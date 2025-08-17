@@ -1,4 +1,4 @@
-            using System;
+using System;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
@@ -24,7 +24,7 @@ namespace RcaPlugin
         private const string ButtonName = "ShowChatPanel";
         private const string ButtonText = "Chat Assistant";
         private const string ButtonTooltip = "Open the RCA Chat Assistant panel.";
-        private const string IconPath = @"Resources/rca-icon.png";
+        private const string IconResourceName = "Resources/rca-icon.png";
 
         /// <summary>
         /// Called when Revit starts up. Registers dockable panel and ribbon button.
@@ -41,7 +41,7 @@ namespace RcaPlugin
                 var buttonData = new PushButtonData(ButtonName, ButtonText, typeof(RcaPluginApp).Assembly.Location, typeof(RcaPlugin.Commands.ShowDockablePanelCommand).FullName)
                 {
                     ToolTip = ButtonTooltip,
-                    LargeImage = LoadPngIcon(IconPath)
+                    LargeImage = LoadEmbeddedIcon(IconResourceName)
                 };
                 panel.AddItem(buttonData);
 
@@ -68,40 +68,29 @@ namespace RcaPlugin
         }
 
         /// <summary>
-        /// Loads a PNG icon from resources. Tries pack URI first, then falls back to disk path in output Resources folder.
+        /// Loads an embedded PNG icon from the assembly resources.
         /// </summary>
-        private BitmapImage LoadPngIcon(string relativePath)
+        /// <param name="resourceName">The fully qualified resource name</param>
+        /// <returns>BitmapImage loaded from embedded resource</returns>
+        private BitmapImage LoadEmbeddedIcon(string resourceName)
         {
-            // 1) Try WPF resource pack URI
-            try
+            var assembly = Assembly.GetExecutingAssembly();
+            
+            using (var stream = assembly.GetManifestResourceStream(resourceName))
             {
-                var assemblyName = Assembly.GetExecutingAssembly().GetName().Name;
-                var packUri = new Uri($"pack://application:,,,/{assemblyName};component/{relativePath}", UriKind.Absolute);
-                var bi = new BitmapImage();
-                bi.BeginInit();
-                bi.UriSource = packUri;
-                bi.EndInit();
-                return bi;
-            }
-            catch
-            {
-                // ignored, fallback to disk below
-            }
+                if (stream == null)
+                {
+                    throw new FileNotFoundException($"Cannot locate embedded resource '{resourceName}'. Available resources: {string.Join(", ", assembly.GetManifestResourceNames())}");
+                }
 
-            // 2) Fallback: load from output folder (Resources copied as Content)
-            var baseDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? string.Empty;
-            var diskPath = Path.Combine(baseDir, relativePath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(diskPath))
-            {
-                throw new FileNotFoundException($"Cannot locate resource '{relativePath}'. Tried: {diskPath}");
+                var image = new BitmapImage();
+                image.BeginInit();
+                image.StreamSource = stream;
+                image.CacheOption = BitmapCacheOption.OnLoad;
+                image.EndInit();
+                image.Freeze(); // Makes it thread-safe
+                return image;
             }
-
-            var image = new BitmapImage();
-            image.BeginInit();
-            image.UriSource = new Uri(diskPath, UriKind.Absolute);
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.EndInit();
-            return image;
         }
     }
 }

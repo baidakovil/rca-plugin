@@ -12,6 +12,10 @@
     <RootNamespace>RcaPlugin</RootNamespace>
     <EnableDefaultItems>false</EnableDefaultItems>
     <PlatformTarget>x64</PlatformTarget>
+    
+    <!-- Disable unnecessary files for Revit plugin deployment -->
+    <DebugType>none</DebugType>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
   </PropertyGroup>
 
   <!-- Conditional RevitVersion properties -->
@@ -80,9 +84,12 @@
           SkipUnchangedFiles="true"
           ContinueOnError="WarnAndContinue" />
 
-    <!-- Copy the compiled DLL and all build outputs -->
+    <!-- Copy only necessary files for Revit plugin -->
     <ItemGroup>
-      <DeployFiles Include="$(TargetDir)**\*.*" />
+      <DeployFiles Include="$(TargetDir)**\*.dll" />
+      <!-- Explicitly exclude debugging and dependency files -->
+      <DeployFiles Remove="$(TargetDir)**\*.pdb" />
+      <DeployFiles Remove="$(TargetDir)**\*.deps.json" />
     </ItemGroup>
     <Copy SourceFiles="@(DeployFiles)"
           DestinationFolder="$(AddinPluginDir)"
