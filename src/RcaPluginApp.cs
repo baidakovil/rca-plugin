@@ -1,10 +1,12 @@
-using System;
+            using System;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using System.Windows.Media.Imaging;
 using System.Windows.Controls;
 using System.Windows;
+using System.Reflection;
+using System.IO;
 
 namespace RcaPlugin
 {
@@ -14,6 +16,7 @@ namespace RcaPlugin
     /// </summary>
     public class RcaPluginApp : IExternalApplication
     {
+        private const string AddInId = "8B2A1C3D-4E5F-47A8-9B0C-1234567890AB";
         private const string DockablePaneGuid = "A1B2C3D4-E5F6-47A8-9B0C-1234567890AB";
         private const string DockablePaneName = "RCA Chat Assistant";
         private const string RibbonTabName = "RCA Plugin";
@@ -65,13 +68,38 @@ namespace RcaPlugin
         }
 
         /// <summary>
-        /// Loads a PNG icon from resources.
+        /// Loads a PNG icon from resources. Tries pack URI first, then falls back to disk path in output Resources folder.
         /// </summary>
-        private BitmapImage LoadPngIcon(string path)
+        private BitmapImage LoadPngIcon(string relativePath)
         {
+            // 1) Try WPF resource pack URI
+            try
+            {
+                var assemblyName = Assembly.GetExecutingAssembly().GetName().Name;
+                var packUri = new Uri($"pack://application:,,,/{assemblyName};component/{relativePath}", UriKind.Absolute);
+                var bi = new BitmapImage();
+                bi.BeginInit();
+                bi.UriSource = packUri;
+                bi.EndInit();
+                return bi;
+            }
+            catch
+            {
+                // ignored, fallback to disk below
+            }
+
+            // 2) Fallback: load from output folder (Resources copied as Content)
+            var baseDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? string.Empty;
+            var diskPath = Path.Combine(baseDir, relativePath.Replace('/', Path.DirectorySeparatorChar));
+            if (!File.Exists(diskPath))
+            {
+                throw new FileNotFoundException($"Cannot locate resource '{relativePath}'. Tried: {diskPath}");
+            }
+
             var image = new BitmapImage();
             image.BeginInit();
-            image.UriSource = new Uri($"pack://application:,,,/{path}");
+            image.UriSource = new Uri(diskPath, UriKind.Absolute);
+            image.CacheOption = BitmapCacheOption.OnLoad;
             image.EndInit();
             return image;
         }

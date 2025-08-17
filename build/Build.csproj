@@ -1,54 +1,93 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
     <Nullable>disable</Nullable>
-    <NoWarn>CS0649;CS0169</NoWarn>
+    <NoWarn>CS0649;CS0169;MSB3277</NoWarn>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>true</ImplicitUsings>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <NukeRootDirectory>..</NukeRootDirectory>
-    <NukeScriptDirectory>..</NukeScriptDirectory>
-    <NukeTelemetryVersion>1</NukeTelemetryVersion>
+    <AssemblyName>RcaPlugin</AssemblyName>
+    <RootNamespace>RcaPlugin</RootNamespace>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
 
   <!-- Conditional RevitVersion properties -->
-  <PropertyGroup Condition="$(Configuration.Contains('R26'))">
+  <PropertyGroup>
     <RevitVersion>2026</RevitVersion>
   </PropertyGroup>
 
-  <!-- Embed icon resource -->
+  <!-- Include only plugin sources from src folder -->
   <ItemGroup>
-    <EmbeddedResource Include="../src/Resources/rca-icon.png" />
+    <Compile Include="..\src\**\*.cs" />
   </ItemGroup>
 
-  <!-- Deploy .addin file after build -->
+  <!-- WPF XAML and resources from src -->
+  <ItemGroup>
+    <Page Include="..\src\Views\**\*.xaml">
+      <Link>Views\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </Page>
+    <!-- Embed rca-icon.png as a WPF Resource for pack URI support -->
+    <Resource Include="..\src\Resources\rca-icon.png">
+      <Link>Resources\rca-icon.png</Link>
+    </Resource>
+    <!-- Also include the icon as an EmbeddedResource to ensure it's inside the DLL -->
+    <EmbeddedResource Include="..\src\Resources\rca-icon.png">
+      <LogicalName>Resources/rca-icon.png</LogicalName>
+    </EmbeddedResource>
+    <!-- Copy other resources to output folder to be loaded from disk at runtime -->
+    <Content Include="..\src\Resources\**\*.*" Exclude="..\src\Resources\rca-icon.png">
+      <Link>Resources\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- Revit 2026 API references (adjust if installed in a custom path) -->
+  <ItemGroup>
+    <Reference Include="RevitAPI" Condition="Exists('$(ProgramFiles)\Autodesk\Revit 2026\RevitAPI.dll')">
+      <HintPath>$(ProgramFiles)\Autodesk\Revit 2026\RevitAPI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="RevitAPIUI" Condition="Exists('$(ProgramFiles)\Autodesk\Revit 2026\RevitAPIUI.dll')">
+      <HintPath>$(ProgramFiles)\Autodesk\Revit 2026\RevitAPIUI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="AdWindows" Condition="Exists('$(ProgramFiles)\Autodesk\Revit 2026\AdWindows.dll')">
+      <HintPath>$(ProgramFiles)\Autodesk\Revit 2026\AdWindows.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Ensure any NuGet dependencies are copied alongside the DLL -->
+  <PropertyGroup>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <!-- Deploy .addin file and built DLL after build -->
   <Target Name="DeployRevitAddin" AfterTargets="Build">
-	<!-- Copy the .addin manifest file -->
-	<Copy SourceFiles="$(MSBuildProjectDirectory)\..\src\RcaPlugin.addin"
-		DestinationFolder="C:\Program Files\Autodesk\Revit 2026\AddIns\RCA"
-		SkipUnchangedFiles="true" />
-	<!-- Copy the compiled DLL and all dependencies -->
-	<Copy SourceFiles="$(TargetPath)"
-		DestinationFolder="C:\Program Files\Autodesk\Revit 2026\AddIns\RCA"
-		SkipUnchangedFiles="true" />
+    <PropertyGroup>
+      <RevitAddinsDir>$(APPDATA)\Autodesk\Revit\Addins\$(RevitVersion)</RevitAddinsDir>
+      <AddinPluginDir>$(RevitAddinsDir)\RcaPlugin</AddinPluginDir>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(AddinPluginDir)" />
+
+    <!-- Copy the .addin manifest file -->
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\..\src\RcaPlugin.addin"
+          DestinationFiles="$(RevitAddinsDir)\RcaPlugin.addin"
+          SkipUnchangedFiles="true"
+          ContinueOnError="WarnAndContinue" />
+
+    <!-- Copy the compiled DLL and all build outputs -->
+    <ItemGroup>
+      <DeployFiles Include="$(TargetDir)**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(DeployFiles)"
+          DestinationFolder="$(AddinPluginDir)"
+          SkipUnchangedFiles="true"
+          ContinueOnError="WarnAndContinue" />
   </Target>
-
-  <ItemGroup>
-    <PackageReference Include="Nuke.Common" Version="9.0.4" />
-    <PackageReference Include="Autodesk.PackageBuilder" Version="1.0.6" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Using Include="Nuke.Common" />
-    <Using Include="Nuke.Common.IO" />
-    <Using Include="Serilog" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="src/Views/RcaDockablePanel.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </None>
-  </ItemGroup>
 
 </Project>
