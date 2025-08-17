@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <Nullable>disable</Nullable>
+    <NoWarn>CS0649;CS0169</NoWarn>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>true</ImplicitUsings>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <NukeRootDirectory>..</NukeRootDirectory>
+    <NukeScriptDirectory>..</NukeScriptDirectory>
+    <NukeTelemetryVersion>1</NukeTelemetryVersion>
+  </PropertyGroup>
+
+  <!-- Conditional RevitVersion properties -->
+  <PropertyGroup Condition="$(Configuration.Contains('R25'))">
+    <RevitVersion>2025</RevitVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="$(Configuration.Contains('R26'))">
+    <RevitVersion>2026</RevitVersion>
+  </PropertyGroup>
+
+  <!-- Embed icon resource -->
+  <ItemGroup>
+    <EmbeddedResource Include="src/Resources/rca-icon.png" />
+  </ItemGroup>
+
+  <!-- Deploy .addin file after build -->
+  <Target Name="DeployRevitAddin" AfterTargets="Build">
+	<!-- Copy the .addin manifest file -->
+	<Copy SourceFiles="$(MSBuildProjectDirectory)\src\RcaPlugin.addin"
+		DestinationFolder="$(APPDATA)\Autodesk\Revit\Addins\$(RevitVersion)\"
+		SkipUnchangedFiles="true" />
+	<!-- Copy the compiled DLL and all dependencies -->
+	<Copy SourceFiles="$(TargetPath)"
+		DestinationFolder="$(APPDATA)\Autodesk\Revit\Addins\$(RevitVersion)\"
+		SkipUnchangedFiles="true" />
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="Nuke.Common" Version="9.0.4" />
+    <PackageReference Include="Autodesk.PackageBuilder" Version="1.0.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Nuke.Common" />
+    <Using Include="Nuke.Common.IO" />
+    <Using Include="Serilog" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="src/Views/RcaDockablePanel.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </None>
+  </ItemGroup>
+
+</Project>

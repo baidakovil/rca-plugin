@@ -1,6 +1,6 @@
 ﻿using Nuke.Common.Git;
-using Nuke.Common.Tools.Git;
 using Nuke.Common.ProjectModel;
+using Nuke.Common.Tools.Git;
 
 sealed partial class Build
 {
@@ -85,7 +85,7 @@ sealed partial class Build
     ///     Git repository metadata.
     /// </summary>
     [GitRepository] readonly GitRepository GitRepository;
-    
+
     /// <summary>
     ///     Solution structure metadata.
     /// </summary>

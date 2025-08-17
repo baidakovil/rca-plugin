@@ -5,17 +5,17 @@ VisualStudioVersion = 17.14.36408.4
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{6F8F759D-3A8F-403E-A08B-848BA9656D97}"
 	ProjectSection(SolutionItems) = preProject
-		rca-plugin\.gitignore = rca-plugin\.gitignore
-		rca-plugin\Build\Build.Configuration.cs = rca-plugin\Build\Build.Configuration.cs
-		rca-plugin\Changelog.md = rca-plugin\Changelog.md
-		rca-plugin\ReadmePluginTemplate.md = rca-plugin\ReadmePluginTemplate.md
+		.gitignore = .gitignore
+		Build\Build.Configuration.cs = build\Build.Configuration.cs
+		dev\Changelog.md = dev\Changelog.md
+		dev\ReadmePluginTemplate.md = dev\ReadmePluginTemplate.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Automation", "Automation", "{108809A2-42B8-4499-B94C-23828E8C6755}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Build", "rca-plugin\build\Build.csproj", "{32A4422D-BDCC-497B-A6B8-51CAB6BEA8CA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Build", "build\Build.csproj", "{32A4422D-BDCC-497B-A6B8-51CAB6BEA8CA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Installer", "rca-plugin\install\Installer.csproj", "{AE598EF5-2F73-4AAD-99E0-6F17C3106AFA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Installer", "install\Installer.csproj", "{AE598EF5-2F73-4AAD-99E0-6F17C3106AFA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

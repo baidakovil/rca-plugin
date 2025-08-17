@@ -1,5 +1,5 @@
 {
   "$schema": "./build.schema.json",
-  "Solution": "rca_plugin.sln",
+  "Solution": "rca-plugin.sln",
   "Verbosity": "Normal"
 }

@@ -1,5 +1,5 @@
-﻿using Nuke.Common.Tools.DotNet;
-using Nuke.Common.ProjectModel;
+﻿using Nuke.Common.ProjectModel;
+using Nuke.Common.Tools.DotNet;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
 
 sealed partial class Build
@@ -15,12 +15,12 @@ sealed partial class Build
             [
                 Solution.Automation.Build
             ];
-            
+
             CleanDirectory(ArtifactsDirectory);
             foreach (var project in Solution.AllProjects)
             {
                 if (excludedProjects.Contains(project)) continue;
-                
+
                 CleanDirectory(project.Directory / "bin");
                 CleanDirectory(project.Directory / "obj");
             }

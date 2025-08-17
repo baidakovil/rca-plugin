@@ -1,8 +1,8 @@
-using System.Diagnostics.CodeAnalysis;
-using Serilog.Events;
 using Nuke.Common.Tooling;
-using Nuke.Common.Utilities;
 using Nuke.Common.Tools.DotNet;
+using Nuke.Common.Utilities;
+using Serilog.Events;
+using System.Diagnostics.CodeAnalysis;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
 
 sealed partial class Build
@@ -18,7 +18,7 @@ sealed partial class Build
             foreach (var (wixInstaller, wixTarget) in InstallersMap)
             {
                 Log.Information("Project: {Name}", wixTarget.Name);
-                
+
                 DotNetBuild(settings => settings
                     .SetProjectFile(wixInstaller)
                     .SetConfiguration(configuration)
@@ -26,7 +26,7 @@ sealed partial class Build
                     .SetVerbosity(DotNetVerbosity.minimal));
 
                 var builderFile = Directory
-                    .EnumerateFiles(wixInstaller.Directory / "bin" / configuration,  $"{wixInstaller.Name}.exe")
+                    .EnumerateFiles(wixInstaller.Directory / "bin" / configuration, $"{wixInstaller.Name}.exe")
                     .FirstOrDefault()
                     .NotNull($"No installer builder was found for the project: {wixInstaller.Name}");
 
