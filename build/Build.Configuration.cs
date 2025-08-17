@@ -17,7 +17,7 @@ sealed partial class Build
     /// </summary>
     Project[] Bundles =>
     [
-        Solution.rca_plugin
+        Solution.GetProject("rca_plugin")
     ];
 
     /// <summary>
@@ -25,7 +25,7 @@ sealed partial class Build
     /// </summary>
     Dictionary<Project, Project> InstallersMap => new()
     {
-        {Solution.Automation.Installer, Solution.rca_plugin}
+        {Solution.Automation.Installer, Solution.GetProject("rca_plugin")}
     };
 
     /// <summary>
@@ -35,7 +35,7 @@ sealed partial class Build
     /// <summary>
     ///     Releases changelog path.
     /// </summary>
-    readonly AbsolutePath ChangelogPath = RootDirectory / "Changelog.md";
+    readonly AbsolutePath ChangelogPath = RootDirectory / "dev/Changelog.md";
 
     /// <summary>
     ///     Add-in release version, includes version number and release stage.

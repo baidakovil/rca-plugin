@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -13,27 +13,24 @@
   </PropertyGroup>
 
   <!-- Conditional RevitVersion properties -->
-  <PropertyGroup Condition="$(Configuration.Contains('R25'))">
-    <RevitVersion>2025</RevitVersion>
-  </PropertyGroup>
   <PropertyGroup Condition="$(Configuration.Contains('R26'))">
     <RevitVersion>2026</RevitVersion>
   </PropertyGroup>
 
   <!-- Embed icon resource -->
   <ItemGroup>
-    <EmbeddedResource Include="src/Resources/rca-icon.png" />
+    <EmbeddedResource Include="../src/Resources/rca-icon.png" />
   </ItemGroup>
 
   <!-- Deploy .addin file after build -->
   <Target Name="DeployRevitAddin" AfterTargets="Build">
 	<!-- Copy the .addin manifest file -->
-	<Copy SourceFiles="$(MSBuildProjectDirectory)\src\RcaPlugin.addin"
-		DestinationFolder="$(APPDATA)\Autodesk\Revit\Addins\$(RevitVersion)\"
+	<Copy SourceFiles="$(MSBuildProjectDirectory)\..\src\RcaPlugin.addin"
+		DestinationFolder="C:\Program Files\Autodesk\Revit 2026\AddIns\RCA"
 		SkipUnchangedFiles="true" />
 	<!-- Copy the compiled DLL and all dependencies -->
 	<Copy SourceFiles="$(TargetPath)"
-		DestinationFolder="$(APPDATA)\Autodesk\Revit\Addins\$(RevitVersion)\"
+		DestinationFolder="C:\Program Files\Autodesk\Revit 2026\AddIns\RCA"
 		SkipUnchangedFiles="true" />
   </Target>
 
