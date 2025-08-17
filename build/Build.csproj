@@ -5,25 +5,14 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <Nullable>disable</Nullable>
-    <NoWarn>CS0649;CS0169;MSB3277</NoWarn>
-    <LangVersion>latest</LangVersion>
-    <ImplicitUsings>true</ImplicitUsings>
+	<NoWarn>CS0649;CS0169;MSB3277</NoWarn>
     <AssemblyName>RcaPlugin</AssemblyName>
     <RootNamespace>RcaPlugin</RootNamespace>
     <EnableDefaultItems>false</EnableDefaultItems>
     <PlatformTarget>x64</PlatformTarget>
-    
-    <!-- Disable unnecessary files for Revit plugin deployment -->
-    <DebugType>none</DebugType>
-    <GenerateDependencyFile>false</GenerateDependencyFile>
-  </PropertyGroup>
-
-  <!-- Conditional RevitVersion properties -->
-  <PropertyGroup>
     <RevitVersion>2026</RevitVersion>
   </PropertyGroup>
 
-  <!-- Include only plugin sources from src folder -->
   <ItemGroup>
     <Compile Include="..\src\**\*.cs" />
   </ItemGroup>
@@ -33,41 +22,18 @@
     <Page Include="..\src\Views\**\*.xaml">
       <Link>Views\%(RecursiveDir)%(Filename)%(Extension)</Link>
     </Page>
-    <!-- Embed rca-icon.png as a WPF Resource for pack URI support -->
-    <Resource Include="..\src\Resources\rca-icon.png">
-      <Link>Resources\rca-icon.png</Link>
-    </Resource>
-    <!-- Also include the icon as an EmbeddedResource to ensure it's inside the DLL -->
-    <EmbeddedResource Include="..\src\Resources\rca-icon.png">
-      <LogicalName>Resources/rca-icon.png</LogicalName>
-    </EmbeddedResource>
-    <!-- Copy other resources to output folder to be loaded from disk at runtime -->
-    <Content Include="..\src\Resources\**\*.*" Exclude="..\src\Resources\rca-icon.png">
-      <Link>Resources\%(RecursiveDir)%(Filename)%(Extension)</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
-  <!-- Revit 2026 API references (adjust if installed in a custom path) -->
   <ItemGroup>
-    <Reference Include="RevitAPI" Condition="Exists('$(ProgramFiles)\Autodesk\Revit 2026\RevitAPI.dll')">
-      <HintPath>$(ProgramFiles)\Autodesk\Revit 2026\RevitAPI.dll</HintPath>
+    <Reference Include="RevitAPI">
+      <HintPath>$(ProgramFiles)\Autodesk\Revit $(RevitVersion)\RevitAPI.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="RevitAPIUI" Condition="Exists('$(ProgramFiles)\Autodesk\Revit 2026\RevitAPIUI.dll')">
-      <HintPath>$(ProgramFiles)\Autodesk\Revit 2026\RevitAPIUI.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="AdWindows" Condition="Exists('$(ProgramFiles)\Autodesk\Revit 2026\AdWindows.dll')">
-      <HintPath>$(ProgramFiles)\Autodesk\Revit 2026\AdWindows.dll</HintPath>
+    <Reference Include="RevitAPIUI">
+      <HintPath>$(ProgramFiles)\Autodesk\Revit $(RevitVersion)\RevitAPIUI.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>
-
-  <!-- Ensure any NuGet dependencies are copied alongside the DLL -->
-  <PropertyGroup>
-    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-  </PropertyGroup>
 
   <!-- Deploy .addin file and built DLL after build -->
   <Target Name="DeployRevitAddin" AfterTargets="Build">

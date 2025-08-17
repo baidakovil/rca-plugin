@@ -1,6 +1,4 @@
-using System.Windows;
 using System.Windows.Controls;
-using Autodesk.Revit.UI;
 using RcaPlugin.ViewModels;
 
 namespace RcaPlugin.Views
