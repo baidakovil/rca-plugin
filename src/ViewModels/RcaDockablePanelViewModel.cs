@@ -48,15 +48,27 @@ namespace RcaPlugin.ViewModels
         /// <summary>
         /// Initializes a new instance of the RcaDockablePanelViewModel class.
         /// </summary>
-        public RcaDockablePanelViewModel(UIApplication uiapp = null)
+        private readonly Func<UIApplication> uiappProvider;
+
+        public RcaDockablePanelViewModel(Func<UIApplication> uiappProvider)
         {
-            this.uiapp = uiapp;
+            this.uiappProvider = uiappProvider;
             pythonService = new PythonExecutionService();
-            if (uiapp != null)
-                pythonService.SetRevitContext(uiapp);
             ClickCommand = new RelayCommand(OnHelloClicked);
             ExecutePythonCommand = new RelayCommand(async _ => await OnExecutePython(), _ => !string.IsNullOrWhiteSpace(InputText));
         }
+
+        private async Task OnExecutePython()
+        {
+            OutputText = "Executing...";
+            var uiapp = uiappProvider?.Invoke();
+            if (uiapp != null)
+                pythonService.SetRevitContext(uiapp);
+            var result = await pythonService.ExecuteAsync(InputText);
+            OutputText = result;
+            InputText = string.Empty;
+        }
+
 
         /// <summary>
         /// Handles the hello button click command.
@@ -67,16 +79,6 @@ namespace RcaPlugin.ViewModels
             TaskDialog.Show("RCA Plugin", "Hello, World from RCA Chat Assistant!");
         }
 
-        /// <summary>
-        /// Handles the execution of Python code.
-        /// </summary>
-        private async Task OnExecutePython()
-        {
-            OutputText = "Executing...";
-            var result = await pythonService.ExecuteAsync(InputText);
-            OutputText = result;
-            InputText = string.Empty;
-        }
 
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string propertyName = null)

@@ -13,7 +13,7 @@ namespace RcaPlugin.Views
 
         public void SetupDockablePane(DockablePaneProviderData data)
         {
-            data.FrameworkElement = new RcaDockablePanel(uiapp);
+            data.FrameworkElement = new RcaDockablePanel(() => uiapp);
             data.InitialState = new DockablePaneState
             {
                 DockPosition = DockPosition.Tabbed,

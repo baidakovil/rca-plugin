@@ -7,6 +7,15 @@ using RcaPlugin.Views;
 
 namespace RcaPlugin
 {
+
+    /// <summary>
+    /// Actual UI application context for the Revit plugin.
+    /// </summary>
+    public static class RevitContext
+    {
+        public static UIApplication CurrentUIApplication { get; set; }
+    }
+
     /// <summary>
     /// The main external application class for the RCA Plugin.
     /// </summary>

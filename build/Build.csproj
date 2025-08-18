@@ -83,4 +83,13 @@
     <Copy SourceFiles="@(DeployFiles)" DestinationFolder="$(AddinPluginDir)" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
   </Target>
 
+  <Target Name="CopyRevitApiDlls" AfterTargets="Build">
+	  <PropertyGroup>
+		  <RevitApiPath>$(ProgramFiles)\Autodesk\Revit $(RevitVersion)\RevitAPI.dll</RevitApiPath>
+		  <RevitApiUiPath>$(ProgramFiles)\Autodesk\Revit $(RevitVersion)\RevitAPIUI.dll</RevitApiUiPath>
+	  </PropertyGroup>
+	  <Copy SourceFiles="$(RevitApiPath)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
+	  <Copy SourceFiles="$(RevitApiUiPath)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
+  </Target>
+
 </Project>

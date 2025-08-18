@@ -1,3 +1,4 @@
+using System;
 using System.Windows.Controls;
 using Autodesk.Revit.UI;
 using RcaPlugin.ViewModels;
@@ -9,10 +10,12 @@ namespace RcaPlugin.Views
     /// </summary>
     public partial class RcaDockablePanel : UserControl
     {
-        public RcaDockablePanel(UIApplication uiapp = null)
+        public RcaDockablePanel(Func<UIApplication> uiappProvider)
         {
             InitializeComponent();
-            DataContext = new RcaDockablePanelViewModel(uiapp);
+            DataContext = new RcaDockablePanelViewModel(uiappProvider);
         }
+
+        public RcaDockablePanel() : this(() => RevitContext.CurrentUIApplication) { }
     }
 }
