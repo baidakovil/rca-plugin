@@ -16,7 +16,6 @@ namespace RcaPlugin.ViewModels
         private string inputText;
         private string outputText;
         private readonly PythonExecutionService pythonService;
-        private readonly UIApplication uiapp;
 
         /// <summary>
         /// Command to show hello world dialog.
