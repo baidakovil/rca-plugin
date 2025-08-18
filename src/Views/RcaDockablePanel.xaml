@@ -29,11 +29,11 @@
         <!-- Central Panel -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0" Background="#F5F5F5">
             <StackPanel Background="#F5F5F5">
-                <TextBlock Text="Server Replies" Margin="5" FontSize="14" FontWeight="Bold"/>
+                <TextBlock Text="Python Output" Margin="5" FontSize="14" FontWeight="Bold"/>
                 <Expander Header="Code Snippet" Margin="10" Padding="3" Background="#ECECEC" BorderBrush="#C8C8C8" BorderThickness="1">
                     <StackPanel Background="#F5F5F5">
-                        <TextBlock Text="Python Code Block" Margin="5" FontFamily="Consolas" FontSize="12"/>
-                        <Button Content="EXECUTE" HorizontalAlignment="Right" Margin="5" Padding="5" Background="#ECECEC" BorderBrush="#C8C8C8" Width="100" Height="30"/>
+                        <TextBlock Text="{Binding OutputText}" Margin="5" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap"/>
+                        <Button Content="EXECUTE" HorizontalAlignment="Right" Margin="5" Padding="5" Background="#ECECEC" BorderBrush="#C8C8C8" Width="100" Height="30" Command="{Binding ExecutePythonCommand}"/>
                     </StackPanel>
                 </Expander>
             </StackPanel>
@@ -41,7 +41,7 @@
 
         <!-- Bottom Input Area: TextBox fills, Button overlays bottom-right -->
         <Grid Grid.Row="2" Margin="10">
-            <TextBox AcceptsReturn="True" VerticalScrollBarVisibility="Visible" Margin="0" FontSize="12" Text="{Binding InputText}" 
+            <TextBox AcceptsReturn="True" VerticalScrollBarVisibility="Visible" Margin="0" FontSize="12" Text="{Binding InputText, UpdateSourceTrigger=PropertyChanged}" 
                      HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="#F5F5F5" BorderBrush="#C8C8C8"/>
             <Button Content="SEND" Padding="0" Background="#ECECEC" BorderBrush="#C8C8C8" Width="100" Height="30" 
                     HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="10,10,30,10" Command="{Binding ClickCommand}"/>

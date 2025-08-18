@@ -1,25 +1,61 @@
 using System;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using Autodesk.Revit.UI;
+using RcaPlugin.Services;
 
 namespace RcaPlugin.ViewModels
 {
     /// <summary>
-    /// ViewModel for the RcaDockablePanel. Handles the Hello button command.
+    /// ViewModel for the RcaDockablePanel. Handles Python code execution and UI commands.
     /// </summary>
-    public class RcaDockablePanelViewModel
+    public class RcaDockablePanelViewModel : INotifyPropertyChanged
     {
+        private string inputText;
+        private string outputText;
+        private readonly PythonExecutionService pythonService;
+        private readonly UIApplication uiapp;
+
         /// <summary>
         /// Command to show hello world dialog.
         /// </summary>
         public ICommand ClickCommand { get; }
+        /// <summary>
+        /// Command to execute Python code.
+        /// </summary>
+        public ICommand ExecutePythonCommand { get; }
+
+        /// <summary>
+        /// The Python code input by the user.
+        /// </summary>
+        public string InputText
+        {
+            get => inputText;
+            set { inputText = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// The output/result of Python code execution.
+        /// </summary>
+        public string OutputText
+        {
+            get => outputText;
+            set { outputText = value; OnPropertyChanged(); }
+        }
 
         /// <summary>
         /// Initializes a new instance of the RcaDockablePanelViewModel class.
         /// </summary>
-        public RcaDockablePanelViewModel()
+        public RcaDockablePanelViewModel(UIApplication uiapp = null)
         {
+            this.uiapp = uiapp;
+            pythonService = new PythonExecutionService();
+            if (uiapp != null)
+                pythonService.SetRevitContext(uiapp);
             ClickCommand = new RelayCommand(OnHelloClicked);
+            ExecutePythonCommand = new RelayCommand(async _ => await OnExecutePython(), _ => !string.IsNullOrWhiteSpace(InputText));
         }
 
         /// <summary>
@@ -29,6 +65,23 @@ namespace RcaPlugin.ViewModels
         private void OnHelloClicked(object parameter)
         {
             TaskDialog.Show("RCA Plugin", "Hello, World from RCA Chat Assistant!");
+        }
+
+        /// <summary>
+        /// Handles the execution of Python code.
+        /// </summary>
+        private async Task OnExecutePython()
+        {
+            OutputText = "Executing...";
+            var result = await pythonService.ExecuteAsync(InputText);
+            OutputText = result;
+            InputText = string.Empty;
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        private void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 

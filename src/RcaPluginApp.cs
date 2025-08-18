@@ -3,6 +3,7 @@ using Autodesk.Revit.UI;
 using Autodesk.Revit.Attributes;
 using System.Windows.Media.Imaging;
 using System.Reflection;
+using RcaPlugin.Views;
 
 namespace RcaPlugin
 {
@@ -16,6 +17,8 @@ namespace RcaPlugin
         private const string RibbonTabName = "RCA Plugin";
         private const string RibbonPanelName = "Chat Panel";
         private const string ButtonText = "Chat Assistant";
+
+        private static UIApplication _uiapp;
 
         /// <summary>
         /// Called when Revit starts up.
@@ -38,7 +41,8 @@ namespace RcaPlugin
 
                 // Register dockable pane
                 var dpId = new DockablePaneId(new Guid(DockablePaneGuid));
-                var provider = new RcaPlugin.Views.RcaDockablePanelProvider();
+                // Provider will receive UIApplication later via static property
+                var provider = new RcaDockablePanelProvider(null);
                 application.RegisterDockablePane(dpId, DockablePaneName, provider);
 
                 return Result.Succeeded;
@@ -57,5 +61,18 @@ namespace RcaPlugin
         {
             return Result.Succeeded;
         }
+
+        /// <summary>
+        /// Used to set UIApplication for dockable panel context.
+        /// </summary>
+        public static void SetUIApplication(UIApplication uiapp)
+        {
+            _uiapp = uiapp;
+        }
+
+        /// <summary>
+        /// Gets the current UIApplication instance.
+        /// </summary>
+        public static UIApplication GetUIApplication() => _uiapp;
     }
 }
