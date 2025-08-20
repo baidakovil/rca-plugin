@@ -1,10 +1,10 @@
+using Autodesk.Revit.UI;
+using RcaPlugin.Services;
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using Autodesk.Revit.UI;
-using RcaPlugin.Services;
 
 namespace RcaPlugin.ViewModels
 {
@@ -25,6 +25,10 @@ namespace RcaPlugin.ViewModels
         /// Command to execute Python code.
         /// </summary>
         public ICommand ExecutePythonCommand { get; }
+        /// <summary>
+        /// Command to show debug information.
+        /// </summary>
+        public ICommand ShowDebugInfoCommand { get; }
 
         /// <summary>
         /// The Python code input by the user.
@@ -55,6 +59,7 @@ namespace RcaPlugin.ViewModels
             pythonService = new PythonExecutionService();
             ClickCommand = new RelayCommand(OnHelloClicked);
             ExecutePythonCommand = new RelayCommand(async _ => await OnExecutePython(), _ => !string.IsNullOrWhiteSpace(InputText));
+            ShowDebugInfoCommand = new RelayCommand(_ => OnShowDebugInfo());
         }
 
         private async Task OnExecutePython()
@@ -78,6 +83,14 @@ namespace RcaPlugin.ViewModels
             TaskDialog.Show("RCA Plugin", "Hello, World from RCA Chat Assistant!");
         }
 
+        /// <summary>
+        /// Opens the debug information window.
+        /// </summary>
+        private void OnShowDebugInfo()
+        {
+            var win = new RcaPlugin.Views.DebugInfoWindow();
+            win.Show();
+        }
 
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string propertyName = null)

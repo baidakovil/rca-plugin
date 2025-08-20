@@ -1,7 +1,7 @@
-using System;
-using System.Windows.Controls;
 using Autodesk.Revit.UI;
 using RcaPlugin.ViewModels;
+using System;
+using System.Windows.Controls;
 
 namespace RcaPlugin.Views
 {
@@ -16,6 +16,7 @@ namespace RcaPlugin.Views
             DataContext = new RcaDockablePanelViewModel(uiappProvider);
         }
 
-        public RcaDockablePanel() : this(() => RevitContext.CurrentUIApplication) { }
+        // Default: always resolve UIApplication from RevitContext
+        public RcaDockablePanel() : this(() => RcaPlugin.RevitContext.CurrentUIApplication) { }
     }
 }

@@ -20,9 +20,11 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <Button Grid.Column="1" Content="CHAT HISTORY" Margin="5,0,5,0" Padding="5" Width="100" Height="30" Background="#ECECEC" BorderBrush="#C8C8C8"/>
                 <Button Grid.Column="2" Content="NEW CHAT" Margin="5,0,5,0" Padding="5" Width="100" Height="30" Background="#ECECEC" BorderBrush="#C8C8C8"/>
+                <Button Grid.Column="3" Content="INFO" Margin="5,0,5,0" Padding="5" Width="100" Height="30" Background="#ECECEC" BorderBrush="#C8C8C8" Command="{Binding ShowDebugInfoCommand}"/>
             </Grid>
         </Border>
 

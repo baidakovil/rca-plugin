@@ -71,7 +71,7 @@
     <MakeDir Directories="$(AddinPluginDir)" />
 
     <!-- Copy the .addin manifest file -->
-    <Copy SourceFiles="$(MSBuildProjectDirectory)\..\src\RcaPlugin.addin" DestinationFiles="$(RevitAddinsDir)\RcaPlugin.addin" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\..\src\RcaPlugin.addin" DestinationFiles="$(RevitAddinsDir)\RcaPlugin._noload_addin" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
 
     <!-- Copy only necessary files for Revit plugin -->
     <ItemGroup>

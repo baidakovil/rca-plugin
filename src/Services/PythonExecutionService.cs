@@ -1,9 +1,10 @@
-﻿using System;
-using System.Threading.Tasks;
-using Autodesk.Revit.UI;
-using Autodesk.Revit.DB;
+﻿using Autodesk.Revit.UI;
 using IronPython.Hosting;
 using Microsoft.Scripting.Hosting;
+using System;
+using System.IO;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace RcaPlugin.Services
 {
@@ -15,6 +16,13 @@ namespace RcaPlugin.Services
         private readonly ScriptEngine engine;
         private readonly ScriptScope scope;
         private UIApplication uiapp;
+
+        // Markers and configuration
+        private const string StartMarker = "--- [PYTHON EXECUTION START] ---";
+        private const string EndMarker = "--- [PYTHON EXECUTION END] ---";
+        private const string ErrorStartMarker = "--- [PYTHON ERROR OUTPUT START] ---";
+        private const string ErrorEndMarker = "--- [PYTHON ERROR OUTPUT END] ---";
+        private static readonly Encoding StdoutEncoding = Encoding.Unicode; // keep read/write consistent
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PythonExecutionService"/> class.
@@ -65,17 +73,70 @@ namespace RcaPlugin.Services
         public async Task<string> ExecuteAsync(string code)
         {
             if (string.IsNullOrWhiteSpace(code)) return string.Empty;
+            var sb = new StringBuilder();
+            DebugLogService.LogPythonOutput(StartMarker);
+            sb.AppendLine(StartMarker);
             try
             {
                 InjectRevitContext();
-                var source = engine.CreateScriptSourceFromString(code);
-                var result = await Task.Run(() => source.Execute(scope));
-                return result?.ToString() ?? "(no result)";
+
+                var (printOutput, result) = await ExecuteWithCapturedStdoutAsync(code);
+                var output = ComposeOutput(printOutput, result);
+
+                DebugLogService.LogPythonOutput($"Output: {output}");
+                sb.AppendLine($"Output: {output}");
+                DebugLogService.LogPythonOutput(EndMarker);
+                sb.AppendLine(EndMarker);
+                return sb.ToString();
             }
             catch (Exception ex)
             {
-                return $"Python Error: {ex.Message}";
+                DebugLogService.LogError(ErrorStartMarker);
+                sb.AppendLine(ErrorStartMarker);
+                DebugLogService.LogError($"Python Error: {ex.Message}");
+                sb.AppendLine($"Python Error: {ex.Message}");
+                DebugLogService.LogError(ErrorEndMarker);
+                sb.AppendLine(ErrorEndMarker);
+                return sb.ToString();
             }
+        }
+
+        // Helper: executes code and captures print() output without touching Python scope
+        private async Task<(string printOutput, object result)> ExecuteWithCapturedStdoutAsync(string code)
+        {
+            using var outputStream = new MemoryStream();
+            engine.Runtime.IO.SetOutput(outputStream, StdoutEncoding);
+
+            var source = engine.CreateScriptSourceFromString(code);
+            var result = await Task.Run(() => source.Execute(scope));
+
+            outputStream.Position = 0;
+            using var reader = new StreamReader(outputStream, StdoutEncoding, detectEncodingFromByteOrderMarks: true, leaveOpen: false);
+            var printOutput = reader.ReadToEnd();
+
+            // Sanitize any NULs that some renderers display as spaces
+            if (!string.IsNullOrEmpty(printOutput) && printOutput.IndexOf('\0') >= 0)
+                printOutput = printOutput.Replace("\0", string.Empty);
+
+            return (printOutput, result);
+        }
+
+        // Helper: combines captured print() output and the returned value into a single string
+        private static string ComposeOutput(string printOutput, object result)
+        {
+            var sb = new StringBuilder();
+            if (!string.IsNullOrWhiteSpace(printOutput))
+            {
+                sb.Append(printOutput.TrimEnd());
+            }
+
+            if (result != null)
+            {
+                if (sb.Length > 0) sb.AppendLine();
+                sb.Append($"Return value: {result}");
+            }
+
+            return sb.Length == 0 ? "(no output)" : sb.ToString();
         }
     }
 }

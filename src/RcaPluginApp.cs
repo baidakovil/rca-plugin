@@ -1,21 +1,10 @@
-using System;
 using Autodesk.Revit.UI;
-using Autodesk.Revit.Attributes;
-using System.Windows.Media.Imaging;
-using System.Reflection;
 using RcaPlugin.Views;
+using System;
+using System.Reflection;
 
 namespace RcaPlugin
 {
-
-    /// <summary>
-    /// Actual UI application context for the Revit plugin.
-    /// </summary>
-    public static class RevitContext
-    {
-        public static UIApplication CurrentUIApplication { get; set; }
-    }
-
     /// <summary>
     /// The main external application class for the RCA Plugin.
     /// </summary>
@@ -26,8 +15,6 @@ namespace RcaPlugin
         private const string RibbonTabName = "RCA Plugin";
         private const string RibbonPanelName = "Chat Panel";
         private const string ButtonText = "Chat Assistant";
-
-        private static UIApplication _uiapp;
 
         /// <summary>
         /// Called when Revit starts up.
@@ -42,16 +29,15 @@ namespace RcaPlugin
 
                 // Create push button
                 var buttonData = new PushButtonData(
-                    "ShowChatPanel", 
-                    ButtonText, 
-                    Assembly.GetExecutingAssembly().Location, 
+                    "ShowChatPanel",
+                    ButtonText,
+                    Assembly.GetExecutingAssembly().Location,
                     typeof(RcaPlugin.Commands.ShowDockablePanelCommand).FullName);
                 panel.AddItem(buttonData);
 
-                // Register dockable pane
+                // Register dockable pane with parameterless provider
                 var dpId = new DockablePaneId(new Guid(DockablePaneGuid));
-                // Provider will receive UIApplication later via static property
-                var provider = new RcaDockablePanelProvider(null);
+                var provider = new RcaDockablePanelProvider();
                 application.RegisterDockablePane(dpId, DockablePaneName, provider);
 
                 return Result.Succeeded;
@@ -70,18 +56,5 @@ namespace RcaPlugin
         {
             return Result.Succeeded;
         }
-
-        /// <summary>
-        /// Used to set UIApplication for dockable panel context.
-        /// </summary>
-        public static void SetUIApplication(UIApplication uiapp)
-        {
-            _uiapp = uiapp;
-        }
-
-        /// <summary>
-        /// Gets the current UIApplication instance.
-        /// </summary>
-        public static UIApplication GetUIApplication() => _uiapp;
     }
 }

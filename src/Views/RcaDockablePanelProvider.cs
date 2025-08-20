@@ -4,16 +4,12 @@ namespace RcaPlugin.Views
 {
     public class RcaDockablePanelProvider : IDockablePaneProvider
     {
-        private readonly UIApplication uiapp;
-
-        public RcaDockablePanelProvider(UIApplication uiapp)
-        {
-            this.uiapp = uiapp;
-        }
+        public RcaDockablePanelProvider() { }
 
         public void SetupDockablePane(DockablePaneProviderData data)
         {
-            data.FrameworkElement = new RcaDockablePanel(() => uiapp);
+            // Always resolve UIApplication at runtime from RevitContext
+            data.FrameworkElement = new RcaDockablePanel(() => RcaPlugin.RevitContext.CurrentUIApplication);
             data.InitialState = new DockablePaneState
             {
                 DockPosition = DockPosition.Tabbed,
