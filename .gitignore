@@ -1,5 +1,4 @@
 ﻿#IDE folders
-*.idea/
 *.vs/
 *.vscode/
 
@@ -7,15 +6,3 @@
 *obj/
 *bin/
 *temp/
-
-#Deprecated Nuget folder
-/packages/
-
-#Nuke output folder
-/output/
-
-#Project-specific files
-*/build.schema.json
-
-#User-specific files
-*.user
