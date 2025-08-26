@@ -54,7 +54,6 @@ src/
 ├── Rca.Core/           # 🧠 Business logic and Python engine  
 ├── Rca.UI/             # 🎨 WPF dockable panel and views
 ├── Rca.Network/        # 🌐 Network services
-├── Rca.Mocks/          # 🎭 Test doubles for CI builds
 └── RcaPlugin/          # 🚀 Main plugin entry point
 ```
 
