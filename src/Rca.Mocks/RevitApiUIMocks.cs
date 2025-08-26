@@ -80,6 +80,42 @@ namespace Autodesk.Revit.UI
     {
         public object FrameworkElement { get; set; }
         public string InitialDockingState { get; set; }
+        public DockablePaneState InitialState { get; set; }
+    }
+
+    /// <summary>
+    /// Mock implementation of DockablePaneState for testing and CI builds.
+    /// </summary>
+    public class DockablePaneState
+    {
+        public DockPosition DockPosition { get; set; }
+        public DockablePaneId TabBehind { get; set; }
+    }
+
+    /// <summary>
+    /// Mock implementation of DockPosition enum for testing and CI builds.
+    /// </summary>
+    public enum DockPosition
+    {
+        Left,
+        Right,
+        Top,
+        Bottom,
+        Tabbed,
+        Floating
+    }
+
+    /// <summary>
+    /// Mock implementation of DockablePanes for testing and CI builds.
+    /// </summary>
+    public static class DockablePanes
+    {
+        public static class BuiltInDockablePanes
+        {
+            public static DockablePaneId ProjectBrowser { get; } = new DockablePaneId(Guid.NewGuid());
+            public static DockablePaneId Properties { get; } = new DockablePaneId(Guid.NewGuid());
+            public static DockablePaneId SystemBrowser { get; } = new DockablePaneId(Guid.NewGuid());
+        }
     }
 
     /// <summary>
