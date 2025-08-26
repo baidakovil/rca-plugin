@@ -1,6 +1,6 @@
-using RcaPlugin.Services;
+using Rca.Core.Services;
 
-namespace RcaPlugin.Helpers
+namespace Rca.Core.Helpers
 {
     /// <summary>
     /// Helper for writing custom debug messages to the debug info window.

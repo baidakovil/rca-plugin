@@ -1,7 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 
-namespace RcaPlugin.Services
+namespace Rca.Core.Services
 {
     /// <summary>
     /// Service for collecting and broadcasting debug log entries.

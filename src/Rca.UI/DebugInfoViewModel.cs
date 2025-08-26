@@ -1,7 +1,7 @@
-using RcaPlugin.Services;
+using Rca.Core.Services;
 using System.Collections.ObjectModel;
 
-namespace RcaPlugin.ViewModels
+namespace Rca.UI.ViewModels
 {
     /// <summary>
     /// ViewModel for the DebugInfoWindow, exposes log entries.

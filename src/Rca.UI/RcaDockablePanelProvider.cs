@@ -1,6 +1,6 @@
 using Autodesk.Revit.UI;
 
-namespace RcaPlugin.Views
+namespace Rca.UI.Views
 {
     public class RcaDockablePanelProvider : IDockablePaneProvider
     {
@@ -9,7 +9,7 @@ namespace RcaPlugin.Views
         public void SetupDockablePane(DockablePaneProviderData data)
         {
             // Always resolve UIApplication at runtime from RevitContext
-            data.FrameworkElement = new RcaDockablePanel(() => RcaPlugin.RevitContext.CurrentUIApplication);
+            data.FrameworkElement = new RcaDockablePanel(() => Rca.Core.RevitContext.CurrentUIApplication);
             data.InitialState = new DockablePaneState
             {
                 DockPosition = DockPosition.Tabbed,

@@ -1,7 +1,7 @@
-using RcaPlugin.ViewModels;
+using Rca.UI.ViewModels;
 using System.Windows;
 
-namespace RcaPlugin.Views
+namespace Rca.UI.Views
 {
     /// <summary>
     /// Interaction logic for DebugInfoWindow.xaml

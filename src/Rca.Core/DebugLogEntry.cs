@@ -1,6 +1,6 @@
 using System;
 
-namespace RcaPlugin.Services
+namespace Rca.Core.Services
 {
     /// <summary>
     /// Represents a single debug log entry.

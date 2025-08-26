@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Autodesk.Revit.DB;
 
-namespace RcaPlugin.Services
+namespace Rca.Core.Services
 {
     /// <summary>
     /// Service for executing Python code using IronPython3 and providing access to Revit API objects.

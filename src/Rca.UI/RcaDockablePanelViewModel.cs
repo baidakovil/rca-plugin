@@ -1,12 +1,12 @@
 using Autodesk.Revit.UI;
-using RcaPlugin.Services;
+using Rca.Core.Services;
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
-namespace RcaPlugin.ViewModels
+namespace Rca.UI.ViewModels
 {
     /// <summary>
     /// ViewModel for the RcaDockablePanel. Handles Python code execution and UI commands.
@@ -88,7 +88,7 @@ namespace RcaPlugin.ViewModels
         /// </summary>
         private void OnShowDebugInfo()
         {
-            var win = new RcaPlugin.Views.DebugInfoWindow();
+            var win = new Rca.UI.Views.DebugInfoWindow();
             win.Show();
         }
 

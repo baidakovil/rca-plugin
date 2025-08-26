@@ -1,9 +1,9 @@
 using Autodesk.Revit.UI;
-using RcaPlugin.ViewModels;
+using Rca.UI.ViewModels;
 using System;
 using System.Windows.Controls;
 
-namespace RcaPlugin.Views
+namespace Rca.UI.Views
 {
     /// <summary>
     /// Interaction logic for RcaDockablePanel.xaml
@@ -17,6 +17,6 @@ namespace RcaPlugin.Views
         }
 
         // Default: always resolve UIApplication from RevitContext
-        public RcaDockablePanel() : this(() => RcaPlugin.RevitContext.CurrentUIApplication) { }
+        public RcaDockablePanel() : this(() => Rca.Core.RevitContext.CurrentUIApplication) { }
     }
 }

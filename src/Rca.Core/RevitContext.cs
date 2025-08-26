@@ -1,6 +1,6 @@
 using Autodesk.Revit.UI;
 
-namespace RcaPlugin
+namespace Rca.Core
 {
     /// <summary>
     /// Holds the current UIApplication for use by modeless windows and panels.
