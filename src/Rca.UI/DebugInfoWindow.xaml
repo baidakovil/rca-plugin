@@ -1,0 +1,17 @@
+<Window x:Class="Rca.UI.Views.DebugInfoWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Debug Info" Height="500" Width="700">
+    <Grid Background="#F5F5F5">
+        <ListBox ItemsSource="{Binding LogEntries}" Margin="10" FontFamily="Consolas" FontSize="12">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding Timestamp, StringFormat=HH:mm:ss}" Margin="0,0,10,0"/>
+                        <TextBlock Text="{Binding Message}"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </Grid>
+</Window>
