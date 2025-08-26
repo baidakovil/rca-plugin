@@ -1,4 +1,5 @@
 using Autodesk.Revit.UI;
+using Rca.Contracts;
 using Rca.UI.ViewModels;
 using System;
 using System.Windows.Controls;
@@ -10,13 +11,13 @@ namespace Rca.UI.Views
     /// </summary>
     public partial class RcaDockablePanel : UserControl
     {
-        public RcaDockablePanel(Func<UIApplication> uiappProvider)
+        public RcaDockablePanel(
+            Func<UIApplication> uiappProvider, 
+            IPythonExecutionService pythonService,
+            Func<DebugInfoWindow> debugInfoWindowFactory)
         {
             InitializeComponent();
-            DataContext = new RcaDockablePanelViewModel(uiappProvider);
+            DataContext = new RcaDockablePanelViewModel(uiappProvider, pythonService, debugInfoWindowFactory);
         }
-
-        // Default: always resolve UIApplication from RevitContext
-        public RcaDockablePanel() : this(() => Rca.Core.RevitContext.CurrentUIApplication) { }
     }
 }

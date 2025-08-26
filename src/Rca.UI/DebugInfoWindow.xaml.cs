@@ -1,3 +1,4 @@
+using Rca.Contracts;
 using Rca.UI.ViewModels;
 using System.Windows;
 
@@ -8,10 +9,10 @@ namespace Rca.UI.Views
     /// </summary>
     public partial class DebugInfoWindow : Window
     {
-        public DebugInfoWindow()
+        public DebugInfoWindow(IDebugLogService debugLogService)
         {
             InitializeComponent();
-            DataContext = new DebugInfoViewModel();
+            DataContext = new DebugInfoViewModel(debugLogService);
         }
     }
 }

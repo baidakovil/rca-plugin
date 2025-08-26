@@ -1,5 +1,9 @@
 using Autodesk.Revit.UI;
 using Rca.UI.Views;
+using Rca.Core.Services;
+using Rca.Core;
+using Rca.Contracts;
+using RcaPlugin.Infrastructure;
 using System;
 using System.Reflection;
 
@@ -23,6 +27,9 @@ namespace RcaPlugin
         {
             try
             {
+                // Setup dependency injection
+                SetupServices();
+
                 // Create ribbon tab and panel
                 try { application.CreateRibbonTab(RibbonTabName); } catch { }
                 var panel = application.CreateRibbonPanel(RibbonTabName, RibbonPanelName);
@@ -35,9 +42,13 @@ namespace RcaPlugin
                     typeof(RcaPlugin.Commands.ShowDockablePanelCommand).FullName);
                 panel.AddItem(buttonData);
 
-                // Register dockable pane with parameterless provider
+                // Register dockable pane with dependency-injected provider
                 var dpId = new DockablePaneId(new Guid(DockablePaneGuid));
-                var provider = new RcaDockablePanelProvider();
+                var container = ServiceContainer.Instance;
+                var provider = new RcaDockablePanelProvider(
+                    () => container.Resolve<IRevitContext>().CurrentUIApplication as UIApplication,
+                    container.Resolve<IPythonExecutionService>(),
+                    container.Resolve<IDebugLogService>());
                 application.RegisterDockablePane(dpId, DockablePaneName, provider);
 
                 return Result.Succeeded;
@@ -47,6 +58,19 @@ namespace RcaPlugin
                 TaskDialog.Show("RCA Plugin Error", ex.Message);
                 return Result.Failed;
             }
+        }
+
+        /// <summary>
+        /// Sets up the dependency injection container.
+        /// </summary>
+        private void SetupServices()
+        {
+            var container = ServiceContainer.Instance;
+
+            // Register core services
+            container.Register<IPythonExecutionService>(new PythonExecutionService());
+            container.Register<IDebugLogService>(DebugLogService.Instance);
+            container.Register<IRevitContext>(RevitContext.Instance);
         }
 
         /// <summary>

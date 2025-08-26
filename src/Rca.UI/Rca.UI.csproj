@@ -10,7 +10,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Rca.Contracts\Rca.Contracts.csproj" />
-    <ProjectReference Include="..\Rca.Core\Rca.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="Exists('$(ProgramFiles)\Autodesk\Revit 2026\RevitAPI.dll')">

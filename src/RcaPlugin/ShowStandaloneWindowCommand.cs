@@ -1,12 +1,14 @@
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.UI;
-using RcaPlugin.Views;
+using Rca.UI.Views;
+using Rca.Contracts;
+using RcaPlugin.Infrastructure;
 using System;
 
 namespace RcaPlugin.Commands
 {
     /// <summary>
-    /// ??????? ??? ???????? RcaDockablePanel ? ????????? ???? (??? ??????? ??? ??????????? ??????).
+    /// Command to open RcaDockablePanel in a standalone window (for testing or non-dockable mode).
     /// </summary>
     [Transaction(TransactionMode.Manual)]
     public class ShowStandaloneWindowCommand : IExternalCommand
@@ -15,8 +17,11 @@ namespace RcaPlugin.Commands
         {
             try
             {
-                // Store UIApplication for use by standalone window
-                RcaPlugin.RevitContext.CurrentUIApplication = commandData.Application;
+                // Update the Revit context with current UIApplication
+                var container = ServiceContainer.Instance;
+                var revitContext = container.Resolve<IRevitContext>();
+                revitContext.CurrentUIApplication = commandData.Application;
+                
                 var window = new RcaStandaloneWindow();
                 window.Show();
                 return Result.Succeeded;
