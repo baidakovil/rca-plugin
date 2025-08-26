@@ -5,6 +5,9 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
+#if WINDOWS
+using Rca.UI.Views;
+#endif
 
 namespace Rca.UI.ViewModels
 {
