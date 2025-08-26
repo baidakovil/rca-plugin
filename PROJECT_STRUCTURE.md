@@ -9,7 +9,7 @@ This repository has been restructured into multiple projects for better organiza
 - **Rca.Contracts** (`src/Rca.Contracts/`)
   - Contains interfaces and contracts
   - Target Framework: .NET 8.0
-  - Purpose: Define abstractions for cross-project communication
+  - Purpose: Define abstractions for cross-project communication following SOLID principles
 
 - **Rca.Core** (`src/Rca.Core/`)
   - Contains core business logic, services, and helpers
@@ -20,8 +20,8 @@ This repository has been restructured into multiple projects for better organiza
 - **Rca.UI** (`src/Rca.UI/`)
   - Contains ViewModels, Views, and UI components
   - Target Framework: .NET 8.0-windows (WPF)
-  - Dependencies: Rca.Contracts, Rca.Core, Revit API
-  - Purpose: User interface components and view models
+  - Dependencies: Rca.Contracts only (✅ SOLID-compliant)
+  - Purpose: User interface components and view models using dependency injection
 
 - **Rca.Network** (`src/Rca.Network/`)
   - Placeholder for future network functionality
@@ -48,18 +48,25 @@ This repository has been restructured into multiple projects for better organiza
 
 ## Dependencies Flow
 
+**✅ SOLID-Compliant Architecture (After Refactoring)**
+
 ```
-RcaPlugin (main entry)
+RcaPlugin (composition root)
 ├── Rca.UI (user interface)
-│   ├── Rca.Core (business logic)
-│   │   └── Rca.Contracts (interfaces)
-│   └── Rca.Contracts
-├── Rca.Core
-│   └── Rca.Contracts
+│   └── Rca.Contracts (interfaces only)
+├── Rca.Core (business logic)
+│   └── Rca.Contracts (interfaces only)
 ├── Rca.Network (future)
-│   └── Rca.Contracts
-└── Rca.Contracts
+│   └── Rca.Contracts (interfaces only)
+└── Rca.Contracts (no dependencies)
 ```
+
+**Key Improvements:**
+- **Dependency Inversion Principle (DIP)**: UI layer no longer depends directly on Core layer
+- **Interface Segregation**: Clean, focused interfaces in Rca.Contracts
+- **Dependency Injection**: RcaPlugin acts as composition root, wiring up services
+- **Single Responsibility**: Each project has a clear, distinct purpose
+- **Testability**: Services can be easily mocked and tested through interfaces
 
 ## Building
 
@@ -77,10 +84,12 @@ The main plugin output will be in `src/RcaPlugin/bin/`.
 2. **Better Testability**: Core logic is separated from UI and Revit dependencies
 3. **Maintainability**: Clear project boundaries and dependencies
 4. **Future Extensibility**: Network project ready for future features
-5. **Namespace Organization**: Each project has its own namespace
-   - `Rca.Contracts` - Interfaces
-   - `Rca.Core.Services` - Services
+5. **SOLID Principles Compliance**: Dependencies follow Dependency Inversion Principle
+6. **Dependency Injection**: Clean service registration and resolution pattern
+7. **Namespace Organization**: Each project has its own namespace
+   - `Rca.Contracts` - Interfaces for SOLID compliance
+   - `Rca.Core.Services` - Services implementing interfaces
    - `Rca.Core.Helpers` - Helper classes
-   - `Rca.UI.ViewModels` - View models
-   - `Rca.UI.Views` - UI components
-   - `RcaPlugin` - Main plugin (kept for compatibility)
+   - `Rca.UI.ViewModels` - View models using dependency injection
+   - `Rca.UI.Views` - UI components with injected services
+   - `RcaPlugin` - Main plugin and composition root
