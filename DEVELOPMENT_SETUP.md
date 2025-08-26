@@ -1,43 +1,33 @@
 # RCA Plugin Development Environment Setup
 
-This document provides comprehensive instructions for setting up the development environment for the RCA Plugin project. The project now supports building in both Windows (full development) and CI/Linux environments (testing and validation).
+This document provides instructions for setting up the Windows development environment for the RCA Plugin project. Since Revit is a Windows-only application, this plugin is designed exclusively for Windows.
 
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
 - [Development Environment Setup](#development-environment-setup)
-  - [Windows Development Environment](#windows-development-environment)
-  - [CI/Testing Environment (Linux/macOS)](#citesting-environment-linuxmacos)
 - [Building the Project](#building-the-project)
-- [Architecture Overview](#architecture-overview)
 - [Dependencies](#dependencies)
 - [Troubleshooting](#troubleshooting)
 
 ## Prerequisites
 
-### All Platforms
+### Windows Development Requirements
 
 - **.NET 8 SDK**: [Download from Microsoft](https://dotnet.microsoft.com/download/dotnet/8.0)
-  ```bash
+  ```powershell
   dotnet --version  # Should show 8.0.x or later
   ```
 
-### Windows Development (Full Plugin Development)
-
 - **Visual Studio 2022** or **Visual Studio Code** with C# extension
-- **Autodesk Revit 2026** (for full plugin testing)
+- **Autodesk Revit 2026** (required for plugin development and testing)
 - **Windows 10/11** (required for WPF support)
-
-### CI/Testing Environment
-
-- **Linux/macOS/Windows** (any platform supporting .NET 8)
-- **GitHub Actions** or similar CI platform
 
 ## Development Environment Setup
 
 ### Windows Development Environment
 
-This setup allows full plugin development including UI components and Revit integration.
+This setup provides full plugin development including UI components and Revit integration.
 
 #### 1. Install Required Software
 
@@ -92,67 +82,11 @@ The build process automatically:
 
 Default deployment location: `%APPDATA%\Autodesk\Revit\Addins\2026\RcaPlugin\`
 
-### CI/Testing Environment (Linux/macOS)
-
-This setup allows building and testing the project structure without Revit dependencies.
-
-#### 1. Setup CI Environment
-
-```bash
-# Install .NET 8 SDK (Ubuntu/Debian)
-wget https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
-sudo dpkg -i packages-microsoft-prod.deb
-sudo apt-get update
-sudo apt-get install -y dotnet-sdk-8.0
-
-# Or on macOS with Homebrew
-brew install dotnet
-
-# Verify installation
-dotnet --version
-```
-
-#### 2. Clone and Build
-
-```bash
-# Clone the repository
-git clone https://github.com/baidakovil/rca-plugin.git
-cd rca-plugin
-
-# Build the project (uses mock implementations)
-dotnet restore
-dotnet build
-
-# Run tests (when available)
-dotnet test
-```
-
-#### 3. Mock Dependencies
-
-In CI/Linux environments, the project automatically uses mock implementations:
-
-- **Rca.Mocks project** - Provides stub implementations for:
-  - Autodesk Revit API types (`UIApplication`, `Document`, etc.)
-  - WPF types (`Window`, `UserControl`, `CommandManager`)
-  - Revit plugin interfaces (`IExternalApplication`, `IExternalCommand`)
-
-#### 4. Conditional Compilation
-
-The project uses conditional compilation to handle platform differences:
-
-```csharp
-#if WINDOWS
-    // Windows-specific code (WPF, full Revit API)
-    var window = new RcaStandaloneWindow();
-    window.Show();
-#endif
-```
-
 ## Building the Project
 
 ### Command Line Build
 
-```bash
+```powershell
 # Clean build
 dotnet clean
 dotnet restore
@@ -183,20 +117,18 @@ RcaPlugin (composition root)
 ├── Rca.UI (depends only on Rca.Contracts) ✅
 ├── Rca.Core (depends only on Rca.Contracts) ✅  
 ├── Rca.Network (depends only on Rca.Contracts) ✅
-├── Rca.Mocks (testing/CI support) ✅
 └── Rca.Contracts (no dependencies) ✅
 ```
 
-### Platform-Specific Behavior
+### Windows-Only Design
 
-| Component | Windows | Linux/CI |
-|-----------|---------|----------|
-| **Target Framework** | `net8.0-windows` | `net8.0` |
-| **WPF Support** | ✅ Full | ❌ Mocked |
-| **Revit API** | ✅ Real DLLs | ❌ Mocked |
-| **IronPython** | ✅ Full | ✅ Full |
-| **UI Components** | ✅ XAML + WPF | ❌ Excluded |
-| **Build/Test** | ✅ Full | ✅ Structure only |
+| Component | Windows |
+|-----------|---------|
+| **Target Framework** | `net8.0-windows` |
+| **WPF Support** | ✅ Full |
+| **Revit API** | ✅ Real DLLs |
+| **IronPython** | ✅ Full |
+| **UI Components** | ✅ XAML + WPF |
 
 ## Dependencies
 
@@ -208,17 +140,10 @@ RcaPlugin (composition root)
 <PackageReference Include="DynamicLanguageRuntime" Version="1.3.5" />
 ```
 
-### Development Dependencies (Windows Only)
+### Development Dependencies (Windows Required)
 
 - **RevitAPI.dll** - Autodesk Revit 2026 API
 - **RevitAPIUI.dll** - Autodesk Revit 2026 UI API
-
-### Mock Dependencies (CI/Testing)
-
-The `Rca.Mocks` project provides test doubles for:
-- All Revit API types and interfaces
-- WPF UI components for non-Windows builds
-- Plugin lifecycle interfaces
 
 ## Troubleshooting
 
@@ -226,21 +151,18 @@ The `Rca.Mocks` project provides test doubles for:
 
 #### 1. Build Fails: "RevitAPI.dll not found"
 
-**Solution**: Either install Revit 2026 or build in a CI environment where mocks are used automatically.
+**Solution**: Install Revit 2026 to the default location.
 
-```bash
-# Check if building on correct platform
-echo $OS  # Should show 'Windows_NT' for full development
-
-# Force CI build mode (uses mocks)
-dotnet build -p:OS=Linux
+```powershell
+# Check Revit installation
+Test-Path "C:\Program Files\Autodesk\Revit 2026\RevitAPI.dll"
 ```
 
 #### 2. Build Fails: "Windows Desktop SDK not found"
 
-**Solution**: The project automatically handles this. Ensure you're using .NET 8 SDK.
+**Solution**: Ensure you're using .NET 8 SDK and have Windows Desktop workload installed.
 
-```bash
+```powershell
 # Check .NET version
 dotnet --version
 
@@ -253,37 +175,13 @@ dotnet restore
 
 **Solution**: The NuGet packages should restore automatically.
 
-```bash
+```powershell
 # Manual restore
 dotnet restore src/Rca.Core/
 dotnet restore src/Rca.UI/
 
 # Check package sources
 dotnet nuget list source
-```
-
-#### 4. Conditional Compilation Issues
-
-**Problem**: Code not compiling due to missing `#if WINDOWS` blocks.
-
-**Solution**: The project automatically sets `WINDOWS` symbol on Windows builds.
-
-```xml
-<!-- Automatic in .csproj -->
-<DefineConstants Condition="'$(OS)' == 'Windows_NT'">WINDOWS</DefineConstants>
-```
-
-### Testing Build in Different Environments
-
-```bash
-# Test Windows build (if on Windows)
-dotnet build -p:OS=Windows_NT
-
-# Test CI build (any platform)
-dotnet build -p:OS=Linux
-
-# Verify mocks are used
-dotnet build -v detailed | grep "Rca.Mocks"
 ```
 
 ### GitHub Copilot Development
@@ -294,11 +192,11 @@ This project is optimized for GitHub Copilot development:
 2. **XML documentation**: All public APIs documented
 3. **SOLID principles**: Clean dependency injection
 4. **Testable design**: Interfaces for all services
-5. **CI-friendly**: Builds in any environment
+5. **Windows-focused**: Simplified single-platform design
 
-```bash
-# Verify Copilot-friendly structure
-dotnet build  # Should succeed on any platform
+```powershell
+# Verify structure
+dotnet build  # Should succeed on Windows with Revit
 dotnet format --verify-no-changes  # Code style validation
 ```
 
@@ -312,7 +210,7 @@ dotnet format --verify-no-changes  # Code style validation
 
 1. Fork the repository
 2. Create a feature branch
-3. Ensure builds pass on both Windows and CI
+3. Ensure builds pass on Windows
 4. Follow the established coding conventions
 5. Submit a pull request
 

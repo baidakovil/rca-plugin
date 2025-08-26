@@ -4,7 +4,7 @@ A modern Revit plugin scaffold implementing SOLID principles with dependency inj
 
 ## Quick Start
 
-### For Windows Development (Full Plugin)
+### Windows Development (Revit Plugin)
 ```powershell
 # Requires: .NET 8 SDK + Revit 2026
 git clone https://github.com/baidakovil/rca-plugin.git
@@ -12,33 +12,20 @@ cd rca-plugin
 dotnet build
 ```
 
-### For CI/Testing (Any Platform)
-```bash
-# Works on Linux/macOS/Windows without Revit
-git clone https://github.com/baidakovil/rca-plugin.git
-cd rca-plugin
-dotnet build  # Uses mock implementations
-```
-
 ## Features
 
 - ✅ **SOLID Architecture**: Clean dependency injection with interface segregation
 - ✅ **Python Engine**: IronPython 3.4.2 integration for dynamic scripting
-- ✅ **Cross-Platform Build**: Windows (full) + CI environments (mocked)
-- ✅ **Modern UI**: WPF dockable panel with MVVM pattern
+- ✅ **Windows Desktop**: Native WPF dockable panel with MVVM pattern
 - ✅ **Testable Design**: All services injectable and mockable
 - ✅ **GitHub Copilot Ready**: Consistent conventions and documentation
 
 ## Dependencies Handled Automatically
 
 ### Windows Development
-- **Revit API**: `RevitAPI.dll`, `RevitAPIUI.dll` (auto-detected)
+- **Revit API**: `RevitAPI.dll`, `RevitAPIUI.dll` (from Revit 2026 installation)
 - **Python**: `IronPython 3.4.2`, `DynamicLanguageRuntime 1.3.5` (NuGet)
 - **UI**: WPF (.NET 8 Windows Desktop)
-
-### CI/Testing Environments  
-- **Mocks**: `Rca.Mocks` project provides stubs for all Revit/WPF types
-- **Core Logic**: Full business logic testing without external dependencies
 
 ## Architecture
 
@@ -46,8 +33,7 @@ dotnet build  # Uses mock implementations
 RcaPlugin (composition root)
 ├── Rca.UI ──────────┐
 ├── Rca.Core ────────┼──► Rca.Contracts (interfaces only)
-├── Rca.Network ─────┘
-└── Rca.Mocks (testing/CI support)
+└── Rca.Network ─────┘
 ```
 
 **Before** (❌ Violated DIP):
@@ -78,34 +64,28 @@ src/
 
 ### Quick Environment Check
 
-```bash
+```powershell
 # Verify .NET 8 installation
 dotnet --version  # Should show 8.0.x
 
-# Check build capability
-dotnet build      # Should succeed on any platform
+# Check Revit installation
+Test-Path "C:\Program Files\Autodesk\Revit 2026\"  # Should return True
 
-# Windows: Check Revit integration
-ls "C:\Program Files\Autodesk\Revit 2026\"  # Should exist for full development
+# Build the project
+dotnet build  # Should succeed on Windows with Revit installed
 ```
 
 ## Building and Testing
 
-```bash
+```powershell
 # Clean build
 dotnet clean && dotnet restore && dotnet build
 
 # Release build  
 dotnet build -c Release
-
-# Test structure (CI environments)
-dotnet build -v minimal  # Validates project structure
-
-# Windows: Test with Revit APIs
-dotnet build -p:OS=Windows_NT  # Uses real Revit DLLs
 ```
 
-## Deployment (Windows Only)
+## Deployment
 
 The plugin automatically deploys to:
 ```
