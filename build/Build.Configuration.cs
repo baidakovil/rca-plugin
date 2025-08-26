@@ -17,7 +17,7 @@ sealed partial class Build
     /// </summary>
     Project[] Bundles =>
     [
-        Solution.GetProject("rca_plugin")
+        Solution.GetProject("RcaPlugin")
     ];
 
     /// <summary>
@@ -25,7 +25,7 @@ sealed partial class Build
     /// </summary>
     Dictionary<Project, Project> InstallersMap => new()
     {
-        {Solution.Automation.Installer, Solution.GetProject("rca_plugin")}
+        {Solution.Automation.Installer, Solution.GetProject("RcaPlugin")}
     };
 
     /// <summary>
