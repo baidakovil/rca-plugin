@@ -1,5 +1,5 @@
 using Rca.Contracts;
-using RcaPlugin.Infrastructure;
+using Rca.Contracts.Infrastructure;
 using System.Windows;
 
 namespace Rca.UI.Views

@@ -1,8 +1,12 @@
 using Autodesk.Revit.UI;
+using Autodesk.Revit.DB;
+#if WINDOWS
 using Rca.UI.Views;
+#endif
 using Rca.Core.Services;
 using Rca.Core;
 using Rca.Contracts;
+using Rca.Contracts.Infrastructure;
 using RcaPlugin.Infrastructure;
 using System;
 using System.Reflection;
@@ -42,6 +46,7 @@ namespace RcaPlugin
                     typeof(RcaPlugin.Commands.ShowDockablePanelCommand).FullName);
                 panel.AddItem(buttonData);
 
+#if WINDOWS
                 // Register dockable pane with dependency-injected provider
                 var dpId = new DockablePaneId(new Guid(DockablePaneGuid));
                 var container = ServiceContainer.Instance;
@@ -50,6 +55,7 @@ namespace RcaPlugin
                     container.Resolve<IPythonExecutionService>(),
                     container.Resolve<IDebugLogService>());
                 application.RegisterDockablePane(dpId, DockablePaneName, provider);
+#endif
 
                 return Result.Succeeded;
             }

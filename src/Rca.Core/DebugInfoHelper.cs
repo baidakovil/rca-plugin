@@ -9,17 +9,17 @@ namespace Rca.Core.Helpers
     {
         public static void Write(string message)
         {
-            DebugLogService.LogInfo(message);
+            DebugLogService.StaticLogInfo(message);
         }
 
         public static void WriteError(string message)
         {
-            DebugLogService.LogError(message);
+            DebugLogService.StaticLogError(message);
         }
 
         public static void WritePython(string message)
         {
-            DebugLogService.LogPythonOutput(message);
+            DebugLogService.StaticLogPythonOutput(message);
         }
     }
 }

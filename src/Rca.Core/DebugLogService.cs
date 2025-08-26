@@ -82,11 +82,11 @@ namespace Rca.Core.Services
         }
 
         #region Static methods for backward compatibility
-        public static void LogInfo(string message) => Instance.LogInfo(message);
-        public static void LogError(string message) => Instance.LogError(message);
-        public static void LogPythonOutput(string message) => Instance.LogPythonOutput(message);
-        public static void LogCustom(string message, DebugLogType type) => Instance.LogCustom(message, type);
-        public static ReadOnlyObservableCollection<DebugLogEntry> Entries => 
+        public static void StaticLogInfo(string message) => Instance.LogInfo(message);
+        public static void StaticLogError(string message) => Instance.LogError(message);
+        public static void StaticLogPythonOutput(string message) => Instance.LogPythonOutput(message);
+        public static void StaticLogCustom(string message, DebugLogType type) => Instance.LogCustom(message, type);
+        public static ReadOnlyObservableCollection<DebugLogEntry> StaticEntries => 
             new(Instance.entries);
         #endregion
     }
