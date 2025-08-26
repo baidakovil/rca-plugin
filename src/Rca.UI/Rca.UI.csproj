@@ -1,38 +1,24 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework Condition="'$(OS)' == 'Windows_NT'">net8.0-windows</TargetFramework>
-    <TargetFramework Condition="'$(OS)' != 'Windows_NT'">net8.0</TargetFramework>
-    <UseWPF Condition="'$(OS)' == 'Windows_NT'">true</UseWPF>
-    <DefineConstants Condition="'$(OS)' == 'Windows_NT'">WINDOWS</DefineConstants>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
     <Nullable>disable</Nullable>
     <AssemblyName>Rca.UI</AssemblyName>
     <RootNamespace>Rca.UI</RootNamespace>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+  <ItemGroup>
     <ProjectReference Include="..\Rca.Contracts\Rca.Contracts.csproj" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
-    <ProjectReference Include="..\Rca.Contracts\Rca.Contracts.csproj" />
-    <Compile Remove="**\*.xaml.cs" />
-    <Compile Remove="RcaDockablePanelProvider.cs" />
-    <Compile Remove="RcaStandaloneWindow.cs" />
-    <None Include="**\*.xaml.cs" />
-    <None Include="RcaDockablePanelProvider.cs" />
-    <None Include="RcaStandaloneWindow.cs" />
-    <Page Remove="**\*.xaml" />
-    <None Include="**\*.xaml" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+  <ItemGroup>
     <PackageReference Include="IronPython" Version="3.4.2" />
     <PackageReference Include="IronPython.StdLib" Version="3.4.2" />
     <PackageReference Include="DynamicLanguageRuntime" Version="1.3.5" />
   </ItemGroup>
 
-  <ItemGroup Condition="Exists('$(ProgramFiles)\Autodesk\Revit 2026\RevitAPI.dll')">
+  <ItemGroup>
     <Reference Include="RevitAPI">
       <HintPath>$(ProgramFiles)\Autodesk\Revit 2026\RevitAPI.dll</HintPath>
       <Private>False</Private>
@@ -41,11 +27,6 @@
       <HintPath>$(ProgramFiles)\Autodesk\Revit 2026\RevitAPIUI.dll</HintPath>
       <Private>False</Private>
     </Reference>
-  </ItemGroup>
-
-  <!-- Use mocks when Revit API is not available -->
-  <ItemGroup Condition="!Exists('$(ProgramFiles)\Autodesk\Revit 2026\RevitAPI.dll')">
-    <ProjectReference Include="..\Rca.Mocks\Rca.Mocks.csproj" />
   </ItemGroup>
 
 </Project>

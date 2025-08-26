@@ -17,7 +17,7 @@
     <PackageReference Include="DynamicLanguageRuntime" Version="1.3.5" />
   </ItemGroup>
 
-  <ItemGroup Condition="Exists('$(ProgramFiles)\Autodesk\Revit 2026\RevitAPI.dll')">
+  <ItemGroup>
     <Reference Include="RevitAPI">
       <HintPath>$(ProgramFiles)\Autodesk\Revit 2026\RevitAPI.dll</HintPath>
       <Private>False</Private>
@@ -26,11 +26,6 @@
       <HintPath>$(ProgramFiles)\Autodesk\Revit 2026\RevitAPIUI.dll</HintPath>
       <Private>False</Private>
     </Reference>
-  </ItemGroup>
-
-  <!-- Use mocks when Revit API is not available -->
-  <ItemGroup Condition="!Exists('$(ProgramFiles)\Autodesk\Revit 2026\RevitAPI.dll')">
-    <ProjectReference Include="..\Rca.Mocks\Rca.Mocks.csproj" />
   </ItemGroup>
 
 </Project>
