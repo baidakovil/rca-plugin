@@ -2,10 +2,8 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework Condition="'$(OS)' == 'Windows_NT'">net8.0-windows</TargetFramework>
-    <TargetFramework Condition="'$(OS)' != 'Windows_NT'">net8.0</TargetFramework>
-    <UseWPF Condition="'$(OS)' == 'Windows_NT'">true</UseWPF>
-    <DefineConstants Condition="'$(OS)' == 'Windows_NT'">WINDOWS</DefineConstants>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
     <Nullable>disable</Nullable>
     <NoWarn>CS0649;CS0169;MSB3277</NoWarn>
     <AssemblyName>RcaPlugin</AssemblyName>
@@ -21,7 +19,7 @@
     <ProjectReference Include="..\Rca.Network\Rca.Network.csproj" />
   </ItemGroup>
 
-  <ItemGroup Condition="Exists('$(ProgramFiles)\Autodesk\Revit $(RevitVersion)\RevitAPI.dll')">
+  <ItemGroup>
     <Reference Include="RevitAPI">
       <HintPath>$(ProgramFiles)\Autodesk\Revit $(RevitVersion)\RevitAPI.dll</HintPath>
       <Private>False</Private>
@@ -32,13 +30,8 @@
     </Reference>
   </ItemGroup>
 
-  <!-- Use mocks when Revit API is not available -->
-  <ItemGroup Condition="!Exists('$(ProgramFiles)\Autodesk\Revit $(RevitVersion)\RevitAPI.dll')">
-    <ProjectReference Include="..\Rca.Mocks\Rca.Mocks.csproj" />
-  </ItemGroup>
-
-  <!-- Ensure all IronPython and DLR dependencies are copied to output (Windows only) -->
-  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+  <!-- Ensure all IronPython and DLR dependencies are copied to output -->
+  <ItemGroup>
     <Content Include="$(UserProfile)\.nuget\packages\ironpython\3.4.2\lib\net8.0\*.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>%(Filename)%(Extension)</Link>
@@ -57,8 +50,8 @@
     </Content>
   </ItemGroup>
 
-  <!-- Deploy .addin file and built DLL after build (Windows only) -->
-  <Target Name="DeployRevitAddin" AfterTargets="Build" Condition="'$(OS)' == 'Windows_NT'">
+  <!-- Deploy .addin file and built DLL after build -->
+  <Target Name="DeployRevitAddin" AfterTargets="Build">
     <PropertyGroup>
       <RevitAddinsDir>$(APPDATA)\Autodesk\Revit\Addins\$(RevitVersion)</RevitAddinsDir>
       <AddinPluginDir>$(RevitAddinsDir)\RcaPlugin</AddinPluginDir>
@@ -79,7 +72,7 @@
     <Copy SourceFiles="@(DeployFiles)" DestinationFolder="$(AddinPluginDir)" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
   </Target>
 
-  <Target Name="CopyRevitApiDlls" AfterTargets="Build" Condition="'$(OS)' == 'Windows_NT' And Exists('$(ProgramFiles)\Autodesk\Revit $(RevitVersion)\RevitAPI.dll')">
+  <Target Name="CopyRevitApiDlls" AfterTargets="Build" Condition="Exists('$(ProgramFiles)\Autodesk\Revit $(RevitVersion)\RevitAPI.dll')">
     <PropertyGroup>
       <RevitApiPath>$(ProgramFiles)\Autodesk\Revit $(RevitVersion)\RevitAPI.dll</RevitApiPath>
       <RevitApiUiPath>$(ProgramFiles)\Autodesk\Revit $(RevitVersion)\RevitAPIUI.dll</RevitApiUiPath>

@@ -5,9 +5,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
-#if WINDOWS
 using Rca.UI.Views;
-#endif
 
 namespace Rca.UI.ViewModels
 {
@@ -55,23 +53,17 @@ namespace Rca.UI.ViewModels
         /// Initializes a new instance of the RcaDockablePanelViewModel class.
         /// </summary>
         private readonly Func<UIApplication> uiappProvider;
-#if WINDOWS
         private readonly Func<DebugInfoWindow> debugInfoWindowFactory;
-#endif
 
         public RcaDockablePanelViewModel(
             Func<UIApplication> uiappProvider, 
-            IPythonExecutionService pythonService
-#if WINDOWS
-            , Func<DebugInfoWindow> debugInfoWindowFactory
-#endif
+            IPythonExecutionService pythonService,
+            Func<DebugInfoWindow> debugInfoWindowFactory
             )
         {
             this.uiappProvider = uiappProvider;
             this.pythonService = pythonService;
-#if WINDOWS
             this.debugInfoWindowFactory = debugInfoWindowFactory;
-#endif
             ClickCommand = new RelayCommand(OnHelloClicked);
             ExecutePythonCommand = new RelayCommand(async _ => await OnExecutePython(), _ => !string.IsNullOrWhiteSpace(InputText));
             ShowDebugInfoCommand = new RelayCommand(_ => OnShowDebugInfo());
@@ -103,10 +95,8 @@ namespace Rca.UI.ViewModels
         /// </summary>
         private void OnShowDebugInfo()
         {
-#if WINDOWS
             var win = debugInfoWindowFactory();
             win.Show();
-#endif
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
