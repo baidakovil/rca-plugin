@@ -1,5 +1,6 @@
 name: Compile
 
+# Trigger this workflow on any push to any branch or on pull requests
 on:
   push:
     branches:
@@ -17,17 +18,16 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 8.0.x 
 
       - name: Cache packages
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.nuget/packages
+          path: ~/.nuget/packages
           key: ${{ runner.os }}-${{ hashFiles('**/global.json', '**/*.csproj', '**/Directory.Packages.props') }}
 
       - name: Restore dependencies
-        run: dotnet restore src/RcaPlugin/RcaPlugin.csproj
+        run: dotnet restore rca-plugin.sln
 
       - name: Build solution
-        run: dotnet build src/RcaPlugin/RcaPlugin.csproj --no-restore --configuration Release
+        run: dotnet build rca-plugin.sln --no-restore --configuration Release
