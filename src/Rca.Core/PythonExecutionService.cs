@@ -6,13 +6,14 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Autodesk.Revit.DB;
+using Rca.Contracts;
 
 namespace Rca.Core.Services
 {
     /// <summary>
     /// Service for executing Python code using IronPython3 and providing access to Revit API objects.
     /// </summary>
-    public class PythonExecutionService
+    public class PythonExecutionService : IPythonExecutionService
     {
         private readonly ScriptEngine engine;
         private readonly ScriptScope scope;
@@ -47,10 +48,16 @@ namespace Rca.Core.Services
         /// <summary>
         /// Sets Revit API objects into the Python scope.
         /// </summary>
-        public void SetRevitContext(UIApplication uiapp)
+        public void SetRevitContext(object context)
         {
-            if (uiapp == null) throw new ArgumentNullException(nameof(uiapp));
-            this.uiapp = uiapp;
+            if (context is UIApplication uiapp)
+            {
+                this.uiapp = uiapp;
+            }
+            else
+            {
+                throw new ArgumentException("Context must be a UIApplication instance", nameof(context));
+            }
         }
 
         /// <summary>

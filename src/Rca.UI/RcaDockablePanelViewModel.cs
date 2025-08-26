@@ -1,5 +1,5 @@
 using Autodesk.Revit.UI;
-using Rca.Core.Services;
+using Rca.Contracts;
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -15,7 +15,7 @@ namespace Rca.UI.ViewModels
     {
         private string inputText;
         private string outputText;
-        private readonly PythonExecutionService pythonService;
+        private readonly IPythonExecutionService pythonService;
 
         /// <summary>
         /// Command to show hello world dialog.
@@ -52,11 +52,16 @@ namespace Rca.UI.ViewModels
         /// Initializes a new instance of the RcaDockablePanelViewModel class.
         /// </summary>
         private readonly Func<UIApplication> uiappProvider;
+        private readonly Func<DebugInfoWindow> debugInfoWindowFactory;
 
-        public RcaDockablePanelViewModel(Func<UIApplication> uiappProvider)
+        public RcaDockablePanelViewModel(
+            Func<UIApplication> uiappProvider, 
+            IPythonExecutionService pythonService,
+            Func<DebugInfoWindow> debugInfoWindowFactory)
         {
             this.uiappProvider = uiappProvider;
-            pythonService = new PythonExecutionService();
+            this.pythonService = pythonService;
+            this.debugInfoWindowFactory = debugInfoWindowFactory;
             ClickCommand = new RelayCommand(OnHelloClicked);
             ExecutePythonCommand = new RelayCommand(async _ => await OnExecutePython(), _ => !string.IsNullOrWhiteSpace(InputText));
             ShowDebugInfoCommand = new RelayCommand(_ => OnShowDebugInfo());
@@ -88,7 +93,7 @@ namespace Rca.UI.ViewModels
         /// </summary>
         private void OnShowDebugInfo()
         {
-            var win = new Rca.UI.Views.DebugInfoWindow();
+            var win = debugInfoWindowFactory();
             win.Show();
         }
 
