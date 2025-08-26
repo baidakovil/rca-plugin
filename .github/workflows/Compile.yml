@@ -14,13 +14,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
       - name: Cache packages
         uses: actions/cache@v4
         with:
           path: |
-            .nuke/temp
             ~/.nuget/packages
           key: ${{ runner.os }}-${{ hashFiles('**/global.json', '**/*.csproj', '**/Directory.Packages.props') }}
 
-      - name: Compile solution
-        run: ./.nuke/build.cmd
+      - name: Restore dependencies
+        run: dotnet restore src/RcaPlugin/RcaPlugin.csproj
+
+      - name: Build solution
+        run: dotnet build src/RcaPlugin/RcaPlugin.csproj --no-restore --configuration Release
