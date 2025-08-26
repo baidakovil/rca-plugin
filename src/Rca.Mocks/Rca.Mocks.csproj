@@ -5,6 +5,7 @@
     <Nullable>disable</Nullable>
     <AssemblyName>Rca.Mocks</AssemblyName>
     <RootNamespace>Rca.Mocks</RootNamespace>
+    <DefineConstants Condition="'$(OS)' == 'Windows_NT'">WINDOWS</DefineConstants>
   </PropertyGroup>
 
 </Project>
