@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 
+#if !WINDOWS
 namespace System.Windows
 {
     /// <summary>
@@ -62,3 +63,4 @@ namespace System.Windows.Input
         }
     }
 }
+#endif
