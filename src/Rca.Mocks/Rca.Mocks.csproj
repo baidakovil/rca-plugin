@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <AssemblyName>Rca.Mocks</AssemblyName>
+    <RootNamespace>Rca.Mocks</RootNamespace>
+  </PropertyGroup>
+
+</Project>

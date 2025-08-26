@@ -28,4 +28,9 @@
     </Reference>
   </ItemGroup>
 
+  <!-- Use mocks when Revit API is not available -->
+  <ItemGroup Condition="!Exists('$(ProgramFiles)\Autodesk\Revit 2026\RevitAPI.dll')">
+    <ProjectReference Include="..\Rca.Mocks\Rca.Mocks.csproj" />
+  </ItemGroup>
+
 </Project>

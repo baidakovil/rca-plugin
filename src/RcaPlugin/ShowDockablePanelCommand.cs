@@ -2,6 +2,7 @@ using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using Rca.Contracts;
+using Rca.Contracts.Infrastructure;
 using RcaPlugin.Infrastructure;
 using System;
 

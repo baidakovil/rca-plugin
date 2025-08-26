@@ -147,9 +147,9 @@ namespace Rca.Core.Services
         // Centralized formatting + logging helpers keep execution logic clean
         private static string FormatSuccessAndLog(string output)
         {
-            DebugLogService.LogPythonOutput(StartMarker);
-            DebugLogService.LogPythonOutput($"Output: {output}");
-            DebugLogService.LogPythonOutput(EndMarker);
+            DebugLogService.StaticLogPythonOutput(StartMarker);
+            DebugLogService.StaticLogPythonOutput($"Output: {output}");
+            DebugLogService.StaticLogPythonOutput(EndMarker);
 
             var sb = new StringBuilder();
             sb.AppendLine(StartMarker);
@@ -160,9 +160,9 @@ namespace Rca.Core.Services
 
         private static string FormatErrorAndLog(string errorMessage)
         {
-            DebugLogService.LogError(ErrorStartMarker);
-            DebugLogService.LogError($"Python Error: {errorMessage}");
-            DebugLogService.LogError(ErrorEndMarker);
+            DebugLogService.StaticLogError(ErrorStartMarker);
+            DebugLogService.StaticLogError($"Python Error: {errorMessage}");
+            DebugLogService.StaticLogError(ErrorEndMarker);
 
             var sb = new StringBuilder();
             sb.AppendLine(ErrorStartMarker);
