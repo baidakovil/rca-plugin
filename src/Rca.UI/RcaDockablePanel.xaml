@@ -32,7 +32,7 @@
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0" Background="#F5F5F5">
             <StackPanel Background="#F5F5F5">
                 <TextBlock Text="Python Output" Margin="5" FontSize="14" FontWeight="Bold"/>
-                <Expander Header="Code Snippet" Margin="10" Padding="3" Background="#ECECEC" BorderBrush="#C8C8C8" BorderThickness="1">
+                <Expander Header="Code LLM Snippet" Margin="10" Padding="3" Background="#ECECEC" BorderBrush="#C8C8C8" BorderThickness="1">
                     <StackPanel Background="#F5F5F5">
                         <TextBlock Text="{Binding OutputText}" Margin="5" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap"/>
                         <Button Content="EXECUTE" HorizontalAlignment="Right" Margin="5" Padding="5" Background="#ECECEC" BorderBrush="#C8C8C8" Width="100" Height="30" Command="{Binding ExecutePythonCommand}"/>

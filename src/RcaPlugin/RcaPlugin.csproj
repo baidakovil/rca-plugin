@@ -10,24 +10,30 @@
     <RootNamespace>RcaPlugin</RootNamespace>
     <PlatformTarget>x64</PlatformTarget>
     <RevitVersion>2026</RevitVersion>
+    <BaseOutputPath>$(SolutionDir)bin\</BaseOutputPath>
+	<PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Rca.Contracts\Rca.Contracts.csproj" />
-    <ProjectReference Include="..\Rca.Core\Rca.Core.csproj" />
-    <ProjectReference Include="..\Rca.UI\Rca.UI.csproj" />
-    <ProjectReference Include="..\Rca.Network\Rca.Network.csproj" />
+    <ProjectReference Include="$(SolutionDir)src\Rca.Contracts\Rca.Contracts.csproj" />
+    <ProjectReference Include="$(SolutionDir)src\Rca.Core\Rca.Core.csproj" />
+    <ProjectReference Include="$(SolutionDir)src\Rca.UI\Rca.UI.csproj" />
+    <ProjectReference Include="$(SolutionDir)src\Rca.Network\Rca.Network.csproj" />
   </ItemGroup>
 
+	<ItemGroup>
+		<Reference Include="RevitAPI">
+			<HintPath>$(SolutionDir)libs\Revit\2026\RevitAPI.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="RevitAPIUI">
+			<HintPath>$(SolutionDir)libs\Revit\2026\RevitAPIUI.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+	</ItemGroup>
+
   <ItemGroup>
-    <Reference Include="RevitAPI">
-      <HintPath>$(ProgramFiles)\Autodesk\Revit $(RevitVersion)\RevitAPI.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="RevitAPIUI">
-      <HintPath>$(ProgramFiles)\Autodesk\Revit $(RevitVersion)\RevitAPIUI.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
   </ItemGroup>
 
   <!-- Ensure all IronPython and DLR dependencies are copied to output -->
@@ -59,23 +65,20 @@
 
     <MakeDir Directories="$(AddinPluginDir)" />
 
-    <!-- Copy the .addin manifest file -->
-    <Copy SourceFiles="$(MSBuildProjectDirectory)\RcaPlugin.addin" DestinationFiles="$(RevitAddinsDir)\RcaPlugin._noload_addin" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
-
     <!-- Copy only necessary files for Revit plugin -->
     <ItemGroup>
       <DeployFiles Include="$(TargetDir)**\*.dll" />
-      <!-- Explicitly exclude debugging and dependency files -->
-      <DeployFiles Remove="$(TargetDir)**\*.pdb" />
-      <DeployFiles Remove="$(TargetDir)**\*.deps.json" />
     </ItemGroup>
-    <Copy SourceFiles="@(DeployFiles)" DestinationFolder="$(AddinPluginDir)" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
+	  
+	<!-- Copy files -->
+	  <Copy SourceFiles="$(SolutionDir)src\RcaPlugin\RcaPlugin.addin" DestinationFiles="$(RevitAddinsDir)\RcaPlugin.addin" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
+	<Copy SourceFiles="@(DeployFiles)" DestinationFolder="$(AddinPluginDir)" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
   </Target>
 
   <Target Name="CopyRevitApiDlls" AfterTargets="Build" Condition="Exists('$(ProgramFiles)\Autodesk\Revit $(RevitVersion)\RevitAPI.dll')">
     <PropertyGroup>
-      <RevitApiPath>$(ProgramFiles)\Autodesk\Revit $(RevitVersion)\RevitAPI.dll</RevitApiPath>
-      <RevitApiUiPath>$(ProgramFiles)\Autodesk\Revit $(RevitVersion)\RevitAPIUI.dll</RevitApiUiPath>
+      <RevitApiPath>$(SolutionDir)libs\Revit\2026\RevitAPI.dll</RevitApiPath>
+      <RevitApiUiPath>$(SolutionDir)libs\Revit\2026\RevitAPIUI.dll</RevitApiUiPath>
     </PropertyGroup>
     <Copy SourceFiles="$(RevitApiPath)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(RevitApiUiPath)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
