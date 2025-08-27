@@ -1,0 +1,26 @@
+<Project>
+  
+  <!-- Global properties for all test projects -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Rca.Contracts.Tests' or
+                           '$(MSBuildProjectName)' == 'Rca.Core.Tests' or
+                           '$(MSBuildProjectName)' == 'Rca.UI.Tests' or
+                           '$(MSBuildProjectName)' == 'Rca.Network.Tests' or
+                           '$(MSBuildProjectName)' == 'RcaPlugin.Tests' or
+                           '$(MSBuildProjectName)' == 'Rca.Integration.Revit.Tests'">
+    
+    <!-- Test project specific settings -->
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <Nullable>disable</Nullable>
+    
+    <!-- Common package versions -->
+    <NUnitVersion>3.13.*</NUnitVersion>
+    <MicrosoftNETTestSdkVersion>17.*</MicrosoftNETTestSdkVersion>
+    <NSubstituteVersion>5.*</NSubstituteVersion>
+    <FluentAssertionsVersion>6.*</FluentAssertionsVersion>
+    <NUnit3TestAdapterVersion>4.*</NUnit3TestAdapterVersion>
+    <RicaunRevitTestAdapterVersion>*</RicaunRevitTestAdapterVersion>
+    
+  </PropertyGroup>
+
+</Project>
