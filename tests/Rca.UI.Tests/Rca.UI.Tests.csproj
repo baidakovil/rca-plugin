@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Rca.UI.Tests</AssemblyName>
+    <RootNamespace>Rca.UI.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Rca.UI/Rca.UI.csproj" />
+    <ProjectReference Include="../../src/Rca.Contracts/Rca.Contracts.csproj" />
+  </ItemGroup>
+
+	<ItemGroup>
+		<Reference Include="RevitAPI">
+			<HintPath>..\..\libs\Revit\2026\RevitAPI.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="RevitAPIUI">
+			<HintPath>..\..\libs\Revit\2026\RevitAPIUI.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+	</ItemGroup>
+</Project>

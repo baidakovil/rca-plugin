@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Rca.Contracts.Tests</AssemblyName>
+    <RootNamespace>Rca.Contracts.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Rca.Contracts/Rca.Contracts.csproj" />
+  </ItemGroup>
+</Project>
