@@ -7,7 +7,7 @@ namespace Rca.Contracts.Tests
     [TestFixture]
     public class ServiceContainerTests
     {
-        private ServiceContainer container;
+        private ServiceContainer container = null!; // Will be initialized in SetUp
 
         [SetUp]
         public void SetUp()

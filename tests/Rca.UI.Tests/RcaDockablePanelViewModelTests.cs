@@ -24,7 +24,10 @@ namespace Rca.UI.Tests
             vm.InputText = "print('hi')";
 
             // Act
-            await ((RelayCommand)vm.ExecutePythonCommand).Execute(null);
+            ((RelayCommand)vm.ExecutePythonCommand).Execute(null);
+            
+            // Wait a bit for the async operation to complete
+            await Task.Delay(100);
 
             // Assert
             await python.Received(1).ExecuteAsync(Arg.Is<string>(s => s.Contains("print")));
