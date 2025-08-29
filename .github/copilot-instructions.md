@@ -1,6 +1,9 @@
 # .github/copilot-instructions.md
 
-Welcome to the Revit plugin project. Follow these simple guidelines to generate clean, maintainable C# code.
+Welcome to the Revit plugin project. 
+Revit Chat Assistant is an add-in for Autodesk Revit, designed to make working in Revit faster and more convenient with the help of an AI chat agent embedded in a dedicated panel. Similar to how GitHub Copilot works in VS Code or Visual Studio, Revit Chat Assistant (RCA) can modify the Revit model or answer user questions.
+
+Follow these simple guidelines to generate clean, maintainable C# code.
 
 1. Use PascalCase for all class, method, and property names.  
 2. Use camelCase for all private fields and local variables.  
