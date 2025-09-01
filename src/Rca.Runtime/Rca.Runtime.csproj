@@ -1,0 +1,104 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <OutputType>Library</OutputType>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <BaseOutputPath>$(SolutionDir)bin\</BaseOutputPath>
+    <PlatformTarget>x64</PlatformTarget>
+    <RevitVersion>2026</RevitVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(SolutionDir)src\Rca.Contracts\Rca.Contracts.csproj" />
+    <ProjectReference Include="$(SolutionDir)src\Rca.Core\Rca.Core.csproj" />
+    <ProjectReference Include="$(SolutionDir)src\Rca.UI\Rca.UI.csproj" />
+    <ProjectReference Include="$(SolutionDir)src\Rca.Network\Rca.Network.csproj" />
+    <ProjectReference Include="$(SolutionDir)src\Rca.Loader.Contracts\Rca.Loader.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="RevitAPI">
+      <HintPath>$(SolutionDir)libs\Revit\2026\RevitAPI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>$(SolutionDir)libs\Revit\2026\RevitAPIUI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.31" />
+  </ItemGroup>
+
+  <!-- Hot Reload ILRepack and Staging Target -->
+  <Target Name="HotReloadStaging" AfterTargets="Build">
+    <PropertyGroup>
+      <StagingRoot>$(LocalAppData)\RCA\LiveCore</StagingRoot>
+      <TimestampFolder>build_$([System.DateTime]::Now.ToString('yyyyMMdd_HHmmss'))</TimestampFolder>
+      <RuntimeStagingDir>$(StagingRoot)\$(TimestampFolder)</RuntimeStagingDir>
+      <RuntimeAssemblyPath>$(RuntimeStagingDir)\Rca.Dynamic.dll</RuntimeAssemblyPath>
+      <ManifestPath>$(StagingRoot)\current.json</ManifestPath>
+      <TempManifestPath>$(StagingRoot)\current.tmp.json</TempManifestPath>
+    </PropertyGroup>
+
+    <!-- Create staging directory -->
+    <MakeDir Directories="$(RuntimeStagingDir)" />
+
+    <!-- Gather assemblies to merge (exclude RevitAPI, System.*, Microsoft.*, WindowsDesktop.*) -->
+    <ItemGroup>
+      <MergeAssemblies Include="$(TargetPath)" />
+      <MergeAssemblies Include="$(TargetDir)Rca.Contracts.dll" Condition="Exists('$(TargetDir)Rca.Contracts.dll')" />
+      <MergeAssemblies Include="$(TargetDir)Rca.Core.dll" Condition="Exists('$(TargetDir)Rca.Core.dll')" />
+      <MergeAssemblies Include="$(TargetDir)Rca.UI.dll" Condition="Exists('$(TargetDir)Rca.UI.dll')" />
+      <MergeAssemblies Include="$(TargetDir)Rca.Network.dll" Condition="Exists('$(TargetDir)Rca.Network.dll')" />
+      <MergeAssemblies Include="$(TargetDir)Rca.Loader.Contracts.dll" Condition="Exists('$(TargetDir)Rca.Loader.Contracts.dll')" />
+    </ItemGroup>
+
+    <!-- Run ILRepack to create merged assembly -->
+    <Message Text="Creating merged runtime assembly: $(RuntimeAssemblyPath)" Importance="high" />
+    <ILRepack
+      OutputType="Library"
+      MainAssembly="$(TargetPath)"
+      OutputAssembly="$(RuntimeAssemblyPath)"
+      InputAssemblies="@(MergeAssemblies)"
+      DebugInfo="true"
+      XmlDocumentation="false"
+      CopyAttributes="true"
+      AllowMultiple="false"
+      Internalize="false" />
+
+    <!-- Create manifest JSON -->
+    <PropertyGroup>
+      <ManifestContent>{
+  "folder": "$(TimestampFolder)",
+  "assembly": "Rca.Dynamic.dll",
+  "timestamp": "$([System.DateTime]::Now.ToString('yyyy-MM-ddTHH:mm:ss.fffZ'))",
+  "version": "$(AssemblyVersion)"
+}</ManifestContent>
+    </PropertyGroup>
+
+    <!-- Write manifest atomically (temp file then move) -->
+    <WriteLinesToFile
+      File="$(TempManifestPath)"
+      Lines="$(ManifestContent)"
+      Overwrite="true" />
+    
+    <Move SourceFiles="$(TempManifestPath)" DestinationFiles="$(ManifestPath)" />
+
+    <Message Text="Hot reload staging completed: $(RuntimeStagingDir)" Importance="high" />
+
+    <!-- Send pipe notification if on Windows -->
+    <Exec Command="powershell -NoProfile -Command &quot;try { $pipe = New-Object System.IO.Pipes.NamedPipeClientStream('.', 'rca.hotreload', 'Out'); $pipe.Connect(100); $writer = New-Object System.IO.StreamWriter($pipe); $cmd = @{type='RELOAD'; payload=@{folder='$(TimestampFolder)'}} | ConvertTo-Json -Compress; $writer.WriteLine($cmd); $writer.Flush(); $pipe.Close(); Write-Host 'Hot reload notification sent.' } catch { Write-Host 'Pipe notification failed (normal if Revit not running)' }&quot;"
+          ContinueOnError="true"
+          Condition="'$(OS)' == 'Windows_NT'" />
+  </Target>
+
+</Project>
