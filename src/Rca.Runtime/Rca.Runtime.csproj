@@ -1,0 +1,128 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>disable</Nullable>
+    <NoWarn>CS0649;CS0169;MSB3277</NoWarn>
+    <AssemblyName>Rca.Runtime</AssemblyName>
+    <RootNamespace>Rca.Runtime</RootNamespace>
+    <PlatformTarget>x64</PlatformTarget>
+    <BaseOutputPath>$(SolutionDir)bin\</BaseOutputPath>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Rca.Core\Rca.Core.csproj" />
+    <ProjectReference Include="..\Rca.UI\Rca.UI.csproj" />
+    <ProjectReference Include="..\Rca.Network\Rca.Network.csproj" />
+    <ProjectReference Include="..\Rca.Contracts\Rca.Contracts.csproj" />
+    <ProjectReference Include="..\Rca.Loader.Contracts\Rca.Loader.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="RevitAPI">
+      <HintPath>..\..\libs\Revit\2026\RevitAPI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>..\..\libs\Revit\2026\RevitAPIUI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.34.2" />
+  </ItemGroup>
+
+  <!-- Hot Reload MSBuild Target -->
+  <Target Name="HotReloadStaging" AfterTargets="Build">
+    <PropertyGroup>
+      <HotReloadRoot>$(LocalAppData)\RCA\LiveCore</HotReloadRoot>
+      <BuildTimestamp>$([System.DateTime]::Now.ToString('yyyyMMdd_HHmmss'))</BuildTimestamp>
+      <StagingFolder>$(HotReloadRoot)\build_$(BuildTimestamp)</StagingFolder>
+      <DynamicAssemblyPath>$(StagingFolder)\Rca.Dynamic.dll</DynamicAssemblyPath>
+      <ManifestPath>$(HotReloadRoot)\current.json</ManifestPath>
+      <TempManifestPath>$(ManifestPath).tmp</TempManifestPath>
+    </PropertyGroup>
+
+    <!-- Create staging directory -->
+    <MakeDir Directories="$(StagingFolder)" />
+
+    <!-- Gather assemblies to merge (exclude Revit APIs and System assemblies) -->
+    <ItemGroup>
+      <MergeAssemblies Include="$(TargetPath)" />
+      <MergeAssemblies Include="$(OutputPath)Rca.Core.dll" />
+      <MergeAssemblies Include="$(OutputPath)Rca.UI.dll" />
+      <MergeAssemblies Include="$(OutputPath)Rca.Network.dll" />
+      <MergeAssemblies Include="$(OutputPath)Rca.Contracts.dll" />
+      <MergeAssemblies Include="$(OutputPath)Rca.Loader.Contracts.dll" />
+    </ItemGroup>
+
+    <!-- ILRepack to create single dynamic assembly -->
+    <ILRepack
+      Primary="$(TargetPath)"
+      Other="@(MergeAssemblies)"
+      OutputFile="$(DynamicAssemblyPath)"
+      LibraryPath="$(OutputPath)"
+      Internalize="true"
+      InternalizeExclude="$(SolutionDir)src\Rca.Runtime\ILRepack.excludes"
+      DebugInfo="true"
+      ContinueOnError="false" />
+
+    <!-- Create manifest -->
+    <PropertyGroup>
+      <ManifestContent>
+{
+  "folder": "$(StagingFolder.Replace('\', '\\'))",
+  "assembly": "Rca.Dynamic.dll",
+  "timestamp": "$(BuildTimestamp)",
+  "version": "$(AssemblyVersion).$(BuildTimestamp)"
+}
+      </ManifestContent>
+    </PropertyGroup>
+
+    <!-- Write manifest atomically -->
+    <WriteLinesToFile
+      File="$(TempManifestPath)"
+      Lines="$(ManifestContent)"
+      Overwrite="true" />
+    
+    <Move SourceFiles="$(TempManifestPath)" DestinationFiles="$(ManifestPath)" />
+
+    <!-- Send reload notification via pipe (PowerShell for cross-platform) -->
+    <PropertyGroup>
+      <PipeCommand>
+try {
+  $pipe = New-Object System.IO.Pipes.NamedPipeClientStream('.', 'rca.hotreload', 'InOut')
+  $pipe.Connect(1000)
+  $writer = New-Object System.IO.StreamWriter($pipe)
+  $reader = New-Object System.IO.StreamReader($pipe)
+  $command = @{
+    command = 'RELOAD'
+    payload = @{ folder = '$(StagingFolder.Replace('\', '\\'))' }
+  } | ConvertTo-Json -Compress
+  $writer.WriteLine($command)
+  $writer.Flush()
+  $response = $reader.ReadLine()
+  Write-Host "RCA Hot Reload: $response"
+  $pipe.Close()
+} catch {
+  Write-Host "RCA Hot Reload: Could not notify loader (Revit not running?): $($_.Exception.Message)"
+}
+      </PipeCommand>
+    </PropertyGroup>
+
+    <Exec Command="powershell -Command &quot;$(PipeCommand)&quot;" 
+          ContinueOnError="true" 
+          Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
+
+    <Message Text="RCA Hot Reload: Staged to $(StagingFolder)" Importance="high" />
+  </Target>
+
+</Project>

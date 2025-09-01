@@ -1,0 +1,9 @@
+# ILRepack Exclusions
+# These types should not be internalized to maintain plugin contracts
+
+# Keep loader contracts public
+Rca.Loader.Contracts.IPluginRuntime
+Rca.Loader.Contracts.HotReloadConstants
+
+# Keep main runtime class public
+Rca.Runtime.RcaRuntime

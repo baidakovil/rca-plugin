@@ -13,7 +13,10 @@ namespace RcaPlugin
 {
     /// <summary>
     /// The main external application class for the RCA Plugin.
+    /// OBSOLETE: This class has been replaced by the hot reload system.
+    /// Use Rca.Loader.LoaderApp for new installations.
     /// </summary>
+    [Obsolete("This class has been replaced by the hot reload system. Use Rca.Loader.LoaderApp instead.")]
     public class RcaPluginApp : IExternalApplication
     {
         private const string DockablePaneGuid = "A1B2C3D4-E5F6-47A8-9B0C-1234567890AB";
@@ -24,11 +27,18 @@ namespace RcaPlugin
 
         /// <summary>
         /// Called when Revit starts up.
+        /// OBSOLETE: Use Rca.Runtime.RcaRuntime via Rca.Loader.LoaderApp instead.
         /// </summary>
         public Result OnStartup(UIControlledApplication application)
         {
             try
             {
+                // Show deprecation warning
+                TaskDialog.Show("RCA Plugin", 
+                    "Warning: Using deprecated RcaPluginApp.\n\n" +
+                    "The hot reload system is now available.\n" +
+                    "Update your .addin file to use Rca.Loader.LoaderApp for hot reload functionality.");
+
                 // Setup dependency injection
                 SetupServices();
 
