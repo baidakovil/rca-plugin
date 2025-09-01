@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>Rca.Loader</Name>
+    <Assembly>Rca.Loader\Rca.Loader.dll</Assembly>
+    <AddInId>9C3B2D4E-5F7A-48B9-0C1D-2345678901BC</AddInId>
+    <FullClassName>Rca.Loader.LoaderApp</FullClassName>
+    <VendorId>RCA</VendorId>
+    <VendorDescription>RCA Hot Reload Loader</VendorDescription>
+    <RevitVersion>2026</RevitVersion>
+  </AddIn>
+</RevitAddIns>

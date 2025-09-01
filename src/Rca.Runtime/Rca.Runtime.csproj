@@ -1,0 +1,92 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>disable</Nullable>
+    <AssemblyName>Rca.Runtime</AssemblyName>
+    <RootNamespace>Rca.Runtime</RootNamespace>
+    <PlatformTarget>x64</PlatformTarget>
+    <BaseOutputPath>$(SolutionDir)bin\</BaseOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(SolutionDir)src\Rca.Contracts\Rca.Contracts.csproj" />
+    <ProjectReference Include="$(SolutionDir)src\Rca.Core\Rca.Core.csproj" />
+    <ProjectReference Include="$(SolutionDir)src\Rca.UI\Rca.UI.csproj" />
+    <ProjectReference Include="$(SolutionDir)src\Rca.Network\Rca.Network.csproj" />
+    <ProjectReference Include="$(SolutionDir)src\Rca.Loader.Contracts\Rca.Loader.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="RevitAPI">
+      <HintPath>$(SolutionDir)libs\Revit\2026\RevitAPI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>$(SolutionDir)libs\Revit\2026\RevitAPIUI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.33" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
+  </ItemGroup>
+
+  <!-- Hot Reload MSBuild Target -->
+  <Target Name="HotReloadStaging" AfterTargets="AfterBuild">
+    <PropertyGroup>
+      <StagingRoot>$(LocalAppData)\RCA\LiveCore</StagingRoot>
+      <TimestampFolder>build_$([System.DateTime]::Now.ToString("yyyyMMdd_HHmmss"))</TimestampFolder>
+      <StagingFolder>$(StagingRoot)\$(TimestampFolder)</StagingFolder>
+      <DynamicAssemblyName>Rca.Dynamic.dll</DynamicAssemblyName>
+      <ManifestPath>$(StagingRoot)\current.json</ManifestPath>
+      <TempManifestPath>$(StagingRoot)\current.temp.json</TempManifestPath>
+    </PropertyGroup>
+
+    <!-- Create staging directories -->
+    <MakeDir Directories="$(StagingFolder)" />
+
+    <!-- Gather assemblies to merge (exclude RevitAPI and system assemblies) -->
+    <ItemGroup>
+      <MergeAssemblies Include="$(OutputPath)Rca.Runtime.dll" />
+      <MergeAssemblies Include="$(OutputPath)Rca.Core.dll" />
+      <MergeAssemblies Include="$(OutputPath)Rca.UI.dll" />
+      <MergeAssemblies Include="$(OutputPath)Rca.Network.dll" />
+      <MergeAssemblies Include="$(OutputPath)Rca.Contracts.dll" />
+      <MergeAssemblies Include="$(OutputPath)Rca.Loader.Contracts.dll" />
+    </ItemGroup>
+
+    <!-- Run ILRepack to create merged assembly -->
+    <ILRepack 
+      Primary="$(OutputPath)Rca.Runtime.dll"
+      Other="@(MergeAssemblies)"
+      OutputFile="$(StagingFolder)\$(DynamicAssemblyName)"
+      Internalize="true"
+      LibraryPaths="$(OutputPath)"
+      ContinueOnError="false" />
+
+    <!-- Create manifest JSON -->
+    <WriteLinesToFile 
+      File="$(TempManifestPath)"
+      Lines='{ "folder": "$(StagingFolder)", "assembly": "$(DynamicAssemblyName)", "timestamp": "$([System.DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))" }'
+      Overwrite="true" />
+
+    <!-- Atomically move manifest to final location -->
+    <Move SourceFiles="$(TempManifestPath)" DestinationFiles="$(ManifestPath)" />
+
+    <!-- Send reload notification via pipe (Windows only) -->
+    <Exec 
+      Command="powershell -NoProfile -Command &quot;try { $pipe = New-Object System.IO.Pipes.NamedPipeClientStream('.', 'rca.hotreload', 'InOut'); $pipe.Connect(1000); $cmd = @{ command='RELOAD'; payload=@{ folder='$(StagingFolder)' } } | ConvertTo-Json -Compress; $bytes = [Text.Encoding]::UTF8.GetBytes($cmd + \&quot;`n\&quot;); $pipe.Write($bytes, 0, $bytes.Length); $pipe.Close() } catch { Write-Host 'Reload notification failed (loader not running?)' }&quot;"
+      ContinueOnError="true"
+      Condition="'$(OS)' == 'Windows_NT'" />
+
+    <Message Text="Hot reload staging completed: $(StagingFolder)" Importance="high" />
+  </Target>
+
+</Project>
