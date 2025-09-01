@@ -48,16 +48,20 @@ namespace Rca.Runtime
         /// Initializes the runtime with the Revit application.
         /// </summary>
         /// <param name="application">The Revit UI application</param>
-        public void Initialize(UIControlledApplication application)
+        public void Initialize(object application)
         {
             try
             {
+                var uiApplication = application as UIControlledApplication;
+                if (uiApplication == null)
+                    throw new ArgumentException("Application must be a UIControlledApplication", nameof(application));
+
                 // Setup dependency injection
                 SetupServices();
 
                 // Create ribbon tab and panel
-                try { application.CreateRibbonTab(RibbonTabName); } catch { }
-                var panel = application.CreateRibbonPanel(RibbonTabName, RibbonPanelName);
+                try { uiApplication.CreateRibbonTab(RibbonTabName); } catch { }
+                var panel = uiApplication.CreateRibbonPanel(RibbonTabName, RibbonPanelName);
 
                 // Create push button
                 var buttonData = new PushButtonData(
@@ -74,7 +78,7 @@ namespace Rca.Runtime
                     () => container.Resolve<IRevitContext>().CurrentUIApplication as UIApplication,
                     container.Resolve<IPythonExecutionService>(),
                     container.Resolve<IDebugLogService>());
-                application.RegisterDockablePane(dpId, DockablePaneName, provider);
+                uiApplication.RegisterDockablePane(dpId, DockablePaneName, provider);
 
                 LogMessage($"RCA Runtime {Version} initialized successfully");
             }

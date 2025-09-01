@@ -18,7 +18,7 @@ namespace Rca.Loader
         private HotReloadAssemblyLoadContext currentContext;
         private IPluginRuntime currentRuntime;
         private WeakReference contextWeakRef;
-        private UIControlledApplication revitApplication;
+        private object revitApplication;
         private string currentRuntimePath;
 
 #if DEBUG
@@ -44,7 +44,7 @@ namespace Rca.Loader
         /// Loads the runtime from the manifest.
         /// </summary>
         /// <param name="application">The Revit application</param>
-        public void LoadRuntime(UIControlledApplication application)
+        public void LoadRuntime(object application)
         {
             revitApplication = application;
             

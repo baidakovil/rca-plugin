@@ -1,5 +1,3 @@
-using Autodesk.Revit.UI;
-
 namespace Rca.Loader.Contracts
 {
     /// <summary>
@@ -15,8 +13,8 @@ namespace Rca.Loader.Contracts
         /// <summary>
         /// Initializes the runtime with the Revit application.
         /// </summary>
-        /// <param name="application">The Revit UI application</param>
-        void Initialize(UIControlledApplication application);
+        /// <param name="application">The Revit UI application (object to avoid assembly dependency)</param>
+        void Initialize(object application);
 
         /// <summary>
         /// Shuts down the runtime.
