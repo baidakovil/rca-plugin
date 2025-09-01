@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <Nullable>disable</Nullable>
     <AssemblyName>Rca.Core</AssemblyName>
     <RootNamespace>Rca.Core</RootNamespace>
@@ -12,10 +12,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Rca.Contracts\Rca.Contracts.csproj" />
   </ItemGroup>
-
-	<ItemGroup>
-		<FrameworkReference Include="Microsoft.WindowsDesktop.App" />
-	</ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="IronPython" Version="3.4.2" />

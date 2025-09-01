@@ -4,8 +4,21 @@ using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using System.Windows.Input;
 using Rca.UI.Views;
+
+#if LINUX_BUILD
+namespace System.Windows.Input
+{
+    public interface ICommand
+    {
+        event EventHandler CanExecuteChanged;
+        bool CanExecute(object parameter);
+        void Execute(object parameter);
+    }
+}
+#else
+using System.Windows.Input;
+#endif
 
 namespace Rca.UI.ViewModels
 {
@@ -95,8 +108,10 @@ namespace Rca.UI.ViewModels
         /// </summary>
         private void OnShowDebugInfo()
         {
+#if !LINUX_BUILD
             var win = debugInfoWindowFactory();
             win.Show();
+#endif
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -149,8 +164,13 @@ namespace Rca.UI.ViewModels
         /// </summary>
         public event EventHandler CanExecuteChanged
         {
+#if !LINUX_BUILD
             add { System.Windows.Input.CommandManager.RequerySuggested += value; }
             remove { System.Windows.Input.CommandManager.RequerySuggested -= value; }
+#else
+            add { }
+            remove { }
+#endif
         }
     }
 }

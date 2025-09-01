@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
     <AssemblyName>Rca.UI.Tests</AssemblyName>
     <RootNamespace>Rca.UI.Tests</RootNamespace>
   </PropertyGroup>

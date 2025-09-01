@@ -22,6 +22,7 @@ namespace Rca.UI.Views
 
         public void SetupDockablePane(DockablePaneProviderData data)
         {
+#if !LINUX_BUILD
             // Create debug info window factory
             Func<DebugInfoWindow> debugInfoWindowFactory = () => new DebugInfoWindow(debugLogService);
 
@@ -31,6 +32,7 @@ namespace Rca.UI.Views
                 DockPosition = DockPosition.Tabbed,
                 TabBehind = DockablePanes.BuiltInDockablePanes.ProjectBrowser
             };
+#endif
         }
     }
 }
