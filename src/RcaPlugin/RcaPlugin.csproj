@@ -11,7 +11,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <RevitVersion>2026</RevitVersion>
     <BaseOutputPath>$(SolutionDir)bin\</BaseOutputPath>
-	<PlatformTarget>x64</PlatformTarget>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 
   <ItemGroup>
