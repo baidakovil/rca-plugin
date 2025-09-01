@@ -144,7 +144,7 @@ namespace Rca.Loader
 
                     case "RELOAD":
                         eventHandler.SetPendingOperation(() => {
-                            var success = runtimeHost.ReloadRuntime(eventHandler.Application);
+                            var success = runtimeHost.ReloadRuntime();
                             return new { Type = "STATUS", State = success ? "Ready" : "Error", Version = runtimeHost.CurrentRuntime?.Version ?? "Unknown" };
                         }, writer);
                         externalEvent.Raise();
@@ -206,8 +206,6 @@ namespace Rca.Loader
         private Func<object> pendingOperation;
         private StreamWriter pendingWriter;
 
-        public UIControlledApplication Application { get; private set; }
-
         public HotReloadEventHandler(HotReloadServer server)
         {
             this.server = server;
@@ -223,8 +221,6 @@ namespace Rca.Loader
         {
             try
             {
-                Application = app.ControlledApplication;
-                
                 if (pendingOperation != null && pendingWriter != null)
                 {
                     var result = pendingOperation();

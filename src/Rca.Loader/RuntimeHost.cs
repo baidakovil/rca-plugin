@@ -14,6 +14,7 @@ namespace Rca.Loader
     {
         private CollectibleAssemblyLoadContext currentContext;
         private IRcaRuntime currentRuntime;
+        private UIControlledApplication currentApplication;
         private readonly string runtimeAssemblyName = "Rca.Runtime.dll";
         private readonly string tempDirectory;
 
@@ -93,6 +94,7 @@ namespace Rca.Loader
                     return false;
                 }
 
+                currentApplication = application; // Store for later use in reloads
                 Console.WriteLine("[HotReload] Starting runtime...");
                 return currentRuntime.Startup(application);
             }
@@ -139,7 +141,7 @@ namespace Rca.Loader
         /// <summary>
         /// Reloads the runtime by unloading current and loading fresh copy.
         /// </summary>
-        public bool ReloadRuntime(UIControlledApplication application)
+        public bool ReloadRuntime()
         {
             try
             {
@@ -153,7 +155,7 @@ namespace Rca.Loader
                     return false;
                 }
 
-                if (!StartupRuntime(application))
+                if (currentApplication != null && !StartupRuntime(currentApplication))
                 {
                     Console.WriteLine("[HotReload] Failed to startup new runtime during reload");
                     return false;
