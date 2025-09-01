@@ -19,6 +19,28 @@ dotnet build
 - ✅ **Windows Desktop**: Native WPF dockable panel with MVVM pattern
 - ✅ **Testable Design**: All services injectable and mockable
 - ✅ **GitHub Copilot Ready**: Consistent conventions and documentation
+- 🔥 **Hot-Reload Development**: Rebuild plugin without restarting Revit 2026
+
+### Hot-Reload Development (New!)
+
+Experience faster development with hot-reload capability:
+
+```powershell
+# Start Revit 2026 with hot-reload loader
+# Make code changes, then:
+dotnet build src/Rca.Runtime  # Auto-triggers reload via NamedPipe
+
+# Or trigger manually:
+dotnet run --project tools/Rca.HotReload.Client -- --command RELOAD
+```
+
+**Key Benefits:**
+- No Revit restart required for code changes
+- Collectible AssemblyLoadContext ensures clean reloading
+- NamedPipe protocol for external tool integration
+- Post-build automation for seamless experience
+
+📖 **[Complete Hot-Reload Documentation](HOT_RELOAD_ARCHITECTURE.md)**
 
 ## Dependencies Handled Automatically
 
@@ -29,11 +51,24 @@ dotnet build
 
 ## Architecture
 
+### Core Architecture (SOLID Compliance)
 ```
 RcaPlugin (composition root)
 ├── Rca.UI ──────────┐
 ├── Rca.Core ────────┼──► Rca.Contracts (interfaces only)
 └── Rca.Network ─────┘
+```
+
+### Hot-Reload Architecture (New!)
+```
+Revit 2026
+├── Rca.Loader (stable shim) ──┐
+│   ├── RuntimeHost            │
+│   └── HotReloadServer        │  NamedPipe: "rca.hotreload"
+│                              │
+└── Rca.Runtime (collectible) ──┘
+    ├── RcaRuntimeApp (extracted)
+    └── Merged Assembly (ILRepack)
 ```
 
 **Before** (❌ Violated DIP):
@@ -50,11 +85,21 @@ Rca.UI ──► Rca.Contracts ◄── Rca.Core (loose coupling via interfaces
 
 ```
 src/
-├── Rca.Contracts/      # 🔗 Interfaces and contracts
-├── Rca.Core/           # 🧠 Business logic and Python engine  
-├── Rca.UI/             # 🎨 WPF dockable panel and views
-├── Rca.Network/        # 🌐 Network services
-└── RcaPlugin/          # 🚀 Main plugin entry point
+├── Rca.Contracts/           # 🔗 Interfaces and contracts
+├── Rca.Core/                # 🧠 Business logic and Python engine  
+├── Rca.UI/                  # 🎨 WPF dockable panel and views
+├── Rca.Network/             # 🌐 Network services
+├── RcaPlugin/               # 🚀 Original plugin entry point (obsolete)
+├── Rca.Loader.Contracts/    # 🔄 Hot-reload contracts
+├── Rca.Loader/              # 🔄 Hot-reload loader (new entry point)
+└── Rca.Runtime/             # 🔄 Aggregated runtime assembly
+
+tools/
+└── Rca.HotReload.Client/    # 🛠️ Command-line reload trigger
+
+# Entry points:
+# - Production: Rca.Loader.addin → Rca.Loader.LoaderApp
+# - Legacy: RcaPlugin.addin → RcaPlugin.RcaPluginApp (obsolete)
 ```
 
 ## Development Setup
