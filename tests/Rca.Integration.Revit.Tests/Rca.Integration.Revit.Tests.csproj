@@ -2,9 +2,9 @@
   <PropertyGroup>
     <AssemblyName>Rca.Integration.Revit.Tests</AssemblyName>
     <RootNamespace>Rca.Integration.Revit.Tests</RootNamespace>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <UseWPF>true</UseWPF>
+    <TargetFramework>net8.0</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
+    <DefineConstants Condition="'$(OS)' != 'Windows_NT'">LINUX_BUILD</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="ricaun.RevitTest.TestAdapter" Version="1.10.1" />

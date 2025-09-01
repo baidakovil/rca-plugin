@@ -1,14 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <UseWPF>true</UseWPF>
+    <TargetFramework>net8.0</TargetFramework>
+    <UseWPF Condition="'$(OS)' == 'Windows_NT'">true</UseWPF>
     <Nullable>disable</Nullable>
     <AssemblyName>Rca.Runtime</AssemblyName>
     <RootNamespace>Rca.Runtime</RootNamespace>
     <BaseOutputPath>$(SolutionDir)bin\</BaseOutputPath>
     <PlatformTarget>x64</PlatformTarget>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <DefineConstants Condition="'$(OS)' != 'Windows_NT'">LINUX_BUILD</DefineConstants>
   </PropertyGroup>
 
   <!-- Project references to aggregate -->
@@ -32,12 +33,12 @@
     </Reference>
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
   </ItemGroup>
 
-  <!-- ILRepack package for assembly merging -->
-  <ItemGroup>
+  <!-- ILRepack package for assembly merging (Windows only) -->
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.18.1" />
   </ItemGroup>
 
@@ -60,8 +61,8 @@
     </ItemGroup>
   </Target>
 
-  <!-- ILRepack merge target -->
-  <Target Name="MergeAssemblies" AfterTargets="Build">
+  <!-- ILRepack merge target (Windows only) -->
+  <Target Name="MergeAssemblies" AfterTargets="Build" Condition="'$(OS)' == 'Windows_NT'">
     <PropertyGroup>
       <OutputDir>$(OutputPath)</OutputDir>
       <MergedAssembly>$(OutputDir)Rca.Runtime.dll</MergedAssembly>
@@ -103,8 +104,8 @@
     <Message Text="[HotReload] Runtime assembly merged successfully: $(MergedAssembly)" Importance="high" />
   </Target>
 
-  <!-- Post-build trigger for hot reload -->
-  <Target Name="TriggerHotReload" AfterTargets="MergeAssemblies">
+  <!-- Post-build trigger for hot reload (Windows only) -->
+  <Target Name="TriggerHotReload" AfterTargets="MergeAssemblies" Condition="'$(OS)' == 'Windows_NT'">
     <Message Text="[HotReload] Triggering hot reload..." Importance="high" />
     
     <!-- Try to send reload command via PowerShell -->

@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <UseWPF>true</UseWPF>
+    <TargetFramework>net8.0</TargetFramework>
     <AssemblyName>RcaPlugin.Tests</AssemblyName>
     <RootNamespace>RcaPlugin.Tests</RootNamespace>
+    <DefineConstants Condition="'$(OS)' != 'Windows_NT'">LINUX_BUILD</DefineConstants>
   </PropertyGroup>
   
   <ItemGroup>

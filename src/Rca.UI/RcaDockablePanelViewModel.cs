@@ -6,18 +6,18 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Rca.UI.Views;
 
-#if LINUX_BUILD
-namespace System.Windows.Input
-{
-    public interface ICommand
-    {
-        event EventHandler CanExecuteChanged;
-        bool CanExecute(object parameter);
-        void Execute(object parameter);
-    }
-}
-#else
+#if !LINUX_BUILD
 using System.Windows.Input;
+#endif
+
+#if LINUX_BUILD
+// Simple ICommand interface for Linux builds
+public interface ICommand
+{
+    event EventHandler CanExecuteChanged;
+    bool CanExecute(object parameter);
+    void Execute(object parameter);
+}
 #endif
 
 namespace Rca.UI.ViewModels

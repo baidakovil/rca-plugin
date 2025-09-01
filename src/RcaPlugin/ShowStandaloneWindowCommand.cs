@@ -24,8 +24,10 @@ namespace RcaPlugin.Commands
                 var revitContext = container.Resolve<IRevitContext>();
                 revitContext.CurrentUIApplication = commandData.Application;
                 
+#if !LINUX_BUILD
                 var window = new RcaStandaloneWindow();
                 window.Show();
+#endif
                 return Result.Succeeded;
             }
             catch (Exception ex)
