@@ -1,0 +1,134 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>disable</Nullable>
+    <NoWarn>CS0649;CS0169;MSB3277</NoWarn>
+    <AssemblyName>Rca.Runtime</AssemblyName>
+    <RootNamespace>Rca.Runtime</RootNamespace>
+    <PlatformTarget>x64</PlatformTarget>
+    <RevitVersion>2026</RevitVersion>
+    <BaseOutputPath>$(SolutionDir)bin\</BaseOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(SolutionDir)src\Rca.Core\Rca.Core.csproj" />
+    <ProjectReference Include="$(SolutionDir)src\Rca.UI\Rca.UI.csproj" />
+    <ProjectReference Include="$(SolutionDir)src\Rca.Network\Rca.Network.csproj" />
+    <ProjectReference Include="$(SolutionDir)src\Rca.Contracts\Rca.Contracts.csproj" />
+    <ProjectReference Include="$(SolutionDir)src\Rca.Loader.Contracts\Rca.Loader.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="RevitAPI">
+      <HintPath>$(SolutionDir)libs\Revit\2026\RevitAPI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>$(SolutionDir)libs\Revit\2026\RevitAPIUI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
+  </ItemGroup>
+
+  <!-- ILRepack Package Reference -->
+  <ItemGroup>
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.18.2" />
+  </ItemGroup>
+
+  <!-- Ensure all IronPython and DLR dependencies are copied to output -->
+  <ItemGroup>
+    <Content Include="$(UserProfile)\.nuget\packages\ironpython\3.4.2\lib\net8.0\*.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>%(Filename)%(Extension)</Link>
+    </Content>
+    <Content Include="$(UserProfile)\.nuget\packages\ironpython.stdlib\3.4.2\contentFiles\any\any\Lib\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Lib\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </Content>
+    <Content Include="$(UserProfile)\.nuget\packages\dynamiclanguageruntime\1.3.5\lib\net8.0\Microsoft.Scripting.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Microsoft.Scripting.dll</Link>
+    </Content>
+    <Content Include="$(UserProfile)\.nuget\packages\dynamiclanguageruntime\1.3.5\lib\net8.0\Microsoft.Dynamic.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Microsoft.Dynamic.dll</Link>
+    </Content>
+  </ItemGroup>
+
+  <!-- Hot Reload Build Target -->
+  <Target Name="HotReloadTarget" AfterTargets="Build">
+    <PropertyGroup>
+      <StagingRoot>$(LocalAppData)\RCA\LiveCore</StagingRoot>
+      <TimestampFolder>build_$([System.DateTime]::Now.ToString("yyyyMMdd_HHmmss"))</TimestampFolder>
+      <StagingFolder>$(StagingRoot)\$(TimestampFolder)</StagingFolder>
+      <DynamicAssemblyName>Rca.Dynamic.dll</DynamicAssemblyName>
+      <ManifestFile>$(StagingRoot)\current.json</ManifestFile>
+    </PropertyGroup>
+
+    <!-- Create staging directory -->
+    <MakeDir Directories="$(StagingFolder)" />
+
+    <!-- Gather assemblies to merge -->
+    <ItemGroup>
+      <MergeAssemblies Include="$(TargetPath)" />
+      <MergeAssemblies Include="$(OutDir)Rca.Core.dll" />
+      <MergeAssemblies Include="$(OutDir)Rca.UI.dll" />
+      <MergeAssemblies Include="$(OutDir)Rca.Network.dll" />
+      <MergeAssemblies Include="$(OutDir)Rca.Contracts.dll" />
+      <MergeAssemblies Include="$(OutDir)Rca.Loader.Contracts.dll" />
+    </ItemGroup>
+
+    <!-- Run ILRepack to create merged assembly -->
+    <ILRepack
+      OutputType="$(OutputType)"
+      MainAssembly="$(TargetPath)"
+      OutputAssembly="$(StagingFolder)\$(DynamicAssemblyName)"
+      InputAssemblies="@(MergeAssemblies)"
+      InternalizeExcludeAssemblies=""
+      Internalize="false"
+      DelaySign="$(DelaySign)"
+      KeyFile="$(KeyOriginatorFile)"
+      KeyContainer="$(KeyContainerName)"
+      Parallel="true"
+      LogLevel="Info" />
+
+    <!-- Write manifest file atomically -->
+    <PropertyGroup>
+      <ManifestContent>{"folder": "$(TimestampFolder)", "assembly": "$(DynamicAssemblyName)"}</ManifestContent>
+      <TempManifestFile>$(StagingRoot)\current.tmp</TempManifestFile>
+    </PropertyGroup>
+    
+    <WriteLinesToFile File="$(TempManifestFile)" Lines="$(ManifestContent)" Overwrite="true" />
+    <Move SourceFiles="$(TempManifestFile)" DestinationFiles="$(ManifestFile)" />
+
+    <!-- Send reload notification via PowerShell -->
+    <PropertyGroup>
+      <PipeCommand>
+        $pipeName = "rca.hotreload";
+        $message = '{"type": "RELOAD", "payload": {"folder": "$(TimestampFolder)"}}';
+        try {
+          $pipe = New-Object System.IO.Pipes.NamedPipeClientStream(".", $pipeName, [System.IO.Pipes.PipeDirection]::InOut);
+          $pipe.Connect(1000);
+          $bytes = [System.Text.Encoding]::UTF8.GetBytes($message);
+          $pipe.Write($bytes, 0, $bytes.Length);
+          $pipe.Close();
+          Write-Host "Hot reload notification sent successfully";
+        } catch {
+          Write-Host "Could not send hot reload notification (loader may not be running): $($_.Exception.Message)";
+        }
+      </PipeCommand>
+    </PropertyGroup>
+
+    <Exec Command="powershell -Command &quot;$(PipeCommand)&quot;" ContinueOnError="true" />
+
+    <!-- Log success -->
+    <Message Text="Hot reload package created: $(StagingFolder)\$(DynamicAssemblyName)" Importance="high" />
+  </Target>
+
+</Project>

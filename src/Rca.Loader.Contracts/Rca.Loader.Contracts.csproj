@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>disable</Nullable>
+    <AssemblyName>Rca.Loader.Contracts</AssemblyName>
+    <RootNamespace>Rca.Loader.Contracts</RootNamespace>
+    <BaseOutputPath>$(SolutionDir)bin\</BaseOutputPath>
+    <PlatformTarget>x64</PlatformTarget>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <!-- Windows-only files and references -->
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+    <Reference Include="RevitAPIUI">
+      <HintPath>$(SolutionDir)libs\Revit\2026\RevitAPIUI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Compile Include="IPluginRuntime.cs" />
+    <Compile Include="HotReloadConstants.cs" />
+    <Compile Include="PipeProtocol.cs" />
+  </ItemGroup>
+
+  <!-- Linux placeholder files -->
+  <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
+    <Compile Include="Placeholders/LinuxPlaceholders.cs" />
+  </ItemGroup>
+
+</Project>
