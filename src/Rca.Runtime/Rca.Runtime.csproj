@@ -74,15 +74,19 @@
     <MakeDir Directories="$(StagingRoot)" />
     <MakeDir Directories="$(TimestampedFolder)" />
 
+    <Message Text="Hot reload staging: $(TimestampedFolder)" Importance="high" />
+
     <!-- Define assemblies to merge -->
     <ItemGroup>
       <MergeAssemblies Include="$(TargetPath)" />
-      <MergeAssemblies Include="$(TargetDir)Rca.Contracts.dll" />
-      <MergeAssemblies Include="$(TargetDir)Rca.Core.dll" />
-      <MergeAssemblies Include="$(TargetDir)Rca.UI.dll" />
-      <MergeAssemblies Include="$(TargetDir)Rca.Network.dll" />
-      <MergeAssemblies Include="$(TargetDir)Rca.Loader.Contracts.dll" />
+      <MergeAssemblies Include="$(TargetDir)Rca.Contracts.dll" Condition="Exists('$(TargetDir)Rca.Contracts.dll')" />
+      <MergeAssemblies Include="$(TargetDir)Rca.Core.dll" Condition="Exists('$(TargetDir)Rca.Core.dll')" />
+      <MergeAssemblies Include="$(TargetDir)Rca.UI.dll" Condition="Exists('$(TargetDir)Rca.UI.dll')" />
+      <MergeAssemblies Include="$(TargetDir)Rca.Network.dll" Condition="Exists('$(TargetDir)Rca.Network.dll')" />
+      <MergeAssemblies Include="$(TargetDir)Rca.Loader.Contracts.dll" Condition="Exists('$(TargetDir)Rca.Loader.Contracts.dll')" />
     </ItemGroup>
+
+    <Message Text="Assemblies to merge: @(MergeAssemblies)" Importance="high" />
 
     <!-- Run ILRepack -->
     <PropertyGroup>
@@ -123,25 +127,27 @@
     <!-- Send reload notification via PowerShell (Windows only) -->
     <PropertyGroup>
       <ReloadCommand>
-$pipe = New-Object System.IO.Pipes.NamedPipeClientStream(".", "rca.hotreload", [System.IO.Pipes.PipeDirection]::InOut)
 try {
+  $pipe = New-Object System.IO.Pipes.NamedPipeClientStream(".", "rca.hotreload", [System.IO.Pipes.PipeDirection]::InOut)
   $pipe.Connect(2000)
   $writer = New-Object System.IO.StreamWriter($pipe)
   $reader = New-Object System.IO.StreamReader($pipe)
   $command = @{
     Type = "COMMAND"
-    Payload = @{
+    Payload = (@{
       Command = "RELOAD"
       Folder = "$(TimestampedFolder.Replace('\', '\\'))"
-    } | ConvertTo-Json
+    } | ConvertTo-Json)
   } | ConvertTo-Json -Compress
   $writer.WriteLine($command)
   $writer.Flush()
   $response = $reader.ReadLine()
-  Write-Host "Reload notification sent: $response"
+  Write-Host "Hot reload notification sent successfully: $response"
 } catch {
   Write-Host "No pipe server listening (Revit not running?): $($_.Exception.Message)"
 } finally {
+  if ($reader) { $reader.Dispose() }
+  if ($writer) { $writer.Dispose() }
   if ($pipe) { $pipe.Dispose() }
 }
       </ReloadCommand>

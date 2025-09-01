@@ -18,16 +18,25 @@ namespace Rca.Loader.Commands
         {
             try
             {
-                // Find the runtime manager from the loader app
-                // This is a simplified approach - in a real implementation you might use
-                // a service locator or static reference
-                TaskDialog.Show("Manual Reload", "Manual reload triggered. Check the pipe server for reload functionality.");
+                // Find the runtime manager from the static instance
+                var runtimeManager = LoaderApp.GetRuntimeManager();
+                if (runtimeManager == null)
+                {
+                    TaskDialog.Show("Manual Reload", "Runtime manager not available. Ensure the Loader is properly initialized.");
+                    return Result.Failed;
+                }
+
+                // Trigger manual reload
+                runtimeManager.Reload();
+                
+                TaskDialog.Show("Manual Reload", "Runtime reload triggered successfully!");
                 
                 return Result.Succeeded;
             }
             catch (Exception ex)
             {
                 message = ex.Message;
+                TaskDialog.Show("Manual Reload Error", $"Failed to reload runtime: {ex.Message}");
                 return Result.Failed;
             }
         }

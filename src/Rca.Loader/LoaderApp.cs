@@ -16,6 +16,18 @@ namespace Rca.Loader
         private RuntimeManager runtimeManager;
         private PipeServer pipeServer;
 
+        // Static reference for commands to access the runtime manager
+        private static RuntimeManager staticRuntimeManager;
+
+        /// <summary>
+        /// Gets the runtime manager instance for command access.
+        /// </summary>
+        /// <returns>The runtime manager instance or null if not initialized</returns>
+        public static RuntimeManager GetRuntimeManager()
+        {
+            return staticRuntimeManager;
+        }
+
         /// <summary>
         /// Called when Revit starts up.
         /// </summary>
@@ -25,6 +37,7 @@ namespace Rca.Loader
             {
                 // Initialize the runtime manager
                 runtimeManager = new RuntimeManager();
+                staticRuntimeManager = runtimeManager;
 
                 // Start the pipe server for hot reload communication
                 pipeServer = new PipeServer(runtimeManager);
@@ -57,6 +70,9 @@ namespace Rca.Loader
 
                 // Unload the runtime
                 runtimeManager?.UnloadRuntime();
+
+                // Clear static reference
+                staticRuntimeManager = null;
 
                 return Result.Succeeded;
             }
