@@ -29,4 +29,24 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
+  <!-- Deploy .addin file and built DLL after build -->
+  <Target Name="DeployRevitAddin" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug' AND '$(OS)' == 'Windows_NT'">
+    <PropertyGroup>
+      <RevitAddinsDir>$(APPDATA)\Autodesk\Revit\Addins\$(RevitVersion)</RevitAddinsDir>
+      <AddinPluginDir>$(RevitAddinsDir)\Rca.Loader</AddinPluginDir>
+      <RevitVersion>2026</RevitVersion>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(AddinPluginDir)" />
+
+    <!-- Copy only necessary files for Revit plugin -->
+    <ItemGroup>
+      <DeployFiles Include="$(TargetDir)**\*.dll" />
+    </ItemGroup>
+	  
+	<!-- Copy files -->
+	<Copy SourceFiles="$(SolutionDir)src\Rca.Loader\Rca.Loader.addin" DestinationFiles="$(RevitAddinsDir)\Rca.Loader.addin" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
+	<Copy SourceFiles="@(DeployFiles)" DestinationFolder="$(AddinPluginDir)" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
+  </Target>
+
 </Project>

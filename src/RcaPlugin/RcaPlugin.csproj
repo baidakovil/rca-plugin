@@ -56,7 +56,8 @@
     </Content>
   </ItemGroup>
 
-  <!-- Deploy .addin file and built DLL after build -->
+  <!-- Legacy deployment - disabled in favor of Rca.Loader -->
+  <!--
   <Target Name="DeployRevitAddin" AfterTargets="Build">
     <PropertyGroup>
       <RevitAddinsDir>$(APPDATA)\Autodesk\Revit\Addins\$(RevitVersion)</RevitAddinsDir>
@@ -65,15 +66,14 @@
 
     <MakeDir Directories="$(AddinPluginDir)" />
 
-    <!-- Copy only necessary files for Revit plugin -->
     <ItemGroup>
       <DeployFiles Include="$(TargetDir)**\*.dll" />
     </ItemGroup>
 	  
-	<!-- Copy files -->
-	  <Copy SourceFiles="$(SolutionDir)src\RcaPlugin\RcaPlugin.addin" DestinationFiles="$(RevitAddinsDir)\RcaPlugin.addin" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
+	<Copy SourceFiles="$(SolutionDir)src\RcaPlugin\RcaPlugin.addin" DestinationFiles="$(RevitAddinsDir)\RcaPlugin.addin" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
 	<Copy SourceFiles="@(DeployFiles)" DestinationFolder="$(AddinPluginDir)" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
   </Target>
+  -->
 
   <Target Name="CopyRevitApiDlls" AfterTargets="Build" Condition="Exists('$(ProgramFiles)\Autodesk\Revit $(RevitVersion)\RevitAPI.dll')">
     <PropertyGroup>
