@@ -1,6 +1,6 @@
 # RCA Plugin - Revit Chat Assistant
 
-A modern Revit plugin scaffold implementing SOLID principles with dependency injection, featuring a Python execution engine and dockable UI panel.
+A modern Revit plugin scaffold implementing SOLID principles with dependency injection, featuring a Python execution engine, dockable UI panel, and **hot reload development experience**.
 
 ## Quick Start
 
@@ -12,6 +12,15 @@ cd rca-plugin
 dotnet build
 ```
 
+### 🔥 Hot Reload Development
+```powershell
+# Make code changes, then rebuild runtime for instant updates:
+dotnet build src/Rca.Runtime
+
+# No Revit restart needed! Changes appear immediately.
+# See DEV_HOT_RELOAD.md for details.
+```
+
 ## Features
 
 - ✅ **SOLID Architecture**: Clean dependency injection with interface segregation
@@ -19,6 +28,7 @@ dotnet build
 - ✅ **Windows Desktop**: Native WPF dockable panel with MVVM pattern
 - ✅ **Testable Design**: All services injectable and mockable
 - ✅ **GitHub Copilot Ready**: Consistent conventions and documentation
+- 🔥 **Hot Reload**: Update code without restarting Revit (saves hours during development)
 
 ## Dependencies Handled Automatically
 
@@ -26,6 +36,22 @@ dotnet build
 - **Revit API**: `RevitAPI.dll`, `RevitAPIUI.dll` (from Revit 2026 installation)
 - **Python**: `IronPython 3.4.2`, `DynamicLanguageRuntime 1.3.5` (NuGet)
 - **UI**: WPF (.NET 8 Windows Desktop)
+
+## Development Experience
+
+### Traditional Workflow
+```
+Edit Code → Build → Close Revit → Start Revit → Load Plugin → Test
+⏱️ 5-10 minutes per iteration
+```
+
+### With Hot Reload
+```
+Edit Code → Build Runtime → Test Immediately
+⏱️ 10-30 seconds per iteration
+```
+
+**10-20x faster development cycle!**
 
 ## Architecture
 
@@ -50,16 +76,21 @@ Rca.UI ──► Rca.Contracts ◄── Rca.Core (loose coupling via interfaces
 
 ```
 src/
-├── Rca.Contracts/      # 🔗 Interfaces and contracts
-├── Rca.Core/           # 🧠 Business logic and Python engine  
-├── Rca.UI/             # 🎨 WPF dockable panel and views
-├── Rca.Network/        # 🌐 Network services
-└── RcaPlugin/          # 🚀 Main plugin entry point
+├── Rca.Loader.Contracts/ # 🔗 Hot reload interfaces and protocol
+├── Rca.Loader/           # 🏗️  Stable loader with hot reload management
+├── Rca.Runtime/          # ⚡ Hot-swappable runtime (main plugin logic)
+├── Rca.Contracts/        # 📋 Core interfaces and contracts  
+├── Rca.Core/             # 🧠 Business logic and Python engine
+├── Rca.UI/               # 🎨 WPF dockable panel and views
+├── Rca.Network/          # 🌐 Network services
+└── RcaPlugin/            # 🚀 Legacy plugin entry point (deprecated)
 ```
 
 ## Development Setup
 
 📖 **[Complete Development Setup Guide](DEVELOPMENT_SETUP.md)**
+
+🔥 **[Hot Reload Development Guide](DEV_HOT_RELOAD.md)** ← **Start here for fast development**
 
 ### Quick Environment Check
 

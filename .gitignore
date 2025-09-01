@@ -19,3 +19,11 @@
 
 #User-specific files
 *.user
+
+# Hot Reload System
+# Staging area for hot reload builds (can be large)
+**/AppData/Local/RCA/
+**/RCA/LiveCore/
+# Temporary build artifacts
+**/*.tmp
+**/current.json.tmp
