@@ -199,9 +199,10 @@ dotnet build src/Rca.Runtime -c Debug
 
 ## Limitations
 
-- Windows only (Named Pipes, Revit)
-- .NET 8 only (collectible AssemblyLoadContext)
-- Revit 2026+ (net8.0-windows support)
+- **Windows only** (Named Pipes, Revit)
+- **.NET 8 only** (collectible AssemblyLoadContext)
+- **Revit 2026+** (net8.0-windows support)
+- **Linux CI**: Projects compile syntax only, runtime requires Windows + Revit
 - Some static state may persist between reloads
 
 ## Support

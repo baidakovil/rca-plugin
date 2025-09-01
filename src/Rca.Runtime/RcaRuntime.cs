@@ -44,23 +44,28 @@ namespace Rca.Runtime
         /// Initializes the runtime with Revit application context.
         /// </summary>
         /// <param name="application">The Revit UI controlled application</param>
-        public void Initialize(UIControlledApplication application)
+        public void Initialize(object application)
         {
             if (isInitialized)
             {
                 throw new InvalidOperationException("Runtime is already initialized");
             }
 
+            if (!(application is UIControlledApplication uiApp))
+            {
+                throw new ArgumentException("Application must be a UIControlledApplication", nameof(application));
+            }
+
             try
             {
-                currentApplication = application;
+                currentApplication = uiApp;
 
                 // Setup dependency injection
                 SetupServices();
 
                 // Create ribbon tab and panel
-                try { application.CreateRibbonTab(RibbonTabName); } catch { }
-                var panel = application.CreateRibbonPanel(RibbonTabName, RibbonPanelName);
+                try { uiApp.CreateRibbonTab(RibbonTabName); } catch { }
+                var panel = uiApp.CreateRibbonPanel(RibbonTabName, RibbonPanelName);
 
                 // Create push button
                 var buttonData = new PushButtonData(
@@ -77,7 +82,7 @@ namespace Rca.Runtime
                     () => container.Resolve<IRevitContext>().CurrentUIApplication as UIApplication,
                     container.Resolve<IPythonExecutionService>(),
                     container.Resolve<IDebugLogService>());
-                application.RegisterDockablePane(dpId, DockablePaneName, provider);
+                uiApp.RegisterDockablePane(dpId, DockablePaneName, provider);
 
                 isInitialized = true;
             }

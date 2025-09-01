@@ -1,5 +1,3 @@
-using Autodesk.Revit.UI;
-
 namespace Rca.Loader.Contracts
 {
     /// <summary>
@@ -16,7 +14,7 @@ namespace Rca.Loader.Contracts
         /// Initializes the runtime with Revit application context.
         /// </summary>
         /// <param name="application">The Revit UI controlled application</param>
-        void Initialize(UIControlledApplication application);
+        void Initialize(object application);
 
         /// <summary>
         /// Shuts down the runtime and cleans up resources.

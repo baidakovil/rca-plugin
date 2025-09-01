@@ -1,17 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <Nullable>disable</Nullable>
     <AssemblyName>Rca.Loader.Contracts</AssemblyName>
     <RootNamespace>Rca.Loader.Contracts</RootNamespace>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Reference Include="RevitAPIUI">
-      <HintPath>$(SolutionDir)libs\Revit\2026\RevitAPIUI.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-  </ItemGroup>
 
 </Project>

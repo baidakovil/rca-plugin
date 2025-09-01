@@ -24,9 +24,14 @@ namespace Rca.Loader
         /// Loads the initial runtime if available.
         /// </summary>
         /// <param name="application">The Revit UI controlled application</param>
-        public void LoadInitialRuntime(UIControlledApplication application)
+        public void LoadInitialRuntime(object application)
         {
-            revitApplication = application;
+            if (!(application is UIControlledApplication uiApp))
+            {
+                throw new ArgumentException("Application must be a UIControlledApplication", nameof(application));
+            }
+
+            revitApplication = uiApp;
             var manifestPath = GetCurrentManifestPath();
             
             if (File.Exists(manifestPath))
