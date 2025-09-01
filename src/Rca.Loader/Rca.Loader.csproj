@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>disable</Nullable>
+    <NoWarn>CS0649;CS0169;MSB3277</NoWarn>
+    <AssemblyName>Rca.Loader</AssemblyName>
+    <RootNamespace>Rca.Loader</RootNamespace>
+    <PlatformTarget>x64</PlatformTarget>
+    <RevitVersion>2026</RevitVersion>
+    <BaseOutputPath>$(SolutionDir)bin\</BaseOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(SolutionDir)src\Rca.Loader.Contracts\Rca.Loader.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="RevitAPI">
+      <HintPath>$(SolutionDir)libs\Revit\2026\RevitAPI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>$(SolutionDir)libs\Revit\2026\RevitAPIUI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <!-- Deploy Loader to Revit after build -->
+  <Target Name="DeployLoaderToRevit" AfterTargets="Build">
+    <PropertyGroup>
+      <RevitAddinsDir>$(APPDATA)\Autodesk\Revit\Addins\$(RevitVersion)</RevitAddinsDir>
+      <AddinPluginDir>$(RevitAddinsDir)\Rca.Loader</AddinPluginDir>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(AddinPluginDir)" />
+
+    <!-- Copy Loader assemblies -->
+    <ItemGroup>
+      <LoaderDeployFiles Include="$(TargetDir)*.dll" />
+    </ItemGroup>
+	  
+    <!-- Copy files -->
+    <Copy SourceFiles="$(SolutionDir)src\RcaPlugin\Rca.Loader.addin" DestinationFiles="$(RevitAddinsDir)\Rca.Loader.addin" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
+    <Copy SourceFiles="@(LoaderDeployFiles)" DestinationFolder="$(AddinPluginDir)" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
+    
+    <Message Text="Deployed Rca.Loader to $(RevitAddinsDir)" Importance="high" />
+  </Target>
+
+</Project>

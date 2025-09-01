@@ -56,23 +56,24 @@
     </Content>
   </ItemGroup>
 
-  <!-- Deploy .addin file and built DLL after build -->
+  <!-- Deploy Loader as main addin after build -->
   <Target Name="DeployRevitAddin" AfterTargets="Build">
     <PropertyGroup>
       <RevitAddinsDir>$(APPDATA)\Autodesk\Revit\Addins\$(RevitVersion)</RevitAddinsDir>
-      <AddinPluginDir>$(RevitAddinsDir)\RcaPlugin</AddinPluginDir>
+      <AddinPluginDir>$(RevitAddinsDir)\Rca.Loader</AddinPluginDir>
+      <LoaderBinDir>$(SolutionDir)bin\Debug\net8.0-windows\Rca.Loader</LoaderBinDir>
     </PropertyGroup>
 
     <MakeDir Directories="$(AddinPluginDir)" />
 
-    <!-- Copy only necessary files for Revit plugin -->
+    <!-- Copy Loader assemblies -->
     <ItemGroup>
-      <DeployFiles Include="$(TargetDir)**\*.dll" />
+      <LoaderFiles Include="$(LoaderBinDir)\**\*.dll" />
     </ItemGroup>
 	  
-	<!-- Copy files -->
-	  <Copy SourceFiles="$(SolutionDir)src\RcaPlugin\RcaPlugin.addin" DestinationFiles="$(RevitAddinsDir)\RcaPlugin.addin" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
-	<Copy SourceFiles="@(DeployFiles)" DestinationFolder="$(AddinPluginDir)" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
+    <!-- Copy .addin file and Loader assemblies -->
+    <Copy SourceFiles="$(SolutionDir)src\RcaPlugin\Rca.Loader.addin" DestinationFiles="$(RevitAddinsDir)\Rca.Loader.addin" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
+    <Copy SourceFiles="@(LoaderFiles)" DestinationFolder="$(AddinPluginDir)" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
   </Target>
 
   <Target Name="CopyRevitApiDlls" AfterTargets="Build" Condition="Exists('$(ProgramFiles)\Autodesk\Revit $(RevitVersion)\RevitAPI.dll')">
