@@ -17,6 +17,7 @@ dotnet build
 - ✅ **SOLID Architecture**: Clean dependency injection with interface segregation
 - ✅ **Python Engine**: IronPython 3.4.2 integration for dynamic scripting
 - ✅ **Windows Desktop**: Native WPF dockable panel with MVVM pattern
+- ✅ **Hot Reload**: Zero-restart development with collectible AssemblyLoadContext
 - ✅ **Testable Design**: All services injectable and mockable
 - ✅ **GitHub Copilot Ready**: Consistent conventions and documentation
 
@@ -27,34 +28,70 @@ dotnet build
 - **Python**: `IronPython 3.4.2`, `DynamicLanguageRuntime 1.3.5` (NuGet)
 - **UI**: WPF (.NET 8 Windows Desktop)
 
+## Hot Reload Development
+
+⚡ **Zero-restart iterative development in Revit 2026**
+
+```powershell
+# Single command triggers hot reload
+dotnet build src/Rca.Runtime -c Debug
+```
+
+**What happens automatically:**
+1. Code compiles with ILRepack into single dynamic assembly  
+2. Named pipe notifies running Revit loader
+3. AssemblyLoadContext unloads old code and loads new
+4. Changes appear in panel **instantly without restarting Revit**
+
+📖 **[Complete Hot Reload Guide](DEV_HOT_RELOAD.md)**
+
 ## Architecture
 
 ```
-RcaPlugin (composition root)
+Hot Reload Architecture:
+┌─────────────────────────────────────────────────────┐
+│                    Revit 2026                       │
+│  ┌─────────────────────────────────────────────────┐ │
+│  │ Stable Loader (Never Reloaded)                 │ │
+│  │ ├── Rca.Loader (LoaderApp)                     │ │  
+│  │ └── Rca.Loader.Contracts                       │ │
+│  │           │                                     │ │
+│  │           ▼                                     │ │
+│  │ ┌─────────────────────────────────────────────┐ │ │
+│  │ │ Dynamic Runtime (Hot Reloaded)              │ │ │
+│  │ │ └── Rca.Runtime (ILRepacked)                │ │ │
+│  │ │     ├── Rca.Core                            │ │ │
+│  │ │     ├── Rca.UI                              │ │ │
+│  │ │     ├── Rca.Network                         │ │ │
+│  │ │     └── Rca.Contracts                       │ │ │
+│  │ └─────────────────────────────────────────────┘ │ │
+│  └─────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────┘
+```
+
+**Traditional Architecture (Legacy)**:
+```
+RcaPlugin (composition root) [DEPRECATED]
 ├── Rca.UI ──────────┐
 ├── Rca.Core ────────┼──► Rca.Contracts (interfaces only)
 └── Rca.Network ─────┘
-```
-
-**Before** (❌ Violated DIP):
-```
-Rca.UI ──► Rca.Core (direct dependency - tight coupling)
-```
-
-**After** (✅ Follows DIP):
-```
-Rca.UI ──► Rca.Contracts ◄── Rca.Core (loose coupling via interfaces)
 ```
 
 ## Project Structure
 
 ```
 src/
-├── Rca.Contracts/      # 🔗 Interfaces and contracts
-├── Rca.Core/           # 🧠 Business logic and Python engine  
-├── Rca.UI/             # 🎨 WPF dockable panel and views
-├── Rca.Network/        # 🌐 Network services
-└── RcaPlugin/          # 🚀 Main plugin entry point
+├── Rca.Loader.Contracts/   # 🔗 Hot reload interfaces and DTOs
+├── Rca.Loader/             # 🔄 Stable loader with pipe server  
+├── Rca.Runtime/            # 🚀 Hot-reloadable business logic
+├── Rca.Contracts/          # 📋 Domain interfaces and contracts
+├── Rca.Core/               # 🧠 Business logic and Python engine  
+├── Rca.UI/                 # 🎨 WPF dockable panel and views
+├── Rca.Network/            # 🌐 Network services
+└── RcaPlugin/              # ⚠️ Legacy entry point (deprecated)
+
+tools/
+└── SendReload.ps1          # 🔧 Manual hot reload trigger
 ```
 
 ## Development Setup
