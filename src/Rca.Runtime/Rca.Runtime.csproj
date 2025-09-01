@@ -1,0 +1,116 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>disable</Nullable>
+    <AssemblyName>Rca.Runtime</AssemblyName>
+    <RootNamespace>Rca.Runtime</RootNamespace>
+    <BaseOutputPath>$(SolutionDir)bin\</BaseOutputPath>
+    <PlatformTarget>x64</PlatformTarget>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <!-- Project references to aggregate -->
+  <ItemGroup>
+    <ProjectReference Include="..\Rca.Loader.Contracts\Rca.Loader.Contracts.csproj" />
+    <ProjectReference Include="..\Rca.Contracts\Rca.Contracts.csproj" />
+    <ProjectReference Include="..\Rca.Core\Rca.Core.csproj" />
+    <ProjectReference Include="..\Rca.UI\Rca.UI.csproj" />
+    <ProjectReference Include="..\Rca.Network\Rca.Network.csproj" />
+  </ItemGroup>
+
+  <!-- Revit API references (excluded from merge) -->
+  <ItemGroup>
+    <Reference Include="RevitAPI">
+      <HintPath>..\..\libs\Revit\2026\RevitAPI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>..\..\libs\Revit\2026\RevitAPIUI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
+  </ItemGroup>
+
+  <!-- ILRepack package for assembly merging -->
+  <ItemGroup>
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.18.1" />
+  </ItemGroup>
+
+  <!-- Generate timestamped version -->
+  <Target Name="SetVersionInfo" BeforeTargets="GetAssemblyVersion">
+    <PropertyGroup>
+      <BuildTimestamp>$([System.DateTime]::Now.ToString("yyyyMMdd.HHmmss"))</BuildTimestamp>
+      <InformationalVersion>1.0.0+$(BuildTimestamp)</InformationalVersion>
+    </PropertyGroup>
+    <ItemGroup>
+      <AssemblyAttribute Include="System.Reflection.AssemblyVersion">
+        <_Parameter1>1.0.0.0</_Parameter1>
+      </AssemblyAttribute>
+      <AssemblyAttribute Include="System.Reflection.AssemblyFileVersion">
+        <_Parameter1>1.0.0.0</_Parameter1>
+      </AssemblyAttribute>
+      <AssemblyAttribute Include="System.Reflection.AssemblyInformationalVersion">
+        <_Parameter1>$(InformationalVersion)</_Parameter1>
+      </AssemblyAttribute>
+    </ItemGroup>
+  </Target>
+
+  <!-- ILRepack merge target -->
+  <Target Name="MergeAssemblies" AfterTargets="Build">
+    <PropertyGroup>
+      <OutputDir>$(OutputPath)</OutputDir>
+      <MergedAssembly>$(OutputDir)Rca.Runtime.dll</MergedAssembly>
+    </PropertyGroup>
+
+    <!-- Collect assemblies to merge (exclude RevitAPI and system assemblies) -->
+    <ItemGroup>
+      <InputAssemblies Include="$(OutputDir)Rca.Loader.Contracts.dll" />
+      <InputAssemblies Include="$(OutputDir)Rca.Contracts.dll" />
+      <InputAssemblies Include="$(OutputDir)Rca.Core.dll" />
+      <InputAssemblies Include="$(OutputDir)Rca.UI.dll" />
+      <InputAssemblies Include="$(OutputDir)Rca.Network.dll" />
+      <InputAssemblies Include="$(OutputDir)Rca.Runtime.dll" />
+    </ItemGroup>
+
+    <!-- Backup original runtime assembly -->
+    <Move SourceFiles="$(OutputDir)Rca.Runtime.dll" DestinationFiles="$(OutputDir)Rca.Runtime.original.dll" />
+
+    <!-- Run ILRepack to merge assemblies -->
+    <ILRepack 
+      OutputFile="$(MergedAssembly)"
+      InputAssemblies="@(InputAssemblies)"
+      InternalizeExcludeAssemblies="RevitAPI;RevitAPIUI"
+      Internalize="true"
+      XmlDocumentation="false"
+      DebugInfo="true" />
+
+    <!-- Clean up intermediate assemblies (keep originals in obj for incremental builds) -->
+    <ItemGroup>
+      <IntermediateFiles Include="$(OutputDir)Rca.Loader.Contracts.dll" />
+      <IntermediateFiles Include="$(OutputDir)Rca.Contracts.dll" />
+      <IntermediateFiles Include="$(OutputDir)Rca.Core.dll" />
+      <IntermediateFiles Include="$(OutputDir)Rca.UI.dll" />
+      <IntermediateFiles Include="$(OutputDir)Rca.Network.dll" />
+      <IntermediateFiles Include="$(OutputDir)Rca.Runtime.original.dll" />
+    </ItemGroup>
+    <Delete Files="@(IntermediateFiles)" />
+
+    <Message Text="[HotReload] Runtime assembly merged successfully: $(MergedAssembly)" Importance="high" />
+  </Target>
+
+  <!-- Post-build trigger for hot reload -->
+  <Target Name="TriggerHotReload" AfterTargets="MergeAssemblies">
+    <Message Text="[HotReload] Triggering hot reload..." Importance="high" />
+    
+    <!-- Try to send reload command via PowerShell -->
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;try { $pipe = New-Object System.IO.Pipes.NamedPipeClientStream('.', 'rca.hotreload', 'InOut'); $pipe.Connect(1000); $writer = New-Object System.IO.StreamWriter($pipe); $writer.WriteLine('{&quot;Command&quot;:&quot;RELOAD&quot;}'); $writer.Flush(); $reader = New-Object System.IO.StreamReader($pipe); $response = $reader.ReadLine(); Write-Host '[HotReload] Response:' $response; $pipe.Close(); } catch { Write-Host '[HotReload] Could not connect to reload server (server may not be running)' }&quot;" 
+          ContinueOnError="true" 
+          IgnoreExitCode="true" />
+  </Target>
+
+</Project>

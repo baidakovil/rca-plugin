@@ -12,8 +12,11 @@ using System.Reflection;
 namespace RcaPlugin
 {
     /// <summary>
-    /// The main external application class for the RCA Plugin.
+    /// [OBSOLETE] The main external application class for the RCA Plugin.
+    /// This class is now replaced by the hot-reload architecture (Rca.Loader + Rca.Runtime).
+    /// It's kept temporarily for reference and backward compatibility during migration.
     /// </summary>
+    [Obsolete("This class is replaced by the hot-reload architecture. Use Rca.Loader.LoaderApp as entry point instead.")]
     public class RcaPluginApp : IExternalApplication
     {
         private const string DockablePaneGuid = "A1B2C3D4-E5F6-47A8-9B0C-1234567890AB";
