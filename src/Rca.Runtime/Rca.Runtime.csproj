@@ -1,0 +1,85 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF Condition="'$(OS)' == 'Windows_NT'">true</UseWPF>
+    <Nullable>disable</Nullable>
+    <AssemblyName>Rca.Runtime</AssemblyName>
+    <RootNamespace>Rca.Runtime</RootNamespace>
+    <BaseOutputPath>$(SolutionDir)bin\</BaseOutputPath>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Rca.Contracts\Rca.Contracts.csproj" />
+    <ProjectReference Include="..\Rca.Core\Rca.Core.csproj" />
+    <ProjectReference Include="..\Rca.UI\Rca.UI.csproj" />
+    <ProjectReference Include="..\Rca.Network\Rca.Network.csproj" />
+    <ProjectReference Include="..\Rca.Loader.Contracts\Rca.Loader.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="RevitAPI">
+      <HintPath>..\..\libs\Revit\2026\RevitAPI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>..\..\libs\Revit\2026\RevitAPIUI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.34.2" />
+  </ItemGroup>
+
+  <!-- Hot Reload MSBuild Target -->
+  <Target Name="HotReloadPack" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug'">
+    <PropertyGroup>
+      <StagingRoot>$(LocalAppData)\RCA\LiveCore</StagingRoot>
+      <TimestampFolder>build_$([System.DateTime]::Now.ToString("yyyyMMdd_HHmmss"))</TimestampFolder>
+      <StagingFolder>$(StagingRoot)\$(TimestampFolder)</StagingFolder>
+      <DynamicAssembly>Rca.Dynamic.dll</DynamicAssembly>
+    </PropertyGroup>
+
+    <!-- Create staging folder -->
+    <MakeDir Directories="$(StagingFolder)" />
+
+    <!-- Gather assemblies for ILRepack -->
+    <ItemGroup>
+      <ILRepackInput Include="$(TargetPath)" />
+      <ILRepackInput Include="$(OutDir)Rca.Core.dll" />
+      <ILRepackInput Include="$(OutDir)Rca.UI.dll" />
+      <ILRepackInput Include="$(OutDir)Rca.Network.dll" />
+      <ILRepackInput Include="$(OutDir)Rca.Contracts.dll" />
+    </ItemGroup>
+
+    <!-- Run ILRepack -->
+    <ILRepack 
+      OutputFile="$(StagingFolder)\$(DynamicAssembly)"
+      InputAssemblies="@(ILRepackInput)"
+      InternalizeExcludeAssemblies=""
+      Parallel="true"
+      DebugInfo="false"
+      CopyAttributes="true" />
+
+    <!-- Update manifest -->
+    <WriteLinesToFile
+      File="$(StagingRoot)\current.json"
+      Lines='{ "folder": "$(StagingFolder)", "assembly": "$(DynamicAssembly)" }'
+      Overwrite="true" />
+
+    <!-- Send reload command via pipe -->
+    <Exec 
+      Command="powershell.exe -Command &quot;try { $pipe = new-object System.IO.Pipes.NamedPipeClientStream('.', 'rca.hotreload', 'Out'); $pipe.Connect(1000); $msg = [System.Text.Encoding]::UTF8.GetBytes('{&quot;command&quot;:&quot;RELOAD&quot;,&quot;payload&quot;:{&quot;folder&quot;:&quot;$(StagingFolder)&quot;}}'); $pipe.Write($msg, 0, $msg.Length); $pipe.Close(); Write-Host 'Hot reload triggered' } catch { Write-Host 'No reload pipe available' }&quot;"
+      ContinueOnError="true"
+      Condition="'$(OS)' == 'Windows_NT'" />
+
+    <Message Text="Hot reload package created: $(StagingFolder)\$(DynamicAssembly)" Importance="high" />
+  </Target>
+
+</Project>

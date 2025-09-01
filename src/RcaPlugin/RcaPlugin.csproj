@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
-    <UseWPF>true</UseWPF>
+    <UseWPF Condition="'$(OS)' == 'Windows_NT'">true</UseWPF>
     <Nullable>disable</Nullable>
     <NoWarn>CS0649;CS0169;MSB3277</NoWarn>
     <AssemblyName>RcaPlugin</AssemblyName>
@@ -32,7 +32,7 @@
 		</Reference>
 	</ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
   </ItemGroup>
 

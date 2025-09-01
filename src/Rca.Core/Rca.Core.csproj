@@ -13,7 +13,7 @@
     <ProjectReference Include="..\Rca.Contracts\Rca.Contracts.csproj" />
   </ItemGroup>
 
-	<ItemGroup>
+	<ItemGroup Condition="'$(OS)' == 'Windows_NT'">
 		<FrameworkReference Include="Microsoft.WindowsDesktop.App" />
 	</ItemGroup>
 

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
-    <UseWPF>true</UseWPF>
+    <UseWPF Condition="'$(OS)' == 'Windows_NT'">true</UseWPF>
     <Nullable>disable</Nullable>
     <AssemblyName>Rca.UI</AssemblyName>
     <RootNamespace>Rca.UI</RootNamespace>
@@ -14,7 +14,7 @@
     <ProjectReference Include="..\Rca.Contracts\Rca.Contracts.csproj" />
   </ItemGroup>
 
-	<ItemGroup>
+	<ItemGroup Condition="'$(OS)' == 'Windows_NT'">
 		<FrameworkReference Include="Microsoft.WindowsDesktop.App" />
 	</ItemGroup>
 
