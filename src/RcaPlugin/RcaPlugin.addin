@@ -6,7 +6,7 @@
     <AddInId>8B2A1C3D-4E5F-47A8-9B0C-1234567890AB</AddInId>
     <FullClassName>RcaPlugin.RcaPluginApp</FullClassName>
     <VendorId>RCA</VendorId>
-    <VendorDescription>RCA Chat Assistant Plugin</VendorDescription>
+    <VendorDescription>RCA Chat Assistant Plugin (DEPRECATED - Use Rca.Loader instead)</VendorDescription>
     <RevitVersion>2026</RevitVersion>
   </AddIn>
 </RevitAddIns>

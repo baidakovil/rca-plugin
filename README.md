@@ -10,7 +10,13 @@ A modern Revit plugin scaffold implementing SOLID principles with dependency inj
 git clone https://github.com/baidakovil/rca-plugin.git
 cd rca-plugin
 dotnet build
+
+# For hot reload development:
+dotnet build src/Rca.Loader      # Deploy stable loader
+dotnet build src/Rca.Runtime     # Hot reload package
 ```
+
+🔥 **NEW: Hot Reload Development** - See [DEV_HOT_RELOAD.md](DEV_HOT_RELOAD.md) for zero-restart development workflow!
 
 ## Features
 

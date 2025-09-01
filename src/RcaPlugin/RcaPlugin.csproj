@@ -70,8 +70,8 @@
       <DeployFiles Include="$(TargetDir)**\*.dll" />
     </ItemGroup>
 	  
-	<!-- Copy files -->
-	  <Copy SourceFiles="$(SolutionDir)src\RcaPlugin\RcaPlugin.addin" DestinationFiles="$(RevitAddinsDir)\RcaPlugin.addin" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
+	<!-- Copy files with .disabled extension to prevent loading -->
+	  <Copy SourceFiles="$(SolutionDir)src\RcaPlugin\RcaPlugin.addin" DestinationFiles="$(RevitAddinsDir)\RcaPlugin.addin.disabled" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
 	<Copy SourceFiles="@(DeployFiles)" DestinationFolder="$(AddinPluginDir)" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
   </Target>
 

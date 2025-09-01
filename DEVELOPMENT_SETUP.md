@@ -120,6 +120,20 @@ RcaPlugin (composition root)
 └── Rca.Contracts (no dependencies) ✅
 ```
 
+### 🔥 Hot Reload Architecture (NEW)
+
+For faster development without Revit restarts:
+
+```
+Rca.Loader (stable)     Rca.Runtime (hot-reloadable)
+├── LoaderApp           ├── RcaRuntime 
+├── RuntimeManager      ├── Business Logic
+├── PipeServer          └── UI Components
+└── AssemblyLoadContext
+```
+
+**📖 See [DEV_HOT_RELOAD.md](DEV_HOT_RELOAD.md) for complete hot reload development guide**
+
 ### Windows-Only Design
 
 | Component | Windows |

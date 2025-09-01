@@ -13,7 +13,9 @@ namespace RcaPlugin
 {
     /// <summary>
     /// The main external application class for the RCA Plugin.
+    /// THIS CLASS IS OBSOLETE - USE RCA LOADER INSTEAD FOR HOT RELOAD FUNCTIONALITY
     /// </summary>
+    [Obsolete("This class is deprecated. Use Rca.Loader.LoaderApp for hot reload functionality.")]
     public class RcaPluginApp : IExternalApplication
     {
         private const string DockablePaneGuid = "A1B2C3D4-E5F6-47A8-9B0C-1234567890AB";
