@@ -60,6 +60,7 @@ namespace Rca.Loader
 
                 // Unload current runtime
                 runtimeManager?.UnloadCurrentRuntime();
+                runtimeManager?.Dispose();
 
                 return Result.Succeeded;
             }

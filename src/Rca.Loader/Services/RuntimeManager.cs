@@ -21,6 +21,29 @@ namespace Rca.Loader.Services
         private UIControlledApplication uiApplication;
 
         /// <summary>
+        /// Gets the current RuntimeManager instance for manual reload commands.
+        /// </summary>
+        public static RuntimeManager Current { get; private set; }
+
+        /// <summary>
+        /// Initializes a new instance of RuntimeManager.
+        /// </summary>
+        public RuntimeManager()
+        {
+            Current = this; // Set static reference for manual commands
+        }
+
+        /// <summary>
+        /// Gets whether a runtime is currently loaded.
+        /// </summary>
+        public bool IsRuntimeLoaded => currentRuntime != null;
+
+        /// <summary>
+        /// Gets the version of the currently loaded runtime, if any.
+        /// </summary>
+        public string CurrentRuntimeVersion => currentRuntime?.Version ?? "None";
+
+        /// <summary>
         /// Gets the path to the staging directory for runtime assemblies.
         /// </summary>
         public string StagingPath => Path.Combine(
@@ -175,6 +198,18 @@ namespace Rca.Loader.Services
             catch (Exception ex)
             {
                 LogError($"Error during runtime unload: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Disposes of this RuntimeManager and cleans up static references.
+        /// </summary>
+        public void Dispose()
+        {
+            UnloadCurrentRuntime();
+            if (Current == this)
+            {
+                Current = null;
             }
         }
 

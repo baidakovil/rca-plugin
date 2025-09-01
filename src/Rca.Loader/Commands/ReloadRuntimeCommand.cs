@@ -1,6 +1,7 @@
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using Rca.Loader.Services;
 
 namespace Rca.Loader.Commands
 {
@@ -18,17 +19,26 @@ namespace Rca.Loader.Commands
         {
             try
             {
-                // Find the current RuntimeManager instance
-                // Note: In a real implementation, you might want to store a static reference
-                // or use a service locator pattern to access the RuntimeManager
-                TaskDialog.Show("Manual Reload", 
-                    "Manual reload triggered. This is a placeholder implementation.\n\n" +
-                    "In the full implementation, this would:\n" +
-                    "1. Access the current RuntimeManager instance\n" +
-                    "2. Call Reload() method\n" +
-                    "3. Show success/failure status");
+                var runtimeManager = RuntimeManager.Current;
+                if (runtimeManager == null)
+                {
+                    message = "Runtime manager not found. Loader may not be properly initialized.";
+                    return Result.Failed;
+                }
 
-                return Result.Succeeded;
+                // Show current status and reload
+                var currentVersion = runtimeManager.CurrentRuntimeVersion;
+                var isLoaded = runtimeManager.IsRuntimeLoaded;
+                
+                var success = runtimeManager.Reload(force: true);
+                
+                var statusMessage = success 
+                    ? $"Runtime reloaded successfully!\n\nPrevious: {(isLoaded ? currentVersion : "None")}\nCurrent: {runtimeManager.CurrentRuntimeVersion}"
+                    : "Runtime reload failed. Check console for details.";
+                
+                TaskDialog.Show("Manual Reload", statusMessage);
+                
+                return success ? Result.Succeeded : Result.Failed;
             }
             catch (System.Exception ex)
             {
