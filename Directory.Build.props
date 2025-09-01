@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Enable building Windows-targeted projects on Linux CI -->
+    <EnableWindowsTargeting Condition="'$(OS)' != 'Windows_NT'">true</EnableWindowsTargeting>
+  </PropertyGroup>
+</Project>
