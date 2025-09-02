@@ -2,11 +2,11 @@
 <RevitAddIns>
   <AddIn Type="Application">
     <Name>RcaPlugin</Name>
-    <Assembly>RcaPlugin\RcaPlugin.dll</Assembly>
+    <Assembly>Rca.Loader\Rca.Loader.dll</Assembly>
     <AddInId>8B2A1C3D-4E5F-47A8-9B0C-1234567890AB</AddInId>
-    <FullClassName>RcaPlugin.RcaPluginApp</FullClassName>
+    <FullClassName>Rca.Loader.LoaderApp</FullClassName>
     <VendorId>RCA</VendorId>
-    <VendorDescription>RCA Chat Assistant Plugin</VendorDescription>
+    <VendorDescription>RCA Chat Assistant Loader</VendorDescription>
     <RevitVersion>2026</RevitVersion>
   </AddIn>
 </RevitAddIns>

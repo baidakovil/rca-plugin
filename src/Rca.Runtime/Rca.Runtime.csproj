@@ -1,0 +1,97 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Rca.Runtime</AssemblyName>
+    <RootNamespace>Rca.Runtime</RootNamespace>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeDeployRoot>$(LocalAppData)\RCA\Runtime</RuntimeDeployRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Rca.Core\Rca.Core.csproj" />
+    <ProjectReference Include="..\Rca.UI\Rca.UI.csproj" />
+    <ProjectReference Include="..\Rca.Network\Rca.Network.csproj" />
+    <ProjectReference Include="..\Rca.Contracts\Rca.Contracts.csproj" />
+    <!-- Reference shared loader contracts so RuntimeEntry implements the shared IRuntime -->
+    <ProjectReference Include="..\Rca.Loader.Contracts\Rca.Loader.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="RevitAPI">
+      <HintPath>$(SolutionDir)libs\Revit\2026\RevitAPI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>$(SolutionDir)libs\Revit\2026\RevitAPIUI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ilrepack" Version="2.0.34" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="$(UserProfile)\.nuget\packages\ironpython\3.4.2\lib\net8.0\*.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(UserProfile)\.nuget\packages\ironpython.stdlib\3.4.2\contentFiles\any\any\Lib\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(UserProfile)\.nuget\packages\dynamiclanguageruntime\1.3.5\lib\net8.0\Microsoft.Scripting.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(UserProfile)\.nuget\packages\dynamiclanguageruntime\1.3.5\lib\net8.0\Microsoft.Dynamic.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <Target Name="RepackRuntime" AfterTargets="Build">
+    <PropertyGroup>
+      <IlRepackExe>$(UserProfile)\.nuget\packages\ilrepack\2.0.34\tools\ilrepack.exe</IlRepackExe>
+    </PropertyGroup>
+    <ItemGroup>
+      <InputAssemblies Include="$(TargetDir)Rca.Core.dll" />
+      <InputAssemblies Include="$(TargetDir)Rca.UI.dll" />
+      <InputAssemblies Include="$(TargetDir)Rca.Network.dll" />
+      <InputAssemblies Include="$(TargetDir)Rca.Contracts.dll" />
+      <InputAssemblies Include="$(TargetPath)" />
+      <!-- Intentionally NOT adding Rca.Loader.Contracts.dll so it remains shared in default context -->
+    </ItemGroup>
+    <Message Text="ILRepack runtime assemblies -> Rca.Runtime.dll" Importance="High" />
+    <Exec Condition="Exists('$(IlRepackExe)')"
+          Command="&quot;$(IlRepackExe)&quot; /lib:$(TargetDir) /out:$(TargetDir)Rca.Runtime.dll @(InputAssemblies-&gt;'&quot;%(Identity)&quot;',' ')" 
+          ContinueOnError="true" />
+    <Warning Condition="!Exists('$(IlRepackExe)')" Text="ilrepack.exe not found, skipping merge." />
+  </Target>
+
+  <Target Name="DeployRuntime" AfterTargets="RepackRuntime">
+    <PropertyGroup>
+      <RuntimeStamp>$([System.DateTime]::UtcNow.ToString("yyyyMMdd_HHmmss"))</RuntimeStamp>
+      <RuntimeDeployDir>$(RuntimeDeployRoot)\$(RuntimeStamp)</RuntimeDeployDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(RuntimeDeployDir)" />
+    <ItemGroup>
+      <RuntimeDeployFiles Include="$(TargetDir)Rca.Runtime.dll" />
+      <RuntimeDeployFiles Include="$(TargetDir)IronPython*.dll" />
+      <RuntimeDeployFiles Include="$(TargetDir)Microsoft.Scripting.dll" />
+      <RuntimeDeployFiles Include="$(TargetDir)Microsoft.Dynamic.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(RuntimeDeployFiles)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" />
+    <ItemGroup>
+      <LibFiles Include="$(TargetDir)Lib\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(LibFiles)" DestinationFiles="@(LibFiles->'$(RuntimeDeployDir)\Lib\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="@(LibFiles)!=''" />
+  </Target>
+
+  <Target Name="ReloadRuntime" AfterTargets="DeployRuntime">
+    <PropertyGroup>
+      <RuntimeDeployDirEscaped>$([System.String]::Copy('$(RuntimeDeployDir)').Replace('\\','\\\\'))</RuntimeDeployDirEscaped>
+      <PsHotReloadCmd>powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command &quot;try { $p = New-Object System.IO.Pipes.NamedPipeClientStream('.', 'RCA_PIPE',[System.IO.Pipes.PipeDirection]::InOut); $p.Connect(200); $sw = New-Object System.IO.StreamWriter($p); $sw.AutoFlush = $true; $sr = New-Object System.IO.StreamReader($p); $msg = '{\&quot;Command\&quot;:\&quot;RELOAD\&quot;,\&quot;Payload\&quot;:\&quot;$(RuntimeDeployDirEscaped)\&quot;}'; $sw.WriteLine($msg); $resp = $sr.ReadLine(); Write-Host 'HotReload response:' $resp } catch { Write-Warning ('HotReload failed: ' + $_.Exception.Message) }"</PsHotReloadCmd>
+    </PropertyGroup>
+    <Message Text="Send RELOAD to loader (dir=$(RuntimeDeployDir))" Importance="High" />
+    <Exec Command="$(PsHotReloadCmd)" IgnoreExitCode="true" />
+  </Target>
+</Project>
