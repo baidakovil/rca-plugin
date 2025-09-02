@@ -6,7 +6,8 @@
     <AssemblyName>Rca.Network</AssemblyName>
     <RootNamespace>Rca.Network</RootNamespace>
     <BaseOutputPath>$(SolutionDir)bin\</BaseOutputPath>
-	<PlatformTarget>x64</PlatformTarget>
+    <PlatformTarget>x64</PlatformTarget>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 
   <ItemGroup>
