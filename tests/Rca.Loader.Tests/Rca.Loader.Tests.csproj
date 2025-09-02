@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Rca.Loader.Tests</AssemblyName>
+    <RootNamespace>Rca.Loader.Tests</RootNamespace>
+    <Nullable>disable</Nullable>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Rca.Loader\Rca.Loader.csproj" />
+    <ProjectReference Include="..\..\src\Rca.Contracts\Rca.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

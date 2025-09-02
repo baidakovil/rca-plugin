@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>disable</Nullable>
+    <AssemblyName>Rca.Loader</AssemblyName>
+    <RootNamespace>Rca.Loader</RootNamespace>
+    <BaseOutputPath>$(SolutionDir)bin\</BaseOutputPath>
+    <PlatformTarget>x64</PlatformTarget>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RevitVersion>2026</RevitVersion>
+    <NoWarn>MSB3277</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Rca.Contracts\Rca.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="RevitAPI">
+      <HintPath>..\..\libs\Revit\2026\RevitAPI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>..\..\libs\Revit\2026\RevitAPIUI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Deploy .addin file and built DLL after build (Windows only) -->
+  <Target Name="DeployRevitAddin" AfterTargets="Build" Condition="'$(OS)' == 'Windows_NT'">
+    <PropertyGroup>
+      <RevitAddinsDir>$(APPDATA)\Autodesk\Revit\Addins\$(RevitVersion)</RevitAddinsDir>
+      <AddinPluginDir>$(RevitAddinsDir)\RcaLoader</AddinPluginDir>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(AddinPluginDir)" />
+
+    <!-- Copy only necessary files for Revit plugin -->
+    <ItemGroup>
+      <DeployFiles Include="$(TargetDir)**\*.dll" />
+    </ItemGroup>
+
+    <!-- Copy files -->
+    <Copy SourceFiles="$(SolutionDir)src\Rca.Loader\RcaLoader.addin" DestinationFiles="$(RevitAddinsDir)\RcaLoader.addin" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
+    <Copy SourceFiles="@(DeployFiles)" DestinationFolder="$(AddinPluginDir)" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
+  </Target>
+
+</Project>
