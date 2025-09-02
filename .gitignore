@@ -1,7 +1,11 @@
 ﻿#IDE folders
 *.idea/
 *.vs/
-*.vscode/
+.vscode/
+
+# Exception: Include useful VS Code configurations for development
+!.vscode/tasks.json
+!.vscode/launch.json
 
 #Project-specific folders
 *obj/
