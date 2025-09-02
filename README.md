@@ -19,6 +19,8 @@ dotnet build
 - ✅ **Windows Desktop**: Native WPF dockable panel with MVVM pattern
 - ✅ **Testable Design**: All services injectable and mockable
 - ✅ **GitHub Copilot Ready**: Consistent conventions and documentation
+- ✅ **Hot-Reload**: AssemblyLoadContext-based plugin reloading without restarting Revit
+- ✅ **Development Tools**: PowerShell scripts and VS Code integration for rapid iteration
 
 ## Dependencies Handled Automatically
 
@@ -30,18 +32,25 @@ dotnet build
 ## Architecture
 
 ```
-RcaPlugin (composition root)
+RcaLoader (hot-reload loader)
+├── Rca.Loader ──────────┐
+│   ├── PluginLoader     │
+│   └── NamedPipeService │
+└──► Plugin Loading ─────┘
+     │
+     ▼
+RcaPlugin (main plugin - dynamically loaded)
 ├── Rca.UI ──────────┐
 ├── Rca.Core ────────┼──► Rca.Contracts (interfaces only)
 └── Rca.Network ─────┘
 ```
 
-**Before** (❌ Violated DIP):
+**Hot-Reload Flow**:
 ```
-Rca.UI ──► Rca.Core (direct dependency - tight coupling)
+Developer → hot-reload.ps1 → RcaReloadTrigger → Named Pipe → RcaLoader → Unload/Load Plugin
 ```
 
-**After** (✅ Follows DIP):
+**Dependencies** (✅ Follows DIP):
 ```
 Rca.UI ──► Rca.Contracts ◄── Rca.Core (loose coupling via interfaces)
 ```
@@ -50,11 +59,13 @@ Rca.UI ──► Rca.Contracts ◄── Rca.Core (loose coupling via interfaces
 
 ```
 src/
-├── Rca.Contracts/      # 🔗 Interfaces and contracts
-├── Rca.Core/           # 🧠 Business logic and Python engine  
-├── Rca.UI/             # 🎨 WPF dockable panel and views
-├── Rca.Network/        # 🌐 Network services
-└── RcaPlugin/          # 🚀 Main plugin entry point
+├── Rca.Contracts/       # 🔗 Interfaces and contracts
+├── Rca.Core/            # 🧠 Business logic and Python engine  
+├── Rca.UI/              # 🎨 WPF dockable panel and views
+├── Rca.Network/         # 🌐 Network services
+├── Rca.Loader/          # 🔄 Hot-reload loader with AssemblyLoadContext
+├── RcaReloadTrigger/    # ⚡ Command-line reload trigger utility
+└── RcaPlugin/           # 🚀 Main plugin (dynamically loaded)
 ```
 
 ## Development Setup
@@ -73,6 +84,28 @@ Test-Path "C:\Program Files\Autodesk\Revit 2026\"  # Should return True
 # Build the project
 dotnet build  # Should succeed on Windows with Revit installed
 ```
+
+## Hot-Reload Development Workflow
+
+### Quick Start
+```powershell
+# Build and reload in one command
+.\scripts\hot-reload.ps1
+
+# Or use VS Code: Ctrl+Shift+P → "Tasks: Run Task" → "Hot Reload RCA Plugin"
+```
+
+### Manual Steps
+```powershell
+# 1. Start Revit 2026 (loads RcaLoader automatically)
+# 2. Build and reload
+dotnet build
+.\bin\Debug\net8.0-windows\RcaReloadTrigger.exe reload
+
+# 3. Test changes instantly without restarting Revit!
+```
+
+📖 **[Detailed Hot-Reload Documentation](docs/HOT_RELOAD.md)**
 
 ## Building and Testing
 
