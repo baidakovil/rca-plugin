@@ -61,7 +61,7 @@
     </ItemGroup>
     <Message Text="ILRepack runtime assemblies -> Rca.Runtime.dll" Importance="High" />
     <Exec Condition="Exists('$(IlRepackExe)')"
-          Command="&quot;$(IlRepackExe)&quot; /lib:$(TargetDir) /out:$(TargetDir)Rca.Runtime.dll @(InputAssemblies-&gt;'&quot;%(Identity)&quot;',' ')" ContinueOnError="true" />
+          Command="&quot;$(IlRepackExe)&quot; /lib:$(TargetDir) /copyattrs /parallel /internalize /xmldocs /out:$(TargetDir)Rca.Runtime.dll @(InputAssemblies-&gt;'&quot;%(Identity)&quot;',' ')" ContinueOnError="true" />
     <Warning Condition="!Exists('$(IlRepackExe)')" Text="ilrepack.exe not found, skipping merge." />
   </Target>
 
