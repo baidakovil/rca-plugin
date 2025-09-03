@@ -1,18 +1,94 @@
 using System;
-using Rca.Loader.Contracts; // restore shared interface reference
+using System.Diagnostics;
+using Rca.Contracts.Infrastructure;
+using Rca.Core.Services;
+using Rca.Contracts;
 
-namespace Rca.Runtime;
-
-public class RuntimeEntry : IRuntime
+namespace Rca.Runtime
 {
-    public void Initialize()
+    /// <summary>
+    /// Main entry point for the runtime module that's loaded by the Rca.Loader.
+    /// </summary>
+    public class RuntimeEntry
     {
-        // Initialize runtime services here (placeholder)
-        Console.WriteLine("RCA Runtime initialized (shared IRuntime)");
-    }
+        private ServiceContainer container;
+        
+        /// <summary>
+        /// Initializes the runtime and sets up required services
+        /// </summary>
+        public void Initialize()
+        {
+            try
+            {
+                Debug.WriteLine("RCA Runtime initializing...");
+                
+                // Get the service container
+                container = ServiceContainer.Instance;
+                
+                // Register core services
+                RegisterServices();
+                
+                Debug.WriteLine("RCA Runtime initialized successfully");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error initializing runtime: {ex}");
+            }
+        }
 
-    public void Shutdown()
-    {
-        Console.WriteLine("RCA Runtime shutdown");
+        /// <summary>
+        /// Registers required services in the container
+        /// </summary>
+        private void RegisterServices()
+        {
+            try
+            {
+                // Register a standalone RevitContext if not already registered
+                if (!container.IsRegistered<IRevitContext>())
+                {
+                    Debug.WriteLine("Registering StandaloneRevitContext");
+                    container.Register<IRevitContext>(new StandaloneRevitContext());
+                }
+                
+                // Register the debug log service if not already registered
+                if (!container.IsRegistered<IDebugLogService>())
+                {
+                    Debug.WriteLine("Registering DebugLogService");
+                    container.Register<IDebugLogService>(DebugLogService.Instance);
+                }
+                
+                // Register the Python execution service if not already registered
+                if (!container.IsRegistered<IPythonExecutionService>())
+                {
+                    Debug.WriteLine("Registering PythonExecutionService");
+                    container.Register<IPythonExecutionService>(new PythonExecutionService());
+                }
+                
+                // Other service registrations would go here
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error registering services: {ex}");
+            }
+        }
+
+        /// <summary>
+        /// Shuts down the runtime and performs cleanup
+        /// </summary>
+        public void Shutdown()
+        {
+            try
+            {
+                Debug.WriteLine("RCA Runtime shutting down...");
+                
+                // Perform any cleanup needed
+                
+                Debug.WriteLine("RCA Runtime shutdown complete");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error shutting down runtime: {ex}");
+            }
+        }
     }
 }
