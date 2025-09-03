@@ -1,0 +1,31 @@
+<Project>
+  <!-- Common properties for all projects -->
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <UseWPF>true</UseWPF>
+    <BaseOutputPath>$(SolutionDir)bin\</BaseOutputPath>
+    <RcaRevitVersion>2026</RcaRevitVersion>
+    <RcaRevitLibsPath>$(SolutionDir)libs\Revit\$(RcaRevitVersion)</RcaRevitLibsPath>
+    <RcaRuntimeDeployRoot>$(LocalAppData)\RCA\Runtime</RcaRuntimeDeployRoot>
+  </PropertyGroup>
+
+  <!-- Common Revit API references for projects that need them -->
+  <ItemGroup Condition="'$(IncludeRevitApi)' == 'true'">
+    <Reference Include="RevitAPI">
+      <HintPath>$(RcaRevitLibsPath)\RevitAPI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>$(RcaRevitLibsPath)\RevitAPIUI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Common IronPython packages for projects that need them -->
+  <ItemGroup Condition="'$(IncludeIronPython)' == 'true'">
+    <PackageReference Include="IronPython" Version="3.4.2" />
+    <PackageReference Include="IronPython.StdLib" Version="3.4.2" />
+    <PackageReference Include="DynamicLanguageRuntime" Version="1.3.5" />
+  </ItemGroup>
+</Project>
