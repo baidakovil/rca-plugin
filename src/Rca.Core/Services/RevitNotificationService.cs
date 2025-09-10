@@ -1,3 +1,5 @@
+#nullable enable
+
 using Autodesk.Revit.UI;
 using Rca.Contracts.Configuration;
 using Rca.Contracts.Services;

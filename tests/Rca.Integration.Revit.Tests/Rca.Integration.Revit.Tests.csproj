@@ -10,7 +10,6 @@
     <PackageReference Include="ricaun.RevitTest.TestAdapter" Version="1.10.1" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../../src/RcaPlugin/RcaPlugin.csproj" />
     <ProjectReference Include="../../src/Rca.Core/Rca.Core.csproj" />
     <ProjectReference Include="../../src/Rca.Contracts/Rca.Contracts.csproj" />
   </ItemGroup>

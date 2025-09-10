@@ -4,6 +4,7 @@ using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace Rca.Loader
 {
@@ -56,7 +57,8 @@ namespace Rca.Loader
                 catch (OperationCanceledException) { }
                 catch (Exception ex)
                 {
-                    // Optionally log error
+                    // Log the error
+                    Debug.WriteLine($"Error in pipe server: {ex.Message}");
                 }
             }
         }

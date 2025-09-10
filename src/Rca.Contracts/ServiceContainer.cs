@@ -9,7 +9,7 @@ namespace Rca.Contracts.Infrastructure
     public class ServiceContainer
     {
         private readonly Dictionary<Type, object> services = new();
-        private static ServiceContainer instance;
+        private static ServiceContainer? instance;
 
         /// <summary>
         /// Gets the singleton instance of the service container.
@@ -23,6 +23,9 @@ namespace Rca.Contracts.Infrastructure
         /// <param name="implementation">The implementation instance</param>
         public void Register<TInterface>(TInterface implementation)
         {
+            if (implementation is null)
+                throw new ArgumentNullException(nameof(implementation));
+                
             services[typeof(TInterface)] = implementation;
         }
 

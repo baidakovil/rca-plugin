@@ -11,7 +11,16 @@ namespace Rca.Runtime
     /// </summary>
     public class RuntimeEntry
     {
-        private ServiceContainer container;
+        private readonly ServiceContainer container;
+        
+        /// <summary>
+        /// Initializes a new instance of the RuntimeEntry class.
+        /// </summary>
+        public RuntimeEntry()
+        {
+            // Initialize the container in the constructor
+            container = ServiceContainer.Instance;
+        }
         
         /// <summary>
         /// Initializes the runtime and sets up required services
@@ -21,9 +30,6 @@ namespace Rca.Runtime
             try
             {
                 Debug.WriteLine("RCA Runtime initializing...");
-                
-                // Get the service container
-                container = ServiceContainer.Instance;
                 
                 // Register core services
                 RegisterServices();

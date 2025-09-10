@@ -85,6 +85,14 @@ namespace Rca.Loader
                 
                 // Store the runtime path and instance for later use
                 currentContext.SetRuntimePath(runtimeDll);
+                
+                // Check for null before setting the runtime instance
+                if (instance == null)
+                {
+                    error = "Failed to create runtime instance";
+                    return false;
+                }
+                
                 currentContext.SetRuntimeInstance(instance);
                 
                 // Call Initialize

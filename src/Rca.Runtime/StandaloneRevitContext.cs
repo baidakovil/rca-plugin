@@ -33,7 +33,13 @@ namespace Rca.Runtime
             try
             {
                 // Get the directory where the current runtime assembly is located
-                string runtimeDir = Path.GetDirectoryName(GetType().Assembly.Location);
+                string? runtimeDir = Path.GetDirectoryName(GetType().Assembly.Location);
+                
+                if (runtimeDir == null)
+                {
+                    Debug.WriteLine("Could not determine runtime directory");
+                    return;
+                }
                 
                 // List of assemblies we need to ensure are loaded
                 string[] requiredAssemblies = new[]
@@ -128,14 +134,14 @@ namespace Rca.Runtime
 
         /// <summary>
         /// Gets or sets the current UI application.
-        /// In standalone mode, this will always be null.
+        /// In standalone mode, this will always return a null-like placeholder object.
         /// </summary>
         public object CurrentUIApplication
         {
             get
             {
-                Debug.WriteLine("StandaloneRevitContext: Accessing CurrentUIApplication (null in standalone mode)");
-                return null;
+                Debug.WriteLine("StandaloneRevitContext: Accessing CurrentUIApplication (null-placeholder in standalone mode)");
+                return new object(); // Return a placeholder object instead of null
             }
             set
             {
