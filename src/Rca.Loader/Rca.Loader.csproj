@@ -24,19 +24,6 @@
     <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
   </ItemGroup>
   <ItemGroup>
-    <!-- Try both approaches: explicit and wildcard -->
     <EmbeddedResource Include="Resources\*.png" />
-    <EmbeddedResource Include="Resources\OpenAssistant16.png">
-      <LogicalName>Rca.Loader.Resources.OpenAssistant16.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Resources\OpenAssistant32.png">
-      <LogicalName>Rca.Loader.Resources.OpenAssistant32.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Resources\ReloadRuntime16.png">
-      <LogicalName>Rca.Loader.Resources.ReloadRuntime16.png</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Resources\ReloadRuntime32.png">
-      <LogicalName>Rca.Loader.Resources.ReloadRuntime32.png</LogicalName>
-    </EmbeddedResource>
   </ItemGroup>
 </Project>

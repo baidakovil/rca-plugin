@@ -5,7 +5,6 @@ using System.Windows.Media;
 using System.Linq;
 using Autodesk.Revit.UI;
 using Rca.Loader.Commands;
-using Autodesk.Windows;
 
 namespace Rca.Loader
 {
@@ -42,8 +41,7 @@ namespace Rca.Loader
                 typeof(OpenStandaloneWindowCommand).FullName);
             var openPush = panel.AddItem(openBtn) as PushButton;
             AssignEmbeddedIcons(openPush,
-                smallFileName: "OpenAssistant16.png",
-                largeFileName: "OpenAssistant32.png",
+                iconFileName: "OpenAssistant16.png",
                 tooltip: "Open the RCA standalone assistant window.");
 
             // Button: Reload Runtime (latest)
@@ -54,9 +52,59 @@ namespace Rca.Loader
                 typeof(ReloadRuntimeCommand).FullName);
             var reloadPush = panel.AddItem(reloadBtn) as PushButton;
             AssignEmbeddedIcons(reloadPush,
-                smallFileName: "ReloadRuntime16.png",
-                largeFileName: "ReloadRuntime32.png",
+                iconFileName: "ReloadRuntime16.png",
                 tooltip: "Reload the latest deployed runtime.");
+        }
+
+        /// <summary>
+        /// Assigns a 16x16 icon to both Image and LargeImage of a Revit button.
+        /// </summary>
+        /// <param name="button">The button to assign icons to.</param>
+        /// <param name="iconFileName">The 16x16 icon filename.</param>
+        /// <param name="tooltip">Optional tooltip text.</param>
+        private static void AssignEmbeddedIcons(PushButton? button, string iconFileName, string? tooltip = null)
+        {
+            if (button == null) return;
+
+            try
+            {
+                var asm = Assembly.GetExecutingAssembly();
+                var icon = GetEmbeddedImageBitmapFrame(asm, $"Rca.Loader.Resources.{iconFileName}");
+                button.Image = icon;
+                button.LargeImage = icon;
+                if (!string.IsNullOrWhiteSpace(tooltip))
+                {
+                    button.ToolTip = tooltip;
+                }
+            }
+            catch (Exception ex)
+            {
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine($"Exception loading icons: {ex.Message}");
+#endif
+                // Ignore icon load issues to avoid blocking add-in load.
+            }
+        }
+
+        /// <summary>
+        /// Loads a bitmap image from embedded resources using BitmapFrame.Create.
+        /// </summary>
+        /// <param name="assembly">The assembly containing the embedded resources.</param>
+        /// <param name="imageName">The resource name of the embedded image.</param>
+        /// <returns>A bitmap image, or null if not found.</returns>
+        private static ImageSource? GetEmbeddedImageBitmapFrame(Assembly assembly, string imageName)
+        {
+            try
+            {
+                var stream = assembly.GetManifestResourceStream(imageName);
+                if (stream == null) return null;
+                var imageFrame = BitmapFrame.Create(stream);
+                return imageFrame;
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         /// <summary>
@@ -137,121 +185,5 @@ namespace Rca.Loader
             }
         }
 #endif
-
-        /// <summary>
-        /// Assigns icons to a Revit button.
-        /// </summary>
-        /// <param name="button">The button to assign icons to.</param>
-        /// <param name="smallFileName">The small icon filename.</param>
-        /// <param name="largeFileName">The large icon filename.</param>
-        /// <param name="tooltip">Optional tooltip text.</param>
-        private static void AssignEmbeddedIcons(PushButton? button, string smallFileName, string largeFileName, string? tooltip = null)
-        {
-            if (button == null) return;
-
-            try
-            {
-                var asm = Assembly.GetExecutingAssembly();
-                
-                var smallImage = LoadEmbeddedBitmap(asm, smallFileName);
-                var largeImage = LoadEmbeddedBitmap(asm, largeFileName);
-                
-                if (smallImage != null)
-                {
-                    button.Image = smallImage;
-#if DEBUG
-                    System.Diagnostics.Debug.WriteLine($"Successfully loaded small icon: {smallFileName}");
-#endif
-                }
-                else
-                {
-#if DEBUG
-                    System.Diagnostics.Debug.WriteLine($"Failed to load small icon: {smallFileName}");
-#endif
-                }
-                
-                if (largeImage != null)
-                {
-                    button.LargeImage = largeImage;
-#if DEBUG
-                    System.Diagnostics.Debug.WriteLine($"Successfully loaded large icon: {largeFileName}");
-#endif
-                }
-                else
-                {
-#if DEBUG
-                    System.Diagnostics.Debug.WriteLine($"Failed to load large icon: {largeFileName}");
-#endif
-                }
-
-                if (!string.IsNullOrWhiteSpace(tooltip))
-                {
-                    button.ToolTip = tooltip;
-                }
-            }
-            catch (Exception ex)
-            {
-#if DEBUG
-                System.Diagnostics.Debug.WriteLine($"Exception loading icons: {ex.Message}");
-#endif
-                // Ignore icon load issues to avoid blocking add-in load.
-            }
-        }
-
-        /// <summary>
-        /// Loads a bitmap image from embedded resources.
-        /// </summary>
-        /// <param name="asm">The assembly containing the embedded resources.</param>
-        /// <param name="fileName">The filename of the embedded resource.</param>
-        /// <returns>A bitmap image, or null if not found.</returns>
-        private static ImageSource? LoadEmbeddedBitmap(Assembly asm, string fileName)
-        {
-            try
-            {
-#if DEBUG
-                // Debug: List all embedded resources in the assembly
-                var allResources = asm.GetManifestResourceNames();
-                System.Diagnostics.Debug.WriteLine($"Assembly: {asm.GetName().Name}");
-                System.Diagnostics.Debug.WriteLine($"All embedded resources: {string.Join(", ", allResources)}");
-#endif
-
-                // Try multiple resource name patterns
-                var resourceNames = new[]
-                {
-                    $"Rca.Loader.Resources.{fileName}",  // Explicit LogicalName pattern
-                    $"{asm.GetName().Name}.Resources.{fileName}",  // Assembly name pattern
-                    fileName  // Direct filename (fallback)
-                };
-
-                foreach (var resourceName in resourceNames)
-                {
-#if DEBUG
-                    System.Diagnostics.Debug.WriteLine($"Trying resource name: {resourceName}");
-#endif
-                    var stream = asm.GetManifestResourceStream(resourceName);
-                    if (stream != null)
-                    {
-#if DEBUG
-                        System.Diagnostics.Debug.WriteLine($"Successfully found resource: {resourceName}");
-#endif
-                        // Use BitmapFrame.Create as recommended for Revit ribbon icons
-                        var imageFrame = BitmapFrame.Create(stream);
-                        return imageFrame;
-                    }
-                }
-
-#if DEBUG
-                System.Diagnostics.Debug.WriteLine($"Resource not found with any naming pattern: {fileName}");
-#endif
-                return null;
-            }
-            catch (Exception ex)
-            {
-#if DEBUG
-                System.Diagnostics.Debug.WriteLine($"Exception loading embedded resource {fileName}: {ex.Message}");
-#endif
-                return null;
-            }
-        }
     }
 }
