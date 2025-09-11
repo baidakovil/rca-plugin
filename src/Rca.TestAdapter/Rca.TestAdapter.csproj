@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>Rca.TestAdapter</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>RCA Team</Authors>
+    <Description>Custom VS Test Adapter for running tests in Revit context via Named Pipes</Description>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.TestPlatform.ObjectModel" Version="17.9.0" />
+    <PackageReference Include="NUnit" Version="4.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="build\Rca.TestAdapter.props" Pack="true" PackagePath="build" />
+  </ItemGroup>
+
+</Project>

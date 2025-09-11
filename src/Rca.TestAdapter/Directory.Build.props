@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)\nupkg</PackageOutputPath>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+  
+  <Target Name="PackAndPush" DependsOnTargets="Pack">
+    <Exec Command="dotnet nuget push &quot;$(PackageOutputPath)\$(PackageId).$(PackageVersion).nupkg&quot; --source &quot;$(NuGetSource)&quot;" />
+  </Target>
+</Project>

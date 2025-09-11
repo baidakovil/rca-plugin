@@ -1,22 +1,26 @@
 using NUnit.Framework;
 using Autodesk.Revit.ApplicationServices;
 using System;
+using Rca.Loader.Testing;
 
 namespace Rca.Integration.Revit.Tests
 {
     [TestFixture]
-    public class RevitEnvironmentTests
+    public class RevitEnvironmentTests : UIApplicationTests
     {
         private const string ExpectedVersion = "2026";
 
         [Test, Category("Revit")]
-        public void RevitVersion_MatchesExpected(Application app)
+        public void RevitVersion_MatchesExpected()
         {
             if (Environment.GetEnvironmentVariable("RCA_ENABLE_REVIT_TESTS") != "1")
                 Assert.Ignore("Revit integration tests disabled (set RCA_ENABLE_REVIT_TESTS=1).");
 
-            Assert.IsNotNull(app);
-            Assert.AreEqual(ExpectedVersion, app.VersionNumber);
+            var app = uiapp?.Application;
+
+            // Use NUnit 4.0.1 syntax
+            Assert.That(app, Is.Not.Null);
+            Assert.That(app!.VersionNumber, Is.EqualTo(ExpectedVersion));
         }
     }
 }

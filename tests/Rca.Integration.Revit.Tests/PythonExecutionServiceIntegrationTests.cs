@@ -3,24 +3,12 @@ using FluentAssertions;
 using Rca.Core.Services;
 using Autodesk.Revit.UI;
 using System.Threading.Tasks;
-using ricaun.RevitTest.TestAdapter;
 using Autodesk.Revit.ApplicationServices;
 using System;
+using Rca.Loader.Testing;
 
 namespace Rca.Integration.Revit.Tests
 {
-    // Base class to receive UIApplication from the ricaun test adapter (pattern from sample)
-    public abstract class UIApplicationTests
-    {
-        protected UIApplication? uiapp;
-
-        [OneTimeSetUp]
-        public void GlobalSetup(UIApplication uiapp)
-        {
-            this.uiapp = uiapp;
-        }
-    }
-
     [TestFixture]
     public class PythonExecutionServiceIntegrationTests : UIApplicationTests
     {

@@ -33,6 +33,14 @@ namespace Rca.Loader
             LogEmbeddedResources();
 #endif
 
+            // Initialize command - must be called first to set up the UIApplication
+            // This will be invisible to users but can be triggered by the test adapter
+            app.CreateRibbonPanel(TabName, "Hidden").AddItem(new PushButtonData(
+                "RCA_Initialize",
+                "Initialize",
+                Assembly.GetExecutingAssembly().Location,
+                typeof(InitializerCommand).FullName));
+
             // Button: Open Standalone Window
             var openBtn = new PushButtonData(
                 "RCA_OpenStandalone",

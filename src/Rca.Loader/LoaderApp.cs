@@ -16,7 +16,8 @@ namespace Rca.Loader
     {
         private PipeServer? pipeServer;
         private RibbonBuilder ribbonBuilder;
-        private RuntimeCommandHandler commandHandler;
+        private RuntimeCommandHandler? commandHandler;
+        private UIApplication? uiapp;
 
         /// <summary>
         /// Gets the runtime manager instance.
@@ -29,6 +30,11 @@ namespace Rca.Loader
         internal static LoaderApp? Instance { get; private set; }
 
         /// <summary>
+        /// Gets the Revit UI application.
+        /// </summary>
+        public UIApplication? UIApplication => uiapp;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="LoaderApp"/> class.
         /// </summary>
         public LoaderApp()
@@ -36,7 +42,6 @@ namespace Rca.Loader
             Instance = this;
             RuntimeManager = new RuntimeManager();
             ribbonBuilder = new RibbonBuilder();
-            commandHandler = new RuntimeCommandHandler(RuntimeManager);
         }
 
         /// <summary>
@@ -48,7 +53,8 @@ namespace Rca.Loader
         {
             try
             {
-                StartPipeServer();
+                // We need the UIApplication, which will be available in external commands
+                // We'll initialize the pipe server in the first external command
                 ribbonBuilder.BuildRibbon(application);
                 return Result.Succeeded;
             }
@@ -75,8 +81,27 @@ namespace Rca.Loader
             return Result.Succeeded;
         }
 
+        /// <summary>
+        /// Initializes the UIApplication and starts the pipe server.
+        /// </summary>
+        /// <param name="uiapp">The Revit UI application.</param>
+        public void InitializeWithUIApplication(UIApplication uiapp)
+        {
+            if (this.uiapp == null && pipeServer == null)
+            {
+                this.uiapp = uiapp;
+                StartPipeServer();
+            }
+        }
+
         private void StartPipeServer()
         {
+            if (uiapp == null)
+            {
+                throw new InvalidOperationException("UIApplication not initialized");
+            }
+            
+            commandHandler = new RuntimeCommandHandler(RuntimeManager, uiapp);
             pipeServer = new PipeServer(LoaderConstants.PipeName, commandHandler.HandlePipeCommandAsync);
             pipeServer.Start();
         }
