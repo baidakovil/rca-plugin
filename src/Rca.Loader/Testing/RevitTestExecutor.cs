@@ -8,6 +8,7 @@ using Autodesk.Revit.UI;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
 using System.Diagnostics;
+using System.Runtime.Loader;
 
 namespace Rca.Loader.Testing
 {
@@ -41,9 +42,16 @@ namespace Rca.Loader.Testing
             
             try
             {
-                // Load the test assembly
+                // Load the test assembly in the default context to avoid collectible assembly issues
                 Debug.WriteLine($"DEBUG: Loading test assembly from {assemblyPath}");
-                var assembly = Assembly.LoadFrom(assemblyPath);
+                Assembly assembly;
+                
+                // Force assembly loading in the default context
+                using (AssemblyLoadContext.Default.EnterContextualReflection())
+                {
+                    assembly = Assembly.LoadFrom(assemblyPath);
+                }
+                
                 Debug.WriteLine($"DEBUG: Assembly loaded: {assembly.FullName}");
                 
                 // Execute each test
@@ -145,63 +153,67 @@ namespace Rca.Loader.Testing
                 
                 object testInstance;
                 
-                if (needsUiApp)
+                // Execute test in the default context to avoid assembly loading issues
+                using (AssemblyLoadContext.Default.EnterContextualReflection())
                 {
-                    // Call GlobalSetup with UIApplication
-                    Debug.WriteLine("DEBUG: Creating test instance and calling GlobalSetup");
-                    testInstance = Activator.CreateInstance(testClassType)!;
-                    var setupMethod = testClassType.GetMethod("GlobalSetup", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                    
-                    if (setupMethod == null)
+                    if (needsUiApp)
                     {
-                        Debug.WriteLine("DEBUG: GlobalSetup method not found");
+                        // Call GlobalSetup with UIApplication
+                        Debug.WriteLine("DEBUG: Creating test instance and calling GlobalSetup");
+                        testInstance = Activator.CreateInstance(testClassType)!;
+                        var setupMethod = testClassType.GetMethod("GlobalSetup", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                        
+                        if (setupMethod == null)
+                        {
+                            Debug.WriteLine("DEBUG: GlobalSetup method not found");
+                        }
+                        else
+                        {
+                            Debug.WriteLine("DEBUG: Invoking GlobalSetup with UIApplication");
+                            setupMethod.Invoke(testInstance, new[] { uiapp });
+                        }
+                        
+                        // Check for SetUp method
+                        Debug.WriteLine("DEBUG: Looking for SetUp methods");
+                        var setupMethods = testClassType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                            .Where(m => m.GetCustomAttributes(true).Any(a => a.GetType().Name == "SetUpAttribute"))
+                            .ToList();
+                        
+                        Debug.WriteLine($"DEBUG: Found {setupMethods.Count} SetUp methods");
+                        foreach (var setup in setupMethods)
+                        {
+                            Debug.WriteLine($"DEBUG: Invoking SetUp method: {setup.Name}");
+                            setup.Invoke(testInstance, null);
+                        }
                     }
                     else
                     {
-                        Debug.WriteLine("DEBUG: Invoking GlobalSetup with UIApplication");
-                        setupMethod.Invoke(testInstance, new[] { uiapp });
+                        // Regular instantiation
+                        Debug.WriteLine("DEBUG: Creating regular test instance");
+                        testInstance = Activator.CreateInstance(testClassType)!;
+                        
+                        // Check for SetUp method
+                        Debug.WriteLine("DEBUG: Looking for SetUp methods");
+                        var setupMethods = testClassType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                            .Where(m => m.GetCustomAttributes(true).Any(a => a.GetType().Name == "SetUpAttribute"))
+                            .ToList();
+                        
+                        Debug.WriteLine($"DEBUG: Found {setupMethods.Count} SetUp methods");
+                        foreach (var setup in setupMethods)
+                        {
+                            Debug.WriteLine($"DEBUG: Invoking SetUp method: {setup.Name}");
+                            setup.Invoke(testInstance, null);
+                        }
                     }
                     
-                    // Check for SetUp method
-                    Debug.WriteLine("DEBUG: Looking for SetUp methods");
-                    var setupMethods = testClassType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                        .Where(m => m.GetCustomAttributes(true).Any(a => a.GetType().Name == "SetUpAttribute"))
-                        .ToList();
+                    // Invoke the test method
+                    Debug.WriteLine($"DEBUG: Invoking test method: {methodName}");
+                    testMethod.Invoke(testInstance, null);
                     
-                    Debug.WriteLine($"DEBUG: Found {setupMethods.Count} SetUp methods");
-                    foreach (var setup in setupMethods)
-                    {
-                        Debug.WriteLine($"DEBUG: Invoking SetUp method: {setup.Name}");
-                        setup.Invoke(testInstance, null);
-                    }
+                    // Test passed
+                    Debug.WriteLine("DEBUG: Test passed");
+                    result.Outcome = "Passed";
                 }
-                else
-                {
-                    // Regular instantiation
-                    Debug.WriteLine("DEBUG: Creating regular test instance");
-                    testInstance = Activator.CreateInstance(testClassType)!;
-                    
-                    // Check for SetUp method
-                    Debug.WriteLine("DEBUG: Looking for SetUp methods");
-                    var setupMethods = testClassType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                        .Where(m => m.GetCustomAttributes(true).Any(a => a.GetType().Name == "SetUpAttribute"))
-                        .ToList();
-                    
-                    Debug.WriteLine($"DEBUG: Found {setupMethods.Count} SetUp methods");
-                    foreach (var setup in setupMethods)
-                    {
-                        Debug.WriteLine($"DEBUG: Invoking SetUp method: {setup.Name}");
-                        setup.Invoke(testInstance, null);
-                    }
-                }
-                
-                // Invoke the test method
-                Debug.WriteLine($"DEBUG: Invoking test method: {methodName}");
-                testMethod.Invoke(testInstance, null);
-                
-                // Test passed
-                Debug.WriteLine("DEBUG: Test passed");
-                result.Outcome = "Passed";
             }
             catch (TargetInvocationException ex) when (ex.InnerException != null)
             {

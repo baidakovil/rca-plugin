@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Windows;
 using System.Runtime.Loader;
 using Rca.Loader.Contracts;
+using System.Diagnostics;
 
 namespace Rca.Loader
 {
@@ -45,10 +46,18 @@ namespace Rca.Loader
                 var runtimeDll = Path.Combine(folderPath, LoaderConstants.RuntimeFileName);
                 if (!File.Exists(runtimeDll)) { error = $"Runtime dll not found: {runtimeDll}"; return false; }
 
+                Debug.WriteLine($"DEBUG: RuntimeManager.ReloadRuntime called with: {folderPath}");
+                
                 UnloadRuntime();
 
                 // Create a new context for loading the runtime
                 currentContext = new RuntimeLoadContext();
+                
+                // Set the runtime path early so assembly resolution can work
+                currentContext.SetRuntimePath(runtimeDll);
+                
+                // Pre-load IronPython assemblies in the default context to avoid collectible assembly issues
+                PreloadIronPythonAssemblies(folderPath);
                 
                 // Load the runtime DLL into our context
                 var asm = currentContext.LoadFromAssemblyPath(runtimeDll);
@@ -83,9 +92,6 @@ namespace Rca.Loader
                     return false;
                 }
                 
-                // Store the runtime path and instance for later use
-                currentContext.SetRuntimePath(runtimeDll);
-                
                 // Check for null before setting the runtime instance
                 if (instance == null)
                 {
@@ -98,13 +104,69 @@ namespace Rca.Loader
                 // Call Initialize
                 initMethod.Invoke(instance, null);
                 
+                Debug.WriteLine("DEBUG: Runtime loaded successfully");
                 error = null;
                 return true;
             }
             catch (Exception ex)
             {
+                Debug.WriteLine($"DEBUG: RuntimeManager.ReloadRuntime failed: {ex}");
                 error = ex.ToString();
                 return false;
+            }
+        }
+        
+        /// <summary>
+        /// Pre-loads IronPython assemblies in the default context to avoid collectible assembly issues.
+        /// </summary>
+        /// <param name="runtimeFolder">The runtime folder containing the assemblies.</param>
+        private void PreloadIronPythonAssemblies(string runtimeFolder)
+        {
+            Debug.WriteLine("DEBUG: Pre-loading IronPython assemblies in default context");
+            
+            var pythonAssemblies = new[]
+            {
+                "Microsoft.Dynamic.dll",
+                "Microsoft.Scripting.dll", 
+                "IronPython.dll",
+                "IronPython.Modules.dll"
+            };
+            
+            foreach (var assemblyFile in pythonAssemblies)
+            {
+                var assemblyPath = Path.Combine(runtimeFolder, assemblyFile);
+                if (File.Exists(assemblyPath))
+                {
+                    try
+                    {
+                        Debug.WriteLine($"DEBUG: Pre-loading {assemblyFile} in default context");
+                        
+                        // Check if it's already loaded
+                        var assemblyName = Path.GetFileNameWithoutExtension(assemblyFile);
+                        var existingAssembly = AppDomain.CurrentDomain.GetAssemblies()
+                            .FirstOrDefault(a => !a.IsDynamic && 
+                                string.Equals(a.GetName().Name, assemblyName, StringComparison.OrdinalIgnoreCase));
+                        
+                        if (existingAssembly != null)
+                        {
+                            Debug.WriteLine($"DEBUG: {assemblyFile} already loaded in default context");
+                            continue;
+                        }
+                        
+                        // Load in default context
+                        var loadedAssembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath);
+                        Debug.WriteLine($"DEBUG: Successfully pre-loaded {assemblyFile}: {loadedAssembly.FullName}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"DEBUG: Failed to pre-load {assemblyFile}: {ex.Message}");
+                        // Continue with other assemblies even if one fails
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine($"DEBUG: Assembly file not found: {assemblyPath}");
+                }
             }
         }
 

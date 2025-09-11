@@ -61,6 +61,12 @@ namespace Rca.UI.Services
             }
 
             /// <inheritdoc />
+            public string ExecuteSync(string code)
+            {
+                return PythonServiceUnavailableMessage;
+            }
+
+            /// <inheritdoc />
             public void SetRevitContext(object context)
             {
                 // No operation for null implementation

@@ -17,7 +17,7 @@ namespace Rca.Core.Services
     {
         private readonly ScriptEngine engine;
         private readonly ScriptScope scope;
-        private UIApplication uiapp;
+        private UIApplication? uiapp;
 
         // Markers and configuration
         private const string StartMarker = "--- [PYTHON EXECUTION START] ---";
@@ -26,9 +26,9 @@ namespace Rca.Core.Services
         private const string ErrorEndMarker = "--- [PYTHON ERROR OUTPUT END] ---";
         private static readonly Encoding StdoutEncoding = Encoding.Unicode; // keep read/write consistent
 
-        // ExternalEvent plumbing to marshal execution to Revit UI context
-        private readonly ExecutePythonExternalEventHandler externalEventHandler;
-        private readonly ExternalEvent externalEvent;
+        // ExternalEvent plumbing to marshal execution to Revit UI context (lazy initialization)
+        private ExecutePythonExternalEventHandler? externalEventHandler;
+        private ExternalEvent? externalEvent;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PythonExecutionService"/> class.
@@ -40,9 +40,8 @@ namespace Rca.Core.Services
             engine.Runtime.LoadAssembly(typeof(Autodesk.Revit.DB.Document).Assembly); // RevitAPI.dll
             engine.Runtime.LoadAssembly(typeof(Autodesk.Revit.UI.UIDocument).Assembly); // RevitAPIUI.dll
 
-            // Initialize ExternalEvent handler for safe Revit API access from modeless UI
-            externalEventHandler = new ExecutePythonExternalEventHandler(this);
-            externalEvent = ExternalEvent.Create(externalEventHandler);
+            // Don't create ExternalEvent here - it will be created lazily when needed
+            // This allows the service to be instantiated in test contexts
         }
 
         /// <summary>
@@ -57,6 +56,29 @@ namespace Rca.Core.Services
             else
             {
                 throw new ArgumentException("Context must be a UIApplication instance", nameof(context));
+            }
+        }
+
+        /// <summary>
+        /// Initializes the ExternalEvent if it hasn't been created yet.
+        /// This is done lazily to avoid issues when instantiating outside of Revit API context.
+        /// </summary>
+        private void EnsureExternalEventInitialized()
+        {
+            if (externalEvent == null || externalEventHandler == null)
+            {
+                try
+                {
+                    // Initialize ExternalEvent handler for safe Revit API access from modeless UI
+                    externalEventHandler = new ExecutePythonExternalEventHandler(this);
+                    externalEvent = ExternalEvent.Create(externalEventHandler);
+                }
+                catch (Autodesk.Revit.Exceptions.InvalidOperationException ex)
+                {
+                    throw new InvalidOperationException(
+                        "Cannot create ExternalEvent outside of Revit API context. " +
+                        "This service can only execute Python code when called from within Revit.", ex);
+                }
             }
         }
 
@@ -90,12 +112,15 @@ namespace Rca.Core.Services
         {
             if (string.IsNullOrWhiteSpace(code)) return string.Empty;
 
+            // Ensure ExternalEvent is initialized
+            EnsureExternalEventInitialized();
+
             var tcs = new TaskCompletionSource<string>();
-            externalEventHandler.Prepare(code, tcs);
+            externalEventHandler!.Prepare(code, tcs);
 
             try
             {
-                externalEvent.Raise();
+                externalEvent!.Raise();
             }
             catch (Exception ex)
             {
@@ -104,6 +129,33 @@ namespace Rca.Core.Services
             }
 
             return await tcs.Task.ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Executes Python code synchronously. This method should only be called from within a Revit API context.
+        /// </summary>
+        /// <param name="code">Python code to execute.</param>
+        /// <returns>Result of execution or exception message.</returns>
+        public string ExecuteSync(string code)
+        {
+            if (string.IsNullOrWhiteSpace(code)) return string.Empty;
+
+            try
+            {
+                if (uiapp != null)
+                {
+                    InjectRevitContext();
+                }
+
+                var (printOutput, result) = ExecuteWithCapturedStdout(code);
+                var output = ComposeOutput(printOutput, result);
+
+                return FormatSuccessAndLog(output);
+            }
+            catch (Exception ex)
+            {
+                return FormatErrorAndLog(ex.Message);
+            }
         }
 
         // Helper: executes code and captures print() output without touching Python scope (synchronous, runs on Revit UI thread)
@@ -177,8 +229,8 @@ namespace Rca.Core.Services
         private class ExecutePythonExternalEventHandler : IExternalEventHandler
         {
             private readonly PythonExecutionService service;
-            private string pendingCode;
-            private TaskCompletionSource<string> pendingTcs;
+            private string? pendingCode;
+            private TaskCompletionSource<string>? pendingTcs;
 
             public ExecutePythonExternalEventHandler(PythonExecutionService service)
             {
@@ -200,7 +252,7 @@ namespace Rca.Core.Services
 
                     service.InjectRevitContext();
 
-                    var (printOutput, result) = service.ExecuteWithCapturedStdout(pendingCode);
+                    var (printOutput, result) = service.ExecuteWithCapturedStdout(pendingCode!);
                     var output = ComposeOutput(printOutput, result);
 
                     pendingTcs?.TrySetResult(FormatSuccessAndLog(output));

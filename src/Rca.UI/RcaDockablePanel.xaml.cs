@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Markup;
@@ -203,10 +204,15 @@ namespace Rca.UI.Views
         /// </summary>
         private class NullPythonExecutionService : IPythonExecutionService
         {
-            public System.Threading.Tasks.Task<string> ExecuteAsync(string code)
+            public Task<string> ExecuteAsync(string code)
             {
-                return System.Threading.Tasks.Task.FromResult(
+                return Task.FromResult(
                     "Python execution not available in standalone mode.");
+            }
+
+            public string ExecuteSync(string code)
+            {
+                return "Python execution not available in standalone mode.";
             }
 
             public void SetRevitContext(object context)

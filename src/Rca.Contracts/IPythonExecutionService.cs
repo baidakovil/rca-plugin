@@ -19,5 +19,12 @@ namespace Rca.Contracts
         /// <param name="code">The Python code to execute.</param>
         /// <returns>The execution result.</returns>
         Task<string> ExecuteAsync(string code);
+
+        /// <summary>
+        /// Executes Python code synchronously. Should only be called from within a Revit API context.
+        /// </summary>
+        /// <param name="code">The Python code to execute.</param>
+        /// <returns>The execution result.</returns>
+        string ExecuteSync(string code);
     }
 }
