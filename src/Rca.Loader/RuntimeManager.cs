@@ -5,7 +5,6 @@ using System.Reflection;
 using System.Windows;
 using System.Runtime.Loader;
 using Rca.Loader.Contracts;
-using System.Diagnostics;
 
 namespace Rca.Loader
 {
@@ -101,11 +100,8 @@ namespace Rca.Loader
             }
         }
         
-        private Type? FindRuntimeEntryType(Assembly assembly)
-        {
-            return assembly.GetTypes()
-                .FirstOrDefault(type => type.Name == "RuntimeEntry" && !type.IsAbstract);
-        }
+        private Type? FindRuntimeEntryType(Assembly assembly) => 
+            assembly.GetTypes().FirstOrDefault(type => type.Name == "RuntimeEntry" && !type.IsAbstract);
         
         /// <summary>
         /// Pre-loads IronPython assemblies in the default context to avoid collectible assembly issues.
@@ -115,10 +111,8 @@ namespace Rca.Loader
         {
             var pythonAssemblies = new[]
             {
-                "Microsoft.Dynamic.dll",
-                "Microsoft.Scripting.dll", 
-                "IronPython.dll",
-                "IronPython.Modules.dll"
+                "Microsoft.Dynamic.dll", "Microsoft.Scripting.dll", 
+                "IronPython.dll", "IronPython.Modules.dll"
             };
             
             foreach (var assemblyFile in pythonAssemblies)
@@ -140,9 +134,9 @@ namespace Rca.Loader
                             AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath);
                         }
                     }
-                    catch (Exception ex)
+                    catch
                     {
-                        Debug.WriteLine($"Failed to pre-load {assemblyFile}: {ex.Message}");
+                        // Continue with other assemblies if one fails
                     }
                 }
             }

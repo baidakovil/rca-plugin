@@ -13,8 +13,6 @@ namespace Rca.TestAdapter;
 /// </summary>
 public class RevitPipeClient
 {
-    private const int DefaultTimeoutMs = 60000; // 60 seconds
-    
     /// <summary>
     /// Executes tests through the pipe server.
     /// </summary>
@@ -33,16 +31,13 @@ public class RevitPipeClient
         
         try
         {
-            // Create a fresh connection for test execution
             Console.WriteLine("DEBUG: Creating fresh pipe connection for test execution");
             pipeClient = new NamedPipeClientStream(".", Constants.PipeName, PipeDirection.InOut, PipeOptions.None);
             
-            // Connect with timeout
             Console.WriteLine($"DEBUG: Connecting to pipe with timeout {timeoutMs}ms");
             pipeClient.Connect(timeoutMs);
             Console.WriteLine($"DEBUG: Connected to pipe, IsConnected={pipeClient.IsConnected}");
             
-            // Create new StreamWriter/StreamReader
             writer = new StreamWriter(pipeClient) { AutoFlush = true };
             reader = new StreamReader(pipeClient);
             
@@ -76,39 +71,14 @@ public class RevitPipeClient
         finally
         {
             // Clean up resources in proper order
-            try
-            {
-                writer?.Dispose();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"DEBUG: Error disposing writer: {ex.Message}");
-            }
-            
-            try
-            {
-                reader?.Dispose();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"DEBUG: Error disposing reader: {ex.Message}");
-            }
-            
-            try
-            {
-                if (pipeClient != null)
-                {
-                    if (pipeClient.IsConnected)
-                    {
-                        pipeClient.Close();
-                    }
-                    pipeClient.Dispose();
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"DEBUG: Error disposing pipe client: {ex.Message}");
-            }
+            try { writer?.Dispose(); } catch { }
+            try { reader?.Dispose(); } catch { }
+            try 
+            { 
+                if (pipeClient?.IsConnected == true) pipeClient.Close();
+                pipeClient?.Dispose(); 
+            } 
+            catch { }
         }
     }
     
@@ -131,14 +101,12 @@ public class RevitPipeClient
     {
         if (string.IsNullOrEmpty(responseJson))
         {
-            Console.WriteLine("DEBUG: Received empty test execution response");
             return new List<RevitTestResult>();
         }
         
         var response = JsonSerializer.Deserialize<PipeResponse>(responseJson);
         if (response?.Status != "OK" || string.IsNullOrEmpty(response.Message))
         {
-            Console.WriteLine($"DEBUG: Invalid test execution response status: {response?.Status}");
             return new List<RevitTestResult>();
         }
         
@@ -148,9 +116,8 @@ public class RevitPipeClient
             Console.WriteLine($"DEBUG: Deserialized {results?.Count ?? 0} test results");
             return results ?? new List<RevitTestResult>();
         }
-        catch (JsonException ex)
+        catch (JsonException)
         {
-            Console.WriteLine($"DEBUG: Error deserializing test results: {ex.Message}");
             return new List<RevitTestResult>();
         }
     }

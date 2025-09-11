@@ -3,7 +3,6 @@ using System.Reflection;
 using System.Runtime.Loader;
 using System.Linq;
 using System.IO;
-using System.Diagnostics;
 
 namespace Rca.Loader
 {
@@ -29,18 +28,12 @@ namespace Rca.Loader
         /// <summary>
         /// Sets the path to the runtime assembly.
         /// </summary>
-        public void SetRuntimePath(string path)
-        {
-            runtimePath = path;
-        }
+        public void SetRuntimePath(string path) => runtimePath = path;
         
         /// <summary>
         /// Sets the runtime instance.
         /// </summary>
-        public void SetRuntimeInstance(object instance)
-        {
-            runtimeInstance = instance;
-        }
+        public void SetRuntimeInstance(object instance) => runtimeInstance = instance;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RuntimeLoadContext"/> class.
@@ -82,9 +75,9 @@ namespace Rca.Loader
                 {
                     return AssemblyLoadContext.Default.LoadFromAssemblyPath(candidate);
                 }
-                catch (Exception ex)
+                catch
                 {
-                    Debug.WriteLine($"Failed to load {assemblyName}: {ex.Message}");
+                    // Fall back to null if loading fails
                 }
             }
             
@@ -156,20 +149,11 @@ namespace Rca.Loader
         private Assembly? LoadAssemblyInCurrentContext(string assemblyName, string baseDir)
         {
             var candidate = Path.Combine(baseDir, assemblyName + ".dll");
-            if (File.Exists(candidate))
-            {
-                return LoadFromAssemblyPath(candidate);
-            }
-            
-            return null;
+            return File.Exists(candidate) ? LoadFromAssemblyPath(candidate) : null;
         }
 
         /// <inheritdoc/>
-        protected override Assembly? Load(AssemblyName assemblyName)
-        {
-            // Prefer to use the Resolving event handler
-            return null;
-        }
+        protected override Assembly? Load(AssemblyName assemblyName) => null;
         
         /// <summary>
         /// Cleans up resources and unregisters event handlers.

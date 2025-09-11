@@ -1,11 +1,8 @@
 using System;
 using System.IO;
-using System.Text;
 using System.IO.Pipes;
 using System.Text.Json;
 using System.Diagnostics;
-using System.Threading.Tasks;
-using System.Runtime.InteropServices;
 using System.Linq;
 
 namespace Rca.TestAdapter
@@ -37,6 +34,7 @@ namespace Rca.TestAdapter
                     return false;
                 }
                 
+                Console.WriteLine("DEBUG: Pipe server is responsive, ready for test execution.");
                 return true;
             }
             catch (Exception ex)
@@ -93,7 +91,6 @@ namespace Rca.TestAdapter
                 
                 if (revitProcesses.Count > 0)
                 {
-                    Console.WriteLine($"DEBUG: Found {revitProcesses.Count} potential Revit process(es) by window title");
                     return true;
                 }
             }
@@ -102,7 +99,6 @@ namespace Rca.TestAdapter
                 // Ignore errors when searching by window title
             }
             
-            Console.WriteLine("DEBUG: No Revit processes found");
             return false;
         }
         
@@ -118,50 +114,32 @@ namespace Rca.TestAdapter
             
             try
             {
-                Console.WriteLine($"DEBUG: Checking if pipe server is responsive: {Constants.PipeName}");
-                
                 pipeClient = new NamedPipeClientStream(".", Constants.PipeName, PipeDirection.InOut, PipeOptions.None);
-                
-                // Try to connect with a 5 second timeout
-                Console.WriteLine("DEBUG: Connecting to pipe with 5 second timeout");
                 pipeClient.Connect(5000);
                 
                 if (!pipeClient.IsConnected)
                 {
-                    Console.WriteLine("DEBUG: Failed to connect to pipe server");
                     return false;
                 }
                 
-                Console.WriteLine("DEBUG: Connected to pipe server");
-                
-                // Create writer and reader
                 writer = new StreamWriter(pipeClient) { AutoFlush = true };
                 reader = new StreamReader(pipeClient);
                 
                 // Send a status command
                 var command = new PipeCommand { Command = "STATUS", Payload = "TEST_ADAPTER" };
-                var json = JsonSerializer.Serialize(command);
-                Console.WriteLine($"DEBUG: Sending STATUS command: {json}");
-                
-                // Write the command
-                writer.WriteLine(json);
+                writer.WriteLine(JsonSerializer.Serialize(command));
                 
                 // Read the response
                 var responseJson = reader.ReadLine();
-                Console.WriteLine($"DEBUG: Received response: {responseJson ?? "NULL"}");
-                
                 if (string.IsNullOrEmpty(responseJson))
                 {
-                    Console.WriteLine("DEBUG: Empty response received");
                     return false;
                 }
                 
                 var response = JsonSerializer.Deserialize<PipeResponse>(responseJson);
                 var success = response != null && !string.IsNullOrEmpty(response.Status);
-                Console.WriteLine($"DEBUG: Response status: {response?.Status ?? "NULL"}, Success: {success}");
                 
-                // Explicitly close the writer and reader to avoid disposal issues
-                Console.WriteLine("DEBUG: Closing writer and reader");
+                // Explicitly close streams before disposal
                 writer.Close();
                 reader.Close();
                 
@@ -179,40 +157,15 @@ namespace Rca.TestAdapter
             }
             finally
             {
-                // Clean up resources in the proper order
-                try
-                {
-                    writer?.Dispose();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"DEBUG: Error disposing writer: {ex.Message}");
-                }
-                
-                try
-                {
-                    reader?.Dispose();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"DEBUG: Error disposing reader: {ex.Message}");
-                }
-                
-                try
-                {
-                    if (pipeClient != null)
-                    {
-                        if (pipeClient.IsConnected)
-                        {
-                            pipeClient.Close();
-                        }
-                        pipeClient.Dispose();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"DEBUG: Error disposing pipe client: {ex.Message}");
-                }
+                // Clean up resources in proper order
+                try { writer?.Dispose(); } catch { }
+                try { reader?.Dispose(); } catch { }
+                try 
+                { 
+                    if (pipeClient?.IsConnected == true) pipeClient.Close();
+                    pipeClient?.Dispose(); 
+                } 
+                catch { }
             }
         }
     }

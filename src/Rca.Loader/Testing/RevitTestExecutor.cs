@@ -4,7 +4,6 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Autodesk.Revit.UI;
-using System.Diagnostics;
 using System.Runtime.Loader;
 
 namespace Rca.Loader.Testing
@@ -159,9 +158,8 @@ namespace Rca.Loader.Testing
             });
         }
         
-        private TestResult CreateErrorResult(string fullyQualifiedName, string displayName, Exception ex)
-        {
-            return new TestResult
+        private TestResult CreateErrorResult(string fullyQualifiedName, string displayName, Exception ex) => 
+            new TestResult
             {
                 FullyQualifiedName = fullyQualifiedName,
                 DisplayName = displayName,
@@ -176,7 +174,6 @@ namespace Rca.Loader.Testing
                     new TestMessage { Level = "Error", Text = ex.ToString() }
                 }
             };
-        }
         
         private bool IsSubclassOf(Type type, string baseClassName)
         {
@@ -184,6 +181,8 @@ namespace Rca.Loader.Testing
             if (type.Name == baseClassName) return true;
             return type.BaseType != null && IsSubclassOf(type.BaseType, baseClassName);
         }
+        
+        #region Data Transfer Objects
         
         /// <summary>
         /// Test request from the pipe.
@@ -283,5 +282,7 @@ namespace Rca.Loader.Testing
             /// </summary>
             public List<TestRequest> Tests { get; set; } = new();
         }
+        
+        #endregion
     }
 }
