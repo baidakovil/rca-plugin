@@ -23,34 +23,25 @@ namespace Rca.TestAdapter
         {
             try
             {
-                // Check if Revit is running
                 if (!IsRevitRunning())
                 {
                     Console.WriteLine("ERROR: Revit is not running.");
-                    Console.WriteLine("Please follow these steps to run tests with Revit:");
-                    Console.WriteLine("1. Start Autodesk Revit");
-                    Console.WriteLine("2. Click the 'Initialize' button in the RCA ribbon tab in Revit");
-                    Console.WriteLine("3. Run the tests again from Visual Studio");
+                    Console.WriteLine("Please start Autodesk Revit and click 'Initialize' in the RCA ribbon tab.");
                     return false;
                 }
                 
-                Console.WriteLine("DEBUG: Revit process found, now checking pipe server.");
-                
-                // Try to check if the pipe server is responsive
                 if (!CheckPipeServerResponsive())
                 {
-                    Console.WriteLine("ERROR: Revit is running but the pipe server isn't responsive.");
-                    Console.WriteLine("Please click the 'Initialize' button in the RCA ribbon tab in Revit before running tests.");
+                    Console.WriteLine("ERROR: RCA pipe server not responsive.");
+                    Console.WriteLine("Please click the 'Initialize' button in the RCA ribbon tab in Revit.");
                     return false;
                 }
                 
-                Console.WriteLine("DEBUG: Pipe server is responsive, ready for test execution.");
                 return true;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error initializing Revit for testing: {ex.Message}");
-                Console.WriteLine($"DEBUG: Exception details: {ex}");
                 return false;
             }
         }
@@ -61,18 +52,13 @@ namespace Rca.TestAdapter
         /// <returns>True if Revit is running, false otherwise.</returns>
         private static bool IsRevitRunning()
         {
-            // Try multiple possible Revit process names
             var possibleProcessNames = new[] 
             { 
-                "Revit", 
-                "RevitAccelerator", 
-                "RevitPreview", 
-                "Autodesk.Revit.UI",
-                "Autodesk Revit",
-                "Revit.exe"
+                "Revit", "RevitAccelerator", "RevitPreview", 
+                "Autodesk.Revit.UI", "Autodesk Revit"
             };
             
-            // First attempt: look for known process names
+            // Check by process name
             foreach (var processName in possibleProcessNames)
             {
                 try
@@ -80,21 +66,20 @@ namespace Rca.TestAdapter
                     var processes = Process.GetProcessesByName(processName);
                     if (processes.Length > 0)
                     {
-                        Console.WriteLine($"DEBUG: Found {processes.Length} Revit process(es) with name '{processName}'");
+                        Console.WriteLine($"DEBUG: Found {processes.Length} Revit process(es)");
                         return true;
                     }
                 }
-                catch (Exception ex)
+                catch
                 {
-                    Console.WriteLine($"DEBUG: Error checking process name '{processName}': {ex.Message}");
+                    // Continue checking other process names
                 }
             }
             
-            // Second attempt: search by window title containing "Revit"
+            // Check by window title containing "Revit"
             try
             {
-                var allProcesses = Process.GetProcesses();
-                var revitProcesses = allProcesses.Where(p => {
+                var revitProcesses = Process.GetProcesses().Where(p => {
                     try
                     {
                         return !string.IsNullOrEmpty(p.MainWindowTitle) && 
@@ -112,9 +97,9 @@ namespace Rca.TestAdapter
                     return true;
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"DEBUG: Error searching processes by window title: {ex.Message}");
+                // Ignore errors when searching by window title
             }
             
             Console.WriteLine("DEBUG: No Revit processes found");
@@ -135,25 +120,11 @@ namespace Rca.TestAdapter
             {
                 Console.WriteLine($"DEBUG: Checking if pipe server is responsive: {Constants.PipeName}");
                 
-                // Create a connection, send a status command, and close it properly
                 pipeClient = new NamedPipeClientStream(".", Constants.PipeName, PipeDirection.InOut, PipeOptions.None);
                 
                 // Try to connect with a 5 second timeout
                 Console.WriteLine("DEBUG: Connecting to pipe with 5 second timeout");
-                try
-                {
-                    pipeClient.Connect(5000);
-                }
-                catch (TimeoutException)
-                {
-                    Console.WriteLine("DEBUG: Connection timed out");
-                    return false;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"DEBUG: Connection error: {ex.Message}");
-                    return false;
-                }
+                pipeClient.Connect(5000);
                 
                 if (!pipeClient.IsConnected)
                 {
@@ -189,7 +160,17 @@ namespace Rca.TestAdapter
                 var success = response != null && !string.IsNullOrEmpty(response.Status);
                 Console.WriteLine($"DEBUG: Response status: {response?.Status ?? "NULL"}, Success: {success}");
                 
+                // Explicitly close the writer and reader to avoid disposal issues
+                Console.WriteLine("DEBUG: Closing writer and reader");
+                writer.Close();
+                reader.Close();
+                
                 return success;
+            }
+            catch (TimeoutException)
+            {
+                Console.WriteLine("WARNING: Could not connect to RCA pipe server.");
+                return false;
             }
             catch (Exception ex)
             {
@@ -198,10 +179,9 @@ namespace Rca.TestAdapter
             }
             finally
             {
-                // Clean up resources in the proper order - this is the key fix!
+                // Clean up resources in the proper order
                 try
                 {
-                    writer?.Close();
                     writer?.Dispose();
                 }
                 catch (Exception ex)
@@ -211,7 +191,6 @@ namespace Rca.TestAdapter
                 
                 try
                 {
-                    reader?.Close();
                     reader?.Dispose();
                 }
                 catch (Exception ex)

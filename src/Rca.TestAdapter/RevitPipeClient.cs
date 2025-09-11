@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.Pipes;
 using System.Text.Json;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 
 namespace Rca.TestAdapter;
@@ -37,85 +38,35 @@ public class RevitPipeClient
             pipeClient = new NamedPipeClientStream(".", Constants.PipeName, PipeDirection.InOut, PipeOptions.None);
             
             // Connect with timeout
-            try
-            {
-                Console.WriteLine($"DEBUG: Connecting to pipe with timeout {timeoutMs}ms");
-                pipeClient.Connect(timeoutMs);
-            }
-            catch (TimeoutException)
-            {
-                Console.WriteLine($"DEBUG: Connection timed out after {timeoutMs}ms");
-                return new List<RevitTestResult>();
-            }
-            
+            Console.WriteLine($"DEBUG: Connecting to pipe with timeout {timeoutMs}ms");
+            pipeClient.Connect(timeoutMs);
             Console.WriteLine($"DEBUG: Connected to pipe, IsConnected={pipeClient.IsConnected}");
             
             // Create new StreamWriter/StreamReader
             writer = new StreamWriter(pipeClient) { AutoFlush = true };
             reader = new StreamReader(pipeClient);
             
-            // Convert TestCase objects to RevitTestRequest objects
-            var requests = new List<RevitTestRequest>();
-            foreach (var test in tests)
-            {
-                requests.Add(new RevitTestRequest
-                {
-                    FullyQualifiedName = test.FullyQualifiedName,
-                    DisplayName = test.DisplayName
-                });
-            }
+            var payload = CreateTestPayload(assemblyPath, tests);
+            var command = new PipeCommand { Command = "RUN_TESTS", Payload = JsonSerializer.Serialize(payload) };
             
-            // Create the payload
-            var payload = new TestExecutionPayload
-            {
-                AssemblyPath = assemblyPath,
-                Tests = requests
-            };
+            Console.WriteLine($"DEBUG: Sending RUN_TESTS command (payload length: {JsonSerializer.Serialize(payload).Length})");
+            writer.WriteLine(JsonSerializer.Serialize(command));
             
-            // Serialize the payload
-            var payloadJson = JsonSerializer.Serialize(payload);
-            
-            // Send the RUN_TESTS command
-            var cmd = new PipeCommand
-            {
-                Command = "RUN_TESTS",
-                Payload = payloadJson
-            };
-            
-            var json = JsonSerializer.Serialize(cmd);
-            Console.WriteLine($"DEBUG: Sending RUN_TESTS command (payload length: {payloadJson.Length})");
-            writer.WriteLine(json);
-            
-            // Read the response
             Console.WriteLine("DEBUG: Reading test execution response");
             var responseJson = reader.ReadLine();
             
-            if (string.IsNullOrEmpty(responseJson))
-            {
-                Console.WriteLine("DEBUG: Received empty test execution response");
-                return new List<RevitTestResult>();
-            }
+            Console.WriteLine($"DEBUG: Received test execution response (length: {responseJson?.Length ?? 0})");
             
-            Console.WriteLine($"DEBUG: Received test execution response (length: {responseJson.Length})");
-            var response = JsonSerializer.Deserialize<PipeResponse>(responseJson);
+            // Explicitly close streams before disposal
+            writer.Close();
+            reader.Close();
             
-            if (response == null || response.Status != "OK" || string.IsNullOrEmpty(response.Message))
-            {
-                Console.WriteLine($"DEBUG: Invalid test execution response status: {response?.Status}");
-                return new List<RevitTestResult>();
-            }
-            
-            try
-            {
-                var results = JsonSerializer.Deserialize<List<RevitTestResult>>(response.Message);
-                Console.WriteLine($"DEBUG: Deserialized {results?.Count ?? 0} test results");
-                return results ?? new List<RevitTestResult>();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"DEBUG: Error deserializing test results: {ex.Message}");
-                return new List<RevitTestResult>();
-            }
+            return ProcessResponse(responseJson);
+        }
+        catch (TimeoutException)
+        {
+            Console.WriteLine($"DEBUG: Connection timed out after {timeoutMs}ms");
+            return new List<RevitTestResult>();
         }
         catch (Exception ex)
         {
@@ -127,7 +78,6 @@ public class RevitPipeClient
             // Clean up resources in proper order
             try
             {
-                writer?.Close();
                 writer?.Dispose();
             }
             catch (Exception ex)
@@ -137,7 +87,6 @@ public class RevitPipeClient
             
             try
             {
-                reader?.Close();
                 reader?.Dispose();
             }
             catch (Exception ex)
@@ -160,6 +109,49 @@ public class RevitPipeClient
             {
                 Console.WriteLine($"DEBUG: Error disposing pipe client: {ex.Message}");
             }
+        }
+    }
+    
+    private TestExecutionPayload CreateTestPayload(string assemblyPath, List<TestCase> tests)
+    {
+        var requests = tests.Select(test => new RevitTestRequest
+        {
+            FullyQualifiedName = test.FullyQualifiedName,
+            DisplayName = test.DisplayName
+        }).ToList();
+        
+        return new TestExecutionPayload
+        {
+            AssemblyPath = assemblyPath,
+            Tests = requests
+        };
+    }
+    
+    private List<RevitTestResult> ProcessResponse(string? responseJson)
+    {
+        if (string.IsNullOrEmpty(responseJson))
+        {
+            Console.WriteLine("DEBUG: Received empty test execution response");
+            return new List<RevitTestResult>();
+        }
+        
+        var response = JsonSerializer.Deserialize<PipeResponse>(responseJson);
+        if (response?.Status != "OK" || string.IsNullOrEmpty(response.Message))
+        {
+            Console.WriteLine($"DEBUG: Invalid test execution response status: {response?.Status}");
+            return new List<RevitTestResult>();
+        }
+        
+        try
+        {
+            var results = JsonSerializer.Deserialize<List<RevitTestResult>>(response.Message);
+            Console.WriteLine($"DEBUG: Deserialized {results?.Count ?? 0} test results");
+            return results ?? new List<RevitTestResult>();
+        }
+        catch (JsonException ex)
+        {
+            Console.WriteLine($"DEBUG: Error deserializing test results: {ex.Message}");
+            return new List<RevitTestResult>();
         }
     }
 }

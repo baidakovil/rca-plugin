@@ -2,11 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Autodesk.Revit.UI;
-using NUnit.Framework;
-using NUnit.Framework.Internal;
 using System.Diagnostics;
 using System.Runtime.Loader;
 
@@ -26,7 +23,6 @@ namespace Rca.Loader.Testing
         public RevitTestExecutor(UIApplication uiapp)
         {
             this.uiapp = uiapp ?? throw new ArgumentNullException(nameof(uiapp));
-            Debug.WriteLine("DEBUG: RevitTestExecutor initialized with UIApplication");
         }
         
         /// <summary>
@@ -38,68 +34,36 @@ namespace Rca.Loader.Testing
         public List<TestResult> ExecuteTests(string assemblyPath, List<TestRequest> testRequests)
         {
             var results = new List<TestResult>();
-            Debug.WriteLine($"DEBUG: ExecuteTests called for {testRequests.Count} tests in {assemblyPath}");
             
             try
             {
-                // Load the test assembly in the default context to avoid collectible assembly issues
-                Debug.WriteLine($"DEBUG: Loading test assembly from {assemblyPath}");
-                Assembly assembly;
+                var assembly = LoadTestAssembly(assemblyPath);
                 
-                // Force assembly loading in the default context
-                using (AssemblyLoadContext.Default.EnterContextualReflection())
-                {
-                    assembly = Assembly.LoadFrom(assemblyPath);
-                }
-                
-                Debug.WriteLine($"DEBUG: Assembly loaded: {assembly.FullName}");
-                
-                // Execute each test
                 foreach (var testRequest in testRequests)
                 {
-                    Debug.WriteLine($"DEBUG: Executing test: {testRequest.FullyQualifiedName}");
                     var testResult = ExecuteTest(assembly, testRequest);
-                    Debug.WriteLine($"DEBUG: Test execution complete, outcome: {testResult.Outcome}");
                     results.Add(testResult);
                 }
-                
-                Debug.WriteLine($"DEBUG: All tests executed, total results: {results.Count}");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"DEBUG: Error executing tests: {ex.Message}");
-                Debug.WriteLine($"DEBUG: Stack trace: {ex.StackTrace}");
-                
-                // Handle global error
-                var errorResult = new TestResult
-                {
-                    FullyQualifiedName = "Assembly.Load",
-                    DisplayName = "Assembly Load Error",
-                    Outcome = "Failed",
-                    ErrorMessage = $"Failed to load or process assembly: {ex.Message}",
-                    ErrorStackTrace = ex.StackTrace ?? "",
-                    StartTimeUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                    EndTimeUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                    DurationInMilliseconds = 0,
-                    Messages = new List<TestMessage>
-                    {
-                        new TestMessage
-                        {
-                            Level = "Error",
-                            Text = ex.ToString()
-                        }
-                    }
-                };
-                results.Add(errorResult);
+                results.Add(CreateErrorResult("Assembly.Load", "Assembly Load Error", ex));
             }
             
             return results;
         }
         
+        private Assembly LoadTestAssembly(string assemblyPath)
+        {
+            // Load test assembly in default context to avoid assembly loading conflicts
+            using (AssemblyLoadContext.Default.EnterContextualReflection())
+            {
+                return Assembly.LoadFrom(assemblyPath);
+            }
+        }
+        
         private TestResult ExecuteTest(Assembly assembly, TestRequest testRequest)
         {
-            Debug.WriteLine($"DEBUG: ExecuteTest starting for {testRequest.FullyQualifiedName}");
-            
             var result = new TestResult
             {
                 FullyQualifiedName = testRequest.FullyQualifiedName,
@@ -112,161 +76,113 @@ namespace Rca.Loader.Testing
             
             try
             {
-                // Parse the fully qualified name to get the class and method
-                var lastDot = testRequest.FullyQualifiedName.LastIndexOf('.');
-                if (lastDot <= 0 || lastDot >= testRequest.FullyQualifiedName.Length - 1)
-                {
-                    throw new ArgumentException($"Invalid fully qualified name: {testRequest.FullyQualifiedName}");
-                }
+                var (testClassType, testMethod) = ParseAndGetTestMethod(assembly, testRequest.FullyQualifiedName);
+                var testInstance = CreateTestInstance(testClassType);
                 
-                var className = testRequest.FullyQualifiedName.Substring(0, lastDot);
-                var methodName = testRequest.FullyQualifiedName.Substring(lastDot + 1);
+                RunSetupMethods(testInstance, testClassType);
                 
-                Debug.WriteLine($"DEBUG: Class name: {className}, Method name: {methodName}");
+                // Execute the test method
+                testMethod.Invoke(testInstance, null);
                 
-                // Get the test class type
-                var testClassType = assembly.GetType(className);
-                if (testClassType == null)
-                {
-                    Debug.WriteLine($"DEBUG: Type not found: {className}");
-                    
-                    // Log available types for debugging
-                    var availableTypes = string.Join(", ", assembly.GetTypes().Select(t => t.FullName));
-                    Debug.WriteLine($"DEBUG: Available types: {availableTypes}");
-                    
-                    throw new ArgumentException($"Type not found: {className}");
-                }
-                
-                // Get the test method
-                var testMethod = testClassType.GetMethod(methodName);
-                if (testMethod == null)
-                {
-                    Debug.WriteLine($"DEBUG: Method not found: {methodName}");
-                    throw new ArgumentException($"Method not found: {methodName}");
-                }
-                
-                // Create an instance of the test class
-                // Check if the class inherits from UIApplicationTests
-                Debug.WriteLine("DEBUG: Checking if test class inherits from UIApplicationTests");
-                var needsUiApp = IsSubclassOf(testClassType, "UIApplicationTests");
-                Debug.WriteLine($"DEBUG: Needs UIApplication: {needsUiApp}");
-                
-                object testInstance;
-                
-                // Execute test in the default context to avoid assembly loading issues
-                using (AssemblyLoadContext.Default.EnterContextualReflection())
-                {
-                    if (needsUiApp)
-                    {
-                        // Call GlobalSetup with UIApplication
-                        Debug.WriteLine("DEBUG: Creating test instance and calling GlobalSetup");
-                        testInstance = Activator.CreateInstance(testClassType)!;
-                        var setupMethod = testClassType.GetMethod("GlobalSetup", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                        
-                        if (setupMethod == null)
-                        {
-                            Debug.WriteLine("DEBUG: GlobalSetup method not found");
-                        }
-                        else
-                        {
-                            Debug.WriteLine("DEBUG: Invoking GlobalSetup with UIApplication");
-                            setupMethod.Invoke(testInstance, new[] { uiapp });
-                        }
-                        
-                        // Check for SetUp method
-                        Debug.WriteLine("DEBUG: Looking for SetUp methods");
-                        var setupMethods = testClassType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                            .Where(m => m.GetCustomAttributes(true).Any(a => a.GetType().Name == "SetUpAttribute"))
-                            .ToList();
-                        
-                        Debug.WriteLine($"DEBUG: Found {setupMethods.Count} SetUp methods");
-                        foreach (var setup in setupMethods)
-                        {
-                            Debug.WriteLine($"DEBUG: Invoking SetUp method: {setup.Name}");
-                            setup.Invoke(testInstance, null);
-                        }
-                    }
-                    else
-                    {
-                        // Regular instantiation
-                        Debug.WriteLine("DEBUG: Creating regular test instance");
-                        testInstance = Activator.CreateInstance(testClassType)!;
-                        
-                        // Check for SetUp method
-                        Debug.WriteLine("DEBUG: Looking for SetUp methods");
-                        var setupMethods = testClassType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                            .Where(m => m.GetCustomAttributes(true).Any(a => a.GetType().Name == "SetUpAttribute"))
-                            .ToList();
-                        
-                        Debug.WriteLine($"DEBUG: Found {setupMethods.Count} SetUp methods");
-                        foreach (var setup in setupMethods)
-                        {
-                            Debug.WriteLine($"DEBUG: Invoking SetUp method: {setup.Name}");
-                            setup.Invoke(testInstance, null);
-                        }
-                    }
-                    
-                    // Invoke the test method
-                    Debug.WriteLine($"DEBUG: Invoking test method: {methodName}");
-                    testMethod.Invoke(testInstance, null);
-                    
-                    // Test passed
-                    Debug.WriteLine("DEBUG: Test passed");
-                    result.Outcome = "Passed";
-                }
+                result.Outcome = "Passed";
             }
             catch (TargetInvocationException ex) when (ex.InnerException != null)
             {
-                // Test failed with an assertion or other exception
-                Debug.WriteLine($"DEBUG: Test failed with inner exception: {ex.InnerException.Message}");
-                result.Outcome = "Failed";
-                result.ErrorMessage = ex.InnerException.Message;
-                result.ErrorStackTrace = ex.InnerException.StackTrace ?? "";
-                
-                result.Messages.Add(new TestMessage
-                {
-                    Level = "Error",
-                    Text = ex.InnerException.ToString()
-                });
+                SetTestFailure(result, ex.InnerException);
             }
             catch (Exception ex)
             {
-                // Test failed with a different exception
-                Debug.WriteLine($"DEBUG: Test failed with exception: {ex.Message}");
-                result.Outcome = "Failed";
-                result.ErrorMessage = ex.Message;
-                result.ErrorStackTrace = ex.StackTrace ?? "";
-                
-                result.Messages.Add(new TestMessage
-                {
-                    Level = "Error",
-                    Text = ex.ToString()
-                });
+                SetTestFailure(result, ex);
             }
             
-            // Calculate duration
             var endTime = DateTimeOffset.UtcNow;
             result.EndTimeUnixMs = endTime.ToUnixTimeMilliseconds();
             result.DurationInMilliseconds = (endTime - startTime).TotalMilliseconds;
             
-            Debug.WriteLine($"DEBUG: Test execution completed in {result.DurationInMilliseconds}ms, outcome: {result.Outcome}");
             return result;
+        }
+        
+        private (Type testClassType, MethodInfo testMethod) ParseAndGetTestMethod(Assembly assembly, string fullyQualifiedName)
+        {
+            var lastDot = fullyQualifiedName.LastIndexOf('.');
+            if (lastDot <= 0 || lastDot >= fullyQualifiedName.Length - 1)
+            {
+                throw new ArgumentException($"Invalid fully qualified name: {fullyQualifiedName}");
+            }
+            
+            var className = fullyQualifiedName.Substring(0, lastDot);
+            var methodName = fullyQualifiedName.Substring(lastDot + 1);
+            
+            var testClassType = assembly.GetType(className) 
+                ?? throw new ArgumentException($"Type not found: {className}");
+            
+            var testMethod = testClassType.GetMethod(methodName) 
+                ?? throw new ArgumentException($"Method not found: {methodName}");
+            
+            return (testClassType, testMethod);
+        }
+        
+        private object CreateTestInstance(Type testClassType)
+        {
+            var testInstance = Activator.CreateInstance(testClassType)!;
+            
+            // If test class inherits from UIApplicationTests, call GlobalSetup
+            if (IsSubclassOf(testClassType, "UIApplicationTests"))
+            {
+                var setupMethod = testClassType.GetMethod("GlobalSetup", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                setupMethod?.Invoke(testInstance, new[] { uiapp });
+            }
+            
+            return testInstance;
+        }
+        
+        private void RunSetupMethods(object testInstance, Type testClassType)
+        {
+            var setupMethods = testClassType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                .Where(m => m.GetCustomAttributes(true).Any(a => a.GetType().Name == "SetUpAttribute"));
+            
+            foreach (var setup in setupMethods)
+            {
+                setup.Invoke(testInstance, null);
+            }
+        }
+        
+        private void SetTestFailure(TestResult result, Exception ex)
+        {
+            result.Outcome = "Failed";
+            result.ErrorMessage = ex.Message;
+            result.ErrorStackTrace = ex.StackTrace ?? "";
+            result.Messages.Add(new TestMessage
+            {
+                Level = "Error",
+                Text = ex.ToString()
+            });
+        }
+        
+        private TestResult CreateErrorResult(string fullyQualifiedName, string displayName, Exception ex)
+        {
+            return new TestResult
+            {
+                FullyQualifiedName = fullyQualifiedName,
+                DisplayName = displayName,
+                Outcome = "Failed",
+                ErrorMessage = $"Failed to load or process assembly: {ex.Message}",
+                ErrorStackTrace = ex.StackTrace ?? "",
+                StartTimeUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                EndTimeUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                DurationInMilliseconds = 0,
+                Messages = new List<TestMessage>
+                {
+                    new TestMessage { Level = "Error", Text = ex.ToString() }
+                }
+            };
         }
         
         private bool IsSubclassOf(Type type, string baseClassName)
         {
             if (type == null) return false;
-            
-            // Check if this type is the base class
             if (type.Name == baseClassName) return true;
-            
-            // Check the base type
-            if (type.BaseType != null)
-            {
-                return IsSubclassOf(type.BaseType, baseClassName);
-            }
-            
-            return false;
+            return type.BaseType != null && IsSubclassOf(type.BaseType, baseClassName);
         }
         
         /// <summary>
