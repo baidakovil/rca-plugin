@@ -35,4 +35,16 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+
+  <!-- Copy RCA Loader DLLs to Revit Addins Directory after build -->
+  <Target Name="CopyRcaLoaderToRevitAddins" AfterTargets="Build">
+    <ItemGroup>
+      <RcaLoaderAssemblies Include="$(OutputPath)Rca.Loader.dll;$(OutputPath)Rca.Loader.Contracts.dll" />
+    </ItemGroup>
+    <Copy
+      SourceFiles="@(RcaLoaderAssemblies)"
+      DestinationFolder="$(RcaRevitAddinsDir)\Rca.Loader"
+      SkipUnchangedFiles="true"
+      Condition="Exists('$(OutputPath)Rca.Loader.dll') AND Exists('$(OutputPath)Rca.Loader.Contracts.dll')" />
+  </Target>
 </Project>

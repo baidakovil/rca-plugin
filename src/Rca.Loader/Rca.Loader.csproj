@@ -26,4 +26,6 @@
   <ItemGroup>
     <EmbeddedResource Include="Resources\*.png" />
   </ItemGroup>
+  
+  <Import Project="..\..\build\Common.targets" />
 </Project>
