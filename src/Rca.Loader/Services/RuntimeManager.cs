@@ -5,13 +5,14 @@ using System.Reflection;
 using System.Windows;
 using System.Runtime.Loader;
 using Rca.Loader.Contracts;
+using Rca.Loader.Infrastructure;
 
-namespace Rca.Loader
+namespace Rca.Loader.Services
 {
     /// <summary>
     /// Manages loading, unloading, and interactions with the runtime assembly.
     /// </summary>
-    public class RuntimeManager
+    public class RuntimeManager : IRuntimeManager
     {
         private RuntimeLoadContext? currentContext;
         private IRuntime? currentRuntime;

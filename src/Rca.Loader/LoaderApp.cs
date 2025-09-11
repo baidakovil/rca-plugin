@@ -1,11 +1,9 @@
 using System;
-using System.IO;
-using System.Reflection;
-using System.Threading.Tasks;
 using Autodesk.Revit.UI;
-using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Rca.Loader.Contracts;
+using Rca.Loader.Services;
+using Rca.Loader.Infrastructure;
 
 namespace Rca.Loader
 {
@@ -14,15 +12,15 @@ namespace Rca.Loader
     /// </summary>
     public class LoaderApp : IExternalApplication
     {
-        private PipeServer? pipeServer;
-        private RibbonBuilder ribbonBuilder;
+        private IPipeServerService? pipeServer;
+        private IRibbonService ribbonService;
         private RuntimeCommandHandler? commandHandler;
         private UIApplication? uiapp;
 
         /// <summary>
         /// Gets the runtime manager instance.
         /// </summary>
-        public RuntimeManager RuntimeManager { get; }
+        public IRuntimeManager RuntimeManager { get; }
 
         /// <summary>
         /// Gets the singleton instance of the loader application.
@@ -41,7 +39,7 @@ namespace Rca.Loader
         {
             Instance = this;
             RuntimeManager = new RuntimeManager();
-            ribbonBuilder = new RibbonBuilder();
+            ribbonService = new RibbonService();
         }
 
         /// <summary>
@@ -53,9 +51,8 @@ namespace Rca.Loader
         {
             try
             {
-                // We need the UIApplication, which will be available in external commands
-                // We'll initialize the pipe server in the first external command
-                ribbonBuilder.BuildRibbon(application);
+                // Build the ribbon UI
+                ribbonService.BuildRibbon(application);
                 return Result.Succeeded;
             }
             catch (Exception ex)
@@ -102,7 +99,7 @@ namespace Rca.Loader
             }
             
             commandHandler = new RuntimeCommandHandler(RuntimeManager, uiapp);
-            pipeServer = new PipeServer(LoaderConstants.PipeName, commandHandler.HandlePipeCommandAsync);
+            pipeServer = new PipeServerService(LoaderConstants.PipeName, commandHandler.HandlePipeCommandAsync);
             pipeServer.Start();
         }
     }

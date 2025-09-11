@@ -1,40 +1,53 @@
 using System;
-using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using Autodesk.Revit.Attributes;
 
 namespace Rca.Loader.Commands
 {
     /// <summary>
-    /// Command to open the RCA standalone assistant window.
+    /// External command to open the standalone window.
     /// </summary>
     [Transaction(TransactionMode.Manual)]
     public class OpenStandaloneWindowCommand : IExternalCommand
     {
         /// <summary>
-        /// Executes the command to open the standalone assistant window.
+        /// Executes the command.
         /// </summary>
-        /// <param name="commandData">External command data.</param>
-        /// <param name="message">Error message (if any).</param>
-        /// <param name="elements">Elements to highlight (if any).</param>
-        /// <returns>Result of the command execution.</returns>
+        /// <param name="commandData">The command data.</param>
+        /// <param name="message">Error message.</param>
+        /// <param name="elements">Elements for errors.</param>
+        /// <returns>Result of the command.</returns>
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
-            if (LoaderApp.Instance == null)
+            try
             {
-                message = "Loader instance unavailable";
+                if (LoaderApp.Instance?.RuntimeManager == null)
+                {
+                    message = "Runtime manager not available";
+                    TaskDialog.Show("RCA Loader Error", "Runtime manager is not available. Please restart Revit.");
+                    return Result.Failed;
+                }
+
+                var success = LoaderApp.Instance.RuntimeManager.ShowStandaloneWindow(out var error);
+                
+                if (success)
+                {
+                    return Result.Succeeded;
+                }
+                else
+                {
+                    message = error ?? "Unknown error";
+                    TaskDialog.Show("RCA Loader Error", $"Failed to open standalone window: {error}");
+                    return Result.Failed;
+                }
+            }
+            catch (Exception ex)
+            {
+                message = ex.Message;
+                TaskDialog.Show("RCA Loader Error", $"Error opening standalone window: {ex.Message}");
                 return Result.Failed;
             }
-            
-            var runtimeManager = LoaderApp.Instance.RuntimeManager;
-            if (!runtimeManager.ShowStandaloneWindow(out var error))
-            {
-                TaskDialog.Show("RCA Loader", error ?? "Unknown error opening window");
-                message = error ?? string.Empty;
-                return Result.Failed;
-            }
-            
-            return Result.Succeeded;
         }
     }
 }

@@ -4,7 +4,7 @@ using System.Runtime.Loader;
 using System.Linq;
 using System.IO;
 
-namespace Rca.Loader
+namespace Rca.Loader.Infrastructure
 {
     /// <summary>
     /// Custom assembly load context for loading runtime assemblies in an isolated, unloadable context.
