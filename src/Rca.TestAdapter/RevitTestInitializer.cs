@@ -81,20 +81,6 @@ namespace Rca.TestAdapter
                     if (processes.Length > 0)
                     {
                         Console.WriteLine($"DEBUG: Found {processes.Length} Revit process(es) with name '{processName}'");
-                        
-                        // Print process IDs and window titles for debugging
-                        foreach (var process in processes)
-                        {
-                            try
-                            {
-                                Console.WriteLine($"DEBUG: Process ID: {process.Id}, Window Title: '{process.MainWindowTitle}'");
-                            }
-                            catch
-                            {
-                                Console.WriteLine($"DEBUG: Process ID: {process.Id}, Window Title: <unknown>");
-                            }
-                        }
-                        
                         return true;
                     }
                 }
@@ -123,20 +109,6 @@ namespace Rca.TestAdapter
                 if (revitProcesses.Count > 0)
                 {
                     Console.WriteLine($"DEBUG: Found {revitProcesses.Count} potential Revit process(es) by window title");
-                    
-                    // Print process names and window titles for debugging
-                    foreach (var process in revitProcesses)
-                    {
-                        try
-                        {
-                            Console.WriteLine($"DEBUG: Process: '{process.ProcessName}', ID: {process.Id}, Window Title: '{process.MainWindowTitle}'");
-                        }
-                        catch
-                        {
-                            Console.WriteLine($"DEBUG: Process ID: {process.Id}, details unavailable");
-                        }
-                    }
-                    
                     return true;
                 }
             }
@@ -155,9 +127,9 @@ namespace Rca.TestAdapter
         /// <returns>True if responsive, false otherwise.</returns>
         private static bool CheckPipeServerResponsive()
         {
-            NamedPipeClientStream pipeClient = null;
-            StreamWriter writer = null;
-            StreamReader reader = null;
+            NamedPipeClientStream? pipeClient = null;
+            StreamWriter? writer = null;
+            StreamReader? reader = null;
             
             try
             {
@@ -175,8 +147,6 @@ namespace Rca.TestAdapter
                 catch (TimeoutException)
                 {
                     Console.WriteLine("DEBUG: Connection timed out");
-                    Console.WriteLine("WARNING: Could not connect to RCA pipe server. " +
-                        "Please click the Initialize button in the RCA ribbon tab in Revit.");
                     return false;
                 }
                 catch (Exception ex)
@@ -224,14 +194,14 @@ namespace Rca.TestAdapter
             catch (Exception ex)
             {
                 Console.WriteLine($"DEBUG: Error checking pipe server: {ex.Message}");
-                Console.WriteLine($"DEBUG: Stack trace: {ex.StackTrace}");
                 return false;
             }
             finally
             {
-                // Clean up resources in the proper order
+                // Clean up resources in the proper order - this is the key fix!
                 try
                 {
+                    writer?.Close();
                     writer?.Dispose();
                 }
                 catch (Exception ex)
@@ -241,6 +211,7 @@ namespace Rca.TestAdapter
                 
                 try
                 {
+                    reader?.Close();
                     reader?.Dispose();
                 }
                 catch (Exception ex)

@@ -3,9 +3,7 @@ using System.IO;
 using System.IO.Pipes;
 using System.Text.Json;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
-using System.Diagnostics;
 
 namespace Rca.TestAdapter;
 
@@ -28,11 +26,15 @@ public class RevitPipeClient
         var timeoutMs = (int)timeout.TotalMilliseconds;
         Console.WriteLine($"DEBUG: ExecuteTests starting for {tests.Count} tests in {assemblyPath}");
         
+        NamedPipeClientStream? pipeClient = null;
+        StreamWriter? writer = null;
+        StreamReader? reader = null;
+        
         try
         {
             // Create a fresh connection for test execution
             Console.WriteLine("DEBUG: Creating fresh pipe connection for test execution");
-            using var pipeClient = new NamedPipeClientStream(".", Constants.PipeName, PipeDirection.InOut, PipeOptions.None);
+            pipeClient = new NamedPipeClientStream(".", Constants.PipeName, PipeDirection.InOut, PipeOptions.None);
             
             // Connect with timeout
             try
@@ -49,8 +51,8 @@ public class RevitPipeClient
             Console.WriteLine($"DEBUG: Connected to pipe, IsConnected={pipeClient.IsConnected}");
             
             // Create new StreamWriter/StreamReader
-            using var writer = new StreamWriter(pipeClient) { AutoFlush = true };
-            using var reader = new StreamReader(pipeClient);
+            writer = new StreamWriter(pipeClient) { AutoFlush = true };
+            reader = new StreamReader(pipeClient);
             
             // Convert TestCase objects to RevitTestRequest objects
             var requests = new List<RevitTestRequest>();
@@ -83,7 +85,6 @@ public class RevitPipeClient
             var json = JsonSerializer.Serialize(cmd);
             Console.WriteLine($"DEBUG: Sending RUN_TESTS command (payload length: {payloadJson.Length})");
             writer.WriteLine(json);
-            writer.Flush();
             
             // Read the response
             Console.WriteLine("DEBUG: Reading test execution response");
@@ -113,15 +114,52 @@ public class RevitPipeClient
             catch (Exception ex)
             {
                 Console.WriteLine($"DEBUG: Error deserializing test results: {ex.Message}");
-                Console.WriteLine($"DEBUG: Stack trace: {ex.StackTrace}");
                 return new List<RevitTestResult>();
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"DEBUG: Error executing tests: {ex.Message}");
-            Console.WriteLine($"DEBUG: Stack trace: {ex.StackTrace}");
             return new List<RevitTestResult>();
+        }
+        finally
+        {
+            // Clean up resources in proper order
+            try
+            {
+                writer?.Close();
+                writer?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DEBUG: Error disposing writer: {ex.Message}");
+            }
+            
+            try
+            {
+                reader?.Close();
+                reader?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DEBUG: Error disposing reader: {ex.Message}");
+            }
+            
+            try
+            {
+                if (pipeClient != null)
+                {
+                    if (pipeClient.IsConnected)
+                    {
+                        pipeClient.Close();
+                    }
+                    pipeClient.Dispose();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DEBUG: Error disposing pipe client: {ex.Message}");
+            }
         }
     }
 }

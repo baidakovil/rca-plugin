@@ -130,7 +130,6 @@ namespace Rca.Loader
                     catch (Exception ex)
                     {
                         Debug.WriteLine($"DEBUG: Error processing command: {ex.Message}");
-                        Debug.WriteLine($"DEBUG: Stack trace: {ex.StackTrace}");
                         
                         try
                         {
@@ -164,11 +163,10 @@ namespace Rca.Loader
                 {
                     // Log the error
                     Debug.WriteLine($"DEBUG: Error in pipe server: {ex.Message}");
-                    Debug.WriteLine($"DEBUG: Stack trace: {ex.StackTrace}");
                 }
                 finally
                 {
-                    // Clean up resources in proper order
+                    // Clean up resources in proper order - critical for avoiding pipe errors
                     try
                     {
                         writer?.Close();
