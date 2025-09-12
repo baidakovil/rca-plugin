@@ -106,6 +106,26 @@ Files deployed:
 3. **Execute Python**: Enter code and click "Hello from Python!"
 4. **View Logs**: Click "Show Debug Info" for execution details
 
+### Python Execution Threading
+
+The plugin uses a smart execution system that automatically chooses the best execution path:
+
+- **UI Execution**: Uses `ExecuteSmartAsync()` which automatically detects thread context
+- **Test Execution**: Uses direct `ExecuteSync()` for optimal performance  
+- **Error Handling**: Comprehensive error messages and timeout handling (30s)
+
+**Example Python code:**
+```python
+# Access Revit API objects
+print(f'Document: {doc.Title}')
+print(f'Application: {uiapp.Application.VersionName}')
+
+# Create geometry, modify elements, etc.
+# All Revit API operations are available
+```
+
+For technical details about threading and execution paths, see [PYTHON_EXECUTION_THREADING_ANALYSIS.md](PYTHON_EXECUTION_THREADING_ANALYSIS.md).
+
 ## Contributing
 
 This project follows GitHub Copilot conventions:
