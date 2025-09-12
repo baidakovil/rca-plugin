@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Reflection;
 using System.Runtime.Loader;
@@ -53,9 +54,10 @@ namespace Rca.Loader.Infrastructure
                 "Microsoft.Scripting", "Microsoft.Dynamic", "DynamicLanguageRuntime"
             };
             
-            if (pythonAssemblies.Contains(assemblyName.Name, StringComparer.OrdinalIgnoreCase))
+            var assemblyNameValue = assemblyName.Name;
+            if (assemblyNameValue != null && pythonAssemblies.Contains(assemblyNameValue, StringComparer.OrdinalIgnoreCase))
             {
-                return LoadPythonAssemblyFromRuntime(assemblyName.Name);
+                return LoadPythonAssemblyFromRuntime(assemblyNameValue);
             }
             
             return null;

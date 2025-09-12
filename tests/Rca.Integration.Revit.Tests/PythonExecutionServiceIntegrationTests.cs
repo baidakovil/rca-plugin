@@ -18,7 +18,10 @@ namespace Rca.Integration.Revit.Tests
         public void Setup()
         {
             pythonService = new PythonExecutionService();
-            pythonService.SetRevitContext(uiapp);
+            if (uiapp != null)
+            {
+                pythonService.SetRevitContext(uiapp);
+            }
         }
 
         [Test, Category("Revit")]
