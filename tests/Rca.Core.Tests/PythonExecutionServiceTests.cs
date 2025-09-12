@@ -48,6 +48,22 @@ namespace Rca.Core.Tests
         }
 
         [Test, Category("Unit")]
+        public async Task ExecuteSmartAsync_ValidCode_ReturnsExpectedResult()
+        {
+            // Arrange
+            var code = "print('Hello Smart World')";
+            var expectedResult = "--- [PYTHON EXECUTION START] ---\nOutput: Hello Smart World\n--- [PYTHON EXECUTION END] ---";
+            pythonService!.ExecuteSmartAsync(code).Returns(Task.FromResult(expectedResult));
+
+            // Act
+            var result = await pythonService.ExecuteSmartAsync(code);
+
+            // Assert
+            result.Should().Contain("Hello Smart World");
+            await pythonService.Received(1).ExecuteSmartAsync(code);
+        }
+
+        [Test, Category("Unit")]
         public void SetRevitContext_ValidContext_DoesNotThrow()
         {
             // Arrange & Act & Assert

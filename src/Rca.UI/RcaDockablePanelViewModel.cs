@@ -71,13 +71,51 @@ namespace Rca.UI.ViewModels
 
         private async Task OnExecutePython()
         {
-            OutputText = "Executing...";
-            var uiapp = uiappProvider?.Invoke();
-            if (uiapp != null)
+            try
+            {
+                OutputText = "Executing...";
+                
+                // Ensure we have a valid UIApplication context
+                var uiapp = uiappProvider?.Invoke();
+                if (uiapp == null)
+                {
+                    OutputText = "Error: Revit UI application not available. Please ensure the plugin is properly loaded.";
+                    return;
+                }
+
+                // Set the Revit context before execution
                 pythonService.SetRevitContext(uiapp);
-            var result = await pythonService.ExecuteAsync(InputText);
-            OutputText = result;
-            InputText = string.Empty;
+                
+                // Log the execution attempt for debugging
+                var codeLength = InputText?.Length ?? 0;
+                System.Diagnostics.Debug.WriteLine($"OnExecutePython: Starting execution of {codeLength} characters of Python code");
+                
+                // Execute the Python code using smart execution (automatically chooses best path)
+                var result = await pythonService.ExecuteSmartAsync(InputText);
+                
+                OutputText = result;
+                InputText = string.Empty;
+                
+                System.Diagnostics.Debug.WriteLine("OnExecutePython: Execution completed successfully");
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = $"Error executing Python code: {ex.Message}";
+                OutputText = errorMessage;
+                System.Diagnostics.Debug.WriteLine($"OnExecutePython: Exception occurred - {ex}");
+                
+                // Also log to debug service if available
+                try
+                {
+                    // This is a UI layer, so we don't have direct access to debug service,
+                    // but we can use Debug.WriteLine for troubleshooting
+                    System.Diagnostics.Debug.WriteLine($"UI Layer Error: {errorMessage}\nStackTrace: {ex.StackTrace}");
+                }
+                catch
+                {
+                    // Ignore errors in error logging to prevent cascading failures
+                }
+            }
         }
 
 

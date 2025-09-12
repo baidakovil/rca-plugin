@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Autodesk.Revit.DB;
 using Rca.Contracts;
+using Autodesk.Revit.UI.Events;
 
 namespace Rca.Core.Services
 {
@@ -72,12 +73,22 @@ namespace Rca.Core.Services
                     // Initialize ExternalEvent handler for safe Revit API access from modeless UI
                     externalEventHandler = new ExecutePythonExternalEventHandler(this);
                     externalEvent = ExternalEvent.Create(externalEventHandler);
+                    
+                    // Log successful initialization for debugging
+                    DebugLogService.StaticLogInfo("ExternalEvent initialized successfully for Python execution");
                 }
                 catch (Autodesk.Revit.Exceptions.InvalidOperationException ex)
                 {
-                    throw new InvalidOperationException(
-                        "Cannot create ExternalEvent outside of Revit API context. " +
-                        "This service can only execute Python code when called from within Revit.", ex);
+                    var errorMsg = "Cannot create ExternalEvent outside of Revit API context. " +
+                                  "This service can only execute Python code when called from within Revit.";
+                    DebugLogService.StaticLogError($"ExternalEvent initialization failed: {ex.Message}");
+                    throw new InvalidOperationException(errorMsg, ex);
+                }
+                catch (Exception ex)
+                {
+                    var errorMsg = $"Unexpected error initializing ExternalEvent: {ex.Message}";
+                    DebugLogService.StaticLogError(errorMsg);
+                    throw new InvalidOperationException(errorMsg, ex);
                 }
             }
         }
@@ -112,23 +123,72 @@ namespace Rca.Core.Services
         {
             if (string.IsNullOrWhiteSpace(code)) return string.Empty;
 
-            // Ensure ExternalEvent is initialized
-            EnsureExternalEventInitialized();
-
-            var tcs = new TaskCompletionSource<string>();
-            externalEventHandler!.Prepare(code, tcs);
-
             try
             {
-                externalEvent!.Raise();
+                // Ensure ExternalEvent is initialized
+                EnsureExternalEventInitialized();
+
+                DebugLogService.StaticLogInfo($"ExecuteAsync: Starting Python execution via ExternalEvent");
+
+                var tcs = new TaskCompletionSource<string>();
+                externalEventHandler!.Prepare(code, tcs);
+
+                // Check if ExternalEvent is in a valid state
+                if (externalEvent == null)
+                {
+                    const string errorMsg = "ExternalEvent is null after initialization";
+                    DebugLogService.StaticLogError(errorMsg);
+                    return FormatErrorAndLog(errorMsg);
+                }
+
+                try
+                {
+                    var raiseResult = externalEvent.Raise();
+                    DebugLogService.StaticLogInfo($"ExternalEvent.Raise() result: {raiseResult}");
+                    
+                    if (raiseResult != ExternalEventRequest.Accepted)
+                    {
+                        var errorMsg = $"ExternalEvent.Raise() was not accepted. Result: {raiseResult}. " +
+                                      "This usually indicates that Revit is busy or the request cannot be processed.";
+                        DebugLogService.StaticLogError(errorMsg);
+                        return FormatErrorAndLog(errorMsg);
+                    }
+                }
+                catch (Autodesk.Revit.Exceptions.InvalidOperationException ex)
+                {
+                    var errorMsg = $"Revit InvalidOperationException when raising ExternalEvent: {ex.Message}. " +
+                                  "This typically occurs when trying to execute Revit API code from an invalid thread context.";
+                    DebugLogService.StaticLogError(errorMsg);
+                    return FormatErrorAndLog(errorMsg);
+                }
+                catch (Exception ex)
+                {
+                    var errorMsg = $"Unexpected error raising ExternalEvent: {ex.Message}";
+                    DebugLogService.StaticLogError(errorMsg);
+                    return FormatErrorAndLog(errorMsg);
+                }
+
+                // Wait for the external event to complete with a timeout
+                var timeoutTask = Task.Delay(TimeSpan.FromSeconds(30));
+                var completedTask = await Task.WhenAny(tcs.Task, timeoutTask).ConfigureAwait(false);
+                
+                if (completedTask == timeoutTask)
+                {
+                    const string errorMsg = "Python execution timed out after 30 seconds";
+                    DebugLogService.StaticLogError(errorMsg);
+                    return FormatErrorAndLog(errorMsg);
+                }
+
+                var result = await tcs.Task.ConfigureAwait(false);
+                DebugLogService.StaticLogInfo("ExecuteAsync: Python execution completed successfully");
+                return result;
             }
             catch (Exception ex)
             {
-                // If we cannot raise ExternalEvent, format and log the error consistently
-                return FormatErrorAndLog(ex.Message);
+                var errorMsg = $"Fatal error in ExecuteAsync: {ex.Message}";
+                DebugLogService.StaticLogError($"{errorMsg}\nStackTrace: {ex.StackTrace}");
+                return FormatErrorAndLog(errorMsg);
             }
-
-            return await tcs.Task.ConfigureAwait(false);
         }
 
         /// <summary>
@@ -224,8 +284,67 @@ namespace Rca.Core.Services
         }
 
         /// <summary>
-        /// ExternalEvent handler to run Python code on Revit UI context.
+        /// Executes Python code with automatic path selection based on current thread context.
+        /// Uses ExecuteAsync for UI threads, ExecuteSync for Revit API threads.
         /// </summary>
+        /// <param name="code">The Python code to execute.</param>
+        /// <returns>The execution result.</returns>
+        public async Task<string> ExecuteSmartAsync(string code)
+        {
+            if (string.IsNullOrWhiteSpace(code)) return string.Empty;
+
+            try
+            {
+                // Try to detect if we're in a Revit API context by checking thread name and context
+                var currentThread = System.Threading.Thread.CurrentThread;
+                var isMainThread = currentThread.GetApartmentState() == System.Threading.ApartmentState.STA;
+                
+                DebugLogService.StaticLogInfo($"ExecuteSmartAsync: Thread info - Name: '{currentThread.Name}', " +
+                                            $"IsThreadPoolThread: {currentThread.IsThreadPoolThread}, " +
+                                            $"ApartmentState: {currentThread.GetApartmentState()}");
+
+                // First, try to determine if we can execute synchronously
+                // This is a heuristic - in a real implementation, you might have better context detection
+                bool canUseSyncExecution = false;
+                
+                if (uiapp != null)
+                {
+                    try
+                    {
+                        // Try a simple Revit API call to see if we're in the right context
+                        var _ = uiapp.Application.VersionName;
+                        canUseSyncExecution = true;
+                        DebugLogService.StaticLogInfo("ExecuteSmartAsync: Direct Revit API access successful, using sync execution");
+                    }
+                    catch (Autodesk.Revit.Exceptions.InvalidOperationException)
+                    {
+                        // We're not in Revit API context
+                        DebugLogService.StaticLogInfo("ExecuteSmartAsync: Not in Revit API context, using async execution");
+                    }
+                    catch (Exception ex)
+                    {
+                        DebugLogService.StaticLogError($"ExecuteSmartAsync: Error testing Revit context: {ex.Message}");
+                    }
+                }
+
+                if (canUseSyncExecution)
+                {
+                    // We're in Revit API context, use sync execution
+                    return ExecuteSync(code);
+                }
+                else
+                {
+                    // We need to marshal to Revit context, use async execution
+                    return await ExecuteAsync(code);
+                }
+            }
+            catch (Exception ex)
+            {
+                var errorMsg = $"Error in ExecuteSmartAsync: {ex.Message}";
+                DebugLogService.StaticLogError($"{errorMsg}\nStackTrace: {ex.StackTrace}");
+                return FormatErrorAndLog(errorMsg);
+            }
+        }
         private class ExecutePythonExternalEventHandler : IExternalEventHandler
         {
             private readonly PythonExecutionService service;

@@ -61,27 +61,32 @@ namespace Rca.Integration.Revit.Tests
         }
 
         [Test, Category("Revit")]
-        public async Task ExecuteAsync_SimpleCode_ReturnsFormattedOutput()
+        public async Task ExecuteSmartAsync_SimpleCode_ReturnsFormattedOutput()
         {
-            // This test verifies that async execution still works when called from within Revit API context
-            try
-            {
-                // Arrange
-                var code = "print('Hello from async Python in Revit')";
+            // Arrange
+            var code = "print('Hello from smart execution in Revit')";
 
-                // Act
-                var result = await pythonService!.ExecuteAsync(code);
+            // Act
+            var result = await pythonService!.ExecuteSmartAsync(code);
 
-                // Assert
-                result.Should().Contain("PYTHON EXECUTION START");
-                result.Should().Contain("Hello from async Python in Revit");
-                result.Should().Contain("PYTHON EXECUTION END");
-            }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("ExternalEvent"))
-            {
-                // This is expected when running in test context - ExternalEvent cannot be created outside of standard API execution
-                Assert.Inconclusive("ExternalEvent cannot be created in test context - this is expected behavior");
-            }
+            // Assert
+            result.Should().Contain("PYTHON EXECUTION START");
+            result.Should().Contain("Hello from smart execution in Revit");
+            result.Should().Contain("PYTHON EXECUTION END");
+        }
+
+        [Test, Category("Revit")]
+        public async Task ExecuteSmartAsync_RevitApiCode_AccessesRevitContext()
+        {
+            // Arrange
+            var code = "print(f'Smart execution - Document title: {doc.Title}')";
+
+            // Act
+            var result = await pythonService!.ExecuteSmartAsync(code);
+
+            // Assert
+            result.Should().Contain("Smart execution - Document title:");
+            result.Should().NotContain("Error");
         }
     }
 }

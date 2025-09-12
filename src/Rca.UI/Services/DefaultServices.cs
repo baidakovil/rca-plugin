@@ -67,6 +67,12 @@ namespace Rca.UI.Services
             }
 
             /// <inheritdoc />
+            public Task<string> ExecuteSmartAsync(string code)
+            {
+                return Task.FromResult(PythonServiceUnavailableMessage);
+            }
+
+            /// <inheritdoc />
             public void SetRevitContext(object context)
             {
                 // No operation for null implementation

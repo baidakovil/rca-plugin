@@ -16,7 +16,7 @@ namespace Rca.UI.Tests
         {
             // Arrange
             var python = Substitute.For<IPythonExecutionService>();
-            python.ExecuteAsync(Arg.Any<string>()).Returns(Task.FromResult("ok"));
+            python.ExecuteSmartAsync(Arg.Any<string>()).Returns(Task.FromResult("ok"));
             var vm = new RcaDockablePanelViewModel(
                 () => null,
                 python,
@@ -30,7 +30,7 @@ namespace Rca.UI.Tests
             await Task.Delay(100);
 
             // Assert
-            await python.Received(1).ExecuteAsync(Arg.Is<string>(s => s.Contains("print")));
+            await python.Received(1).ExecuteSmartAsync(Arg.Is<string>(s => s.Contains("print")));
             vm.OutputText.Should().Contain("ok");
             vm.InputText.Should().BeEmpty();
         }
