@@ -72,18 +72,29 @@ namespace Rca.UI.ViewModels
         private async Task OnExecutePython()
         {
             OutputText = "Executing...";
-            var uiapp = uiappProvider?.Invoke();
-            if (uiapp != null)
-                pythonService.SetRevitContext(uiapp);
-            var result = await pythonService.ExecuteAsync(InputText);
-            OutputText = result;
-            InputText = string.Empty;
+            
+            try
+            {
+                var uiapp = uiappProvider?.Invoke();
+                if (uiapp != null)
+                    pythonService.SetRevitContext(uiapp);
+                
+                // Use ExecuteSync in Task.Run for dockable panels since they already run in Revit context
+                // ExecuteAsync would try to create ExternalEvent which is not allowed in dockable panel context
+                var result = await Task.Run(() => pythonService.ExecuteSync(InputText));
+                OutputText = result;
+                InputText = string.Empty;
+            }
+            catch (Exception ex)
+            {
+                OutputText = $"Error: {ex.Message}";
+            }
         }
 
 
         /// <summary>
         /// Handles the hello button click command.
-        /// </summary>
+        /// /// </summary>
         /// <param name="parameter">Command parameter (unused)</param>
         private void OnHelloClicked(object parameter)
         {
@@ -92,7 +103,7 @@ namespace Rca.UI.ViewModels
 
         /// <summary>
         /// Opens the debug information window.
-        /// </summary>
+        /// /// </summary>
         private void OnShowDebugInfo()
         {
             var win = debugInfoWindowFactory();
