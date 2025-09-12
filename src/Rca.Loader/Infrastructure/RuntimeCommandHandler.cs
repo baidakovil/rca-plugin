@@ -5,6 +5,7 @@ using Autodesk.Revit.UI;
 using Rca.Loader.Testing;
 using Rca.Loader.Contracts;
 using Rca.Loader.Services;
+using Rca.Loader.Infrastructure;
 
 namespace Rca.Loader.Infrastructure
 {
@@ -15,6 +16,7 @@ namespace Rca.Loader.Infrastructure
     {
         private readonly IRuntimeManager runtimeManager;
         private readonly UIApplication uiapp;
+        private readonly CommandValidationService validationService;
         
         /// <summary>
         /// Initializes a new instance of the <see cref="RuntimeCommandHandler"/> class.
@@ -25,6 +27,7 @@ namespace Rca.Loader.Infrastructure
         {
             this.runtimeManager = runtimeManager ?? throw new ArgumentNullException(nameof(runtimeManager));
             this.uiapp = uiapp ?? throw new ArgumentNullException(nameof(uiapp));
+            this.validationService = new CommandValidationService();
         }
         
         /// <summary>
@@ -36,63 +39,66 @@ namespace Rca.Loader.Infrastructure
         {
             try
             {
-                switch (cmd.Command)
+                // Validate command first
+                if (!validationService.ValidateCommand(cmd, out var validationError))
                 {
-                    case "RUN_TESTS":
-                        return await HandleRunTestsCommandAsync(cmd);
-                    case "TEST_INIT":
-                        return await Task.FromResult(new PipeResponse { Status = "OK", Message = "Test execution ready" });
-                    default:
-                        return await Task.FromResult(HandlePipeCommand(cmd));
+                    return PipeResponseFactory.InvalidPayload(validationError);
                 }
+
+                return cmd.Command.ToUpperInvariant() switch
+                {
+                    PipeCommands.RunTests => await HandleRunTestsCommandAsync(cmd),
+                    PipeCommands.TestInit => await HandleTestInitCommandAsync(),
+                    _ => await Task.FromResult(HandleSyncCommand(cmd))
+                };
             }
             catch (Exception ex)
             {
-                return new PipeResponse 
-                { 
-                    Status = "ERROR", 
-                    Message = $"Error handling command: {ex.Message}" 
-                };
+                return PipeResponseFactory.Error($"Error handling command: {ex.Message}");
             }
         }
         
         /// <summary>
-        /// Handles a pipe command synchronously.
+        /// Handles synchronous pipe commands.
         /// </summary>
         /// <param name="cmd">The command to handle.</param>
         /// <returns>A response to the command.</returns>
-        private PipeResponse HandlePipeCommand(PipeCommand cmd)
+        private PipeResponse HandleSyncCommand(PipeCommand cmd)
         {
-            switch (cmd.Command)
+            return cmd.Command.ToUpperInvariant() switch
             {
-                case "RELOAD":
-                    var path = cmd.Payload;
-                    var result = runtimeManager.ReloadRuntime(path, out var errorMessage);
-                    return new PipeResponse { 
-                        Status = result ? "OK" : "ERROR", 
-                        Message = errorMessage ?? string.Empty 
-                    };
-                    
-                case "STATUS":
-                    var isRuntimeLoaded = runtimeManager.IsRuntimeLoaded;
-                    return new PipeResponse { 
-                        Status = isRuntimeLoaded ? "LOADED" : "EMPTY",
-                        Message = runtimeManager.CurrentRuntimePath
-                    };
-                    
-                default:
-                    return new PipeResponse { 
-                        Status = "ERROR", 
-                        Message = "Unknown command" 
-                    };
-            }
+                PipeCommands.Reload => HandleReloadCommand(cmd),
+                PipeCommands.Status => HandleStatusCommand(),
+                _ => PipeResponseFactory.UnknownCommand(cmd.Command)
+            };
+        }
+
+        private PipeResponse HandleReloadCommand(PipeCommand cmd)
+        {
+            var result = runtimeManager.ReloadRuntime(cmd.Payload, out var errorMessage);
+            return result 
+                ? PipeResponseFactory.Success(errorMessage ?? string.Empty)
+                : PipeResponseFactory.Error(errorMessage ?? "Unknown reload error");
+        }
+
+        private PipeResponse HandleStatusCommand()
+        {
+            var isRuntimeLoaded = runtimeManager.IsRuntimeLoaded;
+            return isRuntimeLoaded 
+                ? PipeResponseFactory.Loaded(runtimeManager.CurrentRuntimePath)
+                : PipeResponseFactory.Empty();
+        }
+
+        private async Task<PipeResponse> HandleTestInitCommandAsync()
+        {
+            return await Task.FromResult(PipeResponseFactory.Success("Test execution ready"));
         }
         
         private async Task<PipeResponse> HandleRunTestsCommandAsync(PipeCommand cmd)
         {
             if (string.IsNullOrEmpty(cmd.Payload))
             {
-                return new PipeResponse { Status = "ERROR", Message = "Empty test payload" };
+                return PipeResponseFactory.InvalidPayload("Empty test payload");
             }
             
             try
@@ -101,7 +107,7 @@ namespace Rca.Loader.Infrastructure
                 var payload = JsonSerializer.Deserialize<RevitTestExecutor.TestExecutionPayload>(cmd.Payload);
                 if (payload == null)
                 {
-                    return new PipeResponse { Status = "ERROR", Message = "Invalid test payload format" };
+                    return PipeResponseFactory.InvalidPayload("Invalid test payload format");
                 }
                 
                 // Create a test executor
@@ -114,11 +120,15 @@ namespace Rca.Loader.Infrastructure
                 // Serialize the results
                 var resultsJson = JsonSerializer.Serialize(results);
                 
-                return new PipeResponse { Status = "OK", Message = resultsJson };
+                return PipeResponseFactory.Success(resultsJson);
+            }
+            catch (JsonException ex)
+            {
+                return PipeResponseFactory.Error($"JSON serialization error: {ex.Message}");
             }
             catch (Exception ex)
             {
-                return new PipeResponse { Status = "ERROR", Message = $"Test execution error: {ex.Message}" };
+                return PipeResponseFactory.Error($"Test execution error: {ex.Message}");
             }
         }
     }
