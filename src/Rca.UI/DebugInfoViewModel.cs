@@ -1,3 +1,4 @@
+#nullable enable
 using Rca.Contracts;
 using System.Collections.ObjectModel;
 
@@ -16,7 +17,7 @@ namespace Rca.UI.ViewModels
         /// <param name="debugLogService">The debug log service</param>
         public DebugInfoViewModel(IDebugLogService debugLogService)
         {
-            this.debugLogService = debugLogService;
+            this.debugLogService = debugLogService ?? throw new System.ArgumentNullException(nameof(debugLogService));
         }
 
         /// <summary>

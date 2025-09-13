@@ -1,3 +1,4 @@
+#nullable enable
 using Rca.Contracts;
 using Rca.UI.ViewModels;
 using System;
@@ -18,6 +19,8 @@ namespace Rca.UI.Views
     {
         public DebugInfoWindow(IDebugLogService debugLogService)
         {
+            if (debugLogService is null)
+                throw new ArgumentNullException(nameof(debugLogService));
             try
             {
                 // Load XAML manually rather than relying on the automatic XAML loading
@@ -54,7 +57,7 @@ namespace Rca.UI.Views
             try
             {
                 // First try to load from embedded resource (works after ILRepack)
-                string xamlContent = GetEmbeddedXaml();
+                string? xamlContent = GetEmbeddedXaml();
                 if (!string.IsNullOrEmpty(xamlContent))
                 {
                     // Remove or replace the x:Class directive to avoid the type mismatch error
@@ -79,21 +82,19 @@ namespace Rca.UI.Views
         private string RemoveClassDirective(string xamlContent)
         {
             Debug.WriteLine("Removing x:Class directive from XAML");
-            
-            // Use regex to remove the x:Class attribute
-            string pattern = @"x:Class=""[^""]+""";
-            string result = Regex.Replace(xamlContent, pattern, "");
-            
+            // Use regex to remove the x:Class attribute (fix: escape quotes properly)
+            string pattern = "x:Class=\"[^\"]+\"";
+            string result = Regex.Replace(xamlContent, pattern, string.Empty);
             return result;
         }
         
         /// <summary>
         /// Gets the embedded XAML content from the assembly resources
         /// </summary>
-        private string GetEmbeddedXaml()
+        private string? GetEmbeddedXaml()
         {
             // Try several potential resource names since ILRepack might change them
-            var resourceNames = new[]
+            var resourceNames = new string[]
             {
                 "Rca.UI.DebugInfoWindow.xaml",
                 "Rca.UI.Views.DebugInfoWindow.xaml",
@@ -151,7 +152,7 @@ namespace Rca.UI.Views
             try
             {
                 // Parse the XAML string
-                object content = XamlReader.Parse(xamlContent, context);
+                object? content = XamlReader.Parse(xamlContent, context);
                 
                 if (content is Window window)
                 {
@@ -169,7 +170,7 @@ namespace Rca.UI.Views
                     // then use it as our content
                     this.Content = grid;
                 }
-                else
+                else if (content is not null)
                 {
                     Debug.WriteLine($"Parsed content is a {content.GetType().Name}, setting as Content");
                     this.Content = content;

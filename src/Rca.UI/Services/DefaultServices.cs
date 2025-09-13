@@ -1,3 +1,4 @@
+#nullable enable
 using Rca.Contracts;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -135,7 +136,7 @@ namespace Rca.UI.Services
         private class NullRevitContext : IRevitContext
         {
             /// <inheritdoc />
-            public object CurrentUIApplication { get; set; }
+            public object CurrentUIApplication { get; set; } = new object();
         }
 
         #endregion

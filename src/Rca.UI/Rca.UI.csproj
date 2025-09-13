@@ -3,11 +3,12 @@
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
-    <Nullable>disable</Nullable>
+    <Nullable>enable</Nullable>
     <AssemblyName>Rca.UI</AssemblyName>
     <RootNamespace>Rca.UI</RootNamespace>
     <BaseOutputPath>$(SolutionDir)bin\</BaseOutputPath>
 	<PlatformTarget>x64</PlatformTarget>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <!-- Ensure XAML files are embedded as resources -->
