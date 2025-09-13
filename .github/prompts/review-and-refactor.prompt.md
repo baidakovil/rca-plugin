@@ -31,7 +31,8 @@ You're a senior expert software engineer with extensive experience in maintainin
 - Ensure proper exception handling and logging
 - Add missing XML documentation following the enhanced guidelines
 - Improve async patterns to follow Revit-specific best practices
-- Fix any nullable reference type issues
+- Fix nullable-related issues while respecting project settings (e.g., `<Nullable>disable</Nullable>` where present)
+- Verify all projects target `net8.0-windows` as required
 
 ### Medium Priority  
 - Improve code organization and single responsibility adherence
@@ -55,6 +56,7 @@ After refactoring, ensure:
 - [ ] Async patterns follow Revit-specific best practices
 - [ ] Code follows AI-first development principles
 - [ ] No breaking changes to public interfaces
+- [ ] Project settings (target framework, nullable context) remain consistent with solution defaults
 
 ## Success Criteria
 

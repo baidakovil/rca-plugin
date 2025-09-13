@@ -73,7 +73,7 @@ Your goal is to help me write effective unit tests with NUnit for a Revit add-in
 
 - Use `async Task` for async test methods (not `async void`)
 - Use `Assert.ThrowsAsync<T>` for testing async exceptions
-- Use `ConfigureAwait(false)` in test code to avoid deadlocks
+- Consider using `ConfigureAwait(false)` in test code when running under a synchronization context; with modern NUnit and `dotnet test` it is optional
 - Test both successful and failed async operations
 
 ## Mocking and Isolation
