@@ -12,12 +12,12 @@ Your goal is to help me write effective unit tests with NUnit for a Revit add-in
 
 - Use separate test projects for every csproj projects with naming convention `[ProjectName].Tests`
 - Target framework should match main project: `net8.0-windows` for Revit compatibility
-- Required package references:
-  - `Microsoft.NET.Test.Sdk` (latest stable)
-  - `NUnit` (version 3.14.0 or later)
-  - `NUnit3TestAdapter` (version 4.5.0 or later)
-  - `FluentAssertions` (recommended for readable assertions)
-  - `NSubstitute` (for mocking dependencies)
+- Required package references (pinned for reproducibility):
+  - `Microsoft.NET.Test.Sdk` version `17.9.0`
+  - `NUnit` version `3.14.0`
+  - `NUnit3TestAdapter` version `4.5.0`
+  - `FluentAssertions` version `6.12.0`
+  - `NSubstitute` version `5.1.0`
 - Create test classes that match the classes being tested (e.g., `PythonExecutionServiceTests` for `PythonExecutionService`)
 - Use .NET SDK test commands: `dotnet test` for running tests
 - Consider custom test adapters for Named Pipe test execution within Revit API context

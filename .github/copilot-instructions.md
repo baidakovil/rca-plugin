@@ -37,7 +37,7 @@ Follow these guidelines to generate clean, maintainable C# code for AI-first dev
 ## Project Configuration
 
 16. Target `net8.0-windows` framework for Revit 2026 compatibility.
-17. Use nullable reference types where appropriate, but respect legacy `<Nullable>disable</Nullable>` settings where needed.
+17. Enable nullable reference types across ALL projects: set `<Nullable>enable</Nullable>` in every `.csproj` and use correct annotations (`?`, `!`) to fix warnings gradually. Temporary suppressions are allowed only at narrow scope when interacting with external APIs.
 18. All generated code must compile without errors or warnings.
 
 ## Testing and Quality

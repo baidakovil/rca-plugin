@@ -47,6 +47,13 @@ description: 'Ensure that C# types are documented with XML comments and follow b
 - Note **API version compatibility** when relevant
 - Explain **exception handling strategies** for Revit API exceptions
 
+## Nullability and Annotations
+
+- The solution uses `<Nullable>enable</Nullable>` across all projects
+- Document nullability expectations explicitly: annotate nullable parameters/returns with `?`
+- Avoid using the null-forgiving operator `!` unless absolutely necessary; prefer guards and clear contracts
+- In docs, call out whether `null` is allowed and how it is handled
+
 ## Examples
 
 ### Service Class Documentation
@@ -105,6 +112,7 @@ engine.Runtime.IO.SetOutput(outputStream, StdoutEncoding);
 - [ ] All exceptions are documented with `<exception>`
 - [ ] Thread safety considerations are documented in `<remarks>`
 - [ ] Revit API dependencies are clearly stated
+- [ ] Nullability contracts are explicit and consistent with code annotations
 - [ ] Performance implications are noted when relevant
 - [ ] Complex algorithms have explanatory comments about WHY they work that way
 - [ ] Error handling strategies are explained
