@@ -22,6 +22,9 @@ public class RevitPipeClient
     /// <returns>The test results.</returns>
     public List<RevitTestResult> ExecuteTests(string assemblyPath, List<TestCase> tests, TimeSpan timeout)
     {
+        if (tests is null)
+            throw new ArgumentNullException(nameof(tests));
+
         var timeoutMs = (int)timeout.TotalMilliseconds;
         Console.WriteLine($"DEBUG: ExecuteTests starting for {tests.Count} tests in {assemblyPath}");
         

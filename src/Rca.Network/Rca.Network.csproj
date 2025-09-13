@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
-    <Nullable>disable</Nullable>
+    <Nullable>enable</Nullable>
     <AssemblyName>Rca.Network</AssemblyName>
     <RootNamespace>Rca.Network</RootNamespace>
     <BaseOutputPath>$(SolutionDir)bin\</BaseOutputPath>

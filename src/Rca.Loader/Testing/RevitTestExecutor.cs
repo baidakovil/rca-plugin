@@ -32,6 +32,8 @@ namespace Rca.Loader.Testing
         /// <returns>Test results.</returns>
         public List<TestResult> ExecuteTests(string assemblyPath, List<TestRequest> testRequests)
         {
+            if (testRequests == null)
+                throw new ArgumentNullException(nameof(testRequests));
             var results = new List<TestResult>();
             
             try

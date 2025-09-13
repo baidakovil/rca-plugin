@@ -20,6 +20,8 @@ namespace Rca.Loader
         /// <returns>Result of the command.</returns>
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
+            if (commandData == null)
+                throw new ArgumentNullException(nameof(commandData));
             try
             {
                 if (LoaderApp.Instance == null)

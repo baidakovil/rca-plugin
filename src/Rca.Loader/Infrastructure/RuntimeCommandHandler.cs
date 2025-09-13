@@ -37,6 +37,8 @@ namespace Rca.Loader.Infrastructure
         /// <returns>A response to the command.</returns>
         public async Task<PipeResponse> HandlePipeCommandAsync(PipeCommand cmd)
         {
+            if (cmd == null)
+                throw new ArgumentNullException(nameof(cmd));
             try
             {
                 // Validate command first

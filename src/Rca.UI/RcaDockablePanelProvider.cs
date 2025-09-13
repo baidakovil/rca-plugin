@@ -22,6 +22,9 @@ namespace Rca.UI.Views
 
         public void SetupDockablePane(DockablePaneProviderData data)
         {
+            if (data is null)
+                throw new ArgumentNullException(nameof(data));
+
             // Create debug info window factory
             Func<DebugInfoWindow> debugInfoWindowFactory = () => new DebugInfoWindow(debugLogService);
 

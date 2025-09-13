@@ -29,6 +29,13 @@ public class RevitTestDiscoverer : ITestDiscoverer
         IMessageLogger logger,
         ITestCaseDiscoverySink discoverySink)
     {
+        if (sources is null)
+            throw new ArgumentNullException(nameof(sources));
+        if (logger is null)
+            throw new ArgumentNullException(nameof(logger));
+        if (discoverySink is null)
+            throw new ArgumentNullException(nameof(discoverySink));
+
         logger.SendMessage(TestMessageLevel.Informational, "RCA Test Adapter: Starting test discovery");
 
         foreach (var source in sources)
