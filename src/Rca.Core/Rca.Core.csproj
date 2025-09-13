@@ -2,7 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
-    <Nullable>disable</Nullable>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AssemblyName>Rca.Core</AssemblyName>
     <RootNamespace>Rca.Core</RootNamespace>
     <BaseOutputPath>$(SolutionDir)bin\</BaseOutputPath>

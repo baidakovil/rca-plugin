@@ -10,6 +10,6 @@ namespace Rca.Core.Services
     {
         public DateTime Timestamp { get; set; }
         public DebugLogType Type { get; set; }
-        public string Message { get; set; }
+        public string Message { get; set; } = string.Empty;
     }
 }

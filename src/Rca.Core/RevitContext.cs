@@ -8,9 +8,9 @@ namespace Rca.Core
     /// </summary>
     internal class RevitContextServiceImpl : IRevitContext
     {
-        public object CurrentUIApplication 
-        { 
-            get => RevitContext.CurrentUIApplication;
+        public object CurrentUIApplication
+        {
+            get => RevitContext.CurrentUIApplication ?? new object();
             set => RevitContext.CurrentUIApplication = value as UIApplication;
         }
     }
@@ -20,13 +20,13 @@ namespace Rca.Core
     /// </summary>
     public static class RevitContext
     {
-        private static UIApplication currentUIApplication;
+        private static UIApplication? currentUIApplication;
 
         /// <summary>
         /// Gets or sets the current UI application.
         /// </summary>
-        public static UIApplication CurrentUIApplication 
-        { 
+        public static UIApplication? CurrentUIApplication
+        {
             get => currentUIApplication;
             set => currentUIApplication = value;
         }

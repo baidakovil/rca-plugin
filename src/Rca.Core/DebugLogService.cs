@@ -34,14 +34,14 @@ namespace Rca.Core.Services
             {
                 if (e.NewItems != null)
                 {
-                    foreach (DebugLogEntry item in e.NewItems)
+                    foreach (DebugLogEntry item in e.NewItems!)
                     {
                         observableEntries.Add(item);
                     }
                 }
                 if (e.OldItems != null)
                 {
-                    foreach (DebugLogEntry item in e.OldItems)
+                    foreach (DebugLogEntry item in e.OldItems!)
                     {
                         observableEntries.Remove(item);
                     }
