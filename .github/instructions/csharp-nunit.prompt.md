@@ -1,21 +1,26 @@
 ---
 mode: 'agent'
 tools: ['changes', 'codebase', 'editFiles', 'problems', 'search']
-description: 'Get best practices for NUnit unit testing, including data-driven tests'
+description: 'Get best practices for NUnit unit testing, including data-driven tests for Revit add-in projects'
 ---
 
-# NUnit Best Practices
+# NUnit Best Practices for Revit Add-ins
 
-Your goal is to help me write effective unit tests with NUnit, covering both standard and data-driven testing approaches.
-
-Take a note, that current project has a custom test adapters to implement Named Pipe test execution within Revit API context, so please consider that when providing examples.
+Your goal is to help me write effective unit tests with NUnit for a Revit add-in project, covering both standard and data-driven testing approaches with consideration for Revit API context.
 
 ## Project Setup
 
-- Use a separate test projects for every csproj projects with naming convention `[ProjectName].Tests`
-- Reference Microsoft.NET.Test.Sdk, NUnit, and NUnit3TestAdapter packages
-- Create test classes that match the classes being tested (e.g., `CalculatorTests` for `Calculator`)
+- Use separate test projects for every csproj projects with naming convention `[ProjectName].Tests`
+- Target framework should match main project: `net8.0-windows` for Revit compatibility
+- Required package references:
+  - `Microsoft.NET.Test.Sdk` (latest stable)
+  - `NUnit` (version 3.14.0 or later)
+  - `NUnit3TestAdapter` (version 4.5.0 or later)
+  - `FluentAssertions` (recommended for readable assertions)
+  - `NSubstitute` (for mocking dependencies)
+- Create test classes that match the classes being tested (e.g., `PythonExecutionServiceTests` for `PythonExecutionService`)
 - Use .NET SDK test commands: `dotnet test` for running tests
+- Consider custom test adapters for Named Pipe test execution within Revit API context
 
 ## Test Structure
 
@@ -27,11 +32,19 @@ Take a note, that current project has a custom test adapters to implement Named 
 - Use `[OneTimeSetUp]` and `[OneTimeTearDown]` for per-class setup and teardown
 - Use `[SetUpFixture]` for assembly-level setup and teardown
 
+## Revit API Context Considerations
+
+- Mock Revit API dependencies using interfaces (e.g., `IPythonExecutionService`)
+- Avoid direct Revit API calls in unit tests - use integration tests for those
+- Test business logic separately from Revit API interactions
+- Use `[Category("Unit")]` for pure unit tests and `[Category("Integration")]` for Revit-dependent tests
+- Consider using test doubles for `UIApplication`, `Document`, and other Revit types
+
 ## Standard Tests
 
 - Keep tests focused on a single behavior
 - Avoid testing multiple behaviors in one test method
-- Use clear assertions that express intent
+- Use clear assertions that express intent with FluentAssertions: `result.Should().Be(expected)`
 - Include only the assertions needed to verify the test case
 - Make tests independent and idempotent (can run in any order)
 - Avoid test interdependencies
@@ -48,27 +61,67 @@ Take a note, that current project has a custom test adapters to implement Named 
 
 ## Assertions
 
-- Use `Assert.That` with constraint model (preferred NUnit style)
+- Prefer FluentAssertions for readability: `result.Should().NotBeNull()` over `Assert.IsNotNull(result)`
+- Use `Assert.That` with constraint model when FluentAssertions isn't suitable
 - Use constraints like `Is.EqualTo`, `Is.SameAs`, `Contains.Item`
-- Use `Assert.AreEqual` for simple value equality (classic style)
-- Use `CollectionAssert` for collection comparisons
-- Use `StringAssert` for string-specific assertions
-- Use `Assert.Throws<T>` or `Assert.ThrowsAsync<T>` to test exceptions
+- Use `CollectionAssert` for collection comparisons when not using FluentAssertions
+- Use `StringAssert` for string-specific assertions when not using FluentAssertions
+- Use `Assert.ThrowsAsync<T>` for testing exceptions in async methods
 - Use descriptive messages in assertions for clarity on failure
+
+## Async Testing
+
+- Use `async Task` for async test methods (not `async void`)
+- Use `Assert.ThrowsAsync<T>` for testing async exceptions
+- Use `ConfigureAwait(false)` in test code to avoid deadlocks
+- Test both successful and failed async operations
 
 ## Mocking and Isolation
 
-- Consider using Moq or NSubstitute alongside NUnit
-- Mock dependencies to isolate units under test
-- Use interfaces to facilitate mocking
-- Consider using a DI container for complex test setups
+- Use NSubstitute for mocking dependencies: `Substitute.For<IInterface>()`
+- Mock all external dependencies including Revit API objects
+- Use interfaces to facilitate mocking (follow dependency injection patterns)
+- Verify interactions when testing side effects: `mock.Received(1).Method()`
+- Use `Returns()` for setting up mock return values
+- Use `Throws()` for setting up mock exceptions
 
 ## Test Organization
 
-- Group tests by feature or component
-- Use categories with `[Category("CategoryName")]`
-- Use `[Order]` to control test execution order when necessary
+- Group tests by feature or component using nested classes or separate files
+- Use categories with `[Category("Unit")]`, `[Category("Integration")]`, `[Category("Revit")]`
+- Use `[Order]` to control test execution order when necessary (avoid when possible)
 - Use `[Author("DeveloperName")]` to indicate ownership
 - Use `[Description]` to provide additional test information
-- Consider `[Explicit]` for tests that shouldn't run automatically
-- Use `[Ignore("Reason")]` to temporarily skip tests
+- Consider `[Explicit]` for tests that shouldn't run automatically (e.g., slow integration tests)
+- Use `[Ignore("Reason")]` to temporarily skip tests with clear reasoning
+
+## Example Test Structure
+
+```csharp
+[TestFixture]
+public class PythonExecutionServiceTests
+{
+    private IPythonExecutionService? pythonService;
+    
+    [SetUp]
+    public void SetUp()
+    {
+        pythonService = Substitute.For<IPythonExecutionService>();
+    }
+    
+    [Test, Category("Unit")]
+    public async Task ExecuteAsync_ValidCode_ReturnsExpectedResult()
+    {
+        // Arrange
+        var code = "print('Hello World')";
+        var expectedResult = "Hello World";
+        pythonService!.ExecuteAsync(code).Returns(Task.FromResult(expectedResult));
+        
+        // Act
+        var result = await pythonService.ExecuteAsync(code).ConfigureAwait(false);
+        
+        // Assert
+        result.Should().Contain("Hello World");
+        await pythonService.Received(1).ExecuteAsync(code);
+    }
+}
