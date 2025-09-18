@@ -5,6 +5,9 @@ using System.Windows.Media;
 using Autodesk.Revit.UI;
 using Rca.Loader.Commands;
 using Rca.Loader.Contracts;
+#if DEBUG
+using Rca.Loader.UI;
+#endif
 
 namespace Rca.Loader.Services
 {
@@ -15,6 +18,13 @@ namespace Rca.Loader.Services
     {
         private const string TabName = "RCA";
         private const string PanelName = "Loader";
+        
+#if DEBUG
+        /// <summary>
+        /// Gets the status display for the ribbon.
+        /// </summary>
+        public RibbonStatusDisplay? StatusDisplay { get; private set; }
+#endif
 
         /// <summary>
         /// Builds the RCA ribbon tab and panels in Revit.
@@ -59,6 +69,38 @@ namespace Rca.Loader.Services
             AssignEmbeddedIcons(reloadPush,
                 iconFileName: "ReloadRuntime16.png",
                 tooltip: "Reload the latest deployed runtime.");
+                
+#if DEBUG
+            // Create Debug panel and status TextBox (only in DEBUG builds)
+            try
+            {
+                var debugPanel = uiApp.CreateRibbonPanel(TabName, "Debug");
+                
+                // Create TextBox for status display
+                TextBoxData statusTextBoxData = new TextBoxData("RCA_StatusTextBox")
+                {
+                    Name = "Assembly Status",
+                    ToolTip = "Shows status of loaded assemblies",
+                    Image = GetEmbeddedImageBitmapFrame(
+                        Assembly.GetExecutingAssembly(),
+                        "Rca.Loader.Resources.ReloadRuntime16.png")
+                };
+                
+                // Add TextBox to panel
+                var statusTextBox = debugPanel.AddItem(statusTextBoxData) as TextBox;
+                if (statusTextBox != null)
+                {
+                    // Initialize status display with the TextBox
+                    StatusDisplay = new RibbonStatusDisplay();
+                    StatusDisplay.Initialize(statusTextBox);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log but don't crash if debug UI creation fails
+                System.Diagnostics.Debug.WriteLine($"Failed to create debug UI: {ex.Message}");
+            }
+#endif
         }
 
         /// <summary>

@@ -1,9 +1,11 @@
 using System;
+using System.Diagnostics;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.DB;
 using Rca.Loader.Contracts;
 using Rca.Loader.Services;
 using Rca.Loader.Infrastructure;
+using Rca.Loader.AssemblyManagement;
 
 namespace Rca.Loader
 {
@@ -16,11 +18,17 @@ namespace Rca.Loader
         private IRibbonService ribbonService;
         private RuntimeCommandHandler? commandHandler;
         private UIApplication? uiapp;
+        private AssemblyStatusManager? assemblyStatusManager;
 
         /// <summary>
         /// Gets the runtime manager instance.
         /// </summary>
         public IRuntimeManager RuntimeManager { get; }
+
+        /// <summary>
+        /// Gets the assembly status manager instance.
+        /// </summary>
+        public AssemblyStatusManager? AssemblyStatusManager => assemblyStatusManager;
 
         /// <summary>
         /// Gets the singleton instance of the loader application.
@@ -51,12 +59,31 @@ namespace Rca.Loader
         {
             try
             {
+                Debug.WriteLine("RCA Loader starting up");
+                
+                // Initialize assembly status manager
+                assemblyStatusManager = new AssemblyStatusManager();
+                assemblyStatusManager.InitializeOnStartup();
+                
                 // Build the ribbon UI
                 ribbonService.BuildRibbon(application);
+                
+                // Update status display if available
+#if DEBUG
+                var statusDisplay = ((RibbonService)ribbonService).StatusDisplay;
+                if (statusDisplay != null && assemblyStatusManager != null)
+                {
+                    Debug.WriteLine("Updating status display with initial values");
+                    statusDisplay.UpdateStatus(assemblyStatusManager.CurrentInfo);
+                }
+#endif
+                
+                Debug.WriteLine("RCA Loader startup completed");
                 return Result.Succeeded;
             }
             catch (Exception ex)
             {
+                Debug.WriteLine($"Error during RCA Loader startup: {ex.Message}\n{ex.StackTrace}");
                 TaskDialog.Show("RCA Loader Error", ex.ToString());
                 return Result.Failed;
             }
@@ -71,10 +98,15 @@ namespace Rca.Loader
         {
             try
             {
+                Debug.WriteLine("RCA Loader shutting down");
                 pipeServer?.Stop();
                 RuntimeManager.UnloadRuntime();
+                Debug.WriteLine("RCA Loader shutdown completed");
             }
-            catch { }
+            catch (Exception ex) 
+            {
+                Debug.WriteLine($"Error during RCA Loader shutdown: {ex.Message}");
+            }
             return Result.Succeeded;
         }
 
@@ -90,6 +122,28 @@ namespace Rca.Loader
                 StartPipeServer();
             }
         }
+        
+        /// <summary>
+        /// Updates the status display with the current assembly information.
+        /// </summary>
+        public void UpdateStatusDisplay()
+        {
+#if DEBUG
+            try
+            {
+                var statusDisplay = ((RibbonService)ribbonService).StatusDisplay;
+                if (statusDisplay != null && assemblyStatusManager != null)
+                {
+                    Debug.WriteLine("Updating status display");
+                    statusDisplay.UpdateStatus(assemblyStatusManager.CurrentInfo);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error updating status display: {ex.Message}");
+            }
+#endif
+        }
 
         private void StartPipeServer()
         {
@@ -98,9 +152,11 @@ namespace Rca.Loader
                 throw new InvalidOperationException("UIApplication not initialized");
             }
             
+            Debug.WriteLine("Starting pipe server");
             commandHandler = new RuntimeCommandHandler(RuntimeManager, uiapp);
             pipeServer = new PipeServerService(LoaderConstants.PipeName, commandHandler.HandlePipeCommandAsync);
             pipeServer.Start();
+            Debug.WriteLine("Pipe server started");
         }
     }
 }

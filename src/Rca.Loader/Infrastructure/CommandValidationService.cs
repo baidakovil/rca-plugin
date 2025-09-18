@@ -37,6 +37,7 @@ namespace Rca.Loader.Infrastructure
                 PipeCommands.Status => ValidateStatusCommand(command, out validationError),
                 PipeCommands.RunTests => ValidateRunTestsCommand(command, out validationError),
                 PipeCommands.TestInit => ValidateTestInitCommand(command, out validationError),
+                PipeCommands.ReloadRuntime => ValidateReloadRuntimeCommand(command, out validationError),
                 _ => CreateUnknownCommandError(command.Command, out validationError)
             };
         }
@@ -105,6 +106,18 @@ namespace Rca.Loader.Infrastructure
             validationError = string.Empty;
             return true;
         }
+        
+        private static bool ValidateReloadRuntimeCommand(PipeCommand command, out string validationError)
+        {
+            if (string.IsNullOrWhiteSpace(command.Payload))
+            {
+                validationError = "ReloadRuntime command requires a valid folder path";
+                return false;
+            }
+
+            validationError = string.Empty;
+            return true;
+        }
 
         private static bool CreateUnknownCommandError(string commandName, out string validationError)
         {
@@ -137,5 +150,10 @@ namespace Rca.Loader.Infrastructure
         /// Command to initialize the test execution environment.
         /// </summary>
         public const string TestInit = "TEST_INIT";
+        
+        /// <summary>
+        /// Command to reload the runtime and update assembly status.
+        /// </summary>
+        public const string ReloadRuntime = "RELOAD_RUNTIME";
     }
 }
