@@ -25,8 +25,8 @@ namespace Rca.UI.Services
         /// Resolves a service from the container or returns a default implementation.
         /// </summary>
         /// <typeparam name="T">The service interface type.</typeparam>
-        /// <returns>The resolved service or a default implementation.</returns>
-        public T ResolveOrDefault<T>() where T : class
+        /// <returns>The resolved service or a default implementation, which may be null.</returns>
+        public T? ResolveOrDefault<T>() where T : class
         {
             try
             {
@@ -50,7 +50,7 @@ namespace Rca.UI.Services
         /// </summary>
         /// <typeparam name="T">The service interface type.</typeparam>
         /// <returns>A default implementation or null if no default is available.</returns>
-        private static T CreateDefaultService<T>() where T : class
+        private static T? CreateDefaultService<T>() where T : class
         {
             return typeof(T) switch
             {

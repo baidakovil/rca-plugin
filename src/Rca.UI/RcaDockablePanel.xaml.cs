@@ -19,7 +19,7 @@ namespace Rca.UI.Views
     public partial class RcaDockablePanel : UserControl
     {
         public RcaDockablePanel(
-            Func<UIApplication> uiappProvider, 
+            Func<UIApplication?> uiappProvider, 
             IPythonExecutionService pythonService,
             Func<DebugInfoWindow> debugInfoWindowFactory)
         {
@@ -73,7 +73,7 @@ namespace Rca.UI.Views
             try
             {
                 // First try to load from embedded resource (works after ILRepack)
-                string xamlContent = GetEmbeddedXaml();
+                string? xamlContent = GetEmbeddedXaml();
                 if (!string.IsNullOrEmpty(xamlContent))
                 {
                     // Remove or replace the x:Class directive to avoid the type mismatch error
@@ -109,7 +109,7 @@ namespace Rca.UI.Views
         /// <summary>
         /// Gets the embedded XAML content from the assembly resources
         /// </summary>
-        private string GetEmbeddedXaml()
+        private string? GetEmbeddedXaml()
         {
             // Try several potential resource names since ILRepack might change them
             var resourceNames = new[]

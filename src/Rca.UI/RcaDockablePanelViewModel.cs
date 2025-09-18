@@ -14,8 +14,8 @@ namespace Rca.UI.ViewModels
     /// </summary>
     public class RcaDockablePanelViewModel : INotifyPropertyChanged
     {
-        private string inputText;
-        private string outputText;
+        private string inputText = string.Empty;
+        private string outputText = string.Empty;
         private readonly IPythonExecutionService pythonService;
 
         /// <summary>
@@ -52,11 +52,11 @@ namespace Rca.UI.ViewModels
         /// <summary>
         /// Initializes a new instance of the RcaDockablePanelViewModel class.
         /// </summary>
-        private readonly Func<UIApplication> uiappProvider;
+        private readonly Func<UIApplication?> uiappProvider;
         private readonly Func<DebugInfoWindow> debugInfoWindowFactory;
 
         public RcaDockablePanelViewModel(
-            Func<UIApplication> uiappProvider, 
+            Func<UIApplication?> uiappProvider, 
             IPythonExecutionService pythonService,
             Func<DebugInfoWindow> debugInfoWindowFactory
             )
@@ -110,8 +110,8 @@ namespace Rca.UI.ViewModels
             win.Show();
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        private void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
@@ -123,14 +123,14 @@ namespace Rca.UI.ViewModels
     public class RelayCommand : ICommand
     {
         private readonly Action<object> execute;
-        private readonly Func<object, bool> canExecute;
+        private readonly Func<object, bool>? canExecute;
 
         /// <summary>
         /// Initializes a new instance of the RelayCommand class.
         /// </summary>
         /// <param name="execute">The action to execute</param>
         /// <param name="canExecute">The function to determine if command can execute</param>
-        public RelayCommand(Action<object> execute, Func<object, bool> canExecute = null)
+        public RelayCommand(Action<object> execute, Func<object, bool>? canExecute = null)
         {
             this.execute = execute ?? throw new ArgumentNullException(nameof(execute));
             this.canExecute = canExecute;
@@ -141,24 +141,24 @@ namespace Rca.UI.ViewModels
         /// </summary>
         /// <param name="parameter">Command parameter</param>
         /// <returns>True if command can execute, otherwise false</returns>
-        public bool CanExecute(object parameter)
+        public bool CanExecute(object? parameter)
         {
-            return canExecute == null || canExecute(parameter);
+            return canExecute == null || canExecute(parameter!);
         }
 
         /// <summary>
         /// Executes the command.
         /// </summary>
         /// <param name="parameter">Command parameter</param>
-        public void Execute(object parameter)
+        public void Execute(object? parameter)
         {
-            execute(parameter);
+            execute(parameter!);
         }
 
         /// <summary>
         /// Occurs when changes occur that affect whether or not the command should execute.
         /// </summary>
-        public event EventHandler CanExecuteChanged
+        public event EventHandler? CanExecuteChanged
         {
             add { System.Windows.Input.CommandManager.RequerySuggested += value; }
             remove { System.Windows.Input.CommandManager.RequerySuggested -= value; }

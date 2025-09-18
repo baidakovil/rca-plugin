@@ -1,3 +1,4 @@
+using Autodesk.Revit.UI;
 using Rca.Contracts;
 using Rca.Contracts.Infrastructure;
 using System;
@@ -23,11 +24,20 @@ namespace Rca.UI.Views
                 
                 // Get required services or provide fallbacks
                 var revitContext = GetServiceOrDefault<IRevitContext>(container);
-                var pythonService = GetServiceOrDefault<IPythonExecutionService>(container);
-                var debugLogService = GetServiceOrDefault<IDebugLogService>(container);
+                var pythonService = GetServiceOrDefault<IPythonExecutionService>(container) 
+                    ?? new NullPythonExecutionService();
+                var debugLogService = GetServiceOrDefault<IDebugLogService>(container) 
+                    ?? new NullDebugLogService();
+                
+                // Create a UIApplication provider that safely handles null context
+                Func<UIApplication?> uiAppProvider = () => {
+                    if (revitContext?.CurrentUIApplication is UIApplication uiApp)
+                        return uiApp;
+                    return null;
+                };
                 
                 Content = new RcaDockablePanel(
-                    () => revitContext?.CurrentUIApplication as Autodesk.Revit.UI.UIApplication,
+                    uiAppProvider,
                     pythonService,
                     () => new DebugInfoWindow(debugLogService));
             }
@@ -41,7 +51,7 @@ namespace Rca.UI.Views
             }
         }
         
-        private T GetServiceOrDefault<T>(ServiceContainer container) where T : class
+        private T? GetServiceOrDefault<T>(ServiceContainer container) where T : class
         {
             try
             {
@@ -57,6 +67,58 @@ namespace Rca.UI.Views
                 
                 // Return null for the service - calling code must handle this
                 return null;
+            }
+        }
+        
+        /// <summary>
+        /// Null implementation for standalone mode
+        /// </summary>
+        private class NullPythonExecutionService : IPythonExecutionService
+        {
+            public System.Threading.Tasks.Task<string> ExecuteAsync(string code)
+            {
+                return System.Threading.Tasks.Task.FromResult(
+                    "Python execution not available in standalone mode.");
+            }
+
+            public string ExecuteSync(string code)
+            {
+                return "Python execution not available in standalone mode.";
+            }
+
+            public void SetRevitContext(object context)
+            {
+                // Do nothing
+            }
+        }
+        
+        /// <summary>
+        /// Null implementation for standalone mode
+        /// </summary>
+        private class NullDebugLogService : IDebugLogService
+        {
+            public System.Collections.ObjectModel.ReadOnlyObservableCollection<IDebugLogEntry> Entries => 
+                new System.Collections.ObjectModel.ReadOnlyObservableCollection<IDebugLogEntry>(
+                    new System.Collections.ObjectModel.ObservableCollection<IDebugLogEntry>());
+                    
+            public void LogError(string message)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ERROR] {message}");
+            }
+
+            public void LogInfo(string message)
+            {
+                System.Diagnostics.Debug.WriteLine($"[INFO] {message}");
+            }
+
+            public void LogPythonOutput(string message)
+            {
+                System.Diagnostics.Debug.WriteLine($"[PYTHON] {message}");
+            }
+            
+            public void LogCustom(string message, DebugLogType type)
+            {
+                System.Diagnostics.Debug.WriteLine($"[{type}] {message}");
             }
         }
     }

@@ -3,6 +3,7 @@ using FluentAssertions;
 using NSubstitute;
 using Rca.UI.ViewModels;
 using Rca.Contracts;
+using System;
 using System.Threading.Tasks;
 using Autodesk.Revit.UI;
 
@@ -17,10 +18,15 @@ namespace Rca.UI.Tests
             // Arrange
             var python = Substitute.For<IPythonExecutionService>();
             python.ExecuteSync(Arg.Any<string>()).Returns("ok"); // Changed to ExecuteSync
+            
+            // Explicitly define a function that returns null UIApplication
+            Func<UIApplication?> nullUiAppProvider = () => null;
+            
             var vm = new RcaDockablePanelViewModel(
-                () => null,
+                nullUiAppProvider,
                 python,
-                () => null);
+                () => null!); // Use null-forgiving operator for the debugInfoWindowFactory since we don't use it in this test
+            
             vm.InputText = "print('hi')";
 
             // Act
