@@ -17,7 +17,7 @@ Represents information about a loaded assembly, tracking:
 #### LoadedAssembliesInfo.cs
 
 Container class that holds:
-- **LoaderComponents**: Represents both Loader and Contracts assemblies as a single logical unit
+- **LoaderComponents**: Represents the merged Loader assembly (includes Contracts)
 - **RuntimeAssembly**: Information about the Runtime assembly
 - **LastMSBuildSignal**: Tracks the most recent build notification
 
@@ -63,7 +63,7 @@ Handles graceful restarts of Revit when Loader components change:
 
 PowerShell script that:
 - Gracefully closes Revit with save prompts
-- Copies updated assemblies to the target directory
+- Copies updated merged Loader assembly to the target directory
 - Updates state in JSON file
 - Restarts Revit automatically
 
@@ -157,7 +157,7 @@ When only the Runtime assembly is updated:
 
 ### 3. Loader Components Update Scenario
 
-When the Loader and/or Contracts assemblies need updating:
+When the merged Loader assembly needs updating:
 
 1. **Update Detection**:
    ```
@@ -189,7 +189,7 @@ When the Loader and/or Contracts assemblies need updating:
      ↓
    Close Revit gracefully
      ↓
-   Copy assemblies to target directory
+   Copy merged Loader assembly to target directory
      ↓
    Update JSON state file
      ↓
@@ -198,7 +198,7 @@ When the Loader and/or Contracts assemblies need updating:
 
 ### 4. Combined Updates Scenario
 
-When both Loader components and Runtime are updated:
+When both Loader and Runtime are updated:
 
 1. **Update Detection**:
    ```
@@ -249,7 +249,20 @@ When both Loader components and Runtime are updated:
 
 2. **Assembly Directory Structure**:
    - Runtime assemblies are stored in `%LOCALAPPDATA%\RCA\Runtime`
-   - Loader components are in the Revit addin directory (`%APPDATA%\Autodesk\Revit\Addins\2026`)
+   - Merged Loader assembly is in the Revit addin directory (`%APPDATA%\Autodesk\Revit\Addins\2026`)
+
+### Assembly Merging with ILRepack
+
+1. **Merged Assembly Creation**:
+   - Rca.Loader.dll and Rca.Loader.Contracts.dll are merged using ILRepack
+   - MSBuild task handles RevitAPI dependencies properly during merge
+   - Creates a single DLL that contains both components
+   - Internalized types from Contracts aren't exposed outside Loader
+
+2. **Build Process**:
+   - Custom MSBuild task ensures proper merging even with RevitAPI dependencies
+   - Enforces strict success/failure - no fallback to non-merged mode
+   - Ensures consistent binaries across development and deployment
 
 ### Error Handling
 
@@ -280,6 +293,11 @@ When both Loader components and Runtime are updated:
 4. **JSON File Corruption**:
    - Delete `%LOCALAPPDATA%\RCA\LoadedAssemblies.json` to reset state
    - System will recalculate hashes on next startup
+
+5. **ILRepack Failures**:
+   - Ensure RevitAPI.dll is available during build process
+   - Check build logs for specific merge errors
+   - Verify custom MSBuild task is working properly
 
 ## Best Practices for Development
 

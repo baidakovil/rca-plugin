@@ -69,15 +69,33 @@ Console.WriteLine($"Response: {response}");
 ❌ Changes to public interfaces used by Loader  
 ❌ Changes to method signatures of existing public methods  
 ❌ Structural changes to data models used across assemblies  
-❌ Changes to Loader or Contracts assemblies  
+❌ Changes to merged Loader assembly  
 ❌ Database schema changes  
+
+## Understanding the Merged Loader Assembly
+
+The Loader uses ILRepack to merge Rca.Loader.dll and Rca.Loader.Contracts.dll into a single assembly for deployment:
+
+### Benefits of the merged approach:
+
+1. **Simplified deployment**: Only one DLL needs to be managed
+2. **Version consistency**: Eliminates version mismatches between Loader and Contracts
+3. **Reduced footprint**: Smaller total deployment size
+4. **Better encapsulation**: Contract types are internalized where appropriate
+
+### How the merge works:
+
+1. MSBuild process uses ILRepack to combine assemblies at build time
+2. Custom MSBuild task handles dependencies like RevitAPI.dll properly
+3. The merged assembly includes all types from both original assemblies
+4. Public API surface remains the same as before merging
 
 ## Debugging the Hot-Reload System
 
 ### Debug Status Display
 
 In DEBUG builds, the Debug panel shows:
-- **Loader/Contracts**: Shows current/outdated status and directory
+- **Loader (Merged)**: Shows current/outdated status and directory
 - **Runtime**: Shows current/outdated status and directory
 - **Last MSBuild signal**: Shows timestamp and status message
 
@@ -107,6 +125,7 @@ Add this to your `app.config` for additional logging:
 | "Failed to reload runtime: Method not found" | Breaking API changes | Restart Revit completely |
 | "Failed to create debug UI" | Missing UI components in DEBUG build | Rebuild with correct configuration |
 | "Error executing restart script" | PowerShell execution policy or path issues | Check script path and execution policy |
+| "ILRepack failed with exit code" | RevitAPI dependencies not found or accessibility issues | Ensure RevitAPI.dll is available during build |
 
 ## Managing Assembly State
 
@@ -128,12 +147,12 @@ If hot-reloading behaves unexpectedly:
 
 ## Restart Process Details
 
-When Loader components need updating, the restart process:
+When the merged Loader assembly needs updating, the restart process:
 
 1. Shows countdown dialog with options to restart now or later
 2. If "Restart Now" is chosen, executes `RestartRevitGraceful.ps1`
 3. Script saves open documents and closes Revit
-4. Updates assemblies in Revit's addin directory
+4. Updates the merged assembly in Revit's addin directory
 5. Updates JSON state file
 6. Restarts Revit automatically
 
@@ -142,18 +161,38 @@ When Loader components need updating, the restart process:
 For complex changes, test manually by:
 
 1. Build your solution
-2. Copy `Rca.Loader.dll` and `Rca.Loader.Contracts.dll` to `%APPDATA%\Autodesk\Revit\Addins\2026\`
+2. Copy merged `Rca.Loader.dll` to `%APPDATA%\Autodesk\Revit\Addins\2026\`
 3. Copy `Rca.Runtime.dll` to a new folder under `%LOCALAPPDATA%\RCA\Runtime\`
 4. Start Revit and verify functionality
+
+## ILRepack Build Considerations
+
+When working with the Loader build system:
+
+1. **RevitAPI Dependencies**:
+   - The build requires access to RevitAPI.dll and RevitAPIUI.dll
+   - Default location is `libs\Revit\2026\` in the solution directory
+   - Build will fail if dependencies cannot be found
+
+2. **Custom MSBuild Task**:
+   - Uses a custom task to handle merging with proper dependency resolution
+   - Requires ilrepack NuGet package to be installed
+   - Strict failure policy - will not produce partial results
+
+3. **Build Configurations**:
+   - Debug builds contain additional diagnostic information
+   - Release builds are optimized for deployment
+   - Both use the same merging process
 
 ## Best Practices
 
 1. **Maintain backward compatibility** in Runtime changes to support hot-reload
-2. **Update Loader components sparingly** to minimize Revit restarts
+2. **Update the merged Loader assembly sparingly** to minimize Revit restarts
 3. **Add DEBUG logging statements** in critical paths for troubleshooting
 4. **Use versioning** in your API methods to maintain compatibility
 5. **Monitor the status display** during development to understand system state
 6. **Create unit tests** for components to verify compatibility before hot-reload
+7. **Ensure RevitAPI.dll is available** during builds for successful merging
 
 ## Further Reading
 

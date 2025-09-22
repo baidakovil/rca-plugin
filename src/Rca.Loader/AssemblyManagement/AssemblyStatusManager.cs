@@ -20,8 +20,7 @@ namespace Rca.Loader.AssemblyManagement
     /// - Updating the status display in the UI
     /// - Persisting assembly state between Revit sessions
     /// 
-    /// Loader and Contracts assemblies are treated as a single logical unit since
-    /// they are always updated and deployed together.
+    /// The Loader assembly now includes the Contracts assembly merged into it.
     /// </remarks>
     public class AssemblyStatusManager
     {
@@ -65,12 +64,12 @@ namespace Rca.Loader.AssemblyManagement
                     // First run or JSON missing, set up initial paths
                     var paths = GetAssemblyPaths();
                     
-                    // Set path to the directory containing loader components
+                    // Set path to the directory containing loader
                     _currentInfo.LoaderComponents.Path = paths.loaderDir;
                     _currentInfo.RuntimeAssembly.Path = paths.runtimePath;
                     
                     // Calculate initial hashes
-                    _currentInfo.LoaderComponents.Hash = CalculateCombinedLoaderHash(paths.loaderPath, paths.contractsPath);
+                    _currentInfo.LoaderComponents.Hash = CalculateHash(paths.loaderPath);
                     _currentInfo.RuntimeAssembly.Hash = CalculateHash(paths.runtimePath);
                     
                     // Save initial state
@@ -107,46 +106,6 @@ namespace Rca.Loader.AssemblyManagement
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error calculating hash for {filePath}: {ex.Message}");
-                return string.Empty;
-            }
-        }
-        
-        /// <summary>
-        /// Calculates a combined hash for the Loader and Contracts assemblies.
-        /// </summary>
-        /// <param name="loaderPath">Path to the Loader assembly.</param>
-        /// <param name="contractsPath">Path to the Contracts assembly.</param>
-        /// <returns>A combined hash representing both assemblies, or an empty string if either file doesn't exist.</returns>
-        /// <remarks>
-        /// This method creates a deterministic combined hash that represents both assemblies as a single unit.
-        /// The combined hash allows us to track changes to either assembly.
-        /// </remarks>
-        public string CalculateCombinedLoaderHash(string loaderPath, string contractsPath)
-        {
-            try
-            {
-                if (!File.Exists(loaderPath) || !File.Exists(contractsPath))
-                {
-                    return string.Empty;
-                }
-                
-                var loaderHash = CalculateHash(loaderPath);
-                var contractsHash = CalculateHash(contractsPath);
-                
-                if (string.IsNullOrEmpty(loaderHash) || string.IsNullOrEmpty(contractsHash))
-                {
-                    return string.Empty;
-                }
-                
-                // Combine hashes in a deterministic way
-                using var sha256 = SHA256.Create();
-                var combinedBytes = Encoding.UTF8.GetBytes($"{loaderHash}:{contractsHash}");
-                var combinedHash = sha256.ComputeHash(combinedBytes);
-                return BitConverter.ToString(combinedHash).Replace("-", "").ToLowerInvariant();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error calculating combined hash: {ex.Message}");
                 return string.Empty;
             }
         }
@@ -249,11 +208,10 @@ namespace Rca.Loader.AssemblyManagement
             {
                 // Find the latest assemblies
                 var loaderPath = Path.Combine(tempDllPath, LoaderConstants.LoaderFileName);
-                var contractsPath = Path.Combine(tempDllPath, LoaderConstants.LoaderContractsFileName);
                 var runtimePath = Path.Combine(tempDllPath, LoaderConstants.RuntimeFileName);
                 
                 // Calculate hashes for new assemblies
-                var loaderComponentsHash = CalculateCombinedLoaderHash(loaderPath, contractsPath);
+                var loaderComponentsHash = CalculateHash(loaderPath);
                 var runtimeHash = CalculateHash(runtimePath);
                 
                 // Check what has changed
@@ -290,11 +248,10 @@ namespace Rca.Loader.AssemblyManagement
                 }
                 
                 var loaderPath = Path.Combine(latestFolder, LoaderConstants.LoaderFileName);
-                var contractsPath = Path.Combine(latestFolder, LoaderConstants.LoaderContractsFileName);
                 
-                var combinedHash = CalculateCombinedLoaderHash(loaderPath, contractsPath);
+                var loaderHash = CalculateHash(loaderPath);
                 
-                return !string.IsNullOrEmpty(combinedHash) && combinedHash != _currentInfo.LoaderComponents.Hash;
+                return !string.IsNullOrEmpty(loaderHash) && loaderHash != _currentInfo.LoaderComponents.Hash;
             }
             catch (Exception ex)
             {
@@ -356,7 +313,7 @@ namespace Rca.Loader.AssemblyManagement
         }
         
         /// <summary>
-        /// Updates the loader components hashes and path after a successful loader restart.
+        /// Updates the loader components hash and path after a successful loader restart.
         /// </summary>
         /// <param name="loaderDir">The directory containing the newly loaded loader components.</param>
         public void UpdateLoaderComponentsHashesAfterRestart(string loaderDir)
@@ -369,16 +326,15 @@ namespace Rca.Loader.AssemblyManagement
                 }
                 
                 var loaderPath = Path.Combine(loaderDir, LoaderConstants.LoaderFileName);
-                var contractsPath = Path.Combine(loaderDir, LoaderConstants.LoaderContractsFileName);
                 
-                if (!File.Exists(loaderPath) || !File.Exists(contractsPath))
+                if (!File.Exists(loaderPath))
                 {
                     return;
                 }
                 
-                // Update loader components path and combined hash
+                // Update loader components path and hash
                 _currentInfo.LoaderComponents.Path = loaderDir;
-                _currentInfo.LoaderComponents.Hash = CalculateCombinedLoaderHash(loaderPath, contractsPath);
+                _currentInfo.LoaderComponents.Hash = CalculateHash(loaderPath);
                 
                 // Save changes to JSON
                 SaveAssemblyInfo(_currentInfo);
@@ -454,8 +410,8 @@ namespace Rca.Loader.AssemblyManagement
         /// <summary>
         /// Gets the paths to the currently loaded assemblies.
         /// </summary>
-        /// <returns>A tuple containing the loader directory, loader path, contracts path, and runtime path.</returns>
-        private (string loaderDir, string loaderPath, string contractsPath, string runtimePath) GetAssemblyPaths()
+        /// <returns>A tuple containing the loader directory, loader path, and runtime path.</returns>
+        private (string loaderDir, string loaderPath, string runtimePath) GetAssemblyPaths()
         {
             try
             {
@@ -463,9 +419,6 @@ namespace Rca.Loader.AssemblyManagement
                 var loaderAssembly = Assembly.GetExecutingAssembly();
                 var loaderPath = loaderAssembly.Location;
                 var loaderDir = Path.GetDirectoryName(loaderPath) ?? string.Empty;
-                
-                // Get the path to the Contracts assembly (should be in the same folder)
-                var contractsPath = Path.Combine(loaderDir, LoaderConstants.LoaderContractsFileName);
                 
                 // Get the path to the Runtime assembly
                 // First try to find it from the latest folder in TempDllFolder
@@ -477,19 +430,19 @@ namespace Rca.Loader.AssemblyManagement
                     runtimePath = Path.Combine(latestFolder, LoaderConstants.RuntimeFileName);
                     if (File.Exists(runtimePath))
                     {
-                        return (loaderDir, loaderPath, contractsPath, runtimePath);
+                        return (loaderDir, loaderPath, runtimePath);
                     }
                 }
                 
                 // If not found, use empty string
                 runtimePath = string.Empty;
                 
-                return (loaderDir, loaderPath, contractsPath, runtimePath);
+                return (loaderDir, loaderPath, runtimePath);
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error getting assembly paths: {ex.Message}");
-                return (string.Empty, string.Empty, string.Empty, string.Empty);
+                return (string.Empty, string.Empty, string.Empty);
             }
         }
         
@@ -508,13 +461,12 @@ namespace Rca.Loader.AssemblyManagement
                 }
                 
                 var loaderPath = Path.Combine(latestFolder, LoaderConstants.LoaderFileName);
-                var contractsPath = Path.Combine(latestFolder, LoaderConstants.LoaderContractsFileName);
                 var runtimePath = Path.Combine(latestFolder, LoaderConstants.RuntimeFileName);
                 
                 var loaderComponents = new AssemblyInfo
                 {
                     Path = latestFolder, // Store directory path instead of file path
-                    Hash = CalculateCombinedLoaderHash(loaderPath, contractsPath)
+                    Hash = CalculateHash(loaderPath)
                 };
                 
                 var runtime = new AssemblyInfo

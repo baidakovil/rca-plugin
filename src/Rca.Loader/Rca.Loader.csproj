@@ -6,12 +6,18 @@
     <AssemblyName>Rca.Loader</AssemblyName>
     <RootNamespace>Rca.Loader</RootNamespace>
     <PlatformTarget>x64</PlatformTarget>
+    <!-- Identify this as the Loader project for special handling -->
+    <IsLoaderProject>true</IsLoaderProject>
+    <!-- Generate addin file on build -->
+    <GenerateRcaAddinFile>true</GenerateRcaAddinFile>
     <!-- Suppress Revit API reference warnings -->
     <NoWarn>$(NoWarn);MSB3245;MSB3243</NoWarn>
   </PropertyGroup>
+  
   <ItemGroup>
     <ProjectReference Include="..\Rca.Loader.Contracts\Rca.Loader.Contracts.csproj" />
   </ItemGroup>
+  
   <ItemGroup>
     <!-- Explicit references to Revit API DLLs with absolute paths -->
     <Reference Include="RevitAPI">
@@ -23,15 +29,150 @@
       <Private>False</Private>
     </Reference>
   </ItemGroup>
+  
   <ItemGroup>
     <PackageReference Include="NUnit" Version="4.0.1" />
+    <PackageReference Include="ilrepack" Version="2.0.34" PrivateAssets="all" />
   </ItemGroup>
+  
   <ItemGroup>
     <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
   </ItemGroup>
+  
   <ItemGroup>
     <EmbeddedResource Include="Resources\*.png" />
   </ItemGroup>
+  
+  <!-- Custom MSBuild task to merge assemblies -->
+  <UsingTask TaskName="MergeAssemblies" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <MainAssemblyPath ParameterType="System.String" Required="true" />
+      <MergeAssemblyPath ParameterType="System.String" Required="true" />
+      <OutputAssemblyPath ParameterType="System.String" Required="true" />
+      <References ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System" />
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Reflection" />
+      <Using Namespace="System.Diagnostics" />
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+        try
+        {
+            // Create temp folder for references
+            string tempDir = Path.Combine(Path.GetTempPath(), "ilrepack-" + Path.GetRandomFileName());
+            Directory.CreateDirectory(tempDir);
+            
+            try
+            {
+                // Copy required references to temp dir
+                foreach (string refPath in References.Split(';'))
+                {
+                    if (File.Exists(refPath))
+                    {
+                        string destFile = Path.Combine(tempDir, Path.GetFileName(refPath));
+                        File.Copy(refPath, destFile, true);
+                    }
+                }
+                
+                // Get path to ILRepack
+                string ilRepackPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                    ".nuget", "packages", "ilrepack", "2.0.34", "tools", "ILRepack.exe");
+                
+                if (!File.Exists(ilRepackPath))
+                {
+                    Log.LogError("ILRepack not found at: " + ilRepackPath);
+                    return false;
+                }
+                
+                // Run ILRepack
+                ProcessStartInfo psi = new ProcessStartInfo
+                {
+                    FileName = ilRepackPath,
+                    Arguments = $"/out:\"{OutputAssemblyPath}\" \"{MainAssemblyPath}\" \"{MergeAssemblyPath}\" /xmldocs /copyattrs /parallel /internalize /lib:\"{tempDir}\"",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+                
+                using (Process process = Process.Start(psi))
+                {
+                    string output = process.StandardOutput.ReadToEnd();
+                    string error = process.StandardError.ReadToEnd();
+                    process.WaitForExit();
+                    
+                    if (process.ExitCode != 0)
+                    {
+                        Log.LogError($"ILRepack failed with exit code {process.ExitCode}: {error}");
+                        return false;
+                    }
+                    else 
+                    {
+                        Log.LogMessage(MessageImportance.High, "ILRepack succeeded: " + output);
+                        return true;
+                    }
+                }
+            }
+            finally
+            {
+                // Clean up temp directory
+                try { Directory.Delete(tempDir, true); } catch { }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.LogError($"Error in MergeAssemblies task: {ex.Message}");
+            return false;
+        }
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+  
+  <!-- ILRepack target to merge assemblies -->
+  <Target Name="RepackLoader" AfterTargets="Build">
+    <Message Text="Merging Rca.Loader.dll and Rca.Loader.Contracts.dll" Importance="High" />
+    
+    <!-- Create list of reference libraries -->
+    <ItemGroup>
+      <ReferenceDlls Include="$(MSBuildProjectDirectory)\..\..\libs\Revit\2026\RevitAPI.dll" />
+      <ReferenceDlls Include="$(MSBuildProjectDirectory)\..\..\libs\Revit\2026\RevitAPIUI.dll" />
+    </ItemGroup>
+    
+    <!-- Convert reference collection to semicolon-separated list -->
+    <PropertyGroup>
+      <ReferencePaths>@(ReferenceDlls, ';')</ReferencePaths>
+    </PropertyGroup>
+    
+    <!-- Run the merge task -->
+    <MergeAssemblies 
+        MainAssemblyPath="$(TargetPath)"
+        MergeAssemblyPath="$(TargetDir)Rca.Loader.Contracts.dll"
+        OutputAssemblyPath="$(TargetDir)Rca.Loader.Merged.dll"
+        References="$(ReferencePaths)" />
+    
+    <!-- Replace the original with the merged file -->
+    <Copy SourceFiles="$(TargetDir)Rca.Loader.Merged.dll" DestinationFiles="$(TargetPath)" />
+    
+    <!-- Delete the Contracts DLL and the temporary merged file -->
+    <Delete Files="$(TargetDir)Rca.Loader.Contracts.dll" />
+    <Delete Files="$(TargetDir)Rca.Loader.Merged.dll" />
+    
+    <Message Text="ILRepack completed successfully - Using merged assembly" Importance="High" />
+
+    <!-- Copy to Runtime folder for hot-reloading system -->
+    <PropertyGroup>
+      <RuntimeStamp>$([System.DateTime]::UtcNow.ToString("yyyyMMdd_HHmmss"))</RuntimeStamp>
+      <RuntimeDeployDir>$(LocalAppData)\RCA\Runtime\$(RuntimeStamp)</RuntimeDeployDir>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(RuntimeDeployDir)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" />
+    <Message Text="Copied Loader assembly to hot-reload directory: $(RuntimeDeployDir)" Importance="High" />
+  </Target>
   
   <Import Project="..\..\build\Common.targets" />
 </Project>

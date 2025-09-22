@@ -5,16 +5,22 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <PlatformTarget>x64</PlatformTarget>
+    <!-- Indicate that we're using merged assemblies -->
+    <UseMergedLoader>true</UseMergedLoader>
   </PropertyGroup>
+  
   <ItemGroup>
     <!-- Replace ricaun.RevitTest.TestAdapter with our custom adapter -->
     <ProjectReference Include="..\..\src\Rca.TestAdapter\Rca.TestAdapter.csproj" />
   </ItemGroup>
+  
   <ItemGroup>
     <ProjectReference Include="../../src/Rca.Core/Rca.Core.csproj" />
     <ProjectReference Include="../../src/Rca.Contracts/Rca.Contracts.csproj" />
+    <!-- Reference to Loader only, not Contracts -->
     <ProjectReference Include="../../src/Rca.Loader/Rca.Loader.csproj" />
   </ItemGroup>
+  
   <ItemGroup>
     <Reference Include="RevitAPI">
       <HintPath>..\..\libs\Revit\2026\RevitAPI.dll</HintPath>
@@ -25,4 +31,40 @@
       <Private>False</Private>
     </Reference>
   </ItemGroup>
+
+  <!-- Override the target that determines which files to copy -->
+  <Target Name="GetCopyToOutputDirectoryItems" 
+          DependsOnTargets="$(GetCopyToOutputDirectoryItemsDependsOn)" 
+          Returns="@(AllItemsFullPathWithTargetPath)">
+    
+    <!-- Get the standard set of items -->
+    <CallTarget Targets="_GetCopyToOutputDirectoryItemsFromTransitiveProjectReferences">
+      <Output TaskParameter="TargetOutputs" ItemName="_CopyToOutputDirectoryItemsFromTransitiveProjectReferences"/>
+    </CallTarget>
+    
+    <!-- Filter out the Contracts DLL -->
+    <ItemGroup>
+      <_FilteredCopyItems Include="@(_CopyToOutputDirectoryItemsFromTransitiveProjectReferences)" 
+                         Condition="'%(Filename)%(Extension)' != 'Rca.Loader.Contracts.dll'"/>
+      
+      <!-- Add all the other item categories -->
+      <AllItemsFullPathWithTargetPath Include="@(_FilteredCopyItems)"/>
+      <AllItemsFullPathWithTargetPath Include="@(ContentWithTargetPath)"/>
+      <AllItemsFullPathWithTargetPath Include="@(_NoneWithTargetPath)"/>
+      <AllItemsFullPathWithTargetPath Include="@(_SourceItemsToCopyToOutputDirectory)"/>
+      <AllItemsFullPathWithTargetPath Include="@(_CompileItemsToCopyToOutputDirectory)"/>
+      <AllItemsFullPathWithTargetPath Include="@(_EmbeddedResourceToCopyToOutputDirectory)"/>
+      <AllItemsFullPathWithTargetPath Include="@(_LocalizedResourcesToCopyToOutputDirectory)"/>
+      <AllItemsFullPathWithTargetPath Include="@(CopyToOutputDirectoryAlways)"/>
+      <AllItemsFullPathWithTargetPath Include="@(CopyToOutputDirectory)"/>
+    </ItemGroup>
+    
+    <Message Text="Filtered out Rca.Loader.Contracts.dll from copy items" Importance="High" />
+  </Target>
+  
+  <!-- This target runs after Build to cleanup any dummy files -->
+  <Target Name="CleanupDummyFiles" AfterTargets="Build">
+    <!-- Remove the dummy file - we don't actually need it at runtime -->
+    <Delete Files="$(OutputPath)Rca.Loader.Contracts.dll" />
+  </Target>
 </Project>

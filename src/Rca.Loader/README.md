@@ -43,13 +43,27 @@ The hot-reloading system consists of several interconnected components:
   - Enhanced `ReloadRuntimeCommand.cs` - User-facing control
   - Enhanced `RuntimeCommandHandler.cs` - IPC command handling
 
+## Assembly Merging with ILRepack
+
+A key feature of the hot-reloading system is the use of ILRepack to create a single merged assembly:
+
+- **Merged Assembly**: Rca.Loader.dll and Rca.Loader.Contracts.dll are combined into a single DLL
+- **Custom MSBuild Task**: Handles proper RevitAPI reference resolution during merging
+- **Strict Build Process**: Ensures consistent assembly creation or fails with clear errors
+- **Simplified Deployment**: Single file to manage instead of two with dependencies
+
+The merged approach provides several benefits:
+- Eliminates version compatibility issues between Loader and Contracts
+- Ensures consistent behavior across development and production
+- Simplifies the restart process when updates are required
+
 ## Quick Start
 
 To use the hot-reloading system during development:
 
 1. Build your changes to the Runtime project
 2. In Revit, click "Reload Runtime" in the RCA ribbon
-3. If loader components need updating, follow the restart prompts
+3. If the merged Loader assembly needs updating, follow the restart prompts
 
 See [DEVELOPER-GUIDE.md](DEVELOPER-GUIDE.md) for detailed workflows.
 
@@ -62,8 +76,8 @@ See [DEVELOPER-GUIDE.md](DEVELOPER-GUIDE.md) for detailed workflows.
          ▲                     │
          │                     │
 ┌────────┴─────────┐   ┌──────────────────┐
-│   RCA Loader     │◄──┤AssemblyStatusMgr │
-│ (Fixed Component)│   │  (State Tracker) │
+│ RCA Loader       │◄──┤AssemblyStatusMgr │
+│ (Merged Assembly)│   │  (State Tracker) │
 └────────┬─────────┘   └──────┬───────────┘
          │                    │
          │                    │
@@ -74,4 +88,4 @@ See [DEVELOPER-GUIDE.md](DEVELOPER-GUIDE.md) for detailed workflows.
 └─────────────────┘    └─────────────────┘
 ```
 
-This system balances the need for stability (fixed loader components) with the flexibility of hot-reloading (dynamic runtime components) to optimize the developer experience while maintaining plugin reliability.
+This system balances the need for stability (fixed merged Loader assembly) with the flexibility of hot-reloading (dynamic runtime components) to optimize the developer experience while maintaining plugin reliability.

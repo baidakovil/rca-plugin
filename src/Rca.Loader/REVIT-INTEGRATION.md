@@ -7,15 +7,35 @@ This document provides a detailed explanation of how the hot-reloading system in
 Before diving into the startup process, it's important to understand the basic architecture of Revit plugins:
 
 ```
-┌──────────────   ┐    ┌──────────────    ┐    ┌────    ──────────┐
-│  Revit API      │◄───┤ RCA Loader       │◄───┤ RCA Runtime      │
-│  (RevitAPI.dll) │    │ (Rca.Loader.dll) │    │ (Rca.Runtime.dll)│
-└──────────────   ┘    └──────────    ────┘    └─────────────    ─┘
+┌──────────────   ┐    ┌──────────────────────────┐    ┌────    ──────────┐
+│  Revit API      │◄───┤ RCA Loader (Merged)      │◄───┤ RCA Runtime      │
+│  (RevitAPI.dll) │    │ (Rca.Loader.dll)         │    │ (Rca.Runtime.dll)│
+└──────────────   ┘    └──────────────────────────┘    └─────────────    ─┘
 ```
 
 - **Revit API**: The core Autodesk Revit API that provides access to Revit's functionality
-- **RCA Loader**: Fixed component that provides stability and bootstrapping
+- **RCA Loader (Merged)**: Fixed component that provides stability and bootstrapping (contains both Loader and Contracts code)
 - **RCA Runtime**: Dynamic component that can be hot-reloaded without restarting Revit
+
+## Assembly Merging with ILRepack
+
+The Rca.Loader and Rca.Loader.Contracts assemblies are merged into a single DLL using ILRepack at build time:
+
+1. **Merging Process**:
+   - Custom MSBuild task invokes ILRepack
+   - Includes proper dependency resolution for RevitAPI references
+   - Contracts types are internalized as appropriate
+   - XML documentation is preserved
+
+2. **Benefits**:
+   - Eliminates version compatibility issues
+   - Simplifies deployment and updates
+   - Ensures contract implementations are always synchronized
+
+3. **Implications for Revit**:
+   - Single entry point assembly
+   - More consistent loading behavior
+   - Simplified restart process when updates are needed
 
 ## Revit Startup Sequence with Hot-Reloading System
 
@@ -30,7 +50,7 @@ Scan %APPDATA%\Autodesk\Revit\Addins\2026\
   ↓
 Find and parse RcaLoader.addin
   ↓
-Load Rca.Loader.dll
+Load merged Rca.Loader.dll
   ↓
 Instantiate LoaderApp class
   ↓
@@ -135,8 +155,8 @@ Check if runtime already loaded
 ### Initial State Calculation
 
 On first run, the system:
-1. Identifies the executing Loader assembly location
-2. Calculates hashes for Loader and Contracts assemblies
+1. Identifies the executing merged Loader assembly location
+2. Calculates hash for the merged Loader assembly
 3. Attempts to find Runtime assembly in temporary folders
 4. Creates initial JSON structure with paths and hashes
 
@@ -209,9 +229,28 @@ System determines what's changed
 If only Runtime is outdated, reload it and return success
 ```
 
+## RevitAPI Reference Handling
+
+The merged Loader assembly requires careful handling of RevitAPI references:
+
+1. **Reference Resolution**:
+   - RevitAPI.dll and RevitAPIUI.dll are referenced with `<Private>False</Private>`
+   - ILRepack is configured to respect these references correctly
+   - Custom MSBuild task ensures correct merge even with external dependencies
+
+2. **Build-Time Integration**:
+   - RevitAPI libraries must be available at build time in `libs\Revit\2026\`
+   - Build system validates their existence before proceeding
+   - ILRepack properly processes references without including the RevitAPI in the merged assembly
+
+3. **Runtime Integration**:
+   - Merged assembly is loaded by Revit at startup
+   - RevitAPI references are resolved against Revit's own loaded libraries
+   - No additional configuration is required at runtime
+
 ## Revit Restart Process
 
-When Loader components need to be updated:
+When the merged Loader assembly needs to be updated:
 
 ```
 RestartManager.ExecuteRestartScript()
@@ -220,7 +259,7 @@ PowerShell script runs (RestartRevitGraceful.ps1)
   ↓
 Close Revit gracefully
   ↓
-Copy latest assemblies to Revit addin directory
+Copy latest merged Loader assembly to Revit addin directory
   ↓
 Update JSON state file with new paths and reset event
   ↓
@@ -276,5 +315,10 @@ The hot-reloading system is designed to fail gracefully:
    - Validates files before attempting restart
    - Logs detailed information about the restart process
    - Handles failed restarts without crashing
+
+5. **ILRepack Process**:
+   - Build-time validation ensures proper RevitAPI integration
+   - Strict error handling prevents deployment of invalid assemblies
+   - Detailed error messages help diagnose build issues
 
 By understanding this integration and startup process, developers can effectively work with the hot-reloading system and troubleshoot any issues that arise.

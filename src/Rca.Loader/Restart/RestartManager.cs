@@ -44,8 +44,8 @@ namespace Rca.Loader.Restart
                 var taskDialog = new TaskDialog("Revit Restart Required")
                 {
                     MainIcon = TaskDialogIcon.TaskDialogIconWarning,
-                    MainInstruction = "Loader assemblies have been updated",
-                    MainContent = $"Revit needs to restart to load the updated assemblies. The restart will begin in {countdownSeconds} seconds.\n\n" +
+                    MainInstruction = "Loader assembly has been updated",
+                    MainContent = $"Revit needs to restart to load the updated assembly. The restart will begin in {countdownSeconds} seconds.\n\n" +
                                 "Your work will be saved automatically before closing.\n\n" +
                                 "Do you want to proceed with the restart?",
                     CommonButtons = TaskDialogCommonButtons.Cancel,
@@ -63,7 +63,7 @@ namespace Rca.Loader.Restart
                         var remaining = Interlocked.Decrement(ref countdown);
                         if (remaining >= 0)
                         {
-                            taskDialog.MainContent = $"Revit needs to restart to load the updated assemblies. The restart will begin in {remaining} seconds.\n\n" +
+                            taskDialog.MainContent = $"Revit needs to restart to load the updated assembly. The restart will begin in {remaining} seconds.\n\n" +
                                                 "Your work will be saved automatically before closing.\n\n" +
                                                 "Do you want to proceed with the restart?";
                         }
@@ -88,7 +88,7 @@ namespace Rca.Loader.Restart
                     case TaskDialogResult.CommandLink2:
                         // User chose to restart later
                         TaskDialog.Show("Restart Later", 
-                            "Please remember to restart Revit manually to load the updated assemblies.");
+                            "Please remember to restart Revit manually to load the updated assembly.");
                         return false;
                         
                     default:
@@ -206,7 +206,7 @@ namespace Rca.Loader.Restart
         }
         
         /// <summary>
-        /// Validates that assemblies were copied successfully.
+        /// Validates that the loader assembly was copied successfully.
         /// </summary>
         /// <param name="sourcePath">Source directory path.</param>
         /// <param name="targetPath">Target directory path.</param>
@@ -215,27 +215,20 @@ namespace Rca.Loader.Restart
         {
             try
             {
-                // Check that both loader and contracts files exist in target
+                // Check that loader file exists in target
                 var loaderSourcePath = Path.Combine(sourcePath, LoaderConstants.LoaderFileName);
-                var contractsSourcePath = Path.Combine(sourcePath, LoaderConstants.LoaderContractsFileName);
-                
                 var loaderTargetPath = Path.Combine(targetPath, LoaderConstants.LoaderFileName);
-                var contractsTargetPath = Path.Combine(targetPath, LoaderConstants.LoaderContractsFileName);
                 
-                if (!File.Exists(loaderTargetPath) || !File.Exists(contractsTargetPath))
+                if (!File.Exists(loaderTargetPath))
                 {
                     return false;
                 }
                 
-                // Check that the hashes of copied files match the source files
+                // Check that the hash of copied file match the source file
                 var loaderSourceHash = _statusManager.CalculateHash(loaderSourcePath);
-                var contractsSourceHash = _statusManager.CalculateHash(contractsSourcePath);
-                
                 var loaderTargetHash = _statusManager.CalculateHash(loaderTargetPath);
-                var contractsTargetHash = _statusManager.CalculateHash(contractsTargetPath);
                 
-                return loaderSourceHash == loaderTargetHash && 
-                       contractsSourceHash == contractsTargetHash;
+                return loaderSourceHash == loaderTargetHash;
             }
             catch (Exception ex)
             {

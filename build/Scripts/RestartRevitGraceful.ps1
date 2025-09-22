@@ -27,14 +27,24 @@ Write-LogMessage "RestartRevitGraceful script started"
 Write-LogMessage "Parameters: SourcePath=$SourcePath, TargetPath=$TargetPath, RevitExecutable=$RevitExecutable"
 
 try {
-    # 1. Find Revit process
+    # 1. Check for merged Loader assembly
+    $loaderFile = "Rca.Loader.dll"
+    $loaderSourcePath = Join-Path $SourcePath $loaderFile
+    
+    if (!(Test-Path $loaderSourcePath)) {
+        $errorMsg = "Error: Required merged Loader assembly not found at $loaderSourcePath"
+        Write-LogMessage $errorMsg
+        throw $errorMsg
+    }
+    
+    # 2. Find Revit process
     $revitProcess = Get-Process | Where-Object { $_.Path -eq $RevitExecutable }
     if (!$revitProcess) {
         Write-LogMessage "Error: Revit process not found with path: $RevitExecutable"
         exit 1
     }
 
-    # 2. Gracefully close Revit
+    # 3. Gracefully close Revit
     Write-LogMessage "Closing Revit gracefully..."
     $revitProcess.CloseMainWindow() | Out-Null
     
@@ -51,40 +61,39 @@ try {
         Start-Sleep -Seconds 1
     }
 
-    # 3. Force close if not exited
+    # 4. Force close if not exited
     if (!$closed) {
         Write-LogMessage "Forcing Revit to close..."
         $revitProcess.Kill()
         Start-Sleep -Seconds 2
     }
 
-    # 4. Copy updated assemblies
+    # 5. Copy updated assembly
     if (!(Test-Path $TargetPath)) {
         Write-LogMessage "Creating target directory: $TargetPath"
         New-Item -Path $TargetPath -ItemType Directory -Force | Out-Null
     }
     
-    Write-LogMessage "Copying Loader assemblies..."
-    $loaderFile = "Rca.Loader.dll"
-    $contractsFile = "Rca.Loader.Contracts.dll"
+    Write-LogMessage "Copying merged Loader assembly..."
+    Copy-Item -Path $loaderSourcePath -Destination (Join-Path $TargetPath $loaderFile) -Force
     
-    Copy-Item -Path (Join-Path $SourcePath $loaderFile) -Destination (Join-Path $TargetPath $loaderFile) -Force
-    Copy-Item -Path (Join-Path $SourcePath $contractsFile) -Destination (Join-Path $TargetPath $contractsFile) -Force
+    # Verify the copy was successful
+    if (!(Test-Path (Join-Path $TargetPath $loaderFile))) {
+        $errorMsg = "Failed to copy Loader assembly to target directory"
+        Write-LogMessage $errorMsg
+        throw $errorMsg
+    }
     
-    # 5. Update JSON file
+    # 6. Update JSON file
     Write-LogMessage "Updating JSON file: $JsonFilePath"
     
     if (Test-Path $JsonFilePath) {
         try {
             $json = Get-Content -Path $JsonFilePath -Raw | ConvertFrom-Json
             
-            # Calculate new hash for loader components
-            $loaderFilePath = Join-Path $TargetPath $loaderFile
-            $contractsFilePath = Join-Path $TargetPath $contractsFile
+            # Update the loader path in the JSON file
             
-            # We can't directly calculate the hash from PowerShell as it needs to match the C# implementation
-            # So instead we update the path and let the C# code recalculate the hash on next startup
-            
+            # Update JSON state
             $json.LoaderComponents.Path = $TargetPath
             $json.LastMSBuildSignal.Time = (Get-Date -Format "HH:mm:ss")
             $json.LastMSBuildSignal.Event = "restart completed"
@@ -92,12 +101,15 @@ try {
             $json | ConvertTo-Json -Depth 4 | Set-Content -Path $JsonFilePath
         } catch {
             Write-LogMessage "Error updating JSON: $_"
+            throw $_
         }
     } else {
-        Write-LogMessage "JSON file not found: $JsonFilePath"
+        $errorMsg = "JSON file not found: $JsonFilePath"
+        Write-LogMessage $errorMsg
+        throw $errorMsg
     }
 
-    # 6. Restart Revit
+    # 7. Restart Revit
     Write-LogMessage "Restarting Revit..."
     Start-Process -FilePath $RevitExecutable
     

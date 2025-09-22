@@ -19,11 +19,6 @@ namespace Rca.Loader.Infrastructure
         public const string LoaderFileName = "Rca.Loader.dll";
         
         /// <summary>
-        /// The name of the loader contracts DLL file.
-        /// </summary>
-        public const string LoaderContractsFileName = "Rca.Loader.Contracts.dll";
-        
-        /// <summary>
         /// The name of the named pipe for communication.
         /// </summary>
         public const string PipeName = "RCA_PIPE";
@@ -40,11 +35,17 @@ namespace Rca.Loader.Infrastructure
         public static readonly string TempDllFolder = RuntimeDeployRoot;
             
         /// <summary>
-        /// The directory where Revit loads addins from.
+        /// The base directory where Revit loads addins from.
         /// </summary>
         public static readonly string RevitAddinDir = 
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), 
                 "Autodesk", "Revit", "Addins", "2026");
+                
+        /// <summary>
+        /// The directory for the Rca addin.
+        /// </summary>
+        public static readonly string RcaAddinDir =
+            Path.Combine(RevitAddinDir, "Rca");
                 
         /// <summary>
         /// The path to the JSON file that stores information about loaded assemblies.
