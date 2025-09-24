@@ -174,21 +174,17 @@
     <Message Text="Copied Loader assembly to hot-reload directory: $(RuntimeDeployDir)" Importance="High" />
     <Message Text="Deployed Loader assembly to hot-reload directory: $(RuntimeDeployDir)" Importance="High" />
 
-    <!-- Generate loader-specific source hash and place into addin folder only when loader deployed -->
+    <!-- Generate loader-specific source hash and place into runtime deploy folder only when loader deployed -->
     <PropertyGroup>
       <SourceRootList>$(MSBuildProjectDirectory);$(SolutionDir)src\Rca.Loader.Contracts</SourceRootList>
       <SourceHashOut>$(RuntimeDeployDir)\source-hash.loader.txt</SourceHashOut>
       <SourceHashProject>$(SolutionDir)src\Tools\SourceHashGenerator\SourceHashGenerator.csproj</SourceHashProject>
       <SourceHashExe>$(SolutionDir)src\Tools\SourceHashGenerator\bin\$(Configuration)\net8.0\SourceHashGenerator.exe</SourceHashExe>
-      <RcaAddinDir>$(APPDATA)\Autodesk\Revit\Addins\2026\Rca</RcaAddinDir>
-      <AddinSourceHash>$(RcaAddinDir)\source-hash.loader.txt</AddinSourceHash>
     </PropertyGroup>
 
     <Exec Command="dotnet build &quot;$(SourceHashProject)&quot; -c $(Configuration)" />
     <Exec Command="&quot;$(SourceHashExe)&quot; --roots &quot;$(SourceRootList)&quot; --out &quot;$(SourceHashOut)&quot;" ContinueOnError="true" />
 
-    <MakeDir Directories="$(RcaAddinDir)" Condition="!Exists('$(RcaAddinDir)')" />
-    <Copy SourceFiles="$(SourceHashOut)" DestinationFiles="$(AddinSourceHash)" SkipUnchangedFiles="false" Condition="Exists('$(SourceHashOut)')" />
   </Target>
   
   <!-- Optional: Deploy to Revit addin directory for release builds only -->
