@@ -73,7 +73,7 @@
                     {
                         string destFile = Path.Combine(tempDir, Path.GetFileName(refPath));
                         File.Copy(refPath, destFile, true);
-                    }
+                      }
                 }
                 
                 // Get path to ILRepack
@@ -162,17 +162,30 @@
     <Delete Files="$(TargetDir)Rca.Loader.Merged.dll" />
     
     <Message Text="ILRepack completed successfully - Using merged assembly" Importance="High" />
-
-    <!-- Copy to Runtime folder for hot-reloading system -->
+  </Target>
+  
+  <!-- Deploy merged Loader assembly to hot-reload temp folder (same as Runtime) -->
+  <Target Name="DeployLoaderToTemp" AfterTargets="RepackLoader">
     <PropertyGroup>
-      <RuntimeStamp>$([System.DateTime]::UtcNow.ToString("yyyyMMdd_HHmmss"))</RuntimeStamp>
-      <RuntimeDeployDir>$(LocalAppData)\RCA\Runtime\$(RuntimeStamp)</RuntimeDeployDir>
+      <RuntimeDeployDir>$(RcaHotReloadDeployDir)</RuntimeDeployDir>
     </PropertyGroup>
-
     <MakeDir Directories="$(RuntimeDeployDir)" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" />
     <Message Text="Copied Loader assembly to hot-reload directory: $(RuntimeDeployDir)" Importance="High" />
+    <Message Text="Deployed Loader assembly to hot-reload directory: $(RuntimeDeployDir)" Importance="High" />
   </Target>
+  
+  <!-- Optional: Deploy to Revit addin directory for release builds only -->
+  <!--
+  <Target Name="DeployLoaderToAddinDir" AfterTargets="DeployLoaderToTemp" Condition=" '$(Configuration)' == 'Release' ">
+    <PropertyGroup>
+      <RevitAddinDir>$(AppData)\Autodesk\Revit\Addins\2026\Rca</RevitAddinDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(RevitAddinDir)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(RevitAddinDir)" SkipUnchangedFiles="false" />
+    <Message Text="Deployed Loader assembly to Revit addins directory: $(RevitAddinDir)" Importance="High" />
+  </Target>
+  -->
   
   <Import Project="..\..\build\Common.targets" />
 </Project>

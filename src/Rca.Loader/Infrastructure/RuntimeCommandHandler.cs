@@ -2,6 +2,8 @@ using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Collections.Generic;
+using System.Linq;
 using Autodesk.Revit.UI;
 using Rca.Loader.Testing;
 using Rca.Loader.Contracts;
@@ -221,8 +223,8 @@ namespace Rca.Loader.Infrastructure
             
             try
             {
-                // Deserialize the test execution payload
-                var payload = JsonSerializer.Deserialize<RevitTestExecutor.TestExecutionPayload>(cmd.Payload);
+                // Deserialize the test execution payload from the test adapter
+                var payload = JsonSerializer.Deserialize<TestAdapterPayload>(cmd.Payload);
                 if (payload == null)
                 {
                     Debug.WriteLine("Error: Invalid test payload format");
@@ -231,17 +233,42 @@ namespace Rca.Loader.Infrastructure
                 
                 Debug.WriteLine($"Executing {payload.Tests.Count} tests from assembly: {payload.AssemblyPath}");
                 
+                // Convert test adapter types to RevitTestExecutor types
+                var executorRequests = payload.Tests.Select(test => new RevitTestExecutor.TestRequest
+                {
+                    FullyQualifiedName = test.FullyQualifiedName,
+                    DisplayName = test.DisplayName
+                }).ToList();
+                
                 // Create a test executor
                 var testExecutor = new RevitTestExecutor(uiapp);
                 
                 // Execute the tests - this could be CPU intensive for large test suites,
                 // so run it on a background thread to avoid blocking the UI
-                var results = await Task.Run(() => testExecutor.ExecuteTests(payload.AssemblyPath, payload.Tests));
+                var results = await Task.Run(() => testExecutor.ExecuteTests(payload.AssemblyPath, executorRequests));
+                
+                // Convert results back to test adapter format
+                var adapterResults = results.Select(result => new TestAdapterResult
+                {
+                    FullyQualifiedName = result.FullyQualifiedName,
+                    DisplayName = result.DisplayName,
+                    Outcome = result.Outcome,
+                    ErrorMessage = result.ErrorMessage,
+                    ErrorStackTrace = result.ErrorStackTrace,
+                    DurationInMilliseconds = result.DurationInMilliseconds,
+                    StartTimeUnixMs = result.StartTimeUnixMs,
+                    EndTimeUnixMs = result.EndTimeUnixMs,
+                    Messages = result.Messages.Select(msg => new TestAdapterMessage
+                    {
+                        Level = msg.Level,
+                        Text = msg.Text
+                    }).ToList()
+                }).ToList();
                 
                 // Serialize the results
-                var resultsJson = JsonSerializer.Serialize(results);
+                var resultsJson = JsonSerializer.Serialize(adapterResults);
                 
-                Debug.WriteLine($"Test execution completed with {results.Count} results");
+                Debug.WriteLine($"Test execution completed with {adapterResults.Count} results");
                 return PipeResponseFactory.Success(resultsJson);
             }
             catch (JsonException ex)
@@ -255,5 +282,52 @@ namespace Rca.Loader.Infrastructure
                 return PipeResponseFactory.Error($"Test execution error: {ex.Message}");
             }
         }
+        
+        #region Test Adapter Data Transfer Objects
+        
+        /// <summary>
+        /// Test execution payload from the test adapter.
+        /// </summary>
+        private class TestAdapterPayload
+        {
+            public string AssemblyPath { get; set; } = string.Empty;
+            public List<TestAdapterRequest> Tests { get; set; } = new();
+        }
+        
+        /// <summary>
+        /// Test request from the test adapter.
+        /// </summary>
+        private class TestAdapterRequest
+        {
+            public string FullyQualifiedName { get; set; } = string.Empty;
+            public string DisplayName { get; set; } = string.Empty;
+        }
+        
+        /// <summary>
+        /// Test result for the test adapter.
+        /// </summary>
+        private class TestAdapterResult
+        {
+            public string FullyQualifiedName { get; set; } = string.Empty;
+            public string DisplayName { get; set; } = string.Empty;
+            public string Outcome { get; set; } = string.Empty;
+            public string ErrorMessage { get; set; } = string.Empty;
+            public string ErrorStackTrace { get; set; } = string.Empty;
+            public double DurationInMilliseconds { get; set; }
+            public long StartTimeUnixMs { get; set; }
+            public long EndTimeUnixMs { get; set; }
+            public List<TestAdapterMessage> Messages { get; set; } = new();
+        }
+        
+        /// <summary>
+        /// Test message for the test adapter.
+        /// </summary>
+        private class TestAdapterMessage
+        {
+            public string Level { get; set; } = "Informational";
+            public string Text { get; set; } = string.Empty;
+        }
+        
+        #endregion
     }
 }

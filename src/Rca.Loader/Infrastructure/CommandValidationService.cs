@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Text.Json;
+using System.Collections.Generic;
 using Rca.Loader.Services;
 using Rca.Loader.Testing;
 
@@ -71,7 +72,8 @@ namespace Rca.Loader.Infrastructure
 
             try
             {
-                var payload = JsonSerializer.Deserialize<RevitTestExecutor.TestExecutionPayload>(command.Payload);
+                // Validate against test adapter payload format
+                var payload = JsonSerializer.Deserialize<TestAdapterPayload>(command.Payload);
                 if (payload == null)
                 {
                     validationError = "Invalid test execution payload format";
@@ -123,6 +125,24 @@ namespace Rca.Loader.Infrastructure
         {
             validationError = $"Unknown command: {commandName}";
             return false;
+        }
+        
+        /// <summary>
+        /// Test execution payload from the test adapter (for validation only).
+        /// </summary>
+        private class TestAdapterPayload
+        {
+            public string AssemblyPath { get; set; } = string.Empty;
+            public List<TestAdapterRequest> Tests { get; set; } = new();
+        }
+        
+        /// <summary>
+        /// Test request from the test adapter (for validation only).
+        /// </summary>
+        private class TestAdapterRequest
+        {
+            public string FullyQualifiedName { get; set; } = string.Empty;
+            public string DisplayName { get; set; } = string.Empty;
         }
     }
 

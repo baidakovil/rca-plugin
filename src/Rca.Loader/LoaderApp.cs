@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.DB;
+using Autodesk.Revit.UI.Events;
 using Rca.Loader.Contracts;
 using Rca.Loader.Services;
 using Rca.Loader.Infrastructure;
@@ -19,6 +20,7 @@ namespace Rca.Loader
         private RuntimeCommandHandler? commandHandler;
         private UIApplication? uiapp;
         private AssemblyStatusManager? assemblyStatusManager;
+        private UIControlledApplication? uiControlledApp;
 
         /// <summary>
         /// Gets the runtime manager instance.
@@ -61,12 +63,17 @@ namespace Rca.Loader
             {
                 Debug.WriteLine("RCA Loader starting up");
                 
+                this.uiControlledApp = application;
+                
                 // Initialize assembly status manager
                 assemblyStatusManager = new AssemblyStatusManager();
                 assemblyStatusManager.InitializeOnStartup();
                 
                 // Build the ribbon UI
                 ribbonService.BuildRibbon(application);
+                
+                // Hook into application events for auto-initialization
+                application.Idling += OnApplicationIdling;
                 
                 // Update status display if available
 #if DEBUG
@@ -99,6 +106,13 @@ namespace Rca.Loader
             try
             {
                 Debug.WriteLine("RCA Loader shutting down");
+                
+                // Unsubscribe from events
+                if (uiControlledApp != null)
+                {
+                    uiControlledApp.Idling -= OnApplicationIdling;
+                }
+                
                 pipeServer?.Stop();
                 RuntimeManager.UnloadRuntime();
                 Debug.WriteLine("RCA Loader shutdown completed");
@@ -108,6 +122,26 @@ namespace Rca.Loader
                 Debug.WriteLine($"Error during RCA Loader shutdown: {ex.Message}");
             }
             return Result.Succeeded;
+        }
+
+        /// <summary>
+        /// Handles the Idling event to auto-initialize pipe server when UIApplication becomes available.
+        /// </summary>
+        /// <param name="sender">The event sender.</param>
+        /// <param name="e">The event arguments.</param>
+        private void OnApplicationIdling(object? sender, IdlingEventArgs e)
+        {
+            if (uiapp == null && sender is UIApplication uiApplication)
+            {
+                Debug.WriteLine("Auto-initializing pipe server via Idling event");
+                InitializeWithUIApplication(uiApplication);
+                
+                // Unsubscribe after successful initialization
+                if (uiControlledApp != null)
+                {
+                    uiControlledApp.Idling -= OnApplicationIdling;
+                }
+            }
         }
 
         /// <summary>

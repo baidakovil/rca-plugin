@@ -55,11 +55,10 @@
     <Exec Command="&quot;$(IlRepackExe)&quot; /lib:$(TargetDir) /copyattrs /parallel /internalize /xmldocs /out:$(TargetDir)Rca.Runtime.dll @(InputAssemblies-&gt;'&quot;%(Identity)&quot;',' ')" />
   </Target>
 
-  <!-- Deploy to hot-reload folder with timestamp -->
+  <!-- Deploy to hot-reload folder with shared timestamp -->
   <Target Name="DeployRuntime" AfterTargets="RepackRuntime">
     <PropertyGroup>
-      <RuntimeStamp>$([System.DateTime]::UtcNow.ToString("yyyyMMdd_HHmmss"))</RuntimeStamp>
-      <RuntimeDeployDir>$(RcaRuntimeDeployRoot)\$(RuntimeStamp)</RuntimeDeployDir>
+      <RuntimeDeployDir>$(RcaHotReloadDeployDir)</RuntimeDeployDir>
     </PropertyGroup>
     <MakeDir Directories="$(RuntimeDeployDir)" />
     <ItemGroup>

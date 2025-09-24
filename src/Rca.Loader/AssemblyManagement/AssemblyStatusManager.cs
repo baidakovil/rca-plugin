@@ -168,19 +168,19 @@ namespace Rca.Loader.AssemblyManagement
         }
 
         /// <summary>
-        /// Gets the latest folder in the temporary DLL directory based on alphabetical sorting.
+        /// Gets the latest folder in the runtime deployment directory based on alphabetical sorting.
         /// </summary>
         /// <returns>The path to the latest folder, or an empty string if no folders are found.</returns>
         public string GetLatestTempDllFolder()
         {
             try
             {
-                if (!Directory.Exists(LoaderConstants.TempDllFolder))
+                if (!Directory.Exists(LoaderConstants.RuntimeDeployRoot))
                 {
                     return string.Empty;
                 }
                 
-                var directories = Directory.GetDirectories(LoaderConstants.TempDllFolder);
+                var directories = Directory.GetDirectories(LoaderConstants.RuntimeDeployRoot);
                 
                 if (directories.Length == 0)
                 {
@@ -193,7 +193,7 @@ namespace Rca.Loader.AssemblyManagement
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error getting latest temp DLL folder: {ex.Message}");
+                Debug.WriteLine($"Error getting latest runtime deployment folder: {ex.Message}");
                 return string.Empty;
             }
         }
@@ -389,10 +389,10 @@ namespace Rca.Loader.AssemblyManagement
         {
             try
             {
-                var tempDllDir = LoaderConstants.TempDllFolder;
-                if (!Directory.Exists(tempDllDir))
+                var runtimeDeployDir = LoaderConstants.RuntimeDeployRoot;
+                if (!Directory.Exists(runtimeDeployDir))
                 {
-                    Directory.CreateDirectory(tempDllDir);
+                    Directory.CreateDirectory(runtimeDeployDir);
                 }
                 
                 var jsonDir = Path.GetDirectoryName(_jsonPath);
@@ -421,7 +421,7 @@ namespace Rca.Loader.AssemblyManagement
                 var loaderDir = Path.GetDirectoryName(loaderPath) ?? string.Empty;
                 
                 // Get the path to the Runtime assembly
-                // First try to find it from the latest folder in TempDllFolder
+                // First try to find it from the latest folder in RuntimeDeployRoot
                 var latestFolder = GetLatestTempDllFolder();
                 string runtimePath;
                 
@@ -447,7 +447,7 @@ namespace Rca.Loader.AssemblyManagement
         }
         
         /// <summary>
-        /// Finds the latest versions of all assemblies in the temporary directory.
+        /// Finds the latest versions of all assemblies in the runtime deployment directory.
         /// </summary>
         /// <returns>A tuple containing AssemblyInfo objects for the latest assemblies.</returns>
         private (AssemblyInfo loaderComponents, AssemblyInfo runtime) FindLatestAssemblies()

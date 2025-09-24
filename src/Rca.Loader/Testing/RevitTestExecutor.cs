@@ -127,12 +127,10 @@ namespace Rca.Loader.Testing
         {
             var testInstance = Activator.CreateInstance(testClassType)!;
             
-            // If test class inherits from UIApplicationTests, call GlobalSetup
-            if (IsSubclassOf(testClassType, "UIApplicationTests"))
-            {
-                var setupMethod = testClassType.GetMethod("GlobalSetup", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                setupMethod?.Invoke(testInstance, new[] { uiapp });
-            }
+            // If test class has GlobalSetup method, call it with UIApplication
+            // This handles both UIApplicationTests and UIApplicationTestsBase
+            var setupMethod = testClassType.GetMethod("GlobalSetup", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            setupMethod?.Invoke(testInstance, new[] { uiapp });
             
             return testInstance;
         }
@@ -176,13 +174,6 @@ namespace Rca.Loader.Testing
                     new TestMessage { Level = "Error", Text = ex.ToString() }
                 }
             };
-        
-        private bool IsSubclassOf(Type type, string baseClassName)
-        {
-            if (type == null) return false;
-            if (type.Name == baseClassName) return true;
-            return type.BaseType != null && IsSubclassOf(type.BaseType, baseClassName);
-        }
         
         #region Data Transfer Objects
         

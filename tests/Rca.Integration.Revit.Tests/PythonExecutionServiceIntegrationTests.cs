@@ -5,12 +5,12 @@ using Autodesk.Revit.UI;
 using System.Threading.Tasks;
 using Autodesk.Revit.ApplicationServices;
 using System;
-using Rca.Loader.Testing;
+using Rca.Integration.Revit.Tests.Infrastructure;
 
 namespace Rca.Integration.Revit.Tests
 {
     [TestFixture]
-    public class PythonExecutionServiceIntegrationTests : UIApplicationTests
+    public class PythonExecutionServiceIntegrationTests : UIApplicationTestsBase
     {
         private PythonExecutionService? pythonService;
 

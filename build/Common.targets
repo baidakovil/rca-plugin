@@ -7,6 +7,9 @@
     <RcaRevitAddinsDir Condition="'$(RcaRevitAddinsDir)' == ''">$(APPDATA)\Autodesk\Revit\Addins\$(RcaRevitVersion)</RcaRevitAddinsDir>
     <RcaAddinDir Condition="'$(RcaAddinDir)' == ''">$(RcaRevitAddinsDir)\Rca</RcaAddinDir>
     <RcaRuntimeDeployRoot Condition="'$(RcaRuntimeDeployRoot)' == ''">$(LocalAppData)\RCA\Runtime</RcaRuntimeDeployRoot>
+    <!-- Shared timestamp for hot-reload deployments -->
+    <RcaHotReloadTimestamp Condition="'$(RcaHotReloadTimestamp)' == ''">$([System.DateTime]::UtcNow.ToString("yyyyMMdd_HHmmss"))</RcaHotReloadTimestamp>
+    <RcaHotReloadDeployDir>$(LocalAppData)\RCA\Runtime\$(RcaHotReloadTimestamp)</RcaHotReloadDeployDir>
   </PropertyGroup>
 
   <!-- Common Revit API references -->

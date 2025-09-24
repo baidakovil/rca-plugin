@@ -19,11 +19,14 @@ internal static class NUnitTestDiscoverer
         
         try
         {
-            // Load the assembly
+            // Load the assembly using simple approach
             var assembly = Assembly.LoadFrom(assemblyPath);
             
+            // Get only loadable types to handle missing RevitAPI dependencies
+            var types = GetLoadableTypes(assembly);
+            
             // Find all classes with TestFixture attribute
-            foreach (var type in assembly.GetTypes())
+            foreach (var type in types)
             {
                 if (type.GetCustomAttributes(true).Any(a => a.GetType().Name == "TestFixtureAttribute"))
                 {
@@ -46,6 +49,25 @@ internal static class NUnitTestDiscoverer
         }
         
         return testCases;
+    }
+    
+    /// <summary>
+    /// Gets only the types that can be loaded from an assembly, handling ReflectionTypeLoadException.
+    /// </summary>
+    /// <param name="assembly">The assembly to get types from.</param>
+    /// <returns>Array of successfully loaded types.</returns>
+    private static Type[] GetLoadableTypes(Assembly assembly)
+    {
+        try
+        {
+            return assembly.GetTypes();
+        }
+        catch (ReflectionTypeLoadException ex)
+        {
+            // Return only successfully loaded types, skip failed ones
+            // This handles cases where RevitAPI dependencies are missing during test discovery
+            return ex.Types.Where(t => t != null).ToArray()!;
+        }
     }
     
     private static TestCase CreateTestCase(string assemblyPath, Type type, MethodInfo method)

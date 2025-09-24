@@ -41,8 +41,8 @@ namespace Rca.Loader.Commands
                         MainContent = "A new version of the Loader components is available. " +
                                      "Revit must be restarted to use the new version.\n\n" +
                                      "Would you like to restart Revit now or just reload the Runtime?",
-                        CommonButtons = TaskDialogCommonButtons.None,
-                        DefaultButton = TaskDialogResult.CommandLink1
+                        CommonButtons = TaskDialogCommonButtons.None
+                        // Removed DefaultButton assignment to fix error
                     };
                     
                     td.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "Restart Revit", "Close Revit and restart with the new Loader version");

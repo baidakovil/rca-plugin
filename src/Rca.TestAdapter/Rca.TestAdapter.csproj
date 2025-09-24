@@ -11,6 +11,8 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <!-- Indicate this is a test adapter for VS Test Platform -->
+    <IsTestAdapter>true</IsTestAdapter>
   </PropertyGroup>
 
   <ItemGroup>

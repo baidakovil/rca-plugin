@@ -23,14 +23,15 @@ namespace Rca.TestAdapter
                 if (!IsRevitRunning())
                 {
                     Console.WriteLine("ERROR: Revit is not running.");
-                    Console.WriteLine("Please start Autodesk Revit and click 'Initialize' in the RCA ribbon tab.");
+                    Console.WriteLine("Please start Autodesk Revit with the RCA plugin loaded.");
                     return false;
                 }
                 
                 if (!CheckPipeServerResponsive())
                 {
                     Console.WriteLine("ERROR: RCA pipe server not responsive.");
-                    Console.WriteLine("Please click the 'Initialize' button in the RCA ribbon tab in Revit.");
+                    Console.WriteLine("The RCA plugin should auto-initialize when Revit starts. Please wait a moment and try again.");
+                    Console.WriteLine("If the issue persists, try clicking the 'Initialize' button in the RCA ribbon tab in Revit.");
                     return false;
                 }
                 
