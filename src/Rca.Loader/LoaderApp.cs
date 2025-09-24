@@ -59,6 +59,9 @@ namespace Rca.Loader
         /// <returns>Result of the operation.</returns>
         public Result OnStartup(UIControlledApplication application)
         {
+            if (application is null)
+                throw new ArgumentNullException(nameof(application));
+
             try
             {
                 Debug.WriteLine("RCA Loader starting up");
@@ -76,14 +79,14 @@ namespace Rca.Loader
                 application.Idling += OnApplicationIdling;
                 
                 // Update status display if available
-#if DEBUG
+    #if DEBUG
                 var statusDisplay = ((RibbonService)ribbonService).StatusDisplay;
                 if (statusDisplay != null && assemblyStatusManager != null)
                 {
                     Debug.WriteLine("Updating status display with initial values");
                     statusDisplay.UpdateStatus(assemblyStatusManager.CurrentInfo);
                 }
-#endif
+    #endif
                 
                 Debug.WriteLine("RCA Loader startup completed");
                 return Result.Succeeded;
@@ -162,7 +165,7 @@ namespace Rca.Loader
         /// </summary>
         public void UpdateStatusDisplay()
         {
-#if DEBUG
+    #if DEBUG
             try
             {
                 var statusDisplay = ((RibbonService)ribbonService).StatusDisplay;
@@ -176,7 +179,7 @@ namespace Rca.Loader
             {
                 Debug.WriteLine($"Error updating status display: {ex.Message}");
             }
-#endif
+    #endif
         }
 
         private void StartPipeServer()
