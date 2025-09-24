@@ -76,7 +76,19 @@
     <ItemGroup>
       <LibFiles Include="$(TargetDir)Lib\**\*.*" />
     </ItemGroup>
-    <Copy SourceFiles="@(LibFiles)" DestinationFiles="@(LibFiles->'$(RuntimeDeployDir)\Lib\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="@(LibFiles)!=''" />
+    <Copy SourceFiles="@(LibFiles)" DestinationFiles="@(LibFiles-&gt;'$(RuntimeDeployDir)\Lib\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="@(LibFiles)!=''" />
+
+    <!-- Generate source hash and copy it to runtime folder by building and running the tool project -->
+    <PropertyGroup>
+      <SourceRootList>$(MSBuildProjectDirectory);$(SolutionDir)src\Rca.Core;$(SolutionDir)src\Rca.UI;$(SolutionDir)src\Rca.Network;$(SolutionDir)src\Rca.Contracts</SourceRootList>
+      <SourceHashOut>$(RuntimeDeployDir)\source-hash.runtime.txt</SourceHashOut>
+      <SourceHashProject>$(SolutionDir)src\Tools\SourceHashGenerator\SourceHashGenerator.csproj</SourceHashProject>
+      <SourceHashExe>$(SolutionDir)src\Tools\SourceHashGenerator\bin\$(Configuration)\net8.0\SourceHashGenerator.exe</SourceHashExe>
+    </PropertyGroup>
+
+    <Exec Command="dotnet build &quot;$(SourceHashProject)&quot; -c $(Configuration)" />
+    <Exec Command="&quot;$(SourceHashExe)&quot; --roots &quot;$(SourceRootList)&quot; --out &quot;$(SourceHashOut)&quot;" />
+
     <Message Text="Deployed Runtime to hot-reload directory: $(RuntimeDeployDir)" Importance="High" />
   </Target>
 
@@ -87,7 +99,7 @@
       <PipeName>RCA_PIPE</PipeName>
       <!-- Fix path escaping for PowerShell command -->
       <RuntimeDeployDirEscaped>$([System.String]::Copy('$(RuntimeDeployDir)').Replace('\','\\'))</RuntimeDeployDirEscaped>
-      <PsHotReloadCmd>powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "try { $p = New-Object System.IO.Pipes.NamedPipeClientStream('.', '$(PipeName)', [System.IO.Pipes.PipeDirection]::InOut); $p.Connect(200); $sw = New-Object System.IO.StreamWriter($p); $sw.AutoFlush = $true; $sr = New-Object System.IO.StreamReader($p); $msg = '{\"Command\":\"RELOAD_RUNTIME\",\"Payload\":\"$(RuntimeDeployDirEscaped)\"}'; $sw.WriteLine($msg); $resp = $sr.ReadLine(); Write-Host 'HotReload response:' $resp; $p.Close() } catch { Write-Warning ('HotReload failed: ' + $_.Exception.Message) }"</PsHotReloadCmd>
+      <PsHotReloadCmd>powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "try { $p = New-Object System.IO.Pipes.NamedPipeClientStream('.', '$(PipeName)', [System.IO.Pipes.PipeDirection]::InOut); $p.Connect(200); $sw = New-Object System.IO.StreamWriter($p); $sw.AutoFlush = $true; $sr = New-Object System.IO.StreamReader($p); $msg = '{\"Command\":\"RELOAD_RUNTIME\", \"Payload\":\"$(RuntimeDeployDirEscaped)\"}'; $sw.WriteLine($msg); $resp = $sr.ReadLine(); Write-Host 'HotReload response:' $resp; $p.Close() } catch { Write-Warning ('HotReload failed: ' + $_.Exception.Message) }"</PsHotReloadCmd>
     </PropertyGroup>
     <Message Text="Sending RELOAD_RUNTIME command to pipe server (dir=$(RuntimeDeployDir))" Importance="High" />
     <Exec Command="$(PsHotReloadCmd)" IgnoreExitCode="true" />

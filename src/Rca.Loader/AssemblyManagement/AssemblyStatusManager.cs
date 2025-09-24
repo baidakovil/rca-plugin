@@ -1,11 +1,12 @@
 using System;
 using System.IO;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using System.Linq;
 using System.Reflection;
 using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text;
+using System.Collections.Generic;
 using Rca.Loader.Infrastructure;
 
 namespace Rca.Loader.AssemblyManagement
@@ -26,7 +27,10 @@ namespace Rca.Loader.AssemblyManagement
     {
         private readonly string _jsonPath;
         private LoadedAssembliesInfo _currentInfo;
-        
+
+        private const string LoaderSourceHashFile = "source-hash.loader.txt";
+        private const string RuntimeSourceHashFile = "source-hash.runtime.txt";
+
         /// <summary>
         /// Initializes a new instance of the <see cref="AssemblyStatusManager"/> class.
         /// </summary>
@@ -68,10 +72,57 @@ namespace Rca.Loader.AssemblyManagement
                     _currentInfo.LoaderComponents.Path = paths.loaderDir;
                     _currentInfo.RuntimeAssembly.Path = paths.runtimePath;
                     
-                    // Calculate initial hashes
-                    _currentInfo.LoaderComponents.Hash = CalculateHash(paths.loaderPath);
-                    _currentInfo.RuntimeAssembly.Hash = CalculateHash(paths.runtimePath);
-                    
+                    // Read loader hash from addon (addin folder) first
+                    var loaderHash = ReadSourceHashFromDir(paths.loaderDir, LoaderSourceHashFile);
+
+                    // Fallback: latest runtime folder
+                    if (string.IsNullOrEmpty(loaderHash))
+                    {
+                        var latest = GetLatestTempDllFolder();
+                        if (!string.IsNullOrEmpty(latest))
+                            loaderHash = ReadSourceHashFromDir(latest, LoaderSourceHashFile);
+                    }
+
+                    // Fallback: search runtime root for most recent loader hash
+                    if (string.IsNullOrEmpty(loaderHash))
+                    {
+                        loaderHash = ReadSourceHashFromRuntimeRoot(LoaderSourceHashFile);
+                    }
+
+                    _currentInfo.LoaderComponents.Hash = loaderHash ?? string.Empty;
+
+                    // Read runtime hash from the runtime deploy folder
+                    var runtimeHash = ReadSourceHashFromFile(paths.runtimePath, RuntimeSourceHashFile);
+
+                    if (string.IsNullOrEmpty(runtimeHash))
+                    {
+                        var latest = GetLatestTempDllFolder();
+                        if (!string.IsNullOrEmpty(latest))
+                            runtimeHash = ReadSourceHashFromDir(latest, RuntimeSourceHashFile);
+                    }
+
+                    if (string.IsNullOrEmpty(runtimeHash))
+                    {
+                        runtimeHash = ReadSourceHashFromRuntimeRoot(RuntimeSourceHashFile);
+                    }
+
+                    _currentInfo.RuntimeAssembly.Hash = runtimeHash ?? string.Empty;
+
+                    // Developer fallback: compute from repo root if still empty
+                    if (string.IsNullOrEmpty(_currentInfo.LoaderComponents.Hash))
+                    {
+                        var repoRoot = FindRepoRoot(paths.loaderDir);
+                        if (!string.IsNullOrEmpty(repoRoot))
+                            _currentInfo.LoaderComponents.Hash = ComputeSourceHashFromRoot(repoRoot);
+                    }
+
+                    if (string.IsNullOrEmpty(_currentInfo.RuntimeAssembly.Hash))
+                    {
+                        var repoRoot = FindRepoRoot(paths.loaderDir);
+                        if (!string.IsNullOrEmpty(repoRoot))
+                            _currentInfo.RuntimeAssembly.Hash = ComputeSourceHashFromRoot(repoRoot);
+                    }
+
                     // Save initial state
                     SaveAssemblyInfo(_currentInfo);
                 }
@@ -84,30 +135,145 @@ namespace Rca.Loader.AssemblyManagement
             }
         }
 
-        /// <summary>
-        /// Calculates the SHA256 hash of a file.
-        /// </summary>
-        /// <param name="filePath">Path to the file to hash.</param>
-        /// <returns>The hash as a hexadecimal string, or an empty string if the file doesn't exist.</returns>
-        public string CalculateHash(string filePath)
+        private string ReadSourceHashFromDir(string dir, string fileName)
         {
             try
             {
-                if (!File.Exists(filePath))
-                {
-                    return string.Empty;
-                }
-                
-                using var sha256 = SHA256.Create();
-                using var stream = File.OpenRead(filePath);
-                var hash = sha256.ComputeHash(stream);
-                return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+                if (string.IsNullOrEmpty(dir)) return string.Empty;
+                var candidate = Path.Combine(dir, fileName);
+                if (File.Exists(candidate))
+                    return File.ReadAllText(candidate).Trim();
+                return string.Empty;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error calculating hash for {filePath}: {ex.Message}");
+                Debug.WriteLine($"Error reading source hash from dir {dir}: {ex.Message}");
                 return string.Empty;
             }
+        }
+
+        private string ReadSourceHashFromFile(string filePath, string fileName)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(filePath)) return string.Empty;
+                var dir = Path.GetDirectoryName(filePath) ?? string.Empty;
+                return ReadSourceHashFromDir(dir, fileName);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error reading source hash from file {filePath}: {ex.Message}");
+                return string.Empty;
+            }
+        }
+
+        private string ReadSourceHashFromRuntimeRoot(string fileName)
+        {
+            try
+            {
+                var root = LoaderConstants.RuntimeDeployRoot;
+                if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) return string.Empty;
+
+                // Find all source-hash.txt files under runtime root and pick the most recent by write time
+                var files = Directory.EnumerateFiles(root, fileName, SearchOption.AllDirectories)
+                    .Select(f => new FileInfo(f))
+                    .OrderByDescending(fi => fi.LastWriteTimeUtc)
+                    .ToList();
+
+                var file = files.FirstOrDefault();
+                if (file != null && file.Exists)
+                {
+                    return File.ReadAllText(file.FullName).Trim();
+                }
+
+                return string.Empty;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error searching runtime root for source hash: {ex.Message}");
+                return string.Empty;
+            }
+        }
+
+        private string FindRepoRoot(string startDir)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(startDir)) return string.Empty;
+                var dir = new DirectoryInfo(startDir);
+                while (dir != null)
+                {
+                    // look for .git folder or a solution file
+                    if (Directory.Exists(Path.Combine(dir.FullName, ".git"))) return dir.FullName;
+                    if (Directory.EnumerateFiles(dir.FullName, "*.sln").Any()) return dir.FullName;
+                    if (Directory.Exists(Path.Combine(dir.FullName, "src"))) return dir.FullName;
+                    dir = dir.Parent;
+                }
+                return string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
+        private string ComputeSourceHashFromRoot(string root)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) return string.Empty;
+                var exts = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".cs", ".csproj", ".props", ".targets", ".xaml", ".resx", ".json", ".tt", ".config", ".xml" };
+                var ignoreDirs = new[] { "bin", "obj", ".git", ".vs", "node_modules", "packages" };
+
+                var files = Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories)
+                    .Where(f => exts.Contains(Path.GetExtension(f)))
+                    .Where(f => !IsUnderIgnoredDir(f, root, ignoreDirs))
+                    .OrderBy(f => Path.GetRelativePath(root, f), StringComparer.Ordinal)
+                    .ToList();
+
+                using var sha = SHA256.Create();
+                foreach (var f in files)
+                {
+                    if (IsTextFile(f))
+                    {
+                        var text = File.ReadAllText(f);
+                        text = text.Replace("\r\n", "\n").Replace("\r", "\n");
+                        var bytes = Encoding.UTF8.GetBytes(text);
+                        sha.TransformBlock(bytes, 0, bytes.Length, null, 0);
+                    }
+                    else
+                    {
+                        var bytes = File.ReadAllBytes(f);
+                        sha.TransformBlock(bytes, 0, bytes.Length, null, 0);
+                    }
+                }
+                sha.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+                return BitConverter.ToString(sha.Hash!).Replace("-", "").ToLowerInvariant();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error computing source hash from root {root}: {ex.Message}");
+                return string.Empty;
+            }
+        }
+
+        private static bool IsUnderIgnoredDir(string filePath, string root, string[] ignoreDirs)
+        {
+            var rel = Path.GetRelativePath(root, filePath);
+            var parts = rel.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            foreach (var p in parts)
+            {
+                if (ignoreDirs.Contains(p, StringComparer.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
+
+        private static bool IsTextFile(string path)
+        {
+            var ext = Path.GetExtension(path).ToLowerInvariant();
+            var textExt = new HashSet<string> { ".cs", ".csproj", ".props", ".targets", ".xaml", ".resx", ".json", ".tt", ".config", ".xml" };
+            return textExt.Contains(ext);
         }
 
         /// <summary>
@@ -206,21 +372,12 @@ namespace Rca.Loader.AssemblyManagement
         {
             try
             {
-                // Find the latest assemblies
-                var loaderPath = Path.Combine(tempDllPath, LoaderConstants.LoaderFileName);
-                var runtimePath = Path.Combine(tempDllPath, LoaderConstants.RuntimeFileName);
-                
-                // Calculate hashes for new assemblies
-                var loaderComponentsHash = CalculateHash(loaderPath);
-                var runtimeHash = CalculateHash(runtimePath);
-                
-                // Check what has changed
-                bool loaderComponentsChanged = !string.IsNullOrEmpty(loaderComponentsHash) && 
-                                             loaderComponentsHash != _currentInfo.LoaderComponents.Hash;
-                                       
-                bool runtimeChanged = !string.IsNullOrEmpty(runtimeHash) && 
-                                     runtimeHash != _currentInfo.RuntimeAssembly.Hash;
-                
+                var loaderHash = ReadSourceHashFromDir(tempDllPath, LoaderSourceHashFile);
+                var runtimeHash = ReadSourceHashFromDir(tempDllPath, RuntimeSourceHashFile);
+
+                bool loaderComponentsChanged = !string.IsNullOrEmpty(loaderHash) && loaderHash != _currentInfo.LoaderComponents.Hash;
+                bool runtimeChanged = !string.IsNullOrEmpty(runtimeHash) && runtimeHash != _currentInfo.RuntimeAssembly.Hash;
+
                 // Update signal info
                 UpdateSignalInfo(DetermineEventType(loaderComponentsChanged, runtimeChanged));
                 
@@ -247,9 +404,8 @@ namespace Rca.Loader.AssemblyManagement
                     return false;
                 }
                 
-                var loaderPath = Path.Combine(latestFolder, LoaderConstants.LoaderFileName);
-                
-                var loaderHash = CalculateHash(loaderPath);
+                var loaderHash = ReadSourceHashFromDir(latestFolder, LoaderSourceHashFile);
+                if (string.IsNullOrEmpty(loaderHash)) loaderHash = ReadSourceHashFromRuntimeRoot(LoaderSourceHashFile);
                 
                 return !string.IsNullOrEmpty(loaderHash) && loaderHash != _currentInfo.LoaderComponents.Hash;
             }
@@ -274,8 +430,8 @@ namespace Rca.Loader.AssemblyManagement
                     return false;
                 }
                 
-                var runtimePath = Path.Combine(latestFolder, LoaderConstants.RuntimeFileName);
-                var runtimeHash = CalculateHash(runtimePath);
+                var runtimeHash = ReadSourceHashFromDir(latestFolder, RuntimeSourceHashFile);
+                if (string.IsNullOrEmpty(runtimeHash)) runtimeHash = ReadSourceHashFromRuntimeRoot(RuntimeSourceHashFile);
                 
                 return !string.IsNullOrEmpty(runtimeHash) && runtimeHash != _currentInfo.RuntimeAssembly.Hash;
             }
@@ -301,7 +457,20 @@ namespace Rca.Loader.AssemblyManagement
                 
                 // Update runtime path and hash
                 _currentInfo.RuntimeAssembly.Path = runtimePath;
-                _currentInfo.RuntimeAssembly.Hash = CalculateHash(runtimePath);
+                _currentInfo.RuntimeAssembly.Hash = ReadSourceHashFromFile(runtimePath, RuntimeSourceHashFile);
+                
+                if (string.IsNullOrEmpty(_currentInfo.RuntimeAssembly.Hash))
+                {
+                    // try latest folder
+                    var latest = GetLatestTempDllFolder();
+                    if (!string.IsNullOrEmpty(latest))
+                        _currentInfo.RuntimeAssembly.Hash = ReadSourceHashFromDir(latest, RuntimeSourceHashFile);
+                }
+                
+                if (string.IsNullOrEmpty(_currentInfo.RuntimeAssembly.Hash))
+                {
+                    _currentInfo.RuntimeAssembly.Hash = ReadSourceHashFromRuntimeRoot(RuntimeSourceHashFile);
+                }
                 
                 // Save changes to JSON
                 SaveAssemblyInfo(_currentInfo);
@@ -334,7 +503,20 @@ namespace Rca.Loader.AssemblyManagement
                 
                 // Update loader components path and hash
                 _currentInfo.LoaderComponents.Path = loaderDir;
-                _currentInfo.LoaderComponents.Hash = CalculateHash(loaderPath);
+                _currentInfo.LoaderComponents.Hash = ReadSourceHashFromDir(loaderDir, LoaderSourceHashFile);
+                
+                if (string.IsNullOrEmpty(_currentInfo.LoaderComponents.Hash))
+                {
+                    // try latest folder
+                    var latest = GetLatestTempDllFolder();
+                    if (!string.IsNullOrEmpty(latest))
+                        _currentInfo.LoaderComponents.Hash = ReadSourceHashFromDir(latest, LoaderSourceHashFile);
+                }
+                
+                if (string.IsNullOrEmpty(_currentInfo.LoaderComponents.Hash))
+                {
+                    _currentInfo.LoaderComponents.Hash = ReadSourceHashFromRuntimeRoot(LoaderSourceHashFile);
+                }
                 
                 // Save changes to JSON
                 SaveAssemblyInfo(_currentInfo);
@@ -455,26 +637,11 @@ namespace Rca.Loader.AssemblyManagement
             try
             {
                 var latestFolder = GetLatestTempDllFolder();
-                if (string.IsNullOrEmpty(latestFolder))
-                {
-                    return (new AssemblyInfo(), new AssemblyInfo());
-                }
-                
+                if (string.IsNullOrEmpty(latestFolder)) return (new AssemblyInfo(), new AssemblyInfo());
                 var loaderPath = Path.Combine(latestFolder, LoaderConstants.LoaderFileName);
                 var runtimePath = Path.Combine(latestFolder, LoaderConstants.RuntimeFileName);
-                
-                var loaderComponents = new AssemblyInfo
-                {
-                    Path = latestFolder, // Store directory path instead of file path
-                    Hash = CalculateHash(loaderPath)
-                };
-                
-                var runtime = new AssemblyInfo
-                {
-                    Path = runtimePath,
-                    Hash = CalculateHash(runtimePath)
-                };
-                
+                var loaderComponents = new AssemblyInfo { Path = latestFolder, Hash = ReadSourceHashFromDir(latestFolder, LoaderSourceHashFile) };
+                var runtime = new AssemblyInfo { Path = runtimePath, Hash = ReadSourceHashFromDir(latestFolder, RuntimeSourceHashFile) };
                 return (loaderComponents, runtime);
             }
             catch (Exception ex)

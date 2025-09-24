@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Linq;
 using Autodesk.Revit.UI;
 using Rca.Loader.AssemblyManagement;
 using Rca.Loader.Infrastructure;
@@ -22,11 +23,12 @@ namespace Rca.Loader.Restart
             Path.GetDirectoryName(typeof(RestartManager).Assembly.Location) ?? string.Empty,
             "..", "..", "..", "build", "Scripts", ScriptFilename);
 
+        private const string LoaderSourceHashFile = "source-hash.loader.txt";
+
         /// <summary>
         /// Initializes a new instance of the <see cref="RestartManager"/> class.
         /// </summary>
         /// <param name="statusManager">The assembly status manager.</param>
-        /// <exception cref="ArgumentNullException">Thrown if statusManager is null.</exception>
         public RestartManager(AssemblyStatusManager statusManager)
         {
             _statusManager = statusManager ?? throw new ArgumentNullException(nameof(statusManager));
@@ -35,8 +37,6 @@ namespace Rca.Loader.Restart
         /// <summary>
         /// Shows a dialog with restart options and countdown.
         /// </summary>
-        /// <param name="countdownSeconds">Number of seconds for the countdown.</param>
-        /// <returns>True if restart was initiated, false if cancelled.</returns>
         public bool ShowRestartDialog(int countdownSeconds = 10)
         {
             try
@@ -46,15 +46,15 @@ namespace Rca.Loader.Restart
                     MainIcon = TaskDialogIcon.TaskDialogIconWarning,
                     MainInstruction = "Loader assembly has been updated",
                     MainContent = $"Revit needs to restart to load the updated assembly. The restart will begin in {countdownSeconds} seconds.\n\n" +
-                                "Your work will be saved automatically before closing.\n\n" +
-                                "Do you want to proceed with the restart?",
+                                  "Your work will be saved automatically before closing.\n\n" +
+                                  "Do you want to proceed with the restart?",
                     CommonButtons = TaskDialogCommonButtons.Cancel,
                     DefaultButton = TaskDialogResult.Cancel
                 };
-                
+
                 taskDialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "Restart now", "Restart Revit immediately");
                 taskDialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink2, "Restart later", "Continue working and restart manually later");
-                
+
                 var countdown = countdownSeconds;
                 var timer = new Timer(_ => 
                 {
@@ -73,26 +73,19 @@ namespace Rca.Loader.Restart
                         // Ignore timer callback errors
                     }
                 }, null, 0, 1000);
-                
+
                 var result = taskDialog.Show();
-                
-                // Clean up the timer
+
                 timer.Dispose();
-                
+
                 switch (result)
                 {
                     case TaskDialogResult.CommandLink1:
-                        // User chose to restart now
                         return ExecuteRestartScript(out _);
-                        
                     case TaskDialogResult.CommandLink2:
-                        // User chose to restart later
-                        TaskDialog.Show("Restart Later", 
-                            "Please remember to restart Revit manually to load the updated assembly.");
+                        TaskDialog.Show("Restart Later", "Please remember to restart Revit manually to load the updated assembly.");
                         return false;
-                        
                     default:
-                        // User cancelled
                         return false;
                 }
             }
@@ -102,52 +95,40 @@ namespace Rca.Loader.Restart
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Executes the PowerShell restart script.
         /// </summary>
-        /// <param name="error">Output error message if execution fails.</param>
-        /// <returns>True if the script was executed successfully, false otherwise.</returns>
         public bool ExecuteRestartScript(out string error)
         {
             try
             {
-                // Get source path (latest build folder)
                 string sourcePath = _statusManager.GetLatestTempDllFolder();
                 if (string.IsNullOrEmpty(sourcePath))
                 {
                     error = "Source path not found";
                     return false;
                 }
-                
-                // Get target path (Revit addin directory)
+
                 string targetPath = LoaderConstants.RevitAddinDir;
                 if (string.IsNullOrEmpty(targetPath) || !Directory.Exists(targetPath))
                 {
                     error = "Target path not found";
                     return false;
                 }
-                
-                // Check if script exists
+
                 if (!File.Exists(ScriptPath))
                 {
-                    // Try to find the script in alternate locations
-                    var altPath = Path.Combine(
-                        Directory.GetCurrentDirectory(),
-                        "build", "Scripts", ScriptFilename);
-                        
+                    var altPath = Path.Combine(Directory.GetCurrentDirectory(), "build", "Scripts", ScriptFilename);
                     if (!File.Exists(altPath))
                     {
                         error = $"Restart script not found at: {ScriptPath}";
                         return false;
                     }
-                    
-                    // Use the alternate path
                     ExecuteScript(altPath, sourcePath, targetPath, out error);
                     return string.IsNullOrEmpty(error);
                 }
-                
-                // Execute the script with appropriate parameters
+
                 ExecuteScript(ScriptPath, sourcePath, targetPath, out error);
                 return string.IsNullOrEmpty(error);
             }
@@ -157,24 +138,20 @@ namespace Rca.Loader.Restart
                 return false;
             }
         }
-        
+
         private void ExecuteScript(string scriptPath, string sourcePath, string targetPath, out string error)
         {
             error = string.Empty;
-            
             try
             {
-                // Get Revit process info for script
                 var revitProcess = Process.GetCurrentProcess();
                 string revitExecutable = revitProcess.MainModule?.FileName ?? string.Empty;
-                
                 if (string.IsNullOrEmpty(revitExecutable))
                 {
                     error = "Could not determine Revit executable path";
                     return;
                 }
-                
-                // Set up PowerShell process
+
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = PowerShellPath,
@@ -188,52 +165,72 @@ namespace Rca.Loader.Restart
                     RedirectStandardOutput = true,
                     RedirectStandardError = true
                 };
-                
-                // Start the process
+
                 using var process = Process.Start(startInfo);
                 if (process == null)
                 {
                     error = "Failed to start PowerShell process";
                     return;
                 }
-                
-                // The script will handle closing Revit, so we don't need to wait for it to complete
             }
             catch (Exception ex)
             {
                 error = $"Error executing script: {ex.Message}";
             }
         }
-        
+
         /// <summary>
-        /// Validates that the loader assembly was copied successfully.
+        /// Validates that the loader assembly was copied successfully by comparing source-hash files.
         /// </summary>
-        /// <param name="sourcePath">Source directory path.</param>
-        /// <param name="targetPath">Target directory path.</param>
-        /// <returns>True if validation passed, false otherwise.</returns>
         public bool ValidateAssemblyCopy(string sourcePath, string targetPath)
         {
             try
             {
-                // Check that loader file exists in target
                 var loaderSourcePath = Path.Combine(sourcePath, LoaderConstants.LoaderFileName);
                 var loaderTargetPath = Path.Combine(targetPath, LoaderConstants.LoaderFileName);
-                
-                if (!File.Exists(loaderTargetPath))
+
+                if (!File.Exists(loaderTargetPath)) return false;
+
+                // Compare loader-specific source-hash files if present
+                var sourceHash = ReadSourceHashFromDir(sourcePath, LoaderSourceHashFile);
+                var targetHash = ReadSourceHashFromDir(targetPath, LoaderSourceHashFile);
+
+                if (!string.IsNullOrEmpty(sourceHash) && !string.IsNullOrEmpty(targetHash))
+                {
+                    return string.Equals(sourceHash, targetHash, StringComparison.OrdinalIgnoreCase);
+                }
+
+                // Fallback to binary compare if no source-hash files
+                try
+                {
+                    var srcBytes = File.ReadAllBytes(loaderSourcePath);
+                    var tgtBytes = File.ReadAllBytes(loaderTargetPath);
+                    return srcBytes.Length == tgtBytes.Length && srcBytes.SequenceEqual(tgtBytes);
+                }
+                catch
                 {
                     return false;
                 }
-                
-                // Check that the hash of copied file match the source file
-                var loaderSourceHash = _statusManager.CalculateHash(loaderSourcePath);
-                var loaderTargetHash = _statusManager.CalculateHash(loaderTargetPath);
-                
-                return loaderSourceHash == loaderTargetHash;
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error validating assembly copy: {ex.Message}");
                 return false;
+            }
+        }
+
+        private string ReadSourceHashFromDir(string dir, string fileName = LoaderSourceHashFile)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(dir)) return string.Empty;
+                var candidate = Path.Combine(dir, fileName);
+                if (File.Exists(candidate)) return File.ReadAllText(candidate).Trim();
+                return string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
             }
         }
     }
