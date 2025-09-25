@@ -23,7 +23,7 @@ namespace Rca.Loader.Restart
             Path.GetDirectoryName(typeof(RestartManager).Assembly.Location) ?? string.Empty,
             "..", "..", "..", "build", "Scripts", ScriptFilename);
 
-        private const string LoaderSourceHashFile = "source-hash.loader.txt";
+        // LoaderSourceHashFile removed: validation uses AssemblyMetadata 'SourceHash' only.
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RestartManager"/> class.
@@ -193,41 +193,39 @@ namespace Rca.Loader.Restart
 
                 if (!File.Exists(loaderTargetPath)) return false;
 
-                // 1) Try to read embedded assembly metadata attribute "SourceHash" from both assemblies
-                string? srcMetaHash = AssemblyMetadataReader.TryGetAssemblyMetadata(loaderSourcePath, "SourceHash");
-                string? tgtMetaHash = AssemblyMetadataReader.TryGetAssemblyMetadata(loaderTargetPath, "SourceHash");
+                // Only validate by embedded assembly metadata 'SourceHash'.
+                // If metadata is missing or different, do not fall back to other methods —
+                // developer should investigate the mismatch.
+                bool err1 = false, err2 = false;
+                string? srcMetaHash = null;
+                string? tgtMetaHash = null;
 
-                if (!string.IsNullOrEmpty(srcMetaHash) && !string.IsNullOrEmpty(tgtMetaHash))
+                var ok1 = AssemblyMetadataReader.TryGetAssemblyMetadata(loaderSourcePath, "SourceHash", out srcMetaHash, out err1);
+                var ok2 = AssemblyMetadataReader.TryGetAssemblyMetadata(loaderTargetPath, "SourceHash", out tgtMetaHash, out err2);
+
+                if (err1 || err2)
                 {
-                    // Compare short hashes (take first 6 characters if full-length)
-                    var srcShort = GetShortHash(srcMetaHash);
-                    var tgtShort = GetShortHash(tgtMetaHash);
-                    if (string.Equals(srcShort, tgtShort, StringComparison.OrdinalIgnoreCase))
-                        return true;
+                    var msg = $"Error reading AssemblyMetadata 'SourceHash' (sourceError={err1}, targetError={err2})";
+                    Debug.WriteLine($"ValidateAssemblyCopy: {msg}");
+                    throw new InvalidOperationException(msg);
                 }
 
-                // 2) Try to read LoaderVersion - {hash}.txt files next to DLLs
-                string srcInfo = ReadLoaderVersionInfo(sourcePath);
-                string tgtInfo = ReadLoaderVersionInfo(targetPath);
-                if (!string.IsNullOrEmpty(srcInfo) && !string.IsNullOrEmpty(tgtInfo))
+                // If no metadata present on either side, validation fails but no error thrown.
+                if (string.IsNullOrEmpty(srcMetaHash) || string.IsNullOrEmpty(tgtMetaHash))
                 {
-                    var s = GetShortHash(srcInfo);
-                    var t = GetShortHash(tgtInfo);
-                    if (string.Equals(s, t, StringComparison.OrdinalIgnoreCase))
-                        return true;
-                }
-
-                // 3) Fallback: binary comparison
-                try
-                {
-                    var srcBytes = File.ReadAllBytes(loaderSourcePath);
-                    var tgtBytes = File.ReadAllBytes(loaderTargetPath);
-                    return srcBytes.Length == tgtBytes.Length && srcBytes.SequenceEqual(tgtBytes);
-                }
-                catch
-                {
+                    Debug.WriteLine("ValidateAssemblyCopy: missing SourceHash metadata on source or target assembly");
                     return false;
                 }
+
+                var srcShort = GetShortHash(srcMetaHash!);
+                var tgtShort = GetShortHash(tgtMetaHash!);
+                if (string.Equals(srcShort, tgtShort, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+
+                Debug.WriteLine($"ValidateAssemblyCopy: metadata hash mismatch (src={srcShort}, tgt={tgtShort})");
+                return false;
             }
             catch (Exception ex)
             {
@@ -244,20 +242,8 @@ namespace Rca.Loader.Restart
             return cleaned;
         }
 
-        private static string ReadLoaderVersionInfo(string dir)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(dir)) return string.Empty;
-                var files = Directory.GetFiles(dir, "LoaderVersion - *.txt");
-                var file = files.FirstOrDefault();
-                if (file != null) return File.ReadAllText(file).Trim();
-                return string.Empty;
-            }
-            catch
-            {
-                return string.Empty;
-            }
-        }
+        // Note: previous implementations read LoaderVersion - {hash}.txt files and did binary fallbacks.
+        // Current policy: rely only on embedded AssemblyMetadata(SourceHash). If absent or mismatched,
+        // validation fails and developer must investigate.
     }
 }

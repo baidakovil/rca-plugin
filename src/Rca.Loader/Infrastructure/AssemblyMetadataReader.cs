@@ -14,19 +14,23 @@ namespace Rca.Loader.Infrastructure
     public static class AssemblyMetadataReader
     {
         /// <summary>
-        /// Tries to read a metadata attribute value from the assembly file by key.
-        /// Returns null if not found or on error.
+        /// Try to read AssemblyMetadata attribute value by key from an assembly file.
+        /// Returns true if read attempt completed (value may be null if not present).
+        /// If an exception occurred during reading, returns false and sets hadError=true.
         /// </summary>
-        public static string? TryGetAssemblyMetadata(string assemblyPath, string key)
+        public static bool TryGetAssemblyMetadata(string assemblyPath, string key, out string? value, out bool hadError)
         {
+            value = null;
+            hadError = false;
+
             try
             {
                 if (string.IsNullOrEmpty(assemblyPath) || !File.Exists(assemblyPath))
-                    return null;
+                    return true; // no error, but no value
 
                 using var stream = File.OpenRead(assemblyPath);
                 using var peReader = new PEReader(stream, PEStreamOptions.LeaveOpen);
-                if (!peReader.HasMetadata) return null;
+                if (!peReader.HasMetadata) return true;
 
                 var mdReader = peReader.GetMetadataReader();
                 var assemblyDef = mdReader.GetAssemblyDefinition();
@@ -75,16 +79,33 @@ namespace Rca.Loader.Infrastructure
                         var foundKey = parts[0];
                         var foundVal = parts[1];
                         if (string.Equals(foundKey, key, StringComparison.OrdinalIgnoreCase))
-                            return foundVal;
+                        {
+                            value = foundVal;
+                            return true;
+                        }
                     }
                 }
 
-                return null;
+                return true;
             }
             catch
             {
-                return null;
+                hadError = true;
+                value = null;
+                return false;
             }
+        }
+
+        /// <summary>
+        /// Simple convenience method returning the metadata value or null. Does not surface read errors.
+        /// </summary>
+        public static string? TryGetAssemblyMetadata(string assemblyPath, string key)
+        {
+            if (TryGetAssemblyMetadata(assemblyPath, key, out var value, out var hadError))
+            {
+                return value;
+            }
+            return null;
         }
     }
 }
