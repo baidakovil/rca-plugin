@@ -179,27 +179,45 @@ namespace Rca.Loader.Restart
         }
 
         /// <summary>
-        /// Validates that the loader assembly was copied successfully by comparing source-hash files.
+        /// Validates that the loader assembly was copied successfully by comparing embedded source hashes
+        /// (AssemblyMetadata SourceHash) or by reading LoaderVersion info files next to the DLL. Falls back to
+        /// binary compare if neither metadata nor info files exist.
         /// </summary>
         public bool ValidateAssemblyCopy(string sourcePath, string targetPath)
         {
             try
             {
-                var loaderSourcePath = Path.Combine(sourcePath, LoaderConstants.LoaderFileName);
-                var loaderTargetPath = Path.Combine(targetPath, LoaderConstants.LoaderFileName);
+                var loaderFileName = LoaderConstants.LoaderFileName;
+                var loaderSourcePath = Path.Combine(sourcePath, loaderFileName);
+                var loaderTargetPath = Path.Combine(targetPath, loaderFileName);
 
                 if (!File.Exists(loaderTargetPath)) return false;
 
-                // Compare loader-specific source-hash files if present
-                var sourceHash = ReadSourceHashFromDir(sourcePath, LoaderSourceHashFile);
-                var targetHash = ReadSourceHashFromDir(targetPath, LoaderSourceHashFile);
+                // 1) Try to read embedded assembly metadata attribute "SourceHash" from both assemblies
+                string? srcMetaHash = AssemblyMetadataReader.TryGetAssemblyMetadata(loaderSourcePath, "SourceHash");
+                string? tgtMetaHash = AssemblyMetadataReader.TryGetAssemblyMetadata(loaderTargetPath, "SourceHash");
 
-                if (!string.IsNullOrEmpty(sourceHash) && !string.IsNullOrEmpty(targetHash))
+                if (!string.IsNullOrEmpty(srcMetaHash) && !string.IsNullOrEmpty(tgtMetaHash))
                 {
-                    return string.Equals(sourceHash, targetHash, StringComparison.OrdinalIgnoreCase);
+                    // Compare short hashes (take first 6 characters if full-length)
+                    var srcShort = GetShortHash(srcMetaHash);
+                    var tgtShort = GetShortHash(tgtMetaHash);
+                    if (string.Equals(srcShort, tgtShort, StringComparison.OrdinalIgnoreCase))
+                        return true;
                 }
 
-                // Fallback to binary compare if no source-hash files
+                // 2) Try to read LoaderVersion - {hash}.txt files next to DLLs
+                string srcInfo = ReadLoaderVersionInfo(sourcePath);
+                string tgtInfo = ReadLoaderVersionInfo(targetPath);
+                if (!string.IsNullOrEmpty(srcInfo) && !string.IsNullOrEmpty(tgtInfo))
+                {
+                    var s = GetShortHash(srcInfo);
+                    var t = GetShortHash(tgtInfo);
+                    if (string.Equals(s, t, StringComparison.OrdinalIgnoreCase))
+                        return true;
+                }
+
+                // 3) Fallback: binary comparison
                 try
                 {
                     var srcBytes = File.ReadAllBytes(loaderSourcePath);
@@ -218,13 +236,22 @@ namespace Rca.Loader.Restart
             }
         }
 
-        private string ReadSourceHashFromDir(string dir, string fileName = LoaderSourceHashFile)
+        private static string GetShortHash(string hash)
+        {
+            if (string.IsNullOrEmpty(hash)) return string.Empty;
+            var cleaned = hash.Trim();
+            if (cleaned.Length > 6) return cleaned.Substring(0, 6);
+            return cleaned;
+        }
+
+        private static string ReadLoaderVersionInfo(string dir)
         {
             try
             {
                 if (string.IsNullOrEmpty(dir)) return string.Empty;
-                var candidate = Path.Combine(dir, fileName);
-                if (File.Exists(candidate)) return File.ReadAllText(candidate).Trim();
+                var files = Directory.GetFiles(dir, "LoaderVersion - *.txt");
+                var file = files.FirstOrDefault();
+                if (file != null) return File.ReadAllText(file).Trim();
                 return string.Empty;
             }
             catch
