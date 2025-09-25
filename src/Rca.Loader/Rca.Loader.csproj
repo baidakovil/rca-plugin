@@ -164,6 +164,38 @@
     <Message Text="ILRepack completed successfully - Using merged assembly" Importance="High" />
   </Target>
   
+  <!-- Generate loader source hash and assembly metadata before compile so attribute is embedded -->
+  <PropertyGroup>
+    <SourceHashProject>$(SolutionDir)src\Tools\SourceHashGenerator\SourceHashGenerator.csproj</SourceHashProject>
+    <SourceHashExe>$(SolutionDir)src\Tools\SourceHashGenerator\bin\$(Configuration)\net8.0\SourceHashGenerator.exe</SourceHashExe>
+    <SourceRootList>$(MSBuildProjectDirectory);$(SolutionDir)src\Rca.Loader.Contracts</SourceRootList>
+    <SourceHashIntermediate>$(IntermediateOutputPath)source-hash.loader.txt</SourceHashIntermediate>
+  </PropertyGroup>
+
+  <Target Name="GenerateLoaderSourceHashAndMetadata" BeforeTargets="CoreCompile">
+    <Exec Command="dotnet build &quot;$(SourceHashProject)&quot; -c $(Configuration)" />
+    <Exec Command="&quot;$(SourceHashExe)&quot; --roots &quot;$(SourceRootList)&quot; --out &quot;$(SourceHashIntermediate)&quot;" ContinueOnError="true" />
+
+    <ReadLinesFromFile File="$(SourceHashIntermediate)" ContinueOnError="true">
+      <Output TaskParameter="Lines" ItemName="LoaderSourceHashLines" />
+    </ReadLinesFromFile>
+
+    <PropertyGroup>
+      <RcaLoaderSourceHash>%(LoaderSourceHashLines.Identity)</RcaLoaderSourceHash>
+    </PropertyGroup>
+
+    <!-- Generate assembly metadata source file to embed into assembly -->
+    <ItemGroup>
+      <RcaLoaderAssemblyMetadataLines Include="[assembly: System.Reflection.AssemblyMetadata(&quot;SourceHash&quot;, &quot;$(RcaLoaderSourceHash)&quot;)]" />
+      <RcaLoaderAssemblyMetadataLines Include="[assembly: System.Reflection.AssemblyMetadata(&quot;DeployFolder&quot;, &quot;$(RcaHotReloadTimestamp)&quot;)]" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(IntermediateOutputPath)RcaLoaderAssemblyMetadata.cs" Overwrite="true" Lines="@(RcaLoaderAssemblyMetadataLines)" />
+
+    <ItemGroup>
+      <Compile Include="$(IntermediateOutputPath)RcaLoaderAssemblyMetadata.cs" />
+    </ItemGroup>
+  </Target>
+  
   <!-- Deploy merged Loader assembly to hot-reload temp folder (same as Runtime) -->
   <Target Name="DeployLoaderToTemp" AfterTargets="RepackLoader">
     <PropertyGroup>
@@ -174,16 +206,11 @@
     <Message Text="Copied Loader assembly to hot-reload directory: $(RuntimeDeployDir)" Importance="High" />
     <Message Text="Deployed Loader assembly to hot-reload directory: $(RuntimeDeployDir)" Importance="High" />
 
-    <!-- Generate loader-specific source hash and place into runtime deploy folder only when loader deployed -->
+    <!-- Write loader version info file using previously computed short hash -->
     <PropertyGroup>
-      <SourceRootList>$(MSBuildProjectDirectory);$(SolutionDir)src\Rca.Loader.Contracts</SourceRootList>
-      <SourceHashOut>$(RuntimeDeployDir)\source-hash.loader.txt</SourceHashOut>
-      <SourceHashProject>$(SolutionDir)src\Tools\SourceHashGenerator\SourceHashGenerator.csproj</SourceHashProject>
-      <SourceHashExe>$(SolutionDir)src\Tools\SourceHashGenerator\bin\$(Configuration)\net8.0\SourceHashGenerator.exe</SourceHashExe>
+      <LoaderVersionFile>$(RuntimeDeployDir)\LoaderVersion - $(RcaLoaderSourceHash).txt</LoaderVersionFile>
     </PropertyGroup>
-
-    <Exec Command="dotnet build &quot;$(SourceHashProject)&quot; -c $(Configuration)" />
-    <Exec Command="&quot;$(SourceHashExe)&quot; --roots &quot;$(SourceRootList)&quot; --out &quot;$(SourceHashOut)&quot;" ContinueOnError="true" />
+    <WriteLinesToFile File="$(LoaderVersionFile)" Lines="$(RcaLoaderSourceHash)" Overwrite="true" />
 
   </Target>
   

@@ -98,6 +98,9 @@ internal class Program
         sha.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
         var hash = BitConverter.ToString(sha.Hash!).Replace("-", "").ToLowerInvariant();
 
+        // Shorten to first 6 characters for human-readability
+        var shortHash = hash.Length >= 6 ? hash.Substring(0, 6) : hash;
+
         var outputPath = @out;
         if (string.IsNullOrWhiteSpace(outputPath))
             outputPath = Path.Combine(rootList.First(), "source-hash.txt");
@@ -105,10 +108,10 @@ internal class Program
         var outDir = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrEmpty(outDir) && !Directory.Exists(outDir)) Directory.CreateDirectory(outDir);
 
-        File.WriteAllText(outputPath, hash);
+        File.WriteAllText(outputPath, shortHash);
 
         // Print the hash to stdout for logging
-        Console.WriteLine(hash);
+        Console.WriteLine(shortHash);
     }
 
     private static IEnumerable<string> SplitRoots(string roots)

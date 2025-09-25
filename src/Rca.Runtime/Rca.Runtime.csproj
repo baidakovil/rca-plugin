@@ -39,6 +39,39 @@
     <IncludeIronPythonContent>true</IncludeIronPythonContent>
   </PropertyGroup>
 
+  <!-- Generate source hash and assembly metadata before compile so attribute is embedded -->
+  <PropertyGroup>
+    <SourceHashProject>$(SolutionDir)src\Tools\SourceHashGenerator\SourceHashGenerator.csproj</SourceHashProject>
+    <SourceHashExe>$(SolutionDir)src\Tools\SourceHashGenerator\bin\$(Configuration)\net8.0\SourceHashGenerator.exe</SourceHashExe>
+    <SourceRootList>$(MSBuildProjectDirectory);$(SolutionDir)src\Rca.Core;$(SolutionDir)src\Rca.UI;$(SolutionDir)src\Rca.Network;$(SolutionDir)src\Rca.Contracts</SourceRootList>
+    <SourceHashIntermediate>$(IntermediateOutputPath)source-hash.runtime.txt</SourceHashIntermediate>
+  </PropertyGroup>
+
+  <Target Name="GenerateSourceHashAndMetadata" BeforeTargets="CoreCompile">
+    <!-- Build and run source hash generator tool -->
+    <Exec Command="dotnet build &quot;$(SourceHashProject)&quot; -c $(Configuration)" />
+    <Exec Command="&quot;$(SourceHashExe)&quot; --roots &quot;$(SourceRootList)&quot; --out &quot;$(SourceHashIntermediate)&quot;" />
+
+    <ReadLinesFromFile File="$(SourceHashIntermediate)">
+      <Output TaskParameter="Lines" ItemName="SourceHashLines" />
+    </ReadLinesFromFile>
+
+    <PropertyGroup>
+      <RcaSourceHash>%(SourceHashLines.Identity)</RcaSourceHash>
+    </PropertyGroup>
+
+    <!-- Generate assembly metadata source file to embed into assembly -->
+    <ItemGroup>
+      <RcaAssemblyMetadataLines Include="[assembly: System.Reflection.AssemblyMetadata(&quot;SourceHash&quot;, &quot;$(RcaSourceHash)&quot;)]" />
+      <RcaAssemblyMetadataLines Include="[assembly: System.Reflection.AssemblyMetadata(&quot;DeployFolder&quot;, &quot;$(RcaHotReloadTimestamp)&quot;)]" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(IntermediateOutputPath)RcaAssemblyMetadata.cs" Overwrite="true" Lines="@(RcaAssemblyMetadataLines)" />
+
+    <ItemGroup>
+      <Compile Include="$(IntermediateOutputPath)RcaAssemblyMetadata.cs" />
+    </ItemGroup>
+  </Target>
+
   <!-- Merge assemblies with ILRepack -->
   <Target Name="RepackRuntime" AfterTargets="Build">
     <PropertyGroup>
@@ -78,18 +111,13 @@
     </ItemGroup>
     <Copy SourceFiles="@(LibFiles)" DestinationFiles="@(LibFiles-&gt;'$(RuntimeDeployDir)\Lib\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="@(LibFiles)!=''" />
 
-    <!-- Generate source hash and copy it to runtime folder by building and running the tool project -->
+    <!-- Write runtime version info file using previously computed short hash -->
     <PropertyGroup>
-      <SourceRootList>$(MSBuildProjectDirectory);$(SolutionDir)src\Rca.Core;$(SolutionDir)src\Rca.UI;$(SolutionDir)src\Rca.Network;$(SolutionDir)src\Rca.Contracts</SourceRootList>
-      <SourceHashOut>$(RuntimeDeployDir)\source-hash.runtime.txt</SourceHashOut>
-      <SourceHashProject>$(SolutionDir)src\Tools\SourceHashGenerator\SourceHashGenerator.csproj</SourceHashProject>
-      <SourceHashExe>$(SolutionDir)src\Tools\SourceHashGenerator\bin\$(Configuration)\net8.0\SourceHashGenerator.exe</SourceHashExe>
+      <RuntimeVersionFile>$(RuntimeDeployDir)\RuntimeVersion - $(RcaSourceHash).txt</RuntimeVersionFile>
     </PropertyGroup>
+    <WriteLinesToFile File="$(RuntimeVersionFile)" Lines="$(RcaSourceHash)" Overwrite="true" />
 
-    <Exec Command="dotnet build &quot;$(SourceHashProject)&quot; -c $(Configuration)" />
-    <Exec Command="&quot;$(SourceHashExe)&quot; --roots &quot;$(SourceRootList)&quot; --out &quot;$(SourceHashOut)&quot;" />
-
-    <Message Text="Deployed Runtime to hot-reload directory: $(RuntimeDeployDir)" Importance="High" />
+    <Message Text="Deployed Runtime to hot-reload directory: $(RuntimeDeployDir) (hash=$(RcaSourceHash))" Importance="High" />
   </Target>
 
   <!-- Notify Loader of new runtime via named pipe -->
