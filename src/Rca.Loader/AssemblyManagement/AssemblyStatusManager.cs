@@ -10,8 +10,8 @@ namespace Rca.Loader.AssemblyManagement
 {
     public class AssemblyStatusManager
     {
-        private const string LoaderVersionFilePattern = "LoaderVersion - *.txt";
-        private const string RuntimeVersionFilePattern = "RuntimeVersion - *.txt";
+        private const string LoaderVersionFilePattern = "_LoaderVersion - *.txt";
+        private const string RuntimeVersionFilePattern = "_RuntimeVersion - *.txt";
 
         public AssemblyStatusManager()
         {

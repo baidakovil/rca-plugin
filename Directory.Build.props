@@ -2,7 +2,7 @@
   <PropertyGroup>
     <SolutionDir Condition="'$(SolutionDir)' == ''">$(MSBuildThisFileDirectory)</SolutionDir>
     <!-- Shared timestamp for hot-reload deployments, set once per build -->
-    <RcaHotReloadTimestamp Condition="'$(RcaHotReloadTimestamp)' == ''">$([System.DateTime]::Now.ToString("yyyyMMddHHmmss"))</RcaHotReloadTimestamp>
+    <RcaHotReloadTimestamp Condition="'$(RcaHotReloadTimestamp)' == ''">$([System.DateTime]::Now.ToString("yyyyMMdd_HHmmss"))</RcaHotReloadTimestamp>
   </PropertyGroup>
   
   <!-- Define properties in rca-plugin.sln.targets instead -->

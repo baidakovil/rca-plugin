@@ -208,7 +208,7 @@
 
     <!-- Write loader version info file using previously computed short hash -->
     <PropertyGroup>
-      <LoaderVersionFile>$(RuntimeDeployDir)\LoaderVersion - $(RcaLoaderSourceHash).txt</LoaderVersionFile>
+      <LoaderVersionFile>$(RuntimeDeployDir)\_LoaderVersion - $(RcaLoaderSourceHash).txt</LoaderVersionFile>
     </PropertyGroup>
     <WriteLinesToFile File="$(LoaderVersionFile)" Lines="$(RcaLoaderSourceHash)" Overwrite="true" />
 
