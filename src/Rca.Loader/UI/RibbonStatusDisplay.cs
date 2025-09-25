@@ -127,7 +127,7 @@ namespace Rca.Loader.UI
         private string FormatLoaderStatus(AssemblyInfo loaderComponents)
         {
             if (loaderComponents == null) return "Rca.Loader.dll: unknown";
-            if (string.IsNullOrEmpty(loaderComponents.Path)) return "Rca.Loader.dll: not loaded";
+            if (string.IsNullOrEmpty(loaderComponents.Path)) return "Rca.Loader.dll: Not loaded";
 
             string folder = System.IO.Path.GetFileName(loaderComponents.Path);
             bool isOutdated = false;
@@ -138,14 +138,20 @@ namespace Rca.Loader.UI
             }
             catch { }
 
-            string status = isOutdated ? "outdated" : "current";
-            return $"Rca.Loader.dll: {status} - {folder}";
+            if (isOutdated)
+            {
+                return $"Rca.Loader.dll: Loaded but outdated - {folder} (hash: {TruncateHash(loaderComponents.Hash)})";
+            }
+            else
+            {
+                return $"Rca.Loader.dll: Loaded (current) - {folder} (hash: {TruncateHash(loaderComponents.Hash)})";
+            }
         }
 
         private string FormatRuntimeStatus(AssemblyInfo runtimeAssembly)
         {
             if (runtimeAssembly == null) return "Rca.Runtime.dll: unknown";
-            if (string.IsNullOrEmpty(runtimeAssembly.Path)) return "Rca.Runtime.dll: not loaded";
+            if (string.IsNullOrEmpty(runtimeAssembly.Path)) return "Rca.Runtime.dll: Not loaded";
 
             string folder = System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(runtimeAssembly.Path) ?? string.Empty);
             bool isOutdated = false;
@@ -156,8 +162,14 @@ namespace Rca.Loader.UI
             }
             catch { }
 
-            string status = isOutdated ? "outdated" : "current";
-            return $"Rca.Runtime.dll: {status} - {folder}";
+            if (isOutdated)
+            {
+                return $"Rca.Runtime.dll: Loaded but outdated - {folder} (hash: {TruncateHash(runtimeAssembly.Hash)})";
+            }
+            else
+            {
+                return $"Rca.Runtime.dll: Loaded (current) - {folder} (hash: {TruncateHash(runtimeAssembly.Hash)})";
+            }
         }
 
         private string FormatSignalStatus(SignalInfo signalInfo)
@@ -165,6 +177,12 @@ namespace Rca.Loader.UI
             if (signalInfo == null) return "Last MSBuild signal: unknown";
             if (string.IsNullOrEmpty(signalInfo.Time)) return "Last MSBuild signal: none";
             return $"Last MSBuild signal: {signalInfo.Time} - {signalInfo.Event}";
+        }
+
+        private string TruncateHash(string? hash)
+        {
+            if (string.IsNullOrEmpty(hash)) return "n/a";
+            return hash.Length > 8 ? hash.Substring(0, 8) : hash;
         }
     }
 }

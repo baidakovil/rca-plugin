@@ -121,16 +121,26 @@
   </Target>
 
   <!-- Notify Loader of new runtime via named pipe -->
-  <Target Name="ReloadRuntime" AfterTargets="DeployRuntime">
+  <PropertyGroup>
+    <!-- Default: do not notify automatically; set HotReloadNotify=true to enable -->
+    <HotReloadNotify Condition="'$(HotReloadNotify)' == ''">false</HotReloadNotify>
+  </PropertyGroup>
+
+  <Target Name="ReloadRuntime" AfterTargets="DeployRuntime" Condition="'$(HotReloadNotify)' == 'true'">
     <PropertyGroup>
       <!-- Use consistent pipe name from constants -->
       <PipeName>RCA_PIPE</PipeName>
       <!-- Fix path escaping for PowerShell command -->
       <RuntimeDeployDirEscaped>$([System.String]::Copy('$(RuntimeDeployDir)').Replace('\','\\'))</RuntimeDeployDirEscaped>
-      <PsHotReloadCmd>powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "try { $p = New-Object System.IO.Pipes.NamedPipeClientStream('.', '$(PipeName)', [System.IO.Pipes.PipeDirection]::InOut); $p.Connect(200); $sw = New-Object System.IO.StreamWriter($p); $sw.AutoFlush = $true; $sr = New-Object System.IO.StreamReader($p); $msg = '{\"Command\":\"RELOAD_RUNTIME\", \"Payload\":\"$(RuntimeDeployDirEscaped)\"}'; $sw.WriteLine($msg); $resp = $sr.ReadLine(); Write-Host 'HotReload response:' $resp; $p.Close() } catch { Write-Warning ('HotReload failed: ' + $_.Exception.Message) }"</PsHotReloadCmd>
+      <!-- Increase connect timeout to 2000 ms to be more robust -->
+      <PsHotReloadCmd>powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "try { $p = New-Object System.IO.Pipes.NamedPipeClientStream('.', '$(PipeName)', [System.IO.Pipes.PipeDirection]::InOut); $p.Connect(2000); $sw = New-Object System.IO.StreamWriter($p); $sw.AutoFlush = $true; $sr = New-Object System.IO.StreamReader($p); $msg = '{\"Command\":\"RELOAD_RUNTIME\", \"Payload\":\"$(RuntimeDeployDirEscaped)\"}'; $sw.WriteLine($msg); $resp = $sr.ReadLine(); Write-Host 'HotReload response:' $resp; $p.Close() } catch { Write-Warning ('HotReload failed: ' + $_.Exception.Message) }"</PsHotReloadCmd>
     </PropertyGroup>
     <Message Text="Sending RELOAD_RUNTIME command to pipe server (dir=$(RuntimeDeployDir))" Importance="High" />
     <Exec Command="$(PsHotReloadCmd)" IgnoreExitCode="true" />
+  </Target>
+
+  <Target Name="ReloadRuntimeDisabled" AfterTargets="DeployRuntime" Condition="'$(HotReloadNotify)' != 'true'">
+    <Message Text="HotReload notification disabled (HotReloadNotify != true). Skipping pipe notification." Importance="Low" />
   </Target>
 
   <Import Project="..\..\build\Common.targets" />
