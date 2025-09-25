@@ -64,6 +64,7 @@ Follow these guidelines to generate clean, maintainable C# code for AI-first dev
 32. Name boolean parameters or properties with "Is" or "Has" prefixes.
 33. Validate all changes compile successfully before considering the task complete.
 34. When modifying build processes, ensure compatibility with CI/CD pipeline.
+35. Build the project after every significant change to catch issues early. Use 'dotnet build --no-incremental' to ensure a full rebuild.
 
 ## Code Organization Patterns
 

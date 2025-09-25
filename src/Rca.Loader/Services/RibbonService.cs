@@ -71,34 +71,47 @@ namespace Rca.Loader.Services
                 tooltip: "Reload the latest deployed runtime.");
                 
 #if DEBUG
-            // Create Debug panel and status TextBox (only in DEBUG builds)
+            // Create Debug panel and three stacked status TextBoxes (only in DEBUG builds)
             try
             {
                 var debugPanel = uiApp.CreateRibbonPanel(TabName, "Debug");
-                
-                // Create TextBox for status display
-                TextBoxData statusTextBoxData = new TextBoxData("RCA_StatusTextBox")
+
+                // Do not assign images to TextBoxData to avoid icons displaying next to textboxes
+                TextBoxData tb1 = new TextBoxData("RCA_StatusLine1") { Name = "Assembly Status", ToolTip = "Shows status of loaded assemblies" };
+                TextBoxData tb2 = new TextBoxData("RCA_StatusLine2") { Name = "Runtime Status", ToolTip = string.Empty };
+                TextBoxData tb3 = new TextBoxData("RCA_StatusLine3") { Name = "Signal Status", ToolTip = string.Empty };
+
+                // Add them as stacked items
+                var items = debugPanel.AddStackedItems(tb1, tb2, tb3);
+
+                if (items == null)
                 {
-                    Name = "Assembly Status",
-                    ToolTip = "Shows status of loaded assemblies",
-                    Image = GetEmbeddedImageBitmapFrame(
-                        Assembly.GetExecutingAssembly(),
-                        "Rca.Loader.Resources.ReloadRuntime16.png")
-                };
-                
-                // Add TextBox to panel
-                var statusTextBox = debugPanel.AddItem(statusTextBoxData) as TextBox;
-                if (statusTextBox != null)
+                    System.Diagnostics.Debug.WriteLine("Debug: AddStackedItems returned null for debug textboxes");
+                }
+
+                // The returned list maps to the created controls in the same order
+                TextBox? line1 = items != null && items.Count > 0 ? items[0] as TextBox : null;
+                TextBox? line2 = items != null && items.Count > 1 ? items[1] as TextBox : null;
+                TextBox? line3 = items != null && items.Count > 2 ? items[2] as TextBox : null;
+
+                if (line1 == null || line2 == null || line3 == null)
                 {
-                    // Initialize status display with the TextBox
+                    System.Diagnostics.Debug.WriteLine($"Debug: One or more ribbon textboxes are null: line1={line1!=null}, line2={line2!=null}, line3={line3!=null}");
+                }
+
+                if (line1 != null && line2 != null && line3 != null)
+                {
                     StatusDisplay = new RibbonStatusDisplay();
-                    StatusDisplay.Initialize(statusTextBox);
+                    StatusDisplay.Initialize(line1, line2, line3);
+
+                    // Set tooltip on first textbox
+                    line1.ToolTip = "Shows status of loaded assemblies";
                 }
             }
             catch (Exception ex)
             {
                 // Log but don't crash if debug UI creation fails
-                System.Diagnostics.Debug.WriteLine($"Failed to create debug UI: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Failed to create debug UI: {ex.Message}\n{ex.StackTrace}");
             }
 #endif
         }

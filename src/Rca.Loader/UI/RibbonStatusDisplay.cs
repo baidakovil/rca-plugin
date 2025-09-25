@@ -8,16 +8,15 @@ namespace Rca.Loader.UI
 {
     /// <summary>
     /// Manages the display of assembly status information in the Revit ribbon.
+    /// Uses three stacked TextBox controls (one per logical line) to emulate a multi-line read-only display.
     /// </summary>
-    /// <remarks>
-    /// This class is only available in DEBUG builds and provides visual feedback about
-    /// the hot-reload system status directly in the Revit UI.
-    /// </remarks>
     public class RibbonStatusDisplay
     {
         private readonly Dispatcher _uiDispatcher;
-        private TextBox? _statusTextBox;
-        
+        private TextBox? _line1;
+        private TextBox? _line2;
+        private TextBox? _line3;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="RibbonStatusDisplay"/> class.
         /// </summary>
@@ -26,140 +25,145 @@ namespace Rca.Loader.UI
             // Store the current dispatcher for UI thread synchronization
             _uiDispatcher = Dispatcher.CurrentDispatcher;
         }
-        
+
         /// <summary>
-        /// Initializes the UI component with a TextBox.
+        /// Initializes the UI component with three stacked TextBox controls.
         /// </summary>
-        /// <param name="textBox">The TextBox to use for status display.</param>
-        /// <exception cref="ArgumentNullException">Thrown if textBox is null.</exception>
-        public void Initialize(TextBox textBox)
+        /// <param name="line1">Top line TextBox.</param>
+        /// <param name="line2">Middle line TextBox.</param>
+        /// <param name="line3">Bottom line TextBox.</param>
+        public void Initialize(TextBox line1, TextBox line2, TextBox line3)
         {
-            _statusTextBox = textBox ?? throw new ArgumentNullException(nameof(textBox));
-            
+            _line1 = line1 ?? throw new ArgumentNullException(nameof(line1));
+            _line2 = line2 ?? throw new ArgumentNullException(nameof(line2));
+            _line3 = line3 ?? throw new ArgumentNullException(nameof(line3));
+
+            try
+            {
+                // Configure appearance and behavior for each line
+                ConfigureTextBox(_line1);
+                ConfigureTextBox(_line2);
+                ConfigureTextBox(_line3);
+            }
+            catch
+            {
+                // Swallow any configuration errors to avoid breaking the add-in
+            }
+
             // Set initial empty status
             UpdateStatus(new LoadedAssembliesInfo());
         }
-        
+
+        private void ConfigureTextBox(TextBox tb)
+        {
+            try
+            {
+                // Try to set width to occupy more horizontal space in the ribbon
+                tb.Width = 400;
+
+                // Clear prompt text so nothing extra shows
+                try { tb.PromptText = string.Empty; } catch { }
+
+                // Make read-only if supported
+                var isReadOnlyProp = tb.GetType().GetProperty("IsReadOnly");
+                if (isReadOnlyProp != null && isReadOnlyProp.CanWrite)
+                {
+                    isReadOnlyProp.SetValue(tb, true);
+                }
+
+                // Hide the image area on the TextBox if the API exposes the property
+                var showImageProp = tb.GetType().GetProperty("ShowImageAsButton");
+                if (showImageProp != null && showImageProp.CanWrite)
+                {
+                    try { showImageProp.SetValue(tb, false); } catch { }
+                }
+
+                // Clear Image property if present
+                var imageProp = tb.GetType().GetProperty("Image");
+                if (imageProp != null && imageProp.CanWrite)
+                {
+                    try { imageProp.SetValue(tb, null); } catch { }
+                }
+            }
+            catch
+            {
+                // ignore
+            }
+        }
+
         /// <summary>
         /// Updates the status display with current assembly information.
+        /// Each logical piece is shown in its own TextBox line.
         /// </summary>
         /// <param name="info">The current assembly status information.</param>
         public void UpdateStatus(LoadedAssembliesInfo info)
         {
             if (info == null)
                 throw new ArgumentNullException(nameof(info));
-                
-            if (_statusTextBox == null)
-                return;
-                
+
             // Ensure we're on the UI thread to update UI elements
             if (!_uiDispatcher.CheckAccess())
             {
-                // If not on UI thread, invoke on UI thread
                 _uiDispatcher.Invoke(() => UpdateStatus(info));
                 return;
             }
-            
+
             try
             {
-                string loaderStatus = FormatLoaderStatus(info.LoaderComponents);
-                string runtimeStatus = FormatRuntimeStatus(info.RuntimeAssembly);
-                string signalStatus = FormatSignalStatus(info.LastMSBuildSignal);
-                
-                // Update TextBox with formatted status information
-                _statusTextBox.Value = $"{loaderStatus}\n{runtimeStatus}\n{signalStatus}";
+                var loaderStatus = FormatLoaderStatus(info.LoaderComponents);
+                var runtimeStatus = FormatRuntimeStatus(info.RuntimeAssembly);
+                var signalStatus = FormatSignalStatus(info.LastMSBuildSignal);
+
+                if (_line1 != null) _line1.Value = loaderStatus;
+                if (_line2 != null) _line2.Value = runtimeStatus;
+                if (_line3 != null) _line3.Value = signalStatus;
             }
             catch (Exception ex)
             {
-                // Log but don't crash on UI update errors
                 System.Diagnostics.Debug.WriteLine($"Error updating status display: {ex.Message}");
             }
         }
-        
-        /// <summary>
-        /// Formats the loader components status text.
-        /// </summary>
-        /// <param name="loaderComponents">The loader components information.</param>
-        /// <returns>A formatted status string.</returns>
+
         private string FormatLoaderStatus(AssemblyInfo loaderComponents)
         {
-            if (loaderComponents == null)
-                return "Loader/Contracts: unknown";
-                
-            if (string.IsNullOrEmpty(loaderComponents.Path))
-                return "Loader/Contracts: not loaded";
-                
-            // Extract folder name from path
+            if (loaderComponents == null) return "Rca.Loader.dll: unknown";
+            if (string.IsNullOrEmpty(loaderComponents.Path)) return "Rca.Loader.dll: not loaded";
+
             string folder = System.IO.Path.GetFileName(loaderComponents.Path);
-            
-            // Check if the loader is outdated by comparing with the latest in TempDllFolder
             bool isOutdated = false;
             try
             {
                 var assemblyManager = LoaderApp.Instance?.AssemblyStatusManager;
-                if (assemblyManager != null)
-                {
-                    isOutdated = assemblyManager.IsLoaderOutdated();
-                }
+                if (assemblyManager != null) isOutdated = assemblyManager.IsLoaderOutdated();
             }
-            catch
-            {
-                // Ignore errors in status check
-            }
-            
+            catch { }
+
             string status = isOutdated ? "outdated" : "current";
-            return $"Loader/Contracts: {status} - {folder}";
+            return $"Rca.Loader.dll: {status} - {folder}";
         }
-        
-        /// <summary>
-        /// Formats the runtime assembly status text.
-        /// </summary>
-        /// <param name="runtimeAssembly">The runtime assembly information.</param>
-        /// <returns>A formatted status string.</returns>
+
         private string FormatRuntimeStatus(AssemblyInfo runtimeAssembly)
         {
-            if (runtimeAssembly == null)
-                return "Runtime: unknown";
-                
-            if (string.IsNullOrEmpty(runtimeAssembly.Path))
-                return "Runtime: not loaded";
-                
-            // Extract folder name from path
-            string folder = System.IO.Path.GetFileName(
-                System.IO.Path.GetDirectoryName(runtimeAssembly.Path) ?? string.Empty);
-                
-            // Check if the runtime is outdated
+            if (runtimeAssembly == null) return "Rca.Runtime.dll: unknown";
+            if (string.IsNullOrEmpty(runtimeAssembly.Path)) return "Rca.Runtime.dll: not loaded";
+
+            string folder = System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(runtimeAssembly.Path) ?? string.Empty);
             bool isOutdated = false;
             try
             {
                 var assemblyManager = LoaderApp.Instance?.AssemblyStatusManager;
-                if (assemblyManager != null)
-                {
-                    isOutdated = assemblyManager.IsRuntimeOutdated();
-                }
+                if (assemblyManager != null) isOutdated = assemblyManager.IsRuntimeOutdated();
             }
-            catch
-            {
-                // Ignore errors in status check
-            }
-            
+            catch { }
+
             string status = isOutdated ? "outdated" : "current";
-            return $"Runtime: {status} - {folder}";
+            return $"Rca.Runtime.dll: {status} - {folder}";
         }
-        
-        /// <summary>
-        /// Formats the signal status text.
-        /// </summary>
-        /// <param name="signalInfo">The signal information.</param>
-        /// <returns>A formatted status string.</returns>
+
         private string FormatSignalStatus(SignalInfo signalInfo)
         {
-            if (signalInfo == null)
-                return "Last MSBuild signal: unknown";
-                
-            if (string.IsNullOrEmpty(signalInfo.Time))
-                return "Last MSBuild signal: none";
-                
+            if (signalInfo == null) return "Last MSBuild signal: unknown";
+            if (string.IsNullOrEmpty(signalInfo.Time)) return "Last MSBuild signal: none";
             return $"Last MSBuild signal: {signalInfo.Time} - {signalInfo.Event}";
         }
     }
