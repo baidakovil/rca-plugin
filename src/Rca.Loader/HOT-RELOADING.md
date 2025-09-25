@@ -1,319 +1,270 @@
-# Hot-Reloading System Documentation
-
-## Overview
-
-The hot-reloading system in RCA Loader enables dynamic updates to both runtime and loader components without requiring a full manual restart of Revit. This document explains the components of the system, their responsibilities, and the flow of operations in different scenarios.
-
-## System Components
-
-### 1. Assembly Management
-
-#### AssemblyInfo.cs
-
-Represents information about a loaded assembly, tracking:
-- **Path**: Location of the assembly on disk
-- **Hash**: A SHA256 hash of the assembly content for change detection
-
-#### LoadedAssembliesInfo.cs
-
-Container class that holds:
-- **LoaderComponents**: Represents the merged Loader assembly (includes Contracts)
-- **RuntimeAssembly**: Information about the Runtime assembly
-- **LastMSBuildSignal**: Tracks the most recent build notification
-
-#### SignalInfo.cs
-
-Records information about MSBuild signals:
-- **Time**: Timestamp in HH:MM:SS format
-- **Event**: Status string indicating what components are outdated
-
-#### AssemblyStatusManager.cs
-
-Core tracking service that:
-- Monitors assembly versions via hash comparison
-- Persists state between sessions using JSON
-- Determines when assemblies need updating
-- Provides APIs for checking outdated status
-
-### 2. Visualization Components (DEBUG only)
-
-#### RibbonStatusDisplay.cs
-
-Displays real-time status of loaded assemblies:
-- Shows which components are outdated
-- Displays timestamp of last MSBuild signal
-- Updates UI thread-safely using Dispatcher
-
-#### RibbonService.cs (Modified)
-
-Contains debug panel with:
-- TextBox showing current assembly statuses
-- Thread-safe update mechanism
-
-### 3. Restart Mechanism
-
-#### RestartManager.cs
-
-Handles graceful restarts of Revit when Loader components change:
-- Shows countdown dialog with options
-- Executes PowerShell restart script
-- Validates successful assembly copying
-
-#### RestartRevitGraceful.ps1
-
-PowerShell script that:
-- Gracefully closes Revit with save prompts
-- Copies updated merged Loader assembly to the target directory
-- Updates state in JSON file
-- Restarts Revit automatically
-
-### 4. Command Integration
-
-#### ReloadRuntimeCommand.cs (Enhanced)
-
-Enhanced to:
-- Check for outdated Loader components
-- Present restart options to user when needed
-- Update JSON state after successful reload
-
-#### RuntimeCommandHandler.cs (Enhanced)
-
-Handles pipe commands with:
-- RELOAD_RUNTIME command for CI/CD integration
-- Status reporting for different assembly states
-- Comprehensive error logging
-
-## Code Paths and Scenarios
-
-### 1. Revit Startup Process
-
-1. **Application Initialization**:
-   ```
-   LoaderApp.OnStartup()
-     ↓
-   AssemblyStatusManager.InitializeOnStartup()
-     ↓
-   LoadAssemblyInfo() or create initial state
-   ```
-
-2. **UI Setup in DEBUG Mode**:
-   ```
-   LoaderApp.OnStartup()
-     ↓
-   RibbonService.BuildRibbon()
-     ↓
-   Create Debug Panel with Status TextBox
-     ↓
-   Initialize RibbonStatusDisplay
-     ↓
-   Update with initial assembly status
-   ```
-
-3. **Pipe Server Initialization**:
-   ```
-   LoaderApp.InitializeWithUIApplication()
-     ↓
-   StartPipeServer()
-     ↓
-   Create RuntimeCommandHandler with AssemblyStatusManager
-   ```
-
-### 2. Runtime-Only Update Scenario
-
-When only the Runtime assembly is updated:
-
-1. **MSBuild Signal Detection**:
-   ```
-   RuntimeCommandHandler.HandleReloadRuntimeCommand()
-     ↓
-   AssemblyStatusManager.ProcessMsBuildSignal()
-     ↓
-   Calculate new hashes and compare with current
-     ↓
-   Determine "only runtime outdated" state
-   ```
-
-2. **User-Initiated Runtime Reload**:
-   ```
-   ReloadRuntimeCommand.Execute()
-     ↓
-   AssemblyStatusManager.IsRuntimeOutdated() == true
-     ↓
-   RuntimeManager.ReloadLatest()
-     ↓
-   AssemblyStatusManager.UpdateHashesAfterReload()
-   ```
-
-3. **IPC-Initiated Runtime Reload**:
-   ```
-   PipeServer receives RELOAD_RUNTIME command
-     ↓
-   RuntimeCommandHandler.HandleReloadRuntimeCommand()
-     ↓
-   RuntimeManager.ReloadRuntime()
-     ↓
-   AssemblyStatusManager.UpdateHashesAfterReload()
-   ```
-
-### 3. Loader Components Update Scenario
-
-When the merged Loader assembly needs updating:
-
-1. **Update Detection**:
-   ```
-   RuntimeCommandHandler.HandleReloadRuntimeCommand()
-     ↓
-   AssemblyStatusManager.ProcessMsBuildSignal()
-     ↓
-   AssemblyStatusManager.IsLoaderOutdated() == true
-   ```
-
-2. **User Interface Flow**:
-   ```
-   ReloadRuntimeCommand.Execute()
-     ↓
-   AssemblyStatusManager.IsLoaderOutdated() == true
-     ↓
-   Show TaskDialog with restart options
-     ↓
-   User chooses "Restart Revit"
-     ↓
-   RestartManager.ShowRestartDialog()
-     ↓
-   RestartManager.ExecuteRestartScript()
-   ```
-
-3. **Restart Execution**:
-   ```
-   RestartRevitGraceful.ps1 runs
-     ↓
-   Close Revit gracefully
-     ↓
-   Copy merged Loader assembly to target directory
-     ↓
-   Update JSON state file
-     ↓
-   Start new Revit process
-   ```
-
-### 4. Combined Updates Scenario
-
-When both Loader and Runtime are updated:
-
-1. **Update Detection**:
-   ```
-   RuntimeCommandHandler.HandleReloadRuntimeCommand()
-     ↓
-   AssemblyStatusManager.ProcessMsBuildSignal()
-     ↓
-   AssemblyStatusManager.IsLoaderOutdated() == true &&
-   AssemblyStatusManager.IsRuntimeOutdated() == true
-     ↓
-   DetermineEventType() returns "both loader and runtime outdated"
-   ```
-
-2. **User Flow**:
-   ```
-   Same as Loader Components Update Scenario
-   ```
-
-3. **After Restart**:
-   ```
-   LoaderApp.OnStartup()
-     ↓
-   AssemblyStatusManager.InitializeOnStartup()
-     ↓
-   Load updated assembly info from JSON
-     ↓
-   AssemblyStatusManager.IsRuntimeOutdated() may still be true
-   ```
-
-## Implementation Notes
-
-### Thread Safety Considerations
-
-1. **UI Thread Access**:
-   - All Revit API calls are made on the UI thread
-   - RibbonStatusDisplay uses Dispatcher for thread-safe UI updates
-
-2. **File Access**:
-   - JSON operations are performed with appropriate error handling
-   - Hash calculations handle file locks and access issues
-
-### Configuration Persistence
-
-1. **JSON State File**:
-   - Located at `%LOCALAPPDATA%\RCA\LoadedAssemblies.json`
-   - Contains paths and hashes for all tracked assemblies
-   - Persists between Revit sessions
-
-2. **Assembly Directory Structure**:
-   - Runtime assemblies are stored in `%LOCALAPPDATA%\RCA\Runtime`
-   - Merged Loader assembly is in the Revit addin directory (`%APPDATA%\Autodesk\Revit\Addins\2026`)
-
-### Assembly Merging with ILRepack
-
-1. **Merged Assembly Creation**:
-   - Rca.Loader.dll and Rca.Loader.Contracts.dll are merged using ILRepack
-   - MSBuild task handles RevitAPI dependencies properly during merge
-   - Creates a single DLL that contains both components
-   - Internalized types from Contracts aren't exposed outside Loader
-
-2. **Build Process**:
-   - Custom MSBuild task ensures proper merging even with RevitAPI dependencies
-   - Enforces strict success/failure - no fallback to non-merged mode
-   - Ensures consistent binaries across development and deployment
-
-### Error Handling
-
-1. **Graceful Degradation**:
-   - System continues operating if status tracking fails
-   - Comprehensive logging in DEBUG builds
-   - User-friendly error messages via TaskDialog
-
-2. **Recovery Mechanisms**:
-   - Automatic detection of outdated components
-   - Manual recovery option via ReloadRuntimeCommand
-
-## Common Troubleshooting
-
-1. **Missing Status Display**:
-   - Only available in DEBUG builds
-   - Check if TextBox was created successfully
-
-2. **Failed Restart**:
-   - Verify script path is correct
-   - Ensure PowerShell execution policy allows script execution
-   - Check logs at `%TEMP%\RcaRestartLog.txt`
-
-3. **Hash Calculation Failures**:
-   - Ensure files are not locked by other processes
-   - Verify proper permissions to read files
-
-4. **JSON File Corruption**:
-   - Delete `%LOCALAPPDATA%\RCA\LoadedAssemblies.json` to reset state
-   - System will recalculate hashes on next startup
-
-5. **ILRepack Failures**:
-   - Ensure RevitAPI.dll is available during build process
-   - Check build logs for specific merge errors
-   - Verify custom MSBuild task is working properly
-
-## Best Practices for Development
-
-1. **Testing Changes**:
-   - Build directly to `%LOCALAPPDATA%\RCA\Runtime\{timestamp}` folder
-   - Use ReloadRuntimeCommand to apply changes
-
-2. **Debugging Restart Process**:
-   - Add `-Verbose` flag to PowerShell script for detailed logging
-   - Monitor `%TEMP%\RcaRestartLog.txt` for execution details
-
-3. **Hot-Reload Limitations**:
-   - Schema changes to public APIs require restart
-   - Loader component changes always require restart
-   - Runtime changes can be hot-reloaded
-
-4. **CI/CD Integration**:
-   - Use IPC with RELOAD_RUNTIME command from build scripts
-   - Check response for "LOADER_RESTART_REQUIRED" signal
+# Hot-Reloading System (implementation-accurate)
+
+This document describes how the hot-reload system actually works in this repository. It only contains information that is implemented in the codebase and points to the relevant files to make it easy for future maintainers or automated agents to find the implementation.
+
+Important changes to be aware of
+- There are two separate source-hash files produced by the build:
+  - `source-hash.runtime.txt` — produced by the `Rca.Runtime` build and placed into the timestamped runtime deploy folder (under `%LOCALAPPDATA%\\RCA\\Runtime\\<timestamp>`).
+  - `source-hash.loader.txt` — produced by the `Rca.Loader` build and placed into the same timestamped runtime deploy folder when the loader is deployed. It is NOT copied into the Revit addin folder to avoid accidental mismatch.
+- The generator no longer writes any `source-hash.json` metadata; only a single-line hex SHA256 file is produced.
+
+Quick file links (implementation)
+- Source hash generator tool: `src/Tools/SourceHashGenerator/Program.cs`
+- Runtime MSBuild integration (produces `source-hash.runtime.txt`): `src/Rca.Runtime/Rca.Runtime.csproj`
+- Loader MSBuild integration (produces `source-hash.loader.txt`): `src/Rca.Loader/Rca.Loader.csproj`
+- Loader constants (paths, filenames): `src/Rca.Loader/Infrastructure/LoaderConstants.cs`
+- Assembly status tracking: `src/Rca.Loader/AssemblyManagement/AssemblyStatusManager.cs`
+- Restart helper and validation: `src/Rca.Loader/Restart/RestartManager.cs`
+- Runtime manager (load/unload runtime in collectible context): `src/Rca.Loader/Services/RuntimeManager.cs`
+- Custom load context (resolving and non-collectible assemblies): `src/Rca.Loader/Infrastructure/RuntimeLoadContext.cs`
+- Pipe server (receives RELOAD/RELOAD_RUNTIME/etc): `src/Rca.Loader/Services/PipeServerService.cs`
+- Runtime command handling (payload processing): `src/Rca.Loader/Infrastructure/RuntimeCommandHandler.cs`
+- Reload external command (UI entry): `src/Rca.Loader/Commands/ReloadRuntimeCommand.cs`
+
+## LoadedAssemblies.json — when and how it is updated
+
+Path and format
+- The JSON file path is defined in `LoaderConstants.LoadedAssembliesJsonPath` (`src/Rca.Loader/Infrastructure/LoaderConstants.cs`).
+- The file stores a `LoadedAssembliesInfo` object (see `src/Rca.Loader/AssemblyManagement/AssemblyStatusManager.cs` usage). It contains at minimum:
+  - `LoaderComponents.Path` and `LoaderComponents.Hash`
+  - `RuntimeAssembly.Path` and `RuntimeAssembly.Hash`
+  - `LastMSBuildSignal.Time` and `LastMSBuildSignal.Event`
+
+Primary update operations (exact code locations)
+- `AssemblyStatusManager.SaveAssemblyInfo(LoadedAssembliesInfo info)`
+  - Serializes the `LoadedAssembliesInfo` to JSON and writes it to `LoadedAssembliesJsonPath`.
+  - Ensures target directory exists before writing.
+  - Location: `src/Rca.Loader/AssemblyManagement/AssemblyStatusManager.cs`.
+
+When Save is called (conditions and callers)
+1. Initial creation on startup
+   - Method: `AssemblyStatusManager.InitializeOnStartup()`
+   - Behavior: If the JSON file is missing or cannot be loaded, the manager computes initial paths and hashes (reading `source-hash.*.txt` files or computing fallbacks) and calls `SaveAssemblyInfo` to persist initial state.
+   - Location: `AssemblyStatusManager.InitializeOnStartup()` in `src/Rca.Loader/AssemblyManagement/AssemblyStatusManager.cs`.
+
+2. When an MSBuild / deploy signal is processed
+   - Method: `AssemblyStatusManager.ProcessMsBuildSignal(string tempDllPath)`
+   - Behavior: Reads `source-hash.loader.txt` and `source-hash.runtime.txt` from the provided deploy folder, determines event type (`only loader outdated`, `only runtime outdated`, `both`, or `no changes`) and calls `UpdateSignalInfo(...)`.
+   - `UpdateSignalInfo(string eventType)` writes the `LastMSBuildSignal` fields and calls `SaveAssemblyInfo`.
+   - Location: `src/Rca.Loader/AssemblyManagement/AssemblyStatusManager.cs`.
+
+3. After a successful runtime reload
+   - Method: `AssemblyStatusManager.UpdateHashesAfterReload(string runtimePath)`
+   - Behavior: Called after `RuntimeManager.ReloadRuntime(...)` returns success (e.g. from `RuntimeCommandHandler` or `ReloadRuntimeCommand`). This updates `RuntimeAssembly.Path` and `RuntimeAssembly.Hash` (reading `source-hash.runtime.txt` from the runtime folder or runtime root) and then calls `SaveAssemblyInfo`.
+   - Locations involved: `src/Rca.Loader/Services/RuntimeManager.cs` (reload) and `AssemblyStatusManager.UpdateHashesAfterReload`.
+
+4. After a successful loader restart/copy
+   - Method: `AssemblyStatusManager.UpdateLoaderComponentsHashesAfterRestart(string loaderDir)`
+   - Behavior: Called after the loader has been replaced in the addin folder and validated (e.g. via `RestartManager.ValidateAssemblyCopy`). It updates `LoaderComponents.Path` and `LoaderComponents.Hash` and calls `SaveAssemblyInfo`.
+   - Location: `src/Rca.Loader/AssemblyManagement/AssemblyStatusManager.cs` and `src/Rca.Loader/Restart/RestartManager.cs`.
+
+5. When signal info is updated explicitly
+   - Method: `AssemblyStatusManager.UpdateSignalInfo(string eventType)`
+   - Behavior: Updates `LastMSBuildSignal` with current time and event type and saves JSON.
+   - Used by: `ProcessMsBuildSignal` and other signal-related flows.
+
+Other behaviors and notes
+- Directory creation: `EnsureDirectoriesExist()` in `AssemblyStatusManager` will create the runtime deploy root and the JSON directory as needed prior to any save operations.
+- Read/write resilience: Load/Save methods catch exceptions and log them; writes are best-effort and won't crash Revit if they fail.
+- File contents changed by these operations:
+  - `LoadedAssemblies.json` is overwritten whenever `SaveAssemblyInfo` is invoked.
+  - `source-hash.runtime.txt` and `source-hash.loader.txt` are not written by this component — they are generated by MSBuild targets in `Rca.Runtime.csproj` and `Rca.Loader.csproj` respectively; `AssemblyStatusManager` only reads them.
+- Developer reset: Deleting `LoadedAssemblies.json` forces `InitializeOnStartup()` to recompute and re-create the JSON on next startup.
+
+## Overview of the pieces
+
+1) Source hash generation
+- Tool: `src/Tools/SourceHashGenerator/Program.cs`
+  - Accepts `--root` or `--roots` and writes a single-line SHA256 hex string to `--out`.
+  - Normalizes text line endings to LF and sorts files deterministically.
+  - Default scanned extensions include `.cs`, `.xaml`, `.csproj`, `.props`, etc.
+  - It ignores `bin`, `obj`, `.git`, `.vs`, `node_modules`, `packages` directories.
+
+- How MSBuild uses the tool:
+  - `Rca.Runtime` (`src/Rca.Runtime/Rca.Runtime.csproj`) runs the generator with `--roots` set to the projects that are merged into `Rca.Runtime` (for example: `src\\Rca.Runtime;src\\Rca.Core;src\\Rca.UI;src\\Rca.Network;src\\Rca.Contracts`) and writes `source-hash.runtime.txt` into the runtime deploy folder.
+  - `Rca.Loader` (`src/Rca.Loader/Rca.Loader.csproj`) runs the generator with `--roots` set to `src\\Rca.Loader;src\\Rca.Loader.Contracts` and writes `source-hash.loader.txt` into the runtime deploy folder for that build.
+
+Notes:
+- `source-hash.runtime.txt` reflects the combined source state of all projects that are compiled/merged into the runtime bundle.
+- `source-hash.loader.txt` reflects the loader source (loader + loader contracts).
+- The build tasks that produce the hashes are in the `<Target>` elements named `DeployRuntime` and `DeployLoaderToTemp` inside the respective `.csproj` files.
+
+2) Where hashes live at runtime
+- Runtime deploy root: `LoaderConstants.RuntimeDeployRoot` — defined in `src/Rca.Loader/Infrastructure/LoaderConstants.cs` (typically `%LOCALAPPDATA%\RCA\Runtime`).
+- Each build deploy uses a timestamped folder under that root, and `source-hash.*.txt` files are placed in that folder.
+- The loader no longer copies `source-hash.loader.txt` into the Revit addin folder to avoid mismatches.
+
+3) Detection and state tracking (Loader side)
+- `AssemblyStatusManager` (`src/Rca.Loader/AssemblyManagement/AssemblyStatusManager.cs`) is responsible for:
+  - Loading/saving the persisted state at `%LOCALAPPDATA%\RCA\LoadedAssemblies.json` (path available in `LoaderConstants.LoadedAssembliesJsonPath`).
+  - On startup it attempts to populate `LoaderComponents` and `RuntimeAssembly` fields by reading:
+    - `source-hash.loader.txt` (loader hash) from the loader's directory first, then from the latest runtime deploy folder or runtime root if necessary.
+    - `source-hash.runtime.txt` (runtime hash) from the latest runtime deploy folder or the runtime root.
+  - Exposes APIs: `IsLoaderOutdated()`, `IsRuntimeOutdated()`, `ProcessMsBuildSignal(...)`, `UpdateHashesAfterReload(...)`, `UpdateLoaderComponentsHashesAfterRestart(...)`.
+
+- It does not assume loader hash in the addin folder; it searches runtime deploy folders and falls back to computing a hash from a repo root when appropriate.
+
+4) Hot-reload command flow (pipe & UI)
+- `PipeServerService` (`src/Rca.Loader/Services/PipeServerService.cs`) listens on `LoaderConstants.PipeName` and forwards decoded `PipeCommand` objects to a handler.
+- `RuntimeCommandHandler` (`src/Rca.Loader/Infrastructure/RuntimeCommandHandler.cs`) handles commands including `RELOAD_RUNTIME`:
+  - For `RELOAD_RUNTIME` it calls `AssemblyStatusManager.ProcessMsBuildSignal(tempDllPath)` to update status from the deploy folder.
+  - It decides whether a restart is required if only loader is outdated (returns `LOADER_RESTART_REQUIRED`), or proceeds to call `RuntimeManager.ReloadRuntime(...)` when runtime reload is needed.
+  - When runtime reload succeeds it calls `AssemblyStatusManager.UpdateHashesAfterReload(...)`.
+
+- There is also a manual Revit UI entrypoint `ReloadRuntimeCommand` (`src/Rca.Loader/Commands/ReloadRuntimeCommand.cs`) used by the user to trigger reload/restart flows from the ribbon.
+
+5) Runtime loading/unloading
+- `RuntimeManager` (`src/Rca.Loader/Services/RuntimeManager.cs`) loads the runtime into a collectible `RuntimeLoadContext`.
+  - `RuntimeLoadContext` (`src/Rca.Loader/Infrastructure/RuntimeLoadContext.cs`) provides custom resolving logic for assemblies and ensures certain assemblies (e.g. `IronPython` set) are loaded in the default context to avoid collectible issues.
+  - `RuntimeManager.ReloadRuntime(folder, out error)` is used both from the command handler and UI flow.
+  - `RuntimeManager.ReloadLatest(out error)` locates the latest timestamped folder under `LoaderConstants.RuntimeDeployRoot` and calls `ReloadRuntime`.
+
+6) Restart and validation
+- `RestartManager` (`src/Rca.Loader/Restart/RestartManager.cs`) shows the restart dialog and executes an external PowerShell script to copy files and restart Revit when loader components are updated.
+  - `RestartManager.ValidateAssemblyCopy(sourcePath, targetPath)` compares `source-hash.loader.txt` files when present (fallback to binary compare) to validate the copy.
+
+7) What is not done / design decisions reflected in code
+- The loader hash is NOT copied into the Revit addin folder by the build — this avoids potential mismatch issues. (See `src/Rca.Loader/Rca.Loader.csproj`.)
+- There is no `source-hash.json` metadata written by the generator; only the raw hex string file is produced by `SourceHashGenerator`.
+- The system chooses to produce separate loader/runtime hashes rather than a single solution-level hash. This is implemented in MSBuild targets.
+
+How to reproduce common scenarios locally
+- Build runtime (writes `source-hash.runtime.txt` into a timestamped folder):
+  - `dotnet build src/Rca.Runtime -c Debug`
+  - Inspect `%LOCALAPPDATA%\RCA\Runtime\<latest>` for `source-hash.runtime.txt`.
+
+- Build loader (writes `source-hash.loader.txt` into the timestamped folder, but does not copy it into the addin folder):
+  - `dotnet build src/Rca.Loader -c Debug`
+  - Inspect `%LOCALAPPDATA%\RCA\Runtime\<latest>` for `source-hash.loader.txt`.
+
+- Trigger a reload via named pipe (example from MSBuild step): the `RELOAD_RUNTIME` command payload is the path to the timestamped runtime folder. The `RuntimeCommandHandler` will process it and decide whether to reload runtime or request a loader restart.
+
+Files to inspect for troubleshooting
+- `src/Tools/SourceHashGenerator/Program.cs` — generator implementation and CLI options.
+- `src/Rca.Runtime/Rca.Runtime.csproj` — see `DeployRuntime` MSBuild target.
+- `src/Rca.Loader/Rca.Loader.csproj` — see `DeployLoaderToTemp` MSBuild target.
+- `src/Rca.Loader/AssemblyManagement/AssemblyStatusManager.cs` — startup/load/save logic and hash lookups.
+- `src/Rca.Loader/Infrastructure/RuntimeCommandHandler.cs` — pipe command handling and reload logic.
+- `src/Rca.Loader/Services/RuntimeManager.cs` and `src/Rca.Loader/Infrastructure/RuntimeLoadContext.cs` — runtime loading and unloading.
+- `src/Rca.Loader/Restart/RestartManager.cs` — restart dialog and copy validation.
+
+Notes for maintainers / automated agents
+- Keep `SourceRootList` in the `.csproj` targets in sync with what is actually merged into the runtime or loader. If you add a project to the ILRepack inputs, add it to the `--roots` list for the runtime hash.
+- If you want the addin to carry an authoritative loader hash, consider embedding the loader hash into the merged `Rca.Loader.dll` as an assembly attribute or resource at merge-time. That is *not* implemented in the current codebase.
+- Unit tests should assume the generator is deterministic given the same roots and an unchanged working tree.
+
+Contact points in code (quick)
+- Generator: `src/Tools/SourceHashGenerator/Program.cs`
+- Runtime deploy: `src/Rca.Runtime/Rca.Runtime.csproj` (target `DeployRuntime`)
+- Loader deploy: `src/Rca.Loader/Rca.Loader.csproj` (target `DeployLoaderToTemp`)
+- Assembly state: `src/Rca.Loader/AssemblyManagement/AssemblyStatusManager.cs`
+- Command handling: `src/Rca.Loader/Infrastructure/RuntimeCommandHandler.cs`
+- Pipe server: `src/Rca.Loader/Services/PipeServerService.cs`
+- Runtime load: `src/Rca.Loader/Services/RuntimeManager.cs` and `src/Rca.Loader/Infrastructure/RuntimeLoadContext.cs`
+
+This document intentionally avoids speculation and focuses on the current code. If you change the build or deployment flow, update this document accordingly.
+
+---
+
+## Named-pipe protocol used by the hot-reload system
+
+This section documents the exact messages, payloads and responses used by the hot-reload system over the named pipe. Implementation references are provided so an agent or developer can locate parsing/validation and handling code.
+
+Files that implement the protocol
+- Server and message wire format: `src/Rca.Loader/Services/PipeServerService.cs` (listening loop, JSON per-line, one command per connection).
+- Command names and validation: `src/Rca.Loader/Infrastructure/CommandValidationService.cs` (contains `PipeCommands` constants and validation rules).
+- Command handling and semantics: `src/Rca.Loader/Infrastructure/RuntimeCommandHandler.cs` (handler methods for each supported command).
+- Standardized responses: `src/Rca.Loader/Infrastructure/PipeResponseFactory.cs` (status constants and helper creators).
+
+Wire format (JSON)
+- Client -> Server: send a single JSON object encoded as UTF-8, terminated by newline. Server reads one line and deserializes into `PipeCommand`.
+  - Shape (server expects):
+    {
+      "Command": "RELOAD_RUNTIME",
+      "Payload": "C:\\\\Users\\\\...\\\\Rca.Runtime\\\\20251012-123456"
+    }
+  - `Command` is case-insensitive in the handler switch, but validation uses uppercase constants (see `PipeCommands`).
+  - `Payload` is optional depending on `Command` (see validation rules below).
+
+- Server -> Client: server writes a single JSON response object (one line) with the shape:
+    {
+      "Status": "OK" | "ERROR" | "LOADED" | "EMPTY",
+      "Message": "optional human-readable message or data"
+    }
+  - `Status` values are defined in `PipeResponseStatus` inside `PipeResponseFactory.cs`.
+  - `Message` semantics vary by command (see responses below).
+
+Transport details
+- The server accepts one command per connection and sends one response per connection. It uses a 64KB input/output buffer size by default (`PipeServerService`), and gracefully handles connection drops.
+- The server reads the first line from the stream and attempts JSON deserialization; malformed JSON leads to an error response.
+
+Commands relevant to hot-reload (non-test)
+- `RELOAD` (constant: `PipeCommands.Reload`)
+  - Purpose: Ask the loader to reload runtime from the specified folder path.
+  - Payload: required string — path to the folder that contains runtime DLLs.
+  - Validation: `Payload` must be a non-empty folder path (see `CommandValidationService.ValidateReloadCommand`).
+  - Handler: `RuntimeCommandHandler.HandleReloadCommand(PipeCommand)`
+    - Calls `RuntimeManager.ReloadRuntime(payload, out error)`.
+    - On success, calls `AssemblyStatusManager.ProcessMsBuildSignal(payload)` to register the deploy signal.
+  - Responses:
+    - Success: { "Status": "OK", "Message": "<optional message>" }
+    - Failure: { "Status": "ERROR", "Message": "<error message>" }
+
+- `RELOAD_RUNTIME` (constant: `PipeCommands.ReloadRuntime`)
+  - Purpose: High-level CI/CD-friendly command used by MSBuild/deploy step to notify the running loader about a new timestamped deploy folder and request an appropriate action (reload runtime or indicate a loader restart is required).
+  - Payload: required string — path to the timestamped runtime deploy folder produced by build (the folder containing `Rca.Runtime.dll` and source-hash files).
+  - Validation: `Payload` must be a non-empty folder path (see `CommandValidationService.ValidateReloadRuntimeCommand`).
+  - Handler: `RuntimeCommandHandler.HandleReloadRuntimeCommand(PipeCommand)`
+    - Steps performed by handler:
+      1. Calls `AssemblyStatusManager.ProcessMsBuildSignal(payload)` which reads `source-hash.loader.txt` and `source-hash.runtime.txt` in that folder and updates `LastMSBuildSignal` (via `UpdateSignalInfo`).
+      2. Calls `AssemblyStatusManager.IsLoaderOutdated()` and `IsRuntimeOutdated()` to determine what changed.
+      3. If only loader is outdated (loader changed but runtime did not), it returns success with message `LOADER_RESTART_REQUIRED` to indicate that the Loader must be replaced and Revit restarted.
+      4. If neither is outdated, it returns success with message `NO_ACTION_NEEDED`.
+      5. Otherwise (runtime changed or both changed) it attempts `RuntimeManager.ReloadRuntime(payload, out error)` to load the new runtime from that folder. On success it calls `AssemblyStatusManager.UpdateHashesAfterReload(...)` and returns success with message `ReloadRuntime completed successfully`.
+    - Responses (examples):
+      - Loader restart required: { "Status": "OK", "Message": "LOADER_RESTART_REQUIRED" }
+      - No action needed: { "Status": "OK", "Message": "NO_ACTION_NEEDED" }
+      - Runtime reload success: { "Status": "OK", "Message": "ReloadRuntime completed successfully" }
+      - Reload failed: { "Status": "ERROR", "Message": "<error details>" }
+
+- `STATUS` (constant: `PipeCommands.Status`)
+  - Purpose: Query whether a runtime is currently loaded and, if so, which path.
+  - Payload: not required (ignored if present).
+  - Handler: `RuntimeCommandHandler.HandleStatusCommand()`
+    - Checks `RuntimeManager.IsRuntimeLoaded` and `RuntimeManager.CurrentRuntimePath`.
+    - Responses:
+      - If runtime loaded: { "Status": "LOADED", "Message": "<path to loaded runtime DLL>" }
+      - If not loaded: { "Status": "EMPTY", "Message": "" }
+      - On error: { "Status": "ERROR", "Message": "<error details>" }
+
+Validation rules summary
+- Command names are validated against the known set in `PipeCommands`.
+- `RELOAD` and `RELOAD_RUNTIME` require a non-empty `Payload` path.
+- `STATUS` and `TEST_INIT` accept empty payloads.
+- Invalid payloads receive an `InvalidPayload` response created by `PipeResponseFactory.InvalidPayload(...)`.
+
+
+Behavioral notes (observed in code)
+- The server treats each incoming connection as a single request/response exchange and then closes the connection.
+- The handler logs and returns high-level strings (e.g. `LOADER_RESTART_REQUIRED`) for orchestrator use; CI scripts should inspect `Message` to decide whether to trigger a restart sequence.
+- `RELOAD_RUNTIME` is the recommended entrypoint for automated builds/CI — MSBuild/deploy should send the path to the timestamped deploy folder as the `Payload`.
+- The pipe protocol is intentionally simple: small JSON messages, human-readable `Message` field for easy debugging, and a fixed set of `Status` tokens for programmatic checks.
+
+Examples
+- Request (JSON line):
+  { "Command": "RELOAD_RUNTIME", "Payload": "C:\\Users\\dev\\AppData\\Local\\RCA\\Runtime\\20251012-123456" }
+
+- Response (runtime reload success):
+  { "Status": "OK", "Message": "ReloadRuntime completed successfully" }
+
+- Response (loader restart required):
+  { "Status": "OK", "Message": "LOADER_RESTART_REQUIRED" }
+
+- Status request and response:
+  Request: { "Command": "STATUS", "Payload": null }
+  Response: { "Status": "LOADED", "Message": "C:\\Users\\dev\\AppData\\Local\\RCA\\Runtime\\20251012-123456\\Rca.Runtime.dll" }
+
+Where to change/extend
+- Add or change commands in `CommandValidationService` (`src/Rca.Loader/Infrastructure/CommandValidationService.cs`) and `PipeCommands` constant list.
+- Implement handling logic in `RuntimeCommandHandler` (`src/Rca.Loader/Infrastructure/RuntimeCommandHandler.cs`).
+- Adjust wire-level behavior (buffer sizes, one-command-per-connection) in `PipeServerService` (`src/Rca.Loader/Services/PipeServerService.cs`).
