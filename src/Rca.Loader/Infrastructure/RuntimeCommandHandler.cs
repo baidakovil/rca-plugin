@@ -121,58 +121,42 @@ namespace Rca.Loader.Infrastructure
         
         private PipeResponse HandleReloadRuntimeCommand(PipeCommand cmd)
         {
-            Debug.WriteLine($"Handling RELOAD_RUNTIME command with payload: {cmd.Payload}");
+            Debug.WriteLine("Handling RELOAD_RUNTIME command (payload ignored)");
             
             try
             {
-                // Ensure payload is not null
-                string tempDllPath = cmd.Payload ?? string.Empty;
+                // For new flow, determine latest folder automatically
+                var latest = assemblyStatusManager?.GetLatestTempDllFolder() ?? string.Empty;
+                if (string.IsNullOrEmpty(latest))
+                    return PipeResponseFactory.Error("No runtime deploy folders found");
                 
-                if (string.IsNullOrEmpty(tempDllPath))
+                // Update status manager from latest folder
+                assemblyStatusManager?.ProcessMsBuildSignal(latest);
+                
+                bool loaderOutdated = assemblyStatusManager?.IsLoaderOutdated() ?? false;
+                bool runtimeOutdated = assemblyStatusManager?.IsRuntimeOutdated() ?? false;
+                
+                if (loaderOutdated && !runtimeOutdated)
                 {
-                    return PipeResponseFactory.Error("Invalid path: payload is null or empty");
+                    return PipeResponseFactory.Success("LOADER_RESTART_REQUIRED");
                 }
                 
-                // Process MSBuild signal to check what has changed
-                if (assemblyStatusManager != null)
+                if (!loaderOutdated && !runtimeOutdated)
                 {
-                    Debug.WriteLine("Processing MSBuild signal to check what has changed");
-                    assemblyStatusManager.ProcessMsBuildSignal(tempDllPath);
-                    
-                    // Check if only loader is outdated or both are outdated
-                    bool loaderOutdated = assemblyStatusManager.IsLoaderOutdated();
-                    bool runtimeOutdated = assemblyStatusManager.IsRuntimeOutdated();
-                    
-                    if (loaderOutdated && !runtimeOutdated)
-                    {
-                        Debug.WriteLine("Only loader is outdated, restart required but not runtime reload");
-                        return PipeResponseFactory.Success("LOADER_RESTART_REQUIRED");
-                    }
-                    
-                    if (!loaderOutdated && !runtimeOutdated)
-                    {
-                        Debug.WriteLine("Both loader and runtime are current, no action needed");
-                        return PipeResponseFactory.Success("NO_ACTION_NEEDED");
-                    }
+                    return PipeResponseFactory.Success("NO_ACTION_NEEDED");
                 }
                 
-                // Reload runtime if needed
-                Debug.WriteLine("Attempting to reload runtime...");
-                var result = runtimeManager.ReloadRuntime(tempDllPath, out var errorMessage);
+                // Otherwise attempt runtime reload from latest
+                var result = runtimeManager.ReloadRuntime(latest, out var errorMessage);
                 
                 if (result)
                 {
                     // Update runtime hash if reload was successful
-                    if (assemblyStatusManager != null)
-                    {
-                        Debug.WriteLine("Updating runtime hash after successful reload");
-                        assemblyStatusManager.UpdateHashesAfterReload(runtimeManager.CurrentRuntimePath);
-                    }
+                    assemblyStatusManager?.UpdateHashesAfterReload(runtimeManager.CurrentRuntimePath);
                     return PipeResponseFactory.Success("ReloadRuntime completed successfully");
                 }
                 else
                 {
-                    Debug.WriteLine($"Runtime reload failed: {errorMessage}");
                     return PipeResponseFactory.Error(errorMessage ?? "Unknown reload error");
                 }
             }

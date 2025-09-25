@@ -111,12 +111,7 @@ namespace Rca.Loader.Infrastructure
         
         private static bool ValidateReloadRuntimeCommand(PipeCommand command, out string validationError)
         {
-            if (string.IsNullOrWhiteSpace(command.Payload))
-            {
-                validationError = "ReloadRuntime command requires a valid folder path";
-                return false;
-            }
-
+            // New flow: payload is optional and ignored; accept empty payload
             validationError = string.Empty;
             return true;
         }

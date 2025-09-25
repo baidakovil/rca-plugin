@@ -48,12 +48,5 @@ namespace Rca.Loader.Infrastructure
         /// </summary>
         public static readonly string LoaderAssemblyPath =
             Path.Combine(RcaAddinDir, LoaderFileName);
-                
-        /// <summary>
-        /// The path to the JSON file that stores information about loaded assemblies.
-        /// </summary>
-        public static readonly string LoadedAssembliesJsonPath = 
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), 
-                "RCA", "LoadedAssemblies.json");
     }
 }

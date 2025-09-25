@@ -158,8 +158,7 @@ namespace Rca.Loader.Restart
                     Arguments = $"-ExecutionPolicy Bypass -File \"{scriptPath}\" " +
                                $"-SourcePath \"{sourcePath}\" " +
                                $"-TargetPath \"{targetPath}\" " +
-                               $"-RevitExecutable \"{revitExecutable}\" " +
-                               $"-JsonFilePath \"{LoaderConstants.LoadedAssembliesJsonPath}\"",
+                               $"-RevitExecutable \"{revitExecutable}\"",
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardOutput = true,
