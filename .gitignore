@@ -21,3 +21,5 @@
 *.user
 /src/Rca.TestAdapter/nupkg/Rca.TestAdapter.1.0.0.nupkg
 /src/Rca.TestAdapter/nupkg/Rca.TestAdapter.1.0.0.snupkg
+/src/Rca.Loader/source-hash.loader.txt
+/buildlog.txt
