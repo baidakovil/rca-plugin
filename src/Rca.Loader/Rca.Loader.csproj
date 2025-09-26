@@ -50,6 +50,9 @@
   <ItemGroup>
     <Compile Include="BuildTasks\MergeAssembliesTask.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="BuildTasks\Rca.Loader.Tasks.csproj" />
+  </ItemGroup>
 
   <!-- ILRepack target to merge assemblies using Exec (external ILRepack.exe) -->
   <Target Name="RepackLoader" AfterTargets="Build">
@@ -109,6 +112,8 @@
 
     <PropertyGroup>
       <RcaLoaderSourceHash>%(LoaderSourceHashLines.Identity)</RcaLoaderSourceHash>
+      <!-- Set informational version property instead of generating duplicate attribute -->
+      <AssemblyInformationalVersion>$(RcaLoaderSourceHash).$(RcaHotReloadTimestamp)</AssemblyInformationalVersion>
     </PropertyGroup>
 
     <!-- Generate assembly metadata source file to embed into assembly -->
@@ -135,23 +140,11 @@
 
     <!-- Write loader version info file using previously computed short hash -->
     <PropertyGroup>
-      <LoaderVersionFile>$(RuntimeDeployDir)\_LoaderVersion - $(RcaLoaderSourceHash).txt</LoaderVersionFile>
+      <LoaderVersionFile>$(RuntimeDeployDir)\HashLoader - $(RcaLoaderSourceHash).txt</LoaderVersionFile>
     </PropertyGroup>
     <WriteLinesToFile File="$(LoaderVersionFile)" Lines="$(RcaLoaderSourceHash)" Overwrite="true" />
 
   </Target>
-  
-  <!-- Optional: Deploy to Revit addin directory for release builds only -->
-  <!--
-  <Target Name="DeployLoaderToAddinDir" AfterTargets="DeployLoaderToTemp" Condition=" '$(Configuration)' == 'Release' ">
-    <PropertyGroup>
-      <RevitAddinDir>$(AppData)\Autodesk\Revit\Addins\2026\Rca</RevitAddinDir>
-    </PropertyGroup>
-    <MakeDir Directories="$(RevitAddinDir)" Condition="!Exists('$(RevitAddinDir)')" />
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(RevitAddinDir)" SkipUnchangedFiles="false" />
-    <Message Text="Deployed Loader assembly to Revit addins directory: $(RevitAddinDir)" Importance="High" />
-  </Target>
-  -->
   
   <Import Project="..\..\build\Common.targets" />
 </Project>
