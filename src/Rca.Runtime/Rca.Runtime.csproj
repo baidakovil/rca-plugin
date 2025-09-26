@@ -113,7 +113,7 @@
 
     <!-- Write runtime version info file using previously computed short hash -->
     <PropertyGroup>
-      <RuntimeVersionFile>$(RuntimeDeployDir)\_RuntimeVersion - $(RcaSourceHash).txt</RuntimeVersionFile>
+      <RuntimeVersionFile>$(RuntimeDeployDir)\HashRuntime - $(RcaSourceHash).txt</RuntimeVersionFile>
     </PropertyGroup>
     <WriteLinesToFile File="$(RuntimeVersionFile)" Lines="$(RcaSourceHash)" Overwrite="true" />
 
@@ -123,7 +123,7 @@
   <!-- Notify Loader of new runtime via named pipe -->
   <PropertyGroup>
     <!-- Default: do not notify automatically; set HotReloadNotify=true to enable -->
-    <HotReloadNotify Condition="'$(HotReloadNotify)' == ''">false</HotReloadNotify>
+    <HotReloadNotify Condition="'$(HotReloadNotify)' == ''">true</HotReloadNotify>
   </PropertyGroup>
 
   <Target Name="ReloadRuntime" AfterTargets="DeployRuntime" Condition="'$(HotReloadNotify)' == 'true'">
