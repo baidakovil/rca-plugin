@@ -28,7 +28,17 @@ namespace Rca.Loader.AssemblyManagement
                 var loaderHash = GetAssemblyMetadata(loaderAsm, "SourceHash");
                 var loaderDeployFolder = GetAssemblyMetadata(loaderAsm, "DeployFolder");
 
-                CurrentInfo.LoaderComponents.Path = loaderAsm.Location != null ? Path.GetDirectoryName(loaderAsm.Location) ?? string.Empty : string.Empty;
+                // Prefer DeployFolder metadata if present - this is the folder name embedded into the DLL at build time
+                if (!string.IsNullOrEmpty(loaderDeployFolder))
+                {
+                    CurrentInfo.LoaderComponents.Path = loaderDeployFolder;
+                }
+                else
+                {
+                    // Do not expose actual file system location to the ribbon; use explicit marker to indicate missing metadata
+                    CurrentInfo.LoaderComponents.Path = "n/a";
+                }
+
                 CurrentInfo.LoaderComponents.Hash = loaderHash ?? string.Empty;
 
                 // Determine runtime - prefer actually loaded runtime if available
@@ -142,13 +152,27 @@ namespace Rca.Loader.AssemblyManagement
 
                     // Loader hash - try loader DLL in the provided folder; if not present, fall back to deployed loader path
                     var loaderDllInTemp = Path.Combine(latest, LoaderConstants.LoaderFileName);
+                    string? deployFolderMeta = null;
                     if (File.Exists(loaderDllInTemp))
                     {
                         loaderHash = AssemblyMetadataReader.TryGetAssemblyMetadata(loaderDllInTemp, "SourceHash");
+                        deployFolderMeta = AssemblyMetadataReader.TryGetAssemblyMetadata(loaderDllInTemp, "DeployFolder");
                     }
                     else if (File.Exists(LoaderConstants.LoaderAssemblyPath))
                     {
                         loaderHash = AssemblyMetadataReader.TryGetAssemblyMetadata(LoaderConstants.LoaderAssemblyPath, "SourceHash");
+                        deployFolderMeta = AssemblyMetadataReader.TryGetAssemblyMetadata(LoaderConstants.LoaderAssemblyPath, "DeployFolder");
+                    }
+
+                    // If DeployFolder metadata available prefer that for display
+                    if (!string.IsNullOrEmpty(deployFolderMeta))
+                    {
+                        CurrentInfo.LoaderComponents.Path = deployFolderMeta;
+                    }
+                    else
+                    {
+                        // Do not expose actual folder name; use explicit marker so developers can see metadata is missing
+                        CurrentInfo.LoaderComponents.Path = "n/a";
                     }
 
                     bool loaderChanged = !string.IsNullOrEmpty(loaderHash) && loaderHash != CurrentInfo.LoaderComponents.Hash;
@@ -223,16 +247,21 @@ namespace Rca.Loader.AssemblyManagement
             try
             {
                 if (string.IsNullOrEmpty(loaderDir) || !Directory.Exists(loaderDir)) return;
-                CurrentInfo.LoaderComponents.Path = loaderDir;
 
                 var loaderDll = Path.Combine(loaderDir, LoaderConstants.LoaderFileName);
+
+                // Prefer DeployFolder metadata when updating the displayed path
                 if (File.Exists(loaderDll))
                 {
+                    var deployFolderMeta = AssemblyMetadataReader.TryGetAssemblyMetadata(loaderDll, "DeployFolder");
+                    CurrentInfo.LoaderComponents.Path = !string.IsNullOrEmpty(deployFolderMeta) ? deployFolderMeta : "n/a";
+
                     var hash = AssemblyMetadataReader.TryGetAssemblyMetadata(loaderDll, "SourceHash");
                     CurrentInfo.LoaderComponents.Hash = hash ?? string.Empty;
                 }
                 else
                 {
+                    CurrentInfo.LoaderComponents.Path = "n/a";
                     CurrentInfo.LoaderComponents.Hash = string.Empty;
                 }
             }

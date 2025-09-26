@@ -140,11 +140,11 @@ namespace Rca.Loader.UI
 
             if (isOutdated)
             {
-                return $"Rca.Loader.dll: Loaded but outdated - {folder} (hash: {TruncateHash(loaderComponents.Hash)})";
+                return $"Rca.Loader.dll: Loaded - OUTDATED - {folder} (hash: {TruncateHash(loaderComponents.Hash)})";
             }
             else
             {
-                return $"Rca.Loader.dll: Loaded (current) - {folder} (hash: {TruncateHash(loaderComponents.Hash)})";
+                return $"Rca.Loader.dll: Loaded - Current - {folder} (hash: {TruncateHash(loaderComponents.Hash)})";
             }
         }
 
@@ -164,18 +164,18 @@ namespace Rca.Loader.UI
 
             if (isOutdated)
             {
-                return $"Rca.Runtime.dll: Loaded but outdated - {folder} (hash: {TruncateHash(runtimeAssembly.Hash)})";
+                return $"Rca.Runtime.dll: Loaded - OUTDATED - {folder} (hash: {TruncateHash(runtimeAssembly.Hash)})";
             }
             else
             {
-                return $"Rca.Runtime.dll: Loaded (current) - {folder} (hash: {TruncateHash(runtimeAssembly.Hash)})";
+                return $"Rca.Runtime.dll: Loaded - Current - {folder} (hash: {TruncateHash(runtimeAssembly.Hash)})";
             }
         }
 
         private string FormatSignalStatus(SignalInfo signalInfo)
         {
-            if (signalInfo == null) return "Last MSBuild signal: unknown";
-            if (string.IsNullOrEmpty(signalInfo.Time)) return "Last MSBuild signal: none";
+            if (signalInfo == null) return "Last MSBuild signal: null";
+            if (string.IsNullOrEmpty(signalInfo.Time)) return "Last MSBuild signal: empty";
             return $"Last MSBuild signal: {signalInfo.Time} - {signalInfo.Event}";
         }
 

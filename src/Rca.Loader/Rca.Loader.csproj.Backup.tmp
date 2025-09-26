@@ -43,51 +43,47 @@
     <EmbeddedResource Include="Resources\*.png" />
   </ItemGroup>
 
-  <!-- Exclude BuildTasks folder from the main project's compile items -->
+  <!-- Compile the custom MSBuild task class into an in-project assembly for UsingTask -->
   <ItemGroup>
-    <Compile Remove="BuildTasks\**\*.cs" />
+    <Compile Include="Build\MergeAssembliesTask.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BuildTasks\MergeAssembliesTask.cs" />
+    <None Include="BuildTasks\Rca.Loader.Tasks.csproj" />
   </ItemGroup>
 
-  <!-- ILRepack target to merge assemblies using Exec (external ILRepack.exe) -->
+  <!-- Build the task assembly before using it -->
+  <Target Name="BuildTaskAssembly" BeforeTargets="RepackLoader">
+    <Csc Sources="@(Compile->'%(FullPath)')" OutputAssembly="$(IntermediateOutputPath)Rca.Loader.Tasks.dll" References="$(TargetPath)" EmitDebugInformation="false" />
+  </Target>
+
+  <!-- Use the external compiled task assembly for MergeAssemblies -->
+  <UsingTask TaskName="Rca.Loader.Build.MergeAssemblies" AssemblyFile="$(IntermediateOutputPath)Rca.Loader.Tasks.dll" />
+  
+  <!-- ILRepack target to merge assemblies -->
   <Target Name="RepackLoader" AfterTargets="Build">
     <Message Text="Merging Rca.Loader.dll and Rca.Loader.Contracts.dll" Importance="High" />
-
+    
     <!-- Create list of reference libraries -->
     <ItemGroup>
       <ReferenceDlls Include="$(MSBuildProjectDirectory)\..\..\libs\Revit\2026\RevitAPI.dll" />
       <ReferenceDlls Include="$(MSBuildProjectDirectory)\..\..\libs\Revit\2026\RevitAPIUI.dll" />
     </ItemGroup>
-
-    <!-- Prepare temp directory for ILRepack lib option -->
+    
+    <!-- Convert reference collection to semicolon-separated list -->
     <PropertyGroup>
-      <IlRepackTempDir>$(IntermediateOutputPath)ilrepack_$(MSBuildProjectName)</IlRepackTempDir>
-      <IlRepackPath>$(USERPROFILE)\.nuget\packages\ilrepack\2.0.34\tools\ILRepack.exe</IlRepackPath>
-      <MergedOutput>$(TargetDir)Rca.Loader.Merged.dll</MergedOutput>
+      <ReferencePaths>@(ReferenceDlls, ';')</ReferencePaths>
     </PropertyGroup>
-
-    <MakeDir Directories="$(IlRepackTempDir)" />
-
-    <!-- Copy reference DLLs to temp dir to allow ILRepack to resolve them -->
-    <Copy SourceFiles="@(ReferenceDlls)" DestinationFolder="$(IlRepackTempDir)" SkipUnchangedFiles="false" />
-
-    <!-- Fail early if ILRepack not found -->
-    <Error Condition="!Exists('$(IlRepackPath)')" Text="ILRepack not found at: $(IlRepackPath)" />
-
-    <!-- Run ILRepack to create merged assembly -->
-    <Exec Command="&quot;$(IlRepackPath)&quot; /out:&quot;$(MergedOutput)&quot; &quot;$(TargetPath)&quot; &quot;$(TargetDir)Rca.Loader.Contracts.dll&quot; /xmldocs /copyattrs /parallel /internalize /lib:&quot;$(IlRepackTempDir)&quot;" />
-
+    
+    <!-- Run the merge task -->
+    <Rca.Loader.Build.MergeAssemblies MainAssemblyPath="$(TargetPath)" MergeAssemblyPath="$(TargetDir)Rca.Loader.Contracts.dll" OutputAssemblyPath="$(TargetDir)Rca.Loader.Merged.dll" References="$(ReferencePaths)" />
+    
     <!-- Replace the original with the merged file -->
-    <Copy SourceFiles="$(MergedOutput)" DestinationFiles="$(TargetPath)" />
-
+    <Copy SourceFiles="$(TargetDir)Rca.Loader.Merged.dll" DestinationFiles="$(TargetPath)" />
+    
     <!-- Delete the Contracts DLL and the temporary merged file -->
-    <Delete Files="$(TargetDir)Rca.Loader.Contracts.dll;$(MergedOutput)" />
-
-    <!-- Clean up temp dir -->
-    <RemoveDir Directories="$(IlRepackTempDir)" />
-
+    <Delete Files="$(TargetDir)Rca.Loader.Contracts.dll" />
+    <Delete Files="$(TargetDir)Rca.Loader.Merged.dll" />
+    
     <Message Text="ILRepack completed successfully - Using merged assembly" Importance="High" />
   </Target>
   
