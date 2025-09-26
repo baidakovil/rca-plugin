@@ -12,6 +12,8 @@
     <GenerateRcaAddinFile>true</GenerateRcaAddinFile>
     <!-- Suppress Revit API reference warnings -->
     <NoWarn>$(NoWarn);MSB3245;MSB3243</NoWarn>
+    <!-- Prevent the SDK from auto-generating AssemblyInformationalVersion attribute; we will emit it explicitly -->
+    <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
   </PropertyGroup>
   
   <ItemGroup>
@@ -40,18 +42,18 @@
   </ItemGroup>
   
   <ItemGroup>
-    <EmbeddedResource Include="Resources\*.png" />
+    <EmbeddedResource Include="Resources\\*.png" />
   </ItemGroup>
 
   <!-- Exclude BuildTasks folder from the main project's compile items -->
   <ItemGroup>
-    <Compile Remove="BuildTasks\**\*.cs" />
+    <Compile Remove="BuildTasks\\**\\*.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BuildTasks\MergeAssembliesTask.cs" />
+    <Compile Include="BuildTasks\\MergeAssembliesTask.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="BuildTasks\Rca.Loader.Tasks.csproj" />
+    <None Include="BuildTasks\\Rca.Loader.Tasks.csproj" />
   </ItemGroup>
 
   <!-- ILRepack target to merge assemblies using Exec (external ILRepack.exe) -->
@@ -79,7 +81,7 @@
     <!-- Fail early if ILRepack not found -->
     <Error Condition="!Exists('$(IlRepackPath)')" Text="ILRepack not found at: $(IlRepackPath)" />
 
-    <!-- Run ILRepack to create merged assembly -->
+    <!-- Run ILRepack to create merged assembly; ensure attributes are preserved from the compiled assembly -->
     <Exec Command="&quot;$(IlRepackPath)&quot; /out:&quot;$(MergedOutput)&quot; &quot;$(TargetPath)&quot; &quot;$(TargetDir)Rca.Loader.Contracts.dll&quot; /xmldocs /copyattrs /parallel /internalize /lib:&quot;$(IlRepackTempDir)&quot;" />
 
     <!-- Replace the original with the merged file -->
@@ -112,14 +114,13 @@
 
     <PropertyGroup>
       <RcaLoaderSourceHash>%(LoaderSourceHashLines.Identity)</RcaLoaderSourceHash>
-      <!-- Set informational version property instead of generating duplicate attribute -->
-      <AssemblyInformationalVersion>$(RcaLoaderSourceHash).$(RcaHotReloadTimestamp)</AssemblyInformationalVersion>
     </PropertyGroup>
 
     <!-- Generate assembly metadata source file to embed into assembly -->
     <ItemGroup>
       <RcaLoaderAssemblyMetadataLines Include="[assembly: System.Reflection.AssemblyMetadata(&quot;SourceHash&quot;, &quot;$(RcaLoaderSourceHash)&quot;)]" />
       <RcaLoaderAssemblyMetadataLines Include="[assembly: System.Reflection.AssemblyMetadata(&quot;DeployFolder&quot;, &quot;$(RcaHotReloadTimestamp)&quot;)]" />
+      <RcaLoaderAssemblyMetadataLines Include="[assembly: System.Reflection.AssemblyInformationalVersion(&quot;Hash: $(RcaLoaderSourceHash), Folder: $(RcaHotReloadTimestamp)&quot;)]" />
     </ItemGroup>
     <WriteLinesToFile File="$(IntermediateOutputPath)RcaLoaderAssemblyMetadata.cs" Overwrite="true" Lines="@(RcaLoaderAssemblyMetadataLines)" />
 
