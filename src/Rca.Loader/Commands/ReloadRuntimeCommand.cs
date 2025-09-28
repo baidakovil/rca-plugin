@@ -42,15 +42,14 @@ namespace Rca.Loader.Commands
                                      "Revit must be restarted to use the new version.\n\n" +
                                      "Would you like to restart Revit now or just reload the Runtime?",
                         CommonButtons = TaskDialogCommonButtons.None
-                        // Removed DefaultButton assignment to fix error
                     };
-                    
+
                     td.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "Restart Revit", "Close Revit and restart with the new Loader version");
                     td.AddCommandLink(TaskDialogCommandLinkId.CommandLink2, "Just Reload Runtime", "Keep using the current Loader but reload Runtime");
                     td.AddCommandLink(TaskDialogCommandLinkId.CommandLink3, "Cancel", "Don't reload or restart");
-                    
+
                     var result = td.Show();
-                    
+
                     switch (result)
                     {
                         case TaskDialogResult.CommandLink1:
@@ -62,18 +61,40 @@ namespace Rca.Loader.Commands
                                 return Result.Succeeded;
                             }
                             return Result.Cancelled;
-                            
+
                         case TaskDialogResult.CommandLink2:
                             // Just reload runtime, continue with normal flow
                             break;
-                            
+
                         default:
                             // Cancel
                             return Result.Cancelled;
                     }
                 }
 
-                // Check if runtime is outdated
+                // If runtime is not currently loaded, attempt to load the latest runtime directly
+                var runtimeLoaded = LoaderApp.Instance.RuntimeManager.IsRuntimeLoaded;
+                if (!runtimeLoaded)
+                {
+                    var success = LoaderApp.Instance.RuntimeManager.ReloadLatest(out var error);
+                    if (success)
+                    {
+                        // Update runtime hash after successful reload
+                        LoaderApp.Instance.AssemblyStatusManager?.UpdateHashesAfterReload(
+                            LoaderApp.Instance.RuntimeManager.CurrentRuntimePath);
+
+                        TaskDialog.Show("RCA Loader", "Runtime reloaded successfully!");
+                        return Result.Succeeded;
+                    }
+                    else
+                    {
+                        message = error ?? "Unknown error";
+                        TaskDialog.Show("RCA Loader Error", $"Failed to reload runtime: {error}");
+                        return Result.Failed;
+                    }
+                }
+
+                // Runtime is loaded - check whether it is outdated
                 bool runtimeOutdated = LoaderApp.Instance.AssemblyStatusManager?.IsRuntimeOutdated() ?? false;
                 if (!runtimeOutdated)
                 {
@@ -81,22 +102,22 @@ namespace Rca.Loader.Commands
                     return Result.Succeeded;
                 }
 
-                // Normal runtime reload flow
-                var success = LoaderApp.Instance.RuntimeManager.ReloadLatest(out var error);
-                
-                if (success)
+                // Normal runtime reload flow (runtime was loaded and flagged outdated)
+                var reloadSuccess = LoaderApp.Instance.RuntimeManager.ReloadLatest(out var reloadError);
+
+                if (reloadSuccess)
                 {
                     // Update runtime hash after successful reload
                     LoaderApp.Instance.AssemblyStatusManager?.UpdateHashesAfterReload(
                         LoaderApp.Instance.RuntimeManager.CurrentRuntimePath);
-                    
+
                     TaskDialog.Show("RCA Loader", "Runtime reloaded successfully!");
                     return Result.Succeeded;
                 }
                 else
                 {
-                    message = error ?? "Unknown error";
-                    TaskDialog.Show("RCA Loader Error", $"Failed to reload runtime: {error}");
+                    message = reloadError ?? "Unknown error";
+                    TaskDialog.Show("RCA Loader Error", $"Failed to reload runtime: {reloadError}");
                     return Result.Failed;
                 }
             }

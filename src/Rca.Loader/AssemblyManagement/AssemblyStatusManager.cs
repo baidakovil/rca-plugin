@@ -210,6 +210,10 @@ namespace Rca.Loader.AssemblyManagement
         {
             try
             {
+                // If runtime isn't loaded into the process, treat as outdated so reload will occur
+                var runtimeLoaded = LoaderApp.Instance?.RuntimeManager?.IsRuntimeLoaded ?? false;
+                if (!runtimeLoaded) return true;
+
                 var latest = GetLatestTempDllFolder();
                 if (string.IsNullOrEmpty(latest)) return false;
 
