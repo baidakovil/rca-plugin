@@ -1,12 +1,9 @@
-there is some problem with core of hot-reload system. this system is described in the
+@workspace Есть проблема с ядром системы горячей перезагрузки (hot-reload). Эта система описана в следующем документе: #file:'HOT-RELOADING.md' 
 
-look at screenshot for problem screenshout.
+1. Сейчас значения DeployFolder и SourceHash не записываются корректно в Rca.Loader.dll и Rca.Runtime.dll из-за использования ILRepack. Поэтому вместо установки этих значений в *.csproj, они должны устанавливаться через пост-билд скрипт, использующий Mono.Cecil. Также добавь внедрение свойства ProductVersion, которое можно будет видеть в свойствах файла в проводнике Windows. Это свойство должно иметь формат "DeployFolder: {DeployFolder}, SourceHash: {SourceHash}". 
 
-1. When i run revit, i see "Rca.Loader.dll: Loaded - Current - a (hash: aedccd)", where "a" is some folder name. but actually folder name is a timestamp. check and fix it
-2. when i change some code in my addin and recompile it, i see "Rca.Runtime.dll: Loaded - OUTDATED - 20250926_183655 (hash: n/a)". And click "Reload Runtime" button. I see "Runtime reloaded successfully". Then I expect to see "Rca.Runtime.dll: Loaded - Current - timestamp (hash: somehash)". Please fix it
-3. Even with "<HotReloadNotify Condition="'$(HotReloadNotify)' == ''">true</HotReloadNotify>" in my csproj, i see "Last MSBuild signal: empty" in the UI. Please fix it
+2. Чтение этих значений (кроме ProductVersion, который только человекочитаемый) должно производиться в #class:'Rca.Loader.AssemblyManagement.AssemblyStatusManager':225-12627 . Предусмотри, что для Rca.Loader.dll, загруженного в память и выполняющегося в данный момент, и для файлов на диске чтение аттрибутов должно происходить по-разному. Для загруженного в память файла нужно использовать Reflection или Assembly.GetExecutingAssembly(), а для файлов на диске — Mono.Cecil. Все аттрибуты для отображения в UI (хэш, имя папки) должны читаться из AttributeMetadataLoader. Только для Rca.Runtime.dll, кроме имени папки для загруженного в память Rca.Runtime.dll. Если аттрибуты не получилось прочитать из dll, то всегда должно возвращаться "n/a", никаких fallback быть не должно!
 
-4. Somehow i see "Rca.Runtime.dll: Loaded - OUTDATED - 20250926_183655 (hash: n/a)", that means that hot-reloaded system able to read folder, but not able to read hash AssemblyAttribute. Please fix it
+3. Когда я запускаю Revit, вижу "Rca.Loader.dll: Loaded - Current - a (hash: aedccd)", где "a" — это место, где должно отображаться имя папки из AttributeMetadata с именем DeployFolder из файла C:\Users\baidakov\AppData\Roaming\Autodesk\Revit\Addins\2026\Rca\Rca.Loader.dll, т.е. из загруженного в память и выполняющегося в данный момент файла. Оттуда же должен читаться и хэш. Проблема с "a" связана с неверной обработкой значения "n/a", скорее всего, проверь это.
 
-
-First, make a plan how to fix it. Describe which files should be changed and how. If there is an options, describe pros and cons of each option. After that, implement the fix step by step. After each step, show me the changed code and explain what you changed and why. Wait for my confirmation before proceeding to the next step.
+Сначала составь план по исправлению. Опишите, какие файлы нужно изменить и как. Если есть варианты, опишите плюсы и минусы каждого. После этого реализуйте исправление пошагово. После каждого шага покажите изменённый код и объясните, что и почему вы изменили. Ждите моего подтверждения перед переходом к следующему шагу.

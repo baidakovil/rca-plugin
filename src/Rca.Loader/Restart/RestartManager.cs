@@ -180,8 +180,7 @@ namespace Rca.Loader.Restart
 
         /// <summary>
         /// Validates that the loader assembly was copied successfully by comparing embedded source hashes
-        /// (AssemblyMetadata SourceHash) or by reading LoaderVersion info files next to the DLL. Falls back to
-        /// binary compare if neither metadata nor info files exist.
+        /// (AssemblyMetadata SourceHash) only.
         /// </summary>
         public bool ValidateAssemblyCopy(string sourcePath, string targetPath)
         {
@@ -193,25 +192,13 @@ namespace Rca.Loader.Restart
 
                 if (!File.Exists(loaderTargetPath)) return false;
 
-                // Only validate by embedded assembly metadata 'SourceHash'.
-                // If metadata is missing or different, do not fall back to other methods —
-                // developer should investigate the mismatch.
-                bool err1 = false, err2 = false;
-                string? srcMetaHash = null;
-                string? tgtMetaHash = null;
+                // Read SourceHash via AttributeMetadataLoader from the files on disk.
+                var srcMetaHash = AttributeMetadataLoader.TryGetFromFile(loaderSourcePath, "SourceHash");
+                var tgtMetaHash = AttributeMetadataLoader.TryGetFromFile(loaderTargetPath, "SourceHash");
 
-                var ok1 = AssemblyMetadataReader.TryGetAssemblyMetadata(loaderSourcePath, "SourceHash", out srcMetaHash, out err1);
-                var ok2 = AssemblyMetadataReader.TryGetAssemblyMetadata(loaderTargetPath, "SourceHash", out tgtMetaHash, out err2);
-
-                if (err1 || err2)
-                {
-                    var msg = $"Error reading AssemblyMetadata 'SourceHash' (sourceError={err1}, targetError={err2})";
-                    Debug.WriteLine($"ValidateAssemblyCopy: {msg}");
-                    throw new InvalidOperationException(msg);
-                }
-
-                // If no metadata present on either side, validation fails but no error thrown.
-                if (string.IsNullOrEmpty(srcMetaHash) || string.IsNullOrEmpty(tgtMetaHash))
+                // If metadata missing on either side, validation fails (no fallback)
+                if (string.IsNullOrEmpty(srcMetaHash) || srcMetaHash == AttributeMetadataLoader.MissingMarker
+                    || string.IsNullOrEmpty(tgtMetaHash) || tgtMetaHash == AttributeMetadataLoader.MissingMarker)
                 {
                     Debug.WriteLine("ValidateAssemblyCopy: missing SourceHash metadata on source or target assembly");
                     return false;

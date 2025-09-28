@@ -12,8 +12,13 @@
     <GenerateRcaAddinFile>true</GenerateRcaAddinFile>
     <!-- Suppress Revit API reference warnings -->
     <NoWarn>$(NoWarn);MSB3245;MSB3243</NoWarn>
-    <!-- Prevent the SDK from auto-generating AssemblyInformationalVersion attribute; we will emit it explicitly -->
+    <!-- We will not generate assembly attributes before merge; attributes are injected post-merge by AttributeInjector -->
     <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
+  </PropertyGroup>
+
+  <!-- Ensure timestamp exists: use provided RcaHotReloadTimestamp or default to current UTC timestamp -->
+  <PropertyGroup>
+    <RcaHotReloadTimestamp Condition="'$(RcaHotReloadTimestamp)' == ''">$([System.DateTime]::UtcNow.ToString("yyyyMMdd_HHmmss"))</RcaHotReloadTimestamp>
   </PropertyGroup>
   
   <ItemGroup>
@@ -34,6 +39,7 @@
   
   <ItemGroup>
     <PackageReference Include="NUnit" Version="4.0.1" />
+    <PackageReference Include="Mono.Cecil" Version="0.11.4" />
     <PackageReference Include="ilrepack" Version="2.0.34" PrivateAssets="all" />
   </ItemGroup>
   
@@ -94,9 +100,18 @@
     <RemoveDir Directories="$(IlRepackTempDir)" />
 
     <Message Text="ILRepack completed successfully - Using merged assembly" Importance="High" />
+
+    <!-- Build AttributeInjector and run the built exe to inject metadata -->
+    <PropertyGroup>
+      <AttributeInjectorProject>$(SolutionDir)src\Tools\AttributeInjector\AttributeInjector.csproj</AttributeInjectorProject>
+      <AttributeInjectorExe>$(SolutionDir)src\Tools\AttributeInjector\bin\$(Configuration)\net8.0\AttributeInjector.exe</AttributeInjectorExe>
+    </PropertyGroup>
+    <Exec Command="dotnet build &quot;$(AttributeInjectorProject)&quot; -c $(Configuration)" />
+    <Error Condition="!Exists('$(AttributeInjectorExe)')" Text="AttributeInjector executable not found at $(AttributeInjectorExe)" />
+    <Exec Command="&quot;$(AttributeInjectorExe)&quot; &quot;$(TargetPath)&quot; &quot;$(RcaHotReloadTimestamp)&quot; &quot;$(RcaLoaderSourceHash)&quot;" ContinueOnError="false" />
   </Target>
   
-  <!-- Generate loader source hash and assembly metadata before compile so attribute is embedded -->
+  <!-- Generate loader source hash before compile (do not generate assembly attributes yet) -->
   <PropertyGroup>
     <SourceHashProject>$(SolutionDir)src\Tools\SourceHashGenerator\SourceHashGenerator.csproj</SourceHashProject>
     <SourceHashExe>$(SolutionDir)src\Tools\SourceHashGenerator\bin\$(Configuration)\net8.0\SourceHashGenerator.exe</SourceHashExe>
