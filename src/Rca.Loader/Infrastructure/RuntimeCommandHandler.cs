@@ -22,7 +22,7 @@ namespace Rca.Loader.Infrastructure
         private readonly UIApplication uiapp;
         private readonly CommandValidationService validationService;
         private readonly AssemblyStatusManager? assemblyStatusManager;
-        
+
         /// <summary>
         /// Initializes a new instance of the <see cref="RuntimeCommandHandler"/> class.
         /// </summary>
@@ -34,13 +34,13 @@ namespace Rca.Loader.Infrastructure
             this.uiapp = uiapp ?? throw new ArgumentNullException(nameof(uiapp));
             this.validationService = new CommandValidationService();
             this.assemblyStatusManager = LoaderApp.Instance?.AssemblyStatusManager;
-            
+
             if (this.assemblyStatusManager == null)
             {
                 Debug.WriteLine("Warning: AssemblyStatusManager not available in RuntimeCommandHandler");
             }
         }
-        
+
         /// <summary>
         /// Handles a pipe command asynchronously.
         /// </summary>
@@ -50,9 +50,9 @@ namespace Rca.Loader.Infrastructure
         {
             if (cmd == null)
                 throw new ArgumentNullException(nameof(cmd));
-                
+
             Debug.WriteLine($"Received pipe command: {cmd.Command}");
-            
+
             try
             {
                 // Validate command first
@@ -75,7 +75,7 @@ namespace Rca.Loader.Infrastructure
                 return PipeResponseFactory.Error($"Error handling command: {ex.Message}");
             }
         }
-        
+
         /// <summary>
         /// Handles synchronous pipe commands.
         /// </summary>
@@ -84,7 +84,7 @@ namespace Rca.Loader.Infrastructure
         private PipeResponse HandleSyncCommand(PipeCommand cmd)
         {
             Debug.WriteLine($"Handling synchronous command: {cmd.Command}");
-            
+
             return cmd.Command.ToUpperInvariant() switch
             {
                 PipeCommands.Reload => HandleReloadCommand(cmd),
@@ -97,17 +97,19 @@ namespace Rca.Loader.Infrastructure
         private PipeResponse HandleReloadCommand(PipeCommand cmd)
         {
             Debug.WriteLine($"Handling RELOAD command with payload: {cmd.Payload}");
-            
+
             try
             {
                 var result = runtimeManager.ReloadRuntime(cmd.Payload, out var errorMessage);
-                
+
                 if (result && !string.IsNullOrEmpty(cmd.Payload))
                 {
                     // Update status manager about the change
                     assemblyStatusManager?.ProcessMsBuildSignal(cmd.Payload);
+                    // Ensure UI is refreshed to reflect new status
+                    try { LoaderApp.Instance?.UpdateStatusDisplay(); } catch { }
                 }
-                
+
                 return result 
                     ? PipeResponseFactory.Success(errorMessage ?? string.Empty)
                     : PipeResponseFactory.Error(errorMessage ?? "Unknown reload error");
@@ -118,41 +120,45 @@ namespace Rca.Loader.Infrastructure
                 return PipeResponseFactory.Error($"Error reloading: {ex.Message}");
             }
         }
-        
+
         private PipeResponse HandleReloadRuntimeCommand(PipeCommand cmd)
         {
             Debug.WriteLine("Handling RELOAD_RUNTIME command (payload ignored)");
-            
+
             try
             {
                 // For new flow, determine latest folder automatically
                 var latest = assemblyStatusManager?.GetLatestTempDllFolder() ?? string.Empty;
                 if (string.IsNullOrEmpty(latest))
                     return PipeResponseFactory.Error("No runtime deploy folders found");
-                
+
                 // Update status manager from latest folder
                 assemblyStatusManager?.ProcessMsBuildSignal(latest);
-                
+                // Refresh UI after processing MSBuild signal
+                try { LoaderApp.Instance?.UpdateStatusDisplay(); } catch { }
+
                 bool loaderOutdated = assemblyStatusManager?.IsLoaderOutdated() ?? false;
                 bool runtimeOutdated = assemblyStatusManager?.IsRuntimeOutdated() ?? false;
-                
+
                 if (loaderOutdated && !runtimeOutdated)
                 {
                     return PipeResponseFactory.Success("LOADER_RESTART_REQUIRED");
                 }
-                
+
                 if (!loaderOutdated && !runtimeOutdated)
                 {
                     return PipeResponseFactory.Success("NO_ACTION_NEEDED");
                 }
-                
+
                 // Otherwise attempt runtime reload from latest
                 var result = runtimeManager.ReloadRuntime(latest, out var errorMessage);
-                
+
                 if (result)
                 {
                     // Update runtime hash if reload was successful
                     assemblyStatusManager?.UpdateHashesAfterReload(runtimeManager.CurrentRuntimePath);
+                    // Refresh UI to show updated hash/path
+                    try { LoaderApp.Instance?.UpdateStatusDisplay(); } catch { }
                     return PipeResponseFactory.Success("ReloadRuntime completed successfully");
                 }
                 else
@@ -170,14 +176,14 @@ namespace Rca.Loader.Infrastructure
         private PipeResponse HandleStatusCommand()
         {
             Debug.WriteLine("Handling STATUS command");
-            
+
             try
             {
                 var isRuntimeLoaded = runtimeManager.IsRuntimeLoaded;
                 var path = isRuntimeLoaded ? runtimeManager.CurrentRuntimePath : string.Empty;
-                
+
                 Debug.WriteLine($"Runtime loaded: {isRuntimeLoaded}, Path: {path}");
-                
+
                 return isRuntimeLoaded 
                     ? PipeResponseFactory.Loaded(path)
                     : PipeResponseFactory.Empty();
@@ -194,17 +200,17 @@ namespace Rca.Loader.Infrastructure
             Debug.WriteLine("Handling TEST_INIT command");
             return await Task.FromResult(PipeResponseFactory.Success("Test execution ready"));
         }
-        
+
         private async Task<PipeResponse> HandleRunTestsCommandAsync(PipeCommand cmd)
         {
             Debug.WriteLine("Handling RUN_TESTS command");
-            
+
             if (string.IsNullOrEmpty(cmd.Payload))
             {
                 Debug.WriteLine("Error: Empty test payload");
                 return PipeResponseFactory.InvalidPayload("Empty test payload");
             }
-            
+
             try
             {
                 // Deserialize the test execution payload from the test adapter
@@ -214,23 +220,23 @@ namespace Rca.Loader.Infrastructure
                     Debug.WriteLine("Error: Invalid test payload format");
                     return PipeResponseFactory.InvalidPayload("Invalid test payload format");
                 }
-                
+
                 Debug.WriteLine($"Executing {payload.Tests.Count} tests from assembly: {payload.AssemblyPath}");
-                
+
                 // Convert test adapter types to RevitTestExecutor types
                 var executorRequests = payload.Tests.Select(test => new RevitTestExecutor.TestRequest
                 {
                     FullyQualifiedName = test.FullyQualifiedName,
                     DisplayName = test.DisplayName
                 }).ToList();
-                
+
                 // Create a test executor
                 var testExecutor = new RevitTestExecutor(uiapp);
-                
+
                 // Execute the tests - this could be CPU intensive for large test suites,
                 // so run it on a background thread to avoid blocking the UI
                 var results = await Task.Run(() => testExecutor.ExecuteTests(payload.AssemblyPath, executorRequests));
-                
+
                 // Convert results back to test adapter format
                 var adapterResults = results.Select(result => new TestAdapterResult
                 {
@@ -248,10 +254,10 @@ namespace Rca.Loader.Infrastructure
                         Text = msg.Text
                     }).ToList()
                 }).ToList();
-                
+
                 // Serialize the results
                 var resultsJson = JsonSerializer.Serialize(adapterResults);
-                
+
                 Debug.WriteLine($"Test execution completed with {adapterResults.Count} results");
                 return PipeResponseFactory.Success(resultsJson);
             }
@@ -266,9 +272,9 @@ namespace Rca.Loader.Infrastructure
                 return PipeResponseFactory.Error($"Test execution error: {ex.Message}");
             }
         }
-        
+
         #region Test Adapter Data Transfer Objects
-        
+
         /// <summary>
         /// Test execution payload from the test adapter.
         /// </summary>
@@ -277,7 +283,7 @@ namespace Rca.Loader.Infrastructure
             public string AssemblyPath { get; set; } = string.Empty;
             public List<TestAdapterRequest> Tests { get; set; } = new();
         }
-        
+
         /// <summary>
         /// Test request from the test adapter.
         /// </summary>
@@ -286,7 +292,7 @@ namespace Rca.Loader.Infrastructure
             public string FullyQualifiedName { get; set; } = string.Empty;
             public string DisplayName { get; set; } = string.Empty;
         }
-        
+
         /// <summary>
         /// Test result for the test adapter.
         /// </summary>
@@ -302,7 +308,7 @@ namespace Rca.Loader.Infrastructure
             public long EndTimeUnixMs { get; set; }
             public List<TestAdapterMessage> Messages { get; set; } = new();
         }
-        
+
         /// <summary>
         /// Test message for the test adapter.
         /// </summary>
@@ -311,7 +317,7 @@ namespace Rca.Loader.Infrastructure
             public string Level { get; set; } = "Informational";
             public string Text { get; set; } = string.Empty;
         }
-        
+
         #endregion
     }
 }

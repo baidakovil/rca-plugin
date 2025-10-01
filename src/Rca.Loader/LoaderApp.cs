@@ -165,21 +165,25 @@ namespace Rca.Loader
         /// </summary>
         public void UpdateStatusDisplay()
         {
-    #if DEBUG
+#if DEBUG
             try
             {
                 var statusDisplay = ((RibbonService)ribbonService).StatusDisplay;
                 if (statusDisplay != null && assemblyStatusManager != null)
                 {
-                    Debug.WriteLine("Updating status display");
+                    Debug.WriteLine($"[LoaderApp] UpdateStatusDisplay: loaderHash={assemblyStatusManager.CurrentInfo.LoaderComponents.Hash}, runtimeHash={assemblyStatusManager.CurrentInfo.RuntimeAssembly.Hash}, msbuildSignal={assemblyStatusManager.CurrentInfo.LastMSBuildSignal.Time} - {assemblyStatusManager.CurrentInfo.LastMSBuildSignal.Event}");
                     statusDisplay.UpdateStatus(assemblyStatusManager.CurrentInfo);
+                }
+                else
+                {
+                    Debug.WriteLine("[LoaderApp] UpdateStatusDisplay: statusDisplay or assemblyStatusManager is null");
                 }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error updating status display: {ex.Message}");
             }
-    #endif
+#endif
         }
 
         private void StartPipeServer()

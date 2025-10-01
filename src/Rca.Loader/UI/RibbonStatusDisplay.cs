@@ -1,5 +1,6 @@
 #if DEBUG
 using System;
+using System.Diagnostics;
 using System.Windows.Threading;
 using Autodesk.Revit.UI;
 using Rca.Loader.AssemblyManagement;
@@ -113,6 +114,8 @@ namespace Rca.Loader.UI
                 var loaderStatus = FormatLoaderStatus(info.LoaderComponents);
                 var runtimeStatus = FormatRuntimeStatus(info.RuntimeAssembly);
                 var signalStatus = FormatSignalStatus(info.LastMSBuildSignal);
+
+                Debug.WriteLine($"[RibbonStatusDisplay] UpdateStatus: line1={loaderStatus}, line2={runtimeStatus}, line3={signalStatus}");
 
                 if (_line1 != null) _line1.Value = loaderStatus;
                 if (_line2 != null) _line2.Value = runtimeStatus;

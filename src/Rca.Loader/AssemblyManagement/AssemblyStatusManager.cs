@@ -54,6 +54,22 @@ namespace Rca.Loader.AssemblyManagement
                     if (loadedRuntimeAsm != null)
                     {
                         var rHash = AttributeMetadataLoader.TryGetFromLoadedAssembly(loadedRuntimeAsm, "SourceHash");
+
+                        // If reflection didn't return a usable value, try reading from the on-disk runtime DLL
+                        if (string.IsNullOrEmpty(rHash) || rHash == AttributeMetadataLoader.MissingMarker)
+                        {
+                            try
+                            {
+                                if (!string.IsNullOrEmpty(runtimePathFromRuntimeManager) && File.Exists(runtimePathFromRuntimeManager))
+                                {
+                                    var fileHash = AttributeMetadataLoader.TryGetFromFile(runtimePathFromRuntimeManager, "SourceHash");
+                                    if (!string.IsNullOrEmpty(fileHash) && fileHash != AttributeMetadataLoader.MissingMarker)
+                                        rHash = fileHash;
+                                }
+                            }
+                            catch { }
+                        }
+
                         CurrentInfo.RuntimeAssembly.Hash = string.IsNullOrEmpty(rHash) ? AttributeMetadataLoader.MissingMarker : rHash;
                     }
                     else
@@ -87,6 +103,9 @@ namespace Rca.Loader.AssemblyManagement
                         CurrentInfo.RuntimeAssembly.Hash = AttributeMetadataLoader.MissingMarker;
                     }
                 }
+
+                // Refresh UI to reflect initial values
+                try { LoaderApp.Instance?.UpdateStatusDisplay(); } catch { }
             }
             catch (Exception ex)
             {
@@ -127,6 +146,28 @@ namespace Rca.Loader.AssemblyManagement
             }
         }
 
+        public void UpdateHashesAfterReload(string runtimePath)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(runtimePath) || !File.Exists(runtimePath)) return;
+                var oldHash = CurrentInfo.RuntimeAssembly.Hash;
+                CurrentInfo.RuntimeAssembly.Path = runtimePath;
+                var hash = AttributeMetadataLoader.TryGetFromFile(runtimePath, "SourceHash");
+                CurrentInfo.RuntimeAssembly.Hash = string.IsNullOrEmpty(hash) ? AttributeMetadataLoader.MissingMarker : hash;
+                Debug.WriteLine($"[AssemblyStatusManager] UpdateHashesAfterReload: path={runtimePath}, oldHash={oldHash}, newHash={CurrentInfo.RuntimeAssembly.Hash}");
+                // Refresh UI after reload
+                try {
+                    Debug.WriteLine("[AssemblyStatusManager] Calling UpdateStatusDisplay after reload");
+                    LoaderApp.Instance?.UpdateStatusDisplay();
+                } catch { }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error updating hashes after reload: {ex.Message}");
+            }
+        }
+
         public void ProcessMsBuildSignal(string tempDllPath)
         {
             try
@@ -135,6 +176,8 @@ namespace Rca.Loader.AssemblyManagement
                 var latest = !string.IsNullOrEmpty(tempDllPath) && Directory.Exists(tempDllPath)
                     ? tempDllPath
                     : GetLatestTempDllFolder();
+
+                Debug.WriteLine($"[AssemblyStatusManager] ProcessMsBuildSignal: tempDllPath={tempDllPath}, resolved={latest}");
 
                 if (!string.IsNullOrEmpty(latest))
                 {
@@ -147,6 +190,7 @@ namespace Rca.Loader.AssemblyManagement
                     if (File.Exists(runtimeDll))
                     {
                         runtimeHash = AttributeMetadataLoader.TryGetFromFile(runtimeDll, "SourceHash");
+                        Debug.WriteLine($"[AssemblyStatusManager] ProcessMsBuildSignal: runtimeDll={runtimeDll}, runtimeHash={runtimeHash}");
                     }
 
                     // Loader hash - try loader DLL in the provided folder; if not present, fall back to deployed loader path
@@ -156,11 +200,13 @@ namespace Rca.Loader.AssemblyManagement
                     {
                         loaderHash = AttributeMetadataLoader.TryGetFromFile(loaderDllInTemp, "SourceHash");
                         deployFolderMeta = AttributeMetadataLoader.TryGetFromFile(loaderDllInTemp, "DeployFolder");
+                        Debug.WriteLine($"[AssemblyStatusManager] ProcessMsBuildSignal: loaderDllInTemp={loaderDllInTemp}, loaderHash={loaderHash}, deployFolderMeta={deployFolderMeta}");
                     }
                     else if (File.Exists(LoaderConstants.LoaderAssemblyPath))
                     {
                         loaderHash = AttributeMetadataLoader.TryGetFromFile(LoaderConstants.LoaderAssemblyPath, "SourceHash");
                         deployFolderMeta = AttributeMetadataLoader.TryGetFromFile(LoaderConstants.LoaderAssemblyPath, "DeployFolder");
+                        Debug.WriteLine($"[AssemblyStatusManager] ProcessMsBuildSignal: loaderAssemblyPath={LoaderConstants.LoaderAssemblyPath}, loaderHash={loaderHash}, deployFolderMeta={deployFolderMeta}");
                     }
 
                     // If DeployFolder metadata available prefer that for display
@@ -179,8 +225,16 @@ namespace Rca.Loader.AssemblyManagement
 
                     var ev = DetermineEventType(loaderChanged, runtimeChanged);
                     // record event in LastMSBuildSignal
+                    var oldSignal = $"{CurrentInfo.LastMSBuildSignal.Time} - {CurrentInfo.LastMSBuildSignal.Event}";
                     CurrentInfo.LastMSBuildSignal.Time = DateTime.Now.ToString("HH:mm:ss");
                     CurrentInfo.LastMSBuildSignal.Event = ev;
+                    Debug.WriteLine($"[AssemblyStatusManager] ProcessMsBuildSignal: oldSignal={oldSignal}, newSignal={CurrentInfo.LastMSBuildSignal.Time} - {ev}");
+
+                    // Refresh UI after processing MSBuild signal
+                    try {
+                        Debug.WriteLine("[AssemblyStatusManager] Calling UpdateStatusDisplay after MSBuild signal");
+                        LoaderApp.Instance?.UpdateStatusDisplay();
+                    } catch { }
                 }
             }
             catch (Exception ex)
@@ -230,21 +284,6 @@ namespace Rca.Loader.AssemblyManagement
             catch { return false; }
         }
 
-        public void UpdateHashesAfterReload(string runtimePath)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(runtimePath) || !File.Exists(runtimePath)) return;
-                CurrentInfo.RuntimeAssembly.Path = runtimePath;
-                var hash = AttributeMetadataLoader.TryGetFromFile(runtimePath, "SourceHash");
-                CurrentInfo.RuntimeAssembly.Hash = string.IsNullOrEmpty(hash) ? AttributeMetadataLoader.MissingMarker : hash;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error updating hashes after reload: {ex.Message}");
-            }
-        }
-
         public void UpdateLoaderComponentsHashesAfterRestart(string loaderDir)
         {
             try
@@ -267,6 +306,9 @@ namespace Rca.Loader.AssemblyManagement
                     CurrentInfo.LoaderComponents.Path = AttributeMetadataLoader.MissingMarker;
                     CurrentInfo.LoaderComponents.Hash = AttributeMetadataLoader.MissingMarker;
                 }
+
+                // Refresh UI after loader restart
+                try { LoaderApp.Instance?.UpdateStatusDisplay(); } catch { }
             }
             catch (Exception ex)
             {
