@@ -7,6 +7,7 @@ using Rca.Loader.Contracts;
 using Rca.Loader.Services;
 using Rca.Loader.Infrastructure;
 using Rca.Loader.AssemblyManagement;
+using Rca.Loader.UI;
 
 namespace Rca.Loader
 {
@@ -21,6 +22,12 @@ namespace Rca.Loader
         private UIApplication? uiapp;
         private AssemblyStatusManager? assemblyStatusManager;
         private UIControlledApplication? uiControlledApp;
+
+        /// <summary>
+        /// The dockable pane id used to register the RCA panel.
+        /// Keep this GUID stable across builds so user layout persists.
+        /// </summary>
+        private static readonly DockablePaneId DockablePaneId = new DockablePaneId(new Guid("3D5A1C2B-4F8E-4D3F-AF1E-1234567890AB"));
 
         /// <summary>
         /// Gets the runtime manager instance.
@@ -41,6 +48,11 @@ namespace Rca.Loader
         /// Gets the Revit UI application.
         /// </summary>
         public UIApplication? UIApplication => uiapp;
+
+        /// <summary>
+        /// Host instance registered in the dockable pane. Can be null until pane is registered.
+        /// </summary>
+        public Rca.Loader.Contracts.IRuntimePanelHost? PanelHost { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="LoaderApp"/> class.
@@ -65,19 +77,46 @@ namespace Rca.Loader
             try
             {
                 Debug.WriteLine("RCA Loader starting up");
-                
+
                 this.uiControlledApp = application;
-                
+
                 // Initialize assembly status manager
                 assemblyStatusManager = new AssemblyStatusManager();
                 assemblyStatusManager.InitializeOnStartup();
-                
+
                 // Build the ribbon UI
                 ribbonService.BuildRibbon(application);
-                
+
+                // Register minimal dockable pane host so Revit shows placeholder UI without loading runtime
+                try
+                {
+                    var host = new DockablePanelHost();
+                    var provider = new DockablePanelProvider(host);
+
+                    application.RegisterDockablePane(DockablePaneId, "RCA Chat Assistant", provider);
+
+                    // Store reference to the host as contract interface for later swapping
+                    PanelHost = host;
+
+                    // Ensure pane is visible
+                    try
+                    {
+                        var pane = application.GetDockablePane(DockablePaneId);
+                        pane.Show();
+                    }
+                    catch (Exception exPane)
+                    {
+                        Debug.WriteLine($"Failed to show dockable pane: {exPane.Message}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Failed to register RCA dockable pane: {ex.Message}");
+                }
+
                 // Hook into application events for auto-initialization
                 application.Idling += OnApplicationIdling;
-                
+
                 // Update status display if available
     #if DEBUG
                 var statusDisplay = ((RibbonService)ribbonService).StatusDisplay;
@@ -87,7 +126,7 @@ namespace Rca.Loader
                     statusDisplay.UpdateStatus(assemblyStatusManager.CurrentInfo);
                 }
     #endif
-                
+
                 Debug.WriteLine("RCA Loader startup completed");
                 return Result.Succeeded;
             }
@@ -109,18 +148,18 @@ namespace Rca.Loader
             try
             {
                 Debug.WriteLine("RCA Loader shutting down");
-                
+
                 // Unsubscribe from events
                 if (uiControlledApp != null)
                 {
                     uiControlledApp.Idling -= OnApplicationIdling;
                 }
-                
+
                 pipeServer?.Stop();
                 RuntimeManager.UnloadRuntime();
                 Debug.WriteLine("RCA Loader shutdown completed");
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
                 Debug.WriteLine($"Error during RCA Loader shutdown: {ex.Message}");
             }
@@ -138,7 +177,7 @@ namespace Rca.Loader
             {
                 Debug.WriteLine("Auto-initializing pipe server via Idling event");
                 InitializeWithUIApplication(uiApplication);
-                
+
                 // Unsubscribe after successful initialization
                 if (uiControlledApp != null)
                 {
@@ -159,13 +198,13 @@ namespace Rca.Loader
                 StartPipeServer();
             }
         }
-        
+
         /// <summary>
         /// Updates the status display with the current assembly information.
         /// </summary>
         public void UpdateStatusDisplay()
         {
-#if DEBUG
+    #if DEBUG
             try
             {
                 var statusDisplay = ((RibbonService)ribbonService).StatusDisplay;
@@ -183,7 +222,7 @@ namespace Rca.Loader
             {
                 Debug.WriteLine($"Error updating status display: {ex.Message}");
             }
-#endif
+    #endif
         }
 
         private void StartPipeServer()
@@ -192,7 +231,7 @@ namespace Rca.Loader
             {
                 throw new InvalidOperationException("UIApplication not initialized");
             }
-            
+
             Debug.WriteLine("Starting pipe server");
             commandHandler = new RuntimeCommandHandler(RuntimeManager, uiapp);
             pipeServer = new PipeServerService(LoaderConstants.PipeName, commandHandler.HandlePipeCommandAsync);

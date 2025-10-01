@@ -3,6 +3,8 @@ using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using Rca.Loader.Restart;
+using Rca.Loader; // ensure LoaderApp access
+using System.Diagnostics;
 
 namespace Rca.Loader.Commands
 {
@@ -84,6 +86,10 @@ namespace Rca.Loader.Commands
                             LoaderApp.Instance.RuntimeManager.CurrentRuntimePath);
 
                         TaskDialog.Show("RCA Loader", "Runtime reloaded successfully!");
+
+                        // Attempt to create runtime UI and set it into the dockable panel host
+                        TryReplaceDockableContent();
+
                         return Result.Succeeded;
                     }
                     else
@@ -112,6 +118,10 @@ namespace Rca.Loader.Commands
                         LoaderApp.Instance.RuntimeManager.CurrentRuntimePath);
 
                     TaskDialog.Show("RCA Loader", "Runtime reloaded successfully!");
+
+                    // Replace dockable content with runtime UI
+                    TryReplaceDockableContent();
+
                     return Result.Succeeded;
                 }
                 else
@@ -126,6 +136,41 @@ namespace Rca.Loader.Commands
                 message = ex.Message;
                 TaskDialog.Show("RCA Loader Error", $"Error reloading runtime: {ex.Message}");
                 return Result.Failed;
+            }
+        }
+
+        private void TryReplaceDockableContent()
+        {
+            try
+            {
+                var host = LoaderApp.Instance?.PanelHost;
+                if (host == null)
+                {
+                    Debug.WriteLine("No PanelHost available to replace content");
+                    return;
+                }
+
+                var runtimeManager = LoaderApp.Instance?.RuntimeManager;
+                if (runtimeManager == null)
+                {
+                    Debug.WriteLine("RuntimeManager is null");
+                    return;
+                }
+
+                string? createError;
+                var content = runtimeManager.CreateRuntimeDockableContent(out createError);
+                if (content != null)
+                {
+                    host.SetContent(content);
+                }
+                else
+                {
+                    Debug.WriteLine($"Failed to create runtime dockable content: {createError}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error replacing dockable content: {ex.Message}");
             }
         }
     }

@@ -48,17 +48,6 @@ namespace Rca.Loader.Services
                 Assembly.GetExecutingAssembly().Location,
                 typeof(InitializerCommand).FullName));
 
-            // Button: Open Standalone Window
-            var openBtn = new PushButtonData(
-                "RCA_OpenStandalone",
-                "Open\nAssistant",
-                Assembly.GetExecutingAssembly().Location,
-                typeof(OpenStandaloneWindowCommand).FullName);
-            var openPush = panel.AddItem(openBtn) as PushButton;
-            AssignEmbeddedIcons(openPush,
-                iconFileName: "OpenAssistant16.png",
-                tooltip: "Open the RCA standalone assistant window.");
-
             // Button: Reload Runtime (latest)
             var reloadBtn = new PushButtonData(
                 "RCA_ReloadRuntime",

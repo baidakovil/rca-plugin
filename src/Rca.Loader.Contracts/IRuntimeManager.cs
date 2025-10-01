@@ -1,4 +1,5 @@
 using System;
+using System.Windows;
 
 namespace Rca.Loader.Contracts
 {
@@ -33,15 +34,16 @@ namespace Rca.Loader.Contracts
         bool ReloadLatest(out string? error);
 
         /// <summary>
-        /// Shows the standalone window from the loaded runtime.
-        /// </summary>
-        /// <param name="error">Error message if operation fails.</param>
-        /// <returns>True if successful, false otherwise.</returns>
-        bool ShowStandaloneWindow(out string? error);
-
-        /// <summary>
         /// Unloads the current runtime, if loaded.
         /// </summary>
         void UnloadRuntime();
+
+        /// <summary>
+        /// Creates the dockable panel content (WPF FrameworkElement) from the loaded runtime.
+        /// Returns null if runtime is not loaded or creation fails.
+        /// </summary>
+        /// <param name="error">Out error message if creation fails.</param>
+        /// <returns>FrameworkElement instance to host in the loader's panel host, or null.</returns>
+        FrameworkElement? CreateRuntimeDockableContent(out string? error);
     }
 }
