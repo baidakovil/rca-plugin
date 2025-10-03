@@ -8,6 +8,7 @@ using Rca.Loader.Services;
 using Rca.Loader.Infrastructure;
 using Rca.Loader.AssemblyManagement;
 using Rca.Loader.UI;
+using Rca.Loader.Logging; // added for logging pipe
 
 namespace Rca.Loader
 {
@@ -22,6 +23,7 @@ namespace Rca.Loader
         private UIApplication? uiapp;
         private AssemblyStatusManager? assemblyStatusManager;
         private UIControlledApplication? uiControlledApp;
+        private LoggingPipeServerService? loggingPipe; // logging server
 
         /// <summary>
         /// The dockable pane id used to register the RCA panel.
@@ -83,6 +85,10 @@ namespace Rca.Loader
                 // Initialize assembly status manager
                 assemblyStatusManager = new AssemblyStatusManager();
                 assemblyStatusManager.InitializeOnStartup();
+
+                // Start logging pipe server early (must exist before runtime logger tries to connect)
+                loggingPipe = new LoggingPipeServerService("RCA_LOG_PIPE");
+                loggingPipe.Start();
 
                 // Build the ribbon UI
                 ribbonService.BuildRibbon(application);
@@ -156,6 +162,7 @@ namespace Rca.Loader
                 }
 
                 pipeServer?.Stop();
+                loggingPipe?.Dispose();
                 RuntimeManager.UnloadRuntime();
                 Debug.WriteLine("RCA Loader shutdown completed");
             }

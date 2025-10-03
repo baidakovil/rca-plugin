@@ -24,6 +24,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Rca.Loader.Contracts\Rca.Loader.Contracts.csproj" />
     <ProjectReference Include="..\Rca.Contracts\Rca.Contracts.csproj" />
+    <ProjectReference Include="..\Rca.Logging.Contracts\Rca.Logging.Contracts.csproj" />
   </ItemGroup>
   
   <ItemGroup>
