@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Rca.Contracts\Rca.Contracts.csproj" />
+    <ProjectReference Include="..\Rca.Logging.Contracts\Rca.Logging.Contracts.csproj" />
   </ItemGroup>
 
 	<ItemGroup>
@@ -33,6 +34,7 @@
     <PackageReference Include="IronPython" Version="3.4.2" />
     <PackageReference Include="IronPython.StdLib" Version="3.4.2" />
     <PackageReference Include="DynamicLanguageRuntime" Version="1.3.5" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>

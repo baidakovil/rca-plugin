@@ -1,16 +1,17 @@
 using Rca.Contracts;
 using Rca.Contracts.Infrastructure;
 using System;
-using System.Diagnostics;
+using Microsoft.Extensions.Logging;
+using Rca.UI.Logging;
 
 namespace Rca.UI.Services
 {
     /// <summary>
     /// Service for resolving dependencies with graceful fallbacks to default implementations.
-    /// Debug log service removed.
     /// </summary>
     public class ServiceResolver
     {
+        private static readonly ILogger Log = UiLog.GetLogger<ServiceResolver>();
         private readonly ServiceContainer container;
 
         /// <summary>
@@ -67,7 +68,7 @@ namespace Rca.UI.Services
         /// <typeparam name="T">The service type.</typeparam>
         private static void LogServiceNotRegistered<T>()
         {
-            Debug.WriteLine($"Service {typeof(T).Name} not registered. Using default implementation.");
+            Log.LogWarning("Service {Service} not registered - using default", typeof(T).Name);
         }
 
         /// <summary>
@@ -77,7 +78,7 @@ namespace Rca.UI.Services
         /// <param name="ex">The exception that occurred.</param>
         private static void LogServiceResolutionError<T>(Exception ex)
         {
-            Debug.WriteLine($"Error resolving service {typeof(T).Name}: {ex.Message}");
+            Log.LogError(ex, "Error resolving service {Service}", typeof(T).Name);
         }
     }
 }

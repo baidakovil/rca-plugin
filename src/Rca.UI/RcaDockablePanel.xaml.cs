@@ -2,50 +2,52 @@ using Autodesk.Revit.UI;
 using Rca.Contracts;
 using Rca.UI.ViewModels;
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Markup;
+using Microsoft.Extensions.Logging;
+using Rca.UI.Logging; // UI dynamic logging adapter
 
 namespace Rca.UI.Views
 {
     /// <summary>
-    /// Interaction logic for RcaDockablePanel.xaml
+    /// Interaction logic for RcaDockablePanel.xaml.
+    /// Uses UiLog adapter to send logs to unified pipeline when Runtime logging provider is available.
     /// </summary>
     public partial class RcaDockablePanel : UserControl
     {
+        private static readonly ILogger Log = UiLog.GetLogger<RcaDockablePanel>();
+
         public RcaDockablePanel(
-            Func<UIApplication?> uiappProvider, 
+            Func<UIApplication?> uiappProvider,
             IPythonExecutionService pythonService)
         {
             try
             {
-                // Load XAML manually rather than relying on the automatic XAML loading
-                // This is necessary when the assembly is merged with ILRepack
+                Log.LogDebug("Constructing panel instance");
                 LoadXaml();
-                
-                // Handle potential null services in standalone mode
+
                 if (pythonService == null)
                 {
-                    Debug.WriteLine("Warning: RcaDockablePanel created with null pythonService");
+                    Log.LogWarning("Panel created with null pythonService - using NullPythonExecutionService");
                     pythonService = new NullPythonExecutionService();
                 }
-                
+
                 DataContext = new RcaDockablePanelViewModel(uiappProvider, pythonService);
+                Log.LogInformation("Panel DataContext assigned (vmType={VmType})", DataContext?.GetType().FullName);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error initializing RcaDockablePanel: {ex.Message}");
+                Log.LogError(ex, "Error initializing RcaDockablePanel");
                 MessageBox.Show(
                     $"Error initializing RcaDockablePanel: {ex.Message}\n\n{ex.StackTrace}",
                     "RcaDockablePanel Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
-                
-                // Create a minimal UI showing the error
+
                 Content = new TextBlock
                 {
                     Text = $"Error loading UI: {ex.Message}",
@@ -56,52 +58,37 @@ namespace Rca.UI.Views
                 };
             }
         }
-        
-        /// <summary>
-        /// Loads the XAML content for this control manually
-        /// </summary>
+
         private void LoadXaml()
         {
             try
             {
-                // First try to load from embedded resource (works after ILRepack)
                 string? xamlContent = GetEmbeddedXaml();
                 if (!string.IsNullOrEmpty(xamlContent))
                 {
-                    // Remove or replace the x:Class directive to avoid the type mismatch error
                     xamlContent = RemoveClassDirective(xamlContent);
                     LoadFromXamlString(xamlContent);
+                    Log.LogDebug("Loaded XAML from embedded resource (length={Len})", xamlContent.Length);
                     return;
                 }
-                
-                // Fallback to standard InitializeComponent (works in design-time and normal runtime)
+                Log.LogDebug("Falling back to InitializeComponent()");
                 InitializeComponent();
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error loading XAML: {ex.Message}");
+                Log.LogError(ex, "Error loading XAML");
                 throw new InvalidOperationException($"Failed to load XAML for RcaDockablePanel: {ex.Message}", ex);
             }
         }
-        
-        /// <summary>
-        /// Removes or modifies the x:Class directive from the XAML string to avoid type matching issues
-        /// </summary>
+
         private string RemoveClassDirective(string xamlContent)
         {
-            // Use regex to remove the x:Class attribute
-            string pattern = @"x:Class=""[^""]+""";
-            string result = Regex.Replace(xamlContent, pattern, "");
-            
-            return result;
+            const string pattern = "x:Class=\"[^\"]+\"";
+            return Regex.Replace(xamlContent, pattern, "");
         }
-        
-        /// <summary>
-        /// Gets the embedded XAML content from the assembly resources
-        /// </summary>
+
         private string? GetEmbeddedXaml()
         {
-            // Try several potential resource names since ILRepack might change them
             var resourceNames = new[]
             {
                 "Rca.UI.RcaDockablePanel.xaml",
@@ -109,106 +96,72 @@ namespace Rca.UI.Views
                 "Rca.Runtime.Rca.UI.RcaDockablePanel.xaml",
                 "Rca.Runtime.Rca.UI.Views.RcaDockablePanel.xaml"
             };
-            
+
             var assembly = GetType().Assembly;
-            Debug.WriteLine($"Looking for XAML in assembly: {assembly.FullName}");
-            
+            Log.LogDebug("Searching XAML resources assembly={Assembly}", assembly.FullName);
+
             foreach (var resourceName in resourceNames)
             {
-                Debug.WriteLine($"Trying to load resource: {resourceName}");
-                
                 try
                 {
-                    using (var stream = assembly.GetManifestResourceStream(resourceName))
-                    {
-                        if (stream != null)
-                        {
-                            using (var reader = new StreamReader(stream))
-                            {
-                                string xaml = reader.ReadToEnd();
-                                Debug.WriteLine($"Successfully loaded XAML resource: {resourceName}");
-                                return xaml;
-                            }
-                        }
-                    }
+                    using var stream = assembly.GetManifestResourceStream(resourceName);
+                    if (stream == null) continue;
+                    using var reader = new StreamReader(stream);
+                    var xaml = reader.ReadToEnd();
+                    Log.LogDebug("Loaded embedded XAML resource {Resource} size={Size}", resourceName, xaml.Length);
+                    return xaml;
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Error loading resource {resourceName}: {ex.Message}");
+                    Log.LogDebug(ex, "Failed loading resource {Resource}", resourceName);
                 }
             }
-            
-            // List all available resources for debugging
-            Debug.WriteLine("Available resources:");
-            foreach (var resource in assembly.GetManifestResourceNames())
-            {
-                Debug.WriteLine($" - {resource}");
-            }
-            
+
+            Log.LogDebug("Embedded XAML not found (listing resources)");
+            foreach (var res in assembly.GetManifestResourceNames())
+                Log.LogTrace("Resource: {Name}", res);
             return null;
         }
-        
-        /// <summary>
-        /// Loads this control from a XAML string
-        /// </summary>
+
         private void LoadFromXamlString(string xamlContent)
         {
-            Debug.WriteLine("Loading XAML from string");
-            
+            Log.LogTrace("Parsing XAML string");
             var context = new ParserContext();
             context.XmlnsDictionary.Add("", "http://schemas.microsoft.com/winfx/2006/xaml/presentation");
             context.XmlnsDictionary.Add("x", "http://schemas.microsoft.com/winfx/2006/xaml");
             context.XmlnsDictionary.Add("mc", "http://schemas.openxmlformats.org/markup-compatibility/2006");
             context.XmlnsDictionary.Add("d", "http://schemas.microsoft.com/expression/blend/2008");
-            
             try
             {
-                // Parse the XAML content
                 object content = XamlReader.Parse(xamlContent, context);
-                
-                if (content is Grid grid)
+                switch (content)
                 {
-                    Debug.WriteLine("Parsed content is a Grid, setting as Content");
-                    this.Content = grid;
-                }
-                else if (content is UserControl userControl)
-                {
-                    Debug.WriteLine("Parsed content is a UserControl, copying Content");
-                    this.Content = userControl.Content;
-                }
-                else
-                {
-                    Debug.WriteLine($"Parsed content is a {content.GetType().Name}, setting as Content");
-                    this.Content = content;
+                    case Grid grid:
+                        Content = grid;
+                        Log.LogDebug("Parsed XAML as Grid");
+                        break;
+                    case UserControl uc:
+                        Content = uc.Content;
+                        Log.LogDebug("Parsed XAML as UserControl contentType={Type}", uc.Content?.GetType().Name);
+                        break;
+                    default:
+                        Content = content;
+                        Log.LogDebug("Parsed XAML as {Type}", content.GetType().Name);
+                        break;
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error parsing XAML: {ex.Message}");
+                Log.LogError(ex, "Error parsing XAML string");
                 throw;
             }
         }
-        
-        /// <summary>
-        /// Null implementation for standalone mode
-        /// </summary>
+
         private class NullPythonExecutionService : IPythonExecutionService
         {
-            public Task<string> ExecuteAsync(string code)
-            {
-                return Task.FromResult(
-                    "Python execution not available in standalone mode.");
-            }
-
-            public string ExecuteSync(string code)
-            {
-                return "Python execution not available in standalone mode.";
-            }
-
-            public void SetRevitContext(object context)
-            {
-                // Do nothing
-            }
+            public Task<string> ExecuteAsync(string code) => Task.FromResult("Python execution not available in standalone mode.");
+            public string ExecuteSync(string code) => "Python execution not available in standalone mode.";
+            public void SetRevitContext(object context) { }
         }
     }
 }

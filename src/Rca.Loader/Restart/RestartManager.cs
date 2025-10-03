@@ -1,13 +1,12 @@
 using System;
 using System.IO;
-using System.Diagnostics;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Linq;
+using System.Diagnostics;
 using Autodesk.Revit.UI;
 using Rca.Loader.AssemblyManagement;
 using Rca.Loader.Infrastructure;
+using Rca.Loader.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Rca.Loader.Restart
 {
@@ -16,6 +15,7 @@ namespace Rca.Loader.Restart
     /// </summary>
     public class RestartManager
     {
+        private static readonly ILogger Log = LoaderLog.GetLogger<RestartManager>();
         private readonly AssemblyStatusManager _statusManager;
         private const string PowerShellPath = "powershell.exe";
         private const string ScriptFilename = "RestartRevitGraceful.ps1";
@@ -41,6 +41,7 @@ namespace Rca.Loader.Restart
         {
             try
             {
+                Log.LogInformation("Showing restart dialog countdownSeconds={Seconds}", countdownSeconds);
                 var taskDialog = new TaskDialog("Revit Restart Required")
                 {
                     MainIcon = TaskDialogIcon.TaskDialogIconWarning,
@@ -56,7 +57,7 @@ namespace Rca.Loader.Restart
                 taskDialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink2, "Restart later", "Continue working and restart manually later");
 
                 var countdown = countdownSeconds;
-                var timer = new Timer(_ => 
+                var timer = new Timer(_ =>
                 {
                     try
                     {
@@ -64,77 +65,58 @@ namespace Rca.Loader.Restart
                         if (remaining >= 0)
                         {
                             taskDialog.MainContent = $"Revit needs to restart to load the updated assembly. The restart will begin in {remaining} seconds.\n\n" +
-                                                "Your work will be saved automatically before closing.\n\n" +
-                                                "Do you want to proceed with the restart?";
+                                                     "Your work will be saved automatically before closing.\n\n" +
+                                                     "Do you want to proceed with the restart?";
                         }
                     }
-                    catch
-                    {
-                        // Ignore timer callback errors
-                    }
+                    catch { }
                 }, null, 0, 1000);
 
                 var result = taskDialog.Show();
-
                 timer.Dispose();
+                Log.LogInformation("Restart dialog user selection={Result}", result);
 
-                switch (result)
+                return result switch
                 {
-                    case TaskDialogResult.CommandLink1:
-                        return ExecuteRestartScript(out _);
-                    case TaskDialogResult.CommandLink2:
-                        TaskDialog.Show("Restart Later", "Please remember to restart Revit manually to load the updated assembly.");
-                        return false;
-                    default:
-                        return false;
-                }
+                    TaskDialogResult.CommandLink1 => ExecuteRestartScript(out _),
+                    TaskDialogResult.CommandLink2 => false,
+                    _ => false
+                };
             }
             catch (Exception ex)
             {
+                Log.LogError(ex, "Error showing restart dialog");
                 TaskDialog.Show("Error", $"An error occurred while showing the restart dialog: {ex.Message}");
                 return false;
             }
         }
 
-        /// <summary>
-        /// Executes the PowerShell restart script.
-        /// </summary>
-        public bool ExecuteRestartScript(out string error)
+    /// <summary>
+    /// Executes the PowerShell restart script.
+    /// <summary>
+    public bool ExecuteRestartScript(out string error)
         {
             try
             {
-                string sourcePath = _statusManager.GetLatestTempDllFolder();
-                if (string.IsNullOrEmpty(sourcePath))
-                {
-                    error = "Source path not found";
-                    return false;
-                }
-
-                string targetPath = LoaderConstants.RevitAddinDir;
-                if (string.IsNullOrEmpty(targetPath) || !Directory.Exists(targetPath))
-                {
-                    error = "Target path not found";
-                    return false;
-                }
+                var sourcePath = _statusManager.GetLatestTempDllFolder();
+                if (string.IsNullOrEmpty(sourcePath)) { error = "Source path not found"; Log.LogWarning("Restart script aborted: source path missing"); return false; }
+                var targetPath = LoaderConstants.RevitAddinDir;
+                if (string.IsNullOrEmpty(targetPath) || !Directory.Exists(targetPath)) { error = "Target path not found"; Log.LogWarning("Restart script aborted: target path invalid path={Path}", targetPath); return false; }
 
                 if (!File.Exists(ScriptPath))
                 {
                     var altPath = Path.Combine(Directory.GetCurrentDirectory(), "build", "Scripts", ScriptFilename);
-                    if (!File.Exists(altPath))
-                    {
-                        error = $"Restart script not found at: {ScriptPath}";
-                        return false;
-                    }
+                    if (!File.Exists(altPath)) { error = $"Restart script not found at: {ScriptPath}"; Log.LogWarning("Restart script not found both primary and alt"); return false; }
                     ExecuteScript(altPath, sourcePath, targetPath, out error);
                     return string.IsNullOrEmpty(error);
                 }
-
                 ExecuteScript(ScriptPath, sourcePath, targetPath, out error);
                 return string.IsNullOrEmpty(error);
             }
             catch (Exception ex)
             {
                 error = $"Error executing restart script: {ex.Message}";
+                Log.LogError(ex, "ExecuteRestartScript failed");
                 return false;
             }
         }
@@ -145,20 +127,13 @@ namespace Rca.Loader.Restart
             try
             {
                 var revitProcess = Process.GetCurrentProcess();
-                string revitExecutable = revitProcess.MainModule?.FileName ?? string.Empty;
-                if (string.IsNullOrEmpty(revitExecutable))
-                {
-                    error = "Could not determine Revit executable path";
-                    return;
-                }
+                var revitExecutable = revitProcess.MainModule?.FileName ?? string.Empty;
+                if (string.IsNullOrEmpty(revitExecutable)) { error = "Could not determine Revit executable path"; Log.LogWarning("Revit executable path missing"); return; }
 
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = PowerShellPath,
-                    Arguments = $"-ExecutionPolicy Bypass -File \"{scriptPath}\" " +
-                               $"-SourcePath \"{sourcePath}\" " +
-                               $"-TargetPath \"{targetPath}\" " +
-                               $"-RevitExecutable \"{revitExecutable}\"",
+                    Arguments = $"-ExecutionPolicy Bypass -File \"{scriptPath}\" -SourcePath \"{sourcePath}\" -TargetPath \"{targetPath}\" -RevitExecutable \"{revitExecutable}\"",
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardOutput = true,
@@ -166,15 +141,13 @@ namespace Rca.Loader.Restart
                 };
 
                 using var process = Process.Start(startInfo);
-                if (process == null)
-                {
-                    error = "Failed to start PowerShell process";
-                    return;
-                }
+                if (process == null) { error = "Failed to start PowerShell process"; Log.LogWarning("Failed to start powershell scriptPath={Script}", scriptPath); }
+                else { Log.LogInformation("Restart script launched scriptPath={Script}", scriptPath); }
             }
             catch (Exception ex)
             {
                 error = $"Error executing script: {ex.Message}";
+                Log.LogError(ex, "ExecuteScript failure scriptPath={Script}", scriptPath);
             }
         }
 
@@ -189,34 +162,24 @@ namespace Rca.Loader.Restart
                 var loaderFileName = LoaderConstants.LoaderFileName;
                 var loaderSourcePath = Path.Combine(sourcePath, loaderFileName);
                 var loaderTargetPath = Path.Combine(targetPath, loaderFileName);
+                if (!File.Exists(loaderTargetPath)) { Log.LogWarning("ValidateAssemblyCopy target missing path={Path}", loaderTargetPath); return false; }
 
-                if (!File.Exists(loaderTargetPath)) return false;
-
-                // Read SourceHash via AttributeMetadataLoader from the files on disk.
                 var srcMetaHash = AttributeMetadataLoader.TryGetFromFile(loaderSourcePath, "SourceHash");
                 var tgtMetaHash = AttributeMetadataLoader.TryGetFromFile(loaderTargetPath, "SourceHash");
-
-                // If metadata missing on either side, validation fails (no fallback)
-                if (string.IsNullOrEmpty(srcMetaHash) || srcMetaHash == AttributeMetadataLoader.MissingMarker
-                    || string.IsNullOrEmpty(tgtMetaHash) || tgtMetaHash == AttributeMetadataLoader.MissingMarker)
+                if (string.IsNullOrEmpty(srcMetaHash) || srcMetaHash == AttributeMetadataLoader.MissingMarker || string.IsNullOrEmpty(tgtMetaHash) || tgtMetaHash == AttributeMetadataLoader.MissingMarker)
                 {
-                    Debug.WriteLine("ValidateAssemblyCopy: missing SourceHash metadata on source or target assembly");
+                    Log.LogWarning("ValidateAssemblyCopy missing metadata source={Src} target={Tgt}", srcMetaHash, tgtMetaHash);
                     return false;
                 }
-
-                var srcShort = GetShortHash(srcMetaHash!);
-                var tgtShort = GetShortHash(tgtMetaHash!);
-                if (string.Equals(srcShort, tgtShort, StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
-
-                Debug.WriteLine($"ValidateAssemblyCopy: metadata hash mismatch (src={srcShort}, tgt={tgtShort})");
-                return false;
+                var srcShort = GetShortHash(srcMetaHash);
+                var tgtShort = GetShortHash(tgtMetaHash);
+                bool match = string.Equals(srcShort, tgtShort, StringComparison.OrdinalIgnoreCase);
+                if (!match) Log.LogWarning("ValidateAssemblyCopy mismatch src={Src} tgt={Tgt}", srcShort, tgtShort);
+                return match;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error validating assembly copy: {ex.Message}");
+                Log.LogError(ex, "Error validating assembly copy source={Source} target={Target}", sourcePath, targetPath);
                 return false;
             }
         }
@@ -225,12 +188,7 @@ namespace Rca.Loader.Restart
         {
             if (string.IsNullOrEmpty(hash)) return string.Empty;
             var cleaned = hash.Trim();
-            if (cleaned.Length > 6) return cleaned.Substring(0, 6);
-            return cleaned;
+            return cleaned.Length > 6 ? cleaned.Substring(0, 6) : cleaned;
         }
-
-        // Note: previous implementations read LoaderVersion - {hash}.txt files and did binary fallbacks.
-        // Current policy: rely only on embedded AssemblyMetadata(SourceHash). If absent or mismatched,
-        // validation fails and developer must investigate.
     }
 }

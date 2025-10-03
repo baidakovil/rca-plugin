@@ -1,179 +1,138 @@
-# RCA Unified Logging System
+# RCA Unified Logging System (Updated)
 
-> Version: Schema 1
-> Components: Runtime (hot-reloadable) + Loader (stable host)
+> Version: Schema 1  
+> Components: Runtime (hot-reloadable), Loader (stable), UI adapter (UiLog)
 
 ## 1. High-Level Overview
-The logging system provides a hot-reload resilient, structured, unidirectional logging channel from the Runtime (loaded in a custom AssemblyLoadContext and frequently reloaded) to the Loader (stable Revit AppDomain host). It replaces the legacy in‑process debug log window and enables: deterministic sequencing, safe transport across unload boundaries, fallback durability, and future extensibility.
+Structured, hot‑reload resilient logging: Runtime and UI streams JSONL over a dedicated named pipe (`RCA_LOG_PIPE`) to the Loader. Loader enriches and persists logs (file + Debug) and also emits its own internal events through the same sinks (prefixed with `LOADER|`).
 
 ```
-(Runtime ALC) ----JSON lines over Named Pipe----> (Loader) ----> Sinks (File, Debug)
-             fallback file / emergency file               enrichment
+(UI) ─┐                 (Runtime ALC) ─┐         Named Pipe          (Loader)
+      ├─ JSON lines  ─────────────────┴──────────────▶  Ingest ▶ Enrich ▶ Sinks (File, Debug)
+(Placeholder / fallback)                               ▲                ▲
+                                                       │                │
+                                     LoaderLog (internal)───────────────┘
 ```
 
-Key goals:
-- No compile-time circular dependencies (Runtime depends only on `Rca.Logging.Contracts`).
-- Survives Runtime reloads (pipe reconnect handshake is lazy; Loader waits passively).
-- Zero queue / minimal buffering (low expected volume; immediate write).
-- Deterministic ordering within each Runtime session (SequenceId) + global ordering in Loader (GlobalSequenceId).
-- Explicit failure handling for serialization and transport.
+New since previous version:
+- `UiLog` lightweight adapter so UI (part of merged runtime set or design-time loader environment) logs without needing runtime ALC types.
+- Unified internal logger `LoaderLog` + `LoaderInternalLogger` ensuring early startup diagnostics recorded before runtime connects.
+- Simplified dispatcher elimination: direct sink writes via static helper (reduced indirection, earlier availability).
+- Added `Rca.Logging.Contracts` to `NonCollectibleAssemblies` to avoid duplicate ALC loads and FileLoad exceptions.
+- Extended docs for enrichment and operation IDs in runtime management paths.
 
-## 2. Contracts (Project: `Rca.Logging.Contracts`)
-Single record `LogEntryDto` (schema versioned) with primitive fields only:
-- Timestamps: `TimestampTicks` (local) captured at emission; `ReceivedTimestamp` added only in Loader.
-- Ordering: `SequenceId` (per Runtime) and `GlobalSequenceId` (Loader).
-- Identity: `RuntimeSessionId`, optional `ALCInstanceId`, `RuntimeProcessId`.
-- Reliability flags (`Flags` bitset): `SerializationFailed`, `FallbackUsed`, reserved `IncompatibleSchema`.
-- Transport meta: `IsFallback`, `IsPing`.
+## 2. Contracts (`Rca.Logging.Contracts`)
+DTO: `LogEntryDto` (record) + constants `LoggingSchema.Version`, flags `LoggingFlags`.
+Fields (Runtime/UI → Loader):
+- SchemaVersion
+- TimestampTicks (local)
+- Level (string)
+- Category
+- Message
+- Exception (flattened)
+- RuntimeSessionId
+- SequenceId (per runtime / UI session)
+- RuntimeProcessId
+- ALCInstanceId? (runtime only, optional)
+- IsFallback
+- Flags (bitfield: 1=SerializationFailed, 2=FallbackUsed)
+- IsPing (keepalive)
 
-Design choices:
-- Record (immutable init-only) for safe structural cloning (`with`).
-- Strings for Level to avoid coupling to `Microsoft.Extensions.Logging` enums across ALC boundary.
-- No interface abstractions (intentional early-phase simplicity / reduced indirection cost).
+Loader-only enrichment:
+- GlobalSequenceId
+- ReceivedTimestamp
+- LoaderProcessId
 
-## 3. Runtime Side Components
-### 3.1 `NamedPipeLoggerProvider` / `NamedPipeLogger`
-Implements `ILoggerProvider` and `ILogger`. Responsibilities:
-- Format + create `LogEntryDto`.
-- Obtain monotonic `SequenceId` via `Interlocked.Increment`.
-- Forward to transport (no direct IO in provider besides serialization).
+## 3. Runtime Side
+`NamedPipeLoggerProvider` + `NamedPipeLogger` produce DTOs. Transport: `PipeLogTransport` handles:
+- Lazy pipe connection
+- Exponential backoff (50→200→500→1000→2000→5000 ms, jitter ±20%)
+- Keepalive PING every 10s (suppressed by Loader)
+- Fallback JSONL (if pipe unavailable) with size-based part rotation (50MB)
+- Emergency plain-text file for serialization or catastrophic failures
+- Flags set for fallback/serialization scenarios
 
-### 3.2 `PipeLogTransport`
-Encapsulates all transport, resiliency, and file fallback logic.
-Responsibilities:
-- Lazy connect to named pipe `RCA_LOG_PIPE`.
-- Exponential backoff with jitter (±20%) sequence: 50ms → 200ms → 500ms → 1s → 2s → 5s (capped).
-- Immediate JSON serialization (System.Text.Json, camelCase, ignore null).
-- On serialization exception: write to emergency file (human-readable line), skip forwarding.
-- On transport exception: force disconnect; next log triggers reconnect attempt.
-- Fallback logging to per-day file with part rotation on size > 50 MB (`runtime-fallback-YYYYMMDD_partN.log`).
-- Emergency file path: `%LOCALAPPDATA%\RCA\Logs\runtime-emergency-YYYYMMDD.log`.
-- Keepalive: silent `PING` entries every 10s (flagged `IsPing=true`)—suppressed by Loader sinks.
+## 4. UI Adapter (`UiLog`)
+Motivation: UI project should not depend directly on runtime transport internals or create tight coupling, but must replace legacy `Debug.WriteLine` calls. Features:
+- Independent session id (`UI-<guid>`)
+- Same JSON schema; Loader coalesces seamlessly
+- Minimal fallback (plain text) when pipe not ready
+- No ping emission (UI logs typically sparse)
 
-Why no buffering? Expected log volume low; simplicity > throughput. Each log = single line write; latency acceptable.
+## 5. Loader Components
+- `LoggingPipeServerService`: single-thread accept/read loop; on disconnect waits for new session (hot reload safe)
+- `LoaderLog` & `LoaderInternalLogger`: internal structured logging, writing directly to sinks
+- Sinks: `FileLogSink` (session file `rca-logs-<timestamp>.log`), `DebugSink`
+- Enrichment: adds `GlobalSequenceId`, `ReceivedTimestamp`, `LoaderProcessId` before sink dispatch
 
-### 3.3 File Strategy
-- Fallback file: JSONL containing enriched entries marked `IsFallback` + flag `FallbackUsed`.
-- Emergency file: plain text (not JSON) so corruption / partial writes cannot cascade; includes truncated message + exception summary.
-- Size caps applied only to fallback (to prevent unbounded disk consumption if pipe unreachable for long time). Part counter increments; old parts not auto-pruned (future policy hook).
+## 6. Recent Improvements
+| Area | Change | Benefit |
+|------|--------|---------|
+| Internal logging | `LoaderLog.GetLogger<T>()` returns lightweight logger | Early startup logs persisted |
+| Assembly loading | `Rca.Logging.Contracts` in non-collectible list | Prevents duplicate contract loads / identity issues |
+| Dispatcher simplification | Removed intermediate dispatcher class | Less complexity, earlier sink availability |
+| Placeholder host | `DockablePanelHost` now logs via unified logger | Easier diagnosing UI swap issues |
 
-## 4. Loader Side Components
-### 4.1 `LoggingPipeServerService`
-Single long-running accept loop:
-1. Create `NamedPipeServerStream` (In, single client, async).
-2. Wait for connection.
-3. Read lines synchronously (StreamReader.ReadLineAsync) until disconnect.
-4. Process each line individually.
-5. On disconnect: loop and await next Runtime (hot reload or crash recovery).
+## 7. Pings & Keepalive
+Runtime emits `IsPing=true` entries every 10s; Loader ignores them. (Future: implement idle disconnect / watchdog.) UI adapter does not emit pings.
 
-### 4.2 Deserialization & Filtering
-- Deserialize JSON → `LogEntryDto`.
-- Schema mismatch (future extension) currently: ignore silently; flagged conceptually by `IncompatibleSchema` if set.
-- `IsPing` entries dropped before enrichment & sink dispatch.
+## 8. Failure Matrix (unchanged core)
+| Failure | Action | Persistence |
+|---------|--------|-------------|
+| Serialization error | Write emergency line + drop | Emergency file only |
+| Pipe connect fail | Backoff + fallback | Fallback file |
+| Pipe mid-write IO | Force disconnect + fallback | Partial line at worst |
+| Fallback > 50MB | Rotate part counter | New part file |
+| Emergency write fail | Swallow | Lost line only |
 
-### 4.3 Enrichment Pipeline (in-process, synchronous)
-Adds:
-- `GlobalSequenceId` (monotonic `Interlocked.Increment`).
-- `ReceivedTimestamp` (local time at ingestion).
-- `LoaderProcessId`.
+## 9. Log Line Formats
+File sink:
+```
+GlobalSeq|OriginalTimestamp|Recv:ReceivedTimestamp|Level|Category|Message|F=Flags|Seq=RuntimeSeq|Proc=RuntimePid|Sess=SessionId
+```
+Loader internal lines:
+```
+LOADER|Timestamp|Level|Category|Message[|EX=ExceptionType:Message]
+```
 
-### 4.4 Sinks (No Interfaces Yet)
-- `FileLogSink`: session file `rca-logs-<start_timestamp>.log` (header stub). Line format (pipe-friendly, human-readable):
-  `GlobalSeq|OriginalTimestamp|Recv:<ReceivedTimestamp>|Level|Category|Message|F=<Flags>|Seq=<RuntimeSeq>|Proc=<RuntimeProcessId>|Sess=<SessionId>`
-- `DebugSink`: `System.Diagnostics.Debug.WriteLine` short format.
-
-Rationale: Start with minimal fan-out; later insert abstraction if additional sinks (e.g., rolling policy, external aggregator) added.
-
-## 5. Keepalive (Ping) Protocol
-- Runtime emits every 10s if connected.
-- Represented as normal DTO with `IsPing=true` and `Category="__ping"`.
-- Loader discards early; not persisted in file or debug output.
-- Benefit: Allows future idle timeout detection (Loader could measure last activity; not yet enforcing disconnect logic in this iteration).
-
-## 6. Failure & Recovery Semantics
-| Failure Type | Detection | Action | User Impact |
-|--------------|-----------|--------|-------------|
-| Serialization (`JsonException`) | Try/catch serialize | Emergency line write; drop entry | Entry not in main log; emergency file contains summary |
-| Pipe connect timeout | Exception on connect | Backoff + jitter schedule; fallback path for subsequent logs | Slight delay; logs land in fallback until reconnect |
-| Pipe broken mid-write | IOException | ForceDisconnect → fallback | Few entries may duplicate none (write is line atomic) |
-| Fallback file size overflow | Pre-write size check | Rotate to next `_partN` file | Disk usage segmented |
-| Emergency file write failure | Exception | Swallow last resort | Data lost for that entry only |
-
-## 7. Threading Model
-- Runtime logger calls originate on arbitrary threads; `PipeLogTransport` uses minimal locking (only fallback writer rotation uses a `lock`). Sequence IDs are atomic.
-- Loader processing: single thread (pipe reader loop) => ordering preserved exactly as received.
-
-## 8. Configuration Surface (Current)
-Hard-coded constants (future config injection possible):
-- Pipe name: `RCA_LOG_PIPE`.
-- Backoff steps & jitter range.
-- Ping interval: 10 seconds.
-- Fallback size cap: 50 MB per part per day.
-- Log directory base: `%LOCALAPPDATA%\RCA\Logs`.
-
-## 9. Usage (Runtime)
+## 10. Usage Examples
+Runtime:
 ```csharp
-// During runtime bootstrap
-var provider = new NamedPipeLoggerProvider(
-    pipeName: "RCA_LOG_PIPE",
-    runtimeSessionId: sessionId,
-    alcInstanceId: currentAlcId);
-ILogger logger = provider.CreateLogger("My.Feature.Component");
-logger.LogInformation("Runtime started");
+var provider = new NamedPipeLoggerProvider("RCA_LOG_PIPE", sessionId);
+var log = provider.CreateLogger("Runtime.Startup");
+log.LogInformation("Runtime initialized hash={Hash}", buildHash);
 ```
-The provider can be registered into `ILoggerFactory` if one is introduced later. Dispose provider on ALC unload to close pipe early.
-
-## 10. Usage (Loader)
+Loader internal:
 ```csharp
-// Early in Loader startup before Runtime loads
-var loggingServer = new LoggingPipeServerService("RCA_LOG_PIPE");
-loggingServer.Start();
-// Sinks immediately begin capturing once Runtime connects
+private static readonly ILogger Log = LoaderLog.GetLogger<HotReloadService>();
+Log.LogInformation("Hot reload request path={Path}", runtimePath);
 ```
-No explicit stop needed on Runtime reloads. Dispose on Loader shutdown.
+UI adapter:
+```csharp
+private static readonly ILogger Log = UiLog.GetLogger<RcaDockablePanel>();
+Log.LogDebug("XAML resource loaded size={Size}", xaml.Length);
+```
 
-## 11. Extensibility Roadmap
-Planned improvements (not yet implemented):
-- Timeout-based connection liveness (auto-close if no pings > 30s).
-- Pluggable sink abstraction (e.g., interface + composite) without breaking existing DTO or transport.
-- Binary framing (length-prefix) to reduce overhead; backward-compatible by pipe name versioning.
-- Structured scope capture (currently omitted for simplicity) with primitive value sanitization.
-- Schema evolution: negotiation & downgrade / quarantine file for incompatible versions.
-- Loader-driven dynamic level switching (control channel feedback).
+## 11. Migration Status
+All `Debug.WriteLine` replaced except inside `DebugSink` (intentional sink implementation). Placeholder host and panel now use structured logging. Contracts stable for schema 1.
 
-## 12. Known Limitations / Weak Spots
-| Area | Limitation | Risk | Possible Mitigation |
-|------|------------|------|---------------------|
-| No batching | One OS syscall per log line | Higher overhead under burst | Introduce small ring buffer & flush timer (opt-in) |
-| JSON size unbounded | Large exception stack traces | Fallback file bloat | Truncate large fields; add size counters |
-| No retention policy | Log directory may grow indefinitely | Disk consumption | Periodic cleanup (age / size threshold) |
-| Fallback rotation only by size/date | Numerous parts on long outage | File proliferation | Add max parts per day or compression |
-| Ping suppression only client-driven | Silent Runtime freeze undetected until logs resume | Delayed detection | Loader watchdog with timer on last receive |
-| Single client assumption | Multiple runtimes would contend | Undefined ordering | Extend to multi-instance by unique pipe per session |
-| No security on pipe | Local non-sandboxed process could write | Log poisoning | Add ACL tightening or handshake token |
-| No flow control | Writer always pushes | Potential backpressure on slow disk (rare) | Buffered stream + flush strategy |
+## 12. Backlog
+- Idle watchdog & session timeout
+- Retention & cleanup policy
+- Dynamic runtime log level switching (control pipe)
+- Structured scopes & contextual properties
+- Binary framing for bulk performance
+- Compression / pruning of fallback parts
 
-## 13. Rationale Summary
-- Chose Named Pipes over TCP: zero config, local-only, low latency, easy reconnect.
-- Avoided DI for transport: minimize indirection for a foundational cross-boundary service.
-- Record DTO + primitive fields: stable binary layout for future protocol evolution.
-- Immediate flush: favors diagnostic fidelity over throughput (primary use case: development + user issue capture).
-- Separation of fallback vs emergency: isolates logic vs data problems.
+## 13. Operational Notes
+- Safe to remove fallback / emergency files while idle
+- If logs show repeated fallback without recovery, inspect pipe availability or Loader startup sequence
+- Multiple concurrent runtimes not yet supported (single-client assumption)
 
-## 14. Operational Notes
-- If the Loader starts after the Runtime (rare), first connection attempts will fail -> Runtime writes fallback until Loader launches; automatic recovery when pipe becomes available.
-- Safe to delete old `runtime-fallback-*` or session log files while system idle (no locking except active file handles).
-- Emergency file presence should be investigated; frequent entries imply serialization bugs or DTO drift.
-
-## 15. Testing Strategy (Suggested)
-(Not fully implemented yet)
-- Unit test transport reconnection by forcing `IOException` on a mocked stream.
-- Contract test: emit sample DTO → ensure Loader enrichment fields present.
-- Stress test: rapid log emission + periodic forced disconnect → ensure no crash, fallback rotation occurs.
-- Schema mismatch test (future): send modified `SchemaVersion` and verify ignore behavior.
-
-## 16. Migration Notes
-Legacy `DebugLogService` and UI artifacts removed. Any former direct calls should now use `ILogger` obtained via the provider (or future centralized factory). Python execution service no longer logs via legacy API—caller responsible for logging success/error externally.
+## 14. Quick Verification Checklist
+- Loader starts: look for `Logging pipe server starting` and `Waiting for runtime logging connection` in file
+- Runtime reload: new connection followed by runtime initialization logs; global sequence continues monotonic
+- UI panel load: XAML resource log or InitializeComponent fallback log
 
 ---
-**Status:** Phase 1 complete (core transport, fallback, basic resilience). Phase 2 items (retention, dynamic levels, scopes, binary protocol) deferred.
+Schema 1 complete; future changes must increment schema or supply compatibility handling in Loader.

@@ -12,7 +12,6 @@ namespace Rca.Loader.Services
 {
     /// <summary>
     /// Handles named pipe server communication for RCA Loader.
-    /// Uses unified logging (LoaderLog) instead of Debug.WriteLine.
     /// Each connection processes exactly one command then disconnects to simplify lifecycle.
     /// </summary>
     public class PipeServerService : IPipeServerService, IDisposable

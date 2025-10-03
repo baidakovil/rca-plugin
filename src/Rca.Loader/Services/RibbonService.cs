@@ -5,6 +5,8 @@ using System.Windows.Media;
 using Autodesk.Revit.UI;
 using Rca.Loader.Commands;
 using Rca.Loader.Contracts;
+using Rca.Loader.Logging;
+using Microsoft.Extensions.Logging;
 #if DEBUG
 using Rca.Loader.UI;
 #endif
@@ -18,7 +20,8 @@ namespace Rca.Loader.Services
     {
         private const string TabName = "RCA";
         private const string PanelName = "Loader";
-        
+        private static readonly ILogger Log = LoaderLog.GetLogger<RibbonService>();
+
 #if DEBUG
         /// <summary>
         /// Gets the status display for the ribbon.
@@ -33,12 +36,11 @@ namespace Rca.Loader.Services
         public void BuildRibbon(object application)
         {
             if (application is not UIControlledApplication uiApp)
-            {
                 throw new ArgumentException("Application must be a UIControlledApplication", nameof(application));
-            }
 
             try { uiApp.CreateRibbonTab(TabName); } catch { }
             var panel = uiApp.CreateRibbonPanel(TabName, PanelName);
+            Log.LogInformation("Ribbon panel created tab={Tab} panel={Panel}", TabName, PanelName);
 
             // Initialize command - must be called first to set up the UIApplication
             // This will be invisible to users but can be triggered by the test adapter
@@ -58,7 +60,8 @@ namespace Rca.Loader.Services
             AssignEmbeddedIcons(reloadPush,
                 iconFileName: "ReloadRuntime16.png",
                 tooltip: "Reload the latest deployed runtime.");
-                
+            Log.LogDebug("Reload runtime button added");
+
 #if DEBUG
             // Create Debug panel and three stacked status TextBoxes (only in DEBUG builds)
             try
@@ -67,15 +70,15 @@ namespace Rca.Loader.Services
 
                 // Do not assign images to TextBoxData to avoid icons displaying next to textboxes
                 TextBoxData tb1 = new TextBoxData("RCA_StatusLine1") { Name = "Assembly Status", ToolTip = "Shows status of loaded assemblies" };
-                TextBoxData tb2 = new TextBoxData("RCA_StatusLine2") { Name = "Runtime Status", ToolTip = string.Empty };
-                TextBoxData tb3 = new TextBoxData("RCA_StatusLine3") { Name = "Signal Status", ToolTip = string.Empty };
+                TextBoxData tb2 = new TextBoxData("RCA_StatusLine2") { Name = "Runtime Status" };
+                TextBoxData tb3 = new TextBoxData("RCA_StatusLine3") { Name = "Signal Status" };
 
                 // Add them as stacked items
                 var items = debugPanel.AddStackedItems(tb1, tb2, tb3);
 
                 if (items == null)
                 {
-                    System.Diagnostics.Debug.WriteLine("Debug: AddStackedItems returned null for debug textboxes");
+                    Log.LogWarning("AddStackedItems returned null for debug textboxes");
                 }
 
                 // The returned list maps to the created controls in the same order
@@ -85,7 +88,7 @@ namespace Rca.Loader.Services
 
                 if (line1 == null || line2 == null || line3 == null)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Debug: One or more ribbon textboxes are null: line1={line1!=null}, line2={line2!=null}, line3={line3!=null}");
+                    Log.LogWarning("One or more ribbon textboxes are null line1={L1} line2={L2} line3={L3}", line1 != null, line2 != null, line3 != null);
                 }
 
                 if (line1 != null && line2 != null && line3 != null)
@@ -95,12 +98,12 @@ namespace Rca.Loader.Services
 
                     // Set tooltip on first textbox
                     line1.ToolTip = "Shows status of loaded assemblies";
+                    Log.LogInformation("Debug status display initialized");
                 }
             }
             catch (Exception ex)
             {
-                // Log but don't crash if debug UI creation fails
-                System.Diagnostics.Debug.WriteLine($"Failed to create debug UI: {ex.Message}\n{ex.StackTrace}");
+                Log.LogWarning(ex, "Failed to create debug UI (DEBUG build)");
             }
 #endif
         }

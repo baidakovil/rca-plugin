@@ -1,18 +1,22 @@
 #if DEBUG
 using System;
-using System.Diagnostics;
 using System.Windows.Threading;
 using Autodesk.Revit.UI;
 using Rca.Loader.AssemblyManagement;
+using Rca.Loader.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Rca.Loader.UI
 {
     /// <summary>
     /// Manages the display of assembly status information in the Revit ribbon.
     /// Uses three stacked TextBox controls (one per logical line) to emulate a multi-line read-only display.
+    /// DEBUG-only helper: not included in release builds to minimize surface area.
     /// </summary>
     public class RibbonStatusDisplay
     {
+        private static readonly ILogger Log = LoaderLog.GetLogger<RibbonStatusDisplay>();
+
         private readonly Dispatcher _uiDispatcher;
         private TextBox? _line1;
         private TextBox? _line2;
@@ -20,19 +24,17 @@ namespace Rca.Loader.UI
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RibbonStatusDisplay"/> class.
+        /// Captures current dispatcher for later UI marshalling.
         /// </summary>
         public RibbonStatusDisplay()
         {
-            // Store the current dispatcher for UI thread synchronization
             _uiDispatcher = Dispatcher.CurrentDispatcher;
+            Log.LogTrace("RibbonStatusDisplay constructed (dispatcherHash={Hash})", _uiDispatcher.GetHashCode());
         }
 
         /// <summary>
         /// Initializes the UI component with three stacked TextBox controls.
         /// </summary>
-        /// <param name="line1">Top line TextBox.</param>
-        /// <param name="line2">Middle line TextBox.</param>
-        /// <param name="line3">Bottom line TextBox.</param>
         public void Initialize(TextBox line1, TextBox line2, TextBox line3)
         {
             _line1 = line1 ?? throw new ArgumentNullException(nameof(line1));
@@ -41,17 +43,16 @@ namespace Rca.Loader.UI
 
             try
             {
-                // Configure appearance and behavior for each line
                 ConfigureTextBox(_line1);
                 ConfigureTextBox(_line2);
                 ConfigureTextBox(_line3);
+                Log.LogDebug("RibbonStatusDisplay text boxes configured width={Width}", _line1.Width);
             }
-            catch
+            catch (Exception ex)
             {
-                // Swallow any configuration errors to avoid breaking the add-in
+                Log.LogDebug(ex, "Non-fatal error configuring ribbon status text boxes");
             }
 
-            // Set initial empty status
             UpdateStatus(new LoadedAssembliesInfo());
         }
 
@@ -59,36 +60,18 @@ namespace Rca.Loader.UI
         {
             try
             {
-                // Try to set width to occupy more horizontal space in the ribbon
-                tb.Width = 400;
-
-                // Clear prompt text so nothing extra shows
+                tb.Width = 400; // widen for more info
                 try { tb.PromptText = string.Empty; } catch { }
-
-                // Make read-only if supported
                 var isReadOnlyProp = tb.GetType().GetProperty("IsReadOnly");
-                if (isReadOnlyProp != null && isReadOnlyProp.CanWrite)
-                {
-                    isReadOnlyProp.SetValue(tb, true);
-                }
-
-                // Hide the image area on the TextBox if the API exposes the property
+                if (isReadOnlyProp?.CanWrite == true) isReadOnlyProp.SetValue(tb, true);
                 var showImageProp = tb.GetType().GetProperty("ShowImageAsButton");
-                if (showImageProp != null && showImageProp.CanWrite)
-                {
-                    try { showImageProp.SetValue(tb, false); } catch { }
-                }
-
-                // Clear Image property if present
+                if (showImageProp?.CanWrite == true) { try { showImageProp.SetValue(tb, false); } catch { } }
                 var imageProp = tb.GetType().GetProperty("Image");
-                if (imageProp != null && imageProp.CanWrite)
-                {
-                    try { imageProp.SetValue(tb, null); } catch { }
-                }
+                if (imageProp?.CanWrite == true) { try { imageProp.SetValue(tb, null); } catch { } }
             }
-            catch
+            catch (Exception ex)
             {
-                // ignore
+                Log.LogTrace(ex, "ConfigureTextBox ignored error");
             }
         }
 
@@ -96,13 +79,10 @@ namespace Rca.Loader.UI
         /// Updates the status display with current assembly information.
         /// Each logical piece is shown in its own TextBox line.
         /// </summary>
-        /// <param name="info">The current assembly status information.</param>
         public void UpdateStatus(LoadedAssembliesInfo info)
         {
-            if (info == null)
-                throw new ArgumentNullException(nameof(info));
+            if (info == null) throw new ArgumentNullException(nameof(info));
 
-            // Ensure we're on the UI thread to update UI elements
             if (!_uiDispatcher.CheckAccess())
             {
                 _uiDispatcher.Invoke(() => UpdateStatus(info));
@@ -115,15 +95,15 @@ namespace Rca.Loader.UI
                 var runtimeStatus = FormatRuntimeStatus(info.RuntimeAssembly);
                 var signalStatus = FormatSignalStatus(info.LastMSBuildSignal);
 
-                Debug.WriteLine($"[RibbonStatusDisplay] UpdateStatus: line1={loaderStatus}, line2={runtimeStatus}, line3={signalStatus}");
+                Log.LogTrace("UpdateStatus loader='{Loader}' runtime='{Runtime}' signal='{Signal}'", loaderStatus, runtimeStatus, signalStatus);
 
-                if (_line1 != null) _line1.Value = loaderStatus;
-                if (_line2 != null) _line2.Value = runtimeStatus;
-                if (_line3 != null) _line3.Value = signalStatus;
+                if (_line1 != null) _line1.Value = loaderStatus; else Log.LogDebug("_line1 null when updating status");
+                if (_line2 != null) _line2.Value = runtimeStatus; else Log.LogDebug("_line2 null when updating status");
+                if (_line3 != null) _line3.Value = signalStatus; else Log.LogDebug("_line3 null when updating status");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error updating status display: {ex.Message}");
+                Log.LogError(ex, "Error updating ribbon status display");
             }
         }
 
@@ -131,48 +111,32 @@ namespace Rca.Loader.UI
         {
             if (loaderComponents == null) return "Rca.Loader.dll: unknown";
             if (string.IsNullOrEmpty(loaderComponents.Path)) return "Rca.Loader.dll: Not loaded";
-
             string folder = System.IO.Path.GetFileName(loaderComponents.Path);
             bool isOutdated = false;
             try
             {
-                var assemblyManager = LoaderApp.Instance?.AssemblyStatusManager;
-                if (assemblyManager != null) isOutdated = assemblyManager.IsLoaderOutdated();
+                isOutdated = LoaderApp.Instance?.AssemblyStatusManager?.IsLoaderOutdated() ?? false;
             }
             catch { }
-
-            if (isOutdated)
-            {
-                return $"Rca.Loader.dll: Loaded - OUTDATED - {folder} (hash: {TruncateHash(loaderComponents.Hash)})";
-            }
-            else
-            {
-                return $"Rca.Loader.dll: Loaded - Current - {folder} (hash: {TruncateHash(loaderComponents.Hash)})";
-            }
+            return isOutdated
+                ? $"Rca.Loader.dll: Loaded - OUTDATED - {folder} (hash: {TruncateHash(loaderComponents.Hash)})"
+                : $"Rca.Loader.dll: Loaded - Current - {folder} (hash: {TruncateHash(loaderComponents.Hash)})";
         }
 
         private string FormatRuntimeStatus(AssemblyInfo runtimeAssembly)
         {
             if (runtimeAssembly == null) return "Rca.Runtime.dll: unknown";
             if (string.IsNullOrEmpty(runtimeAssembly.Path)) return "Rca.Runtime.dll: Not loaded";
-
             string folder = System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(runtimeAssembly.Path) ?? string.Empty);
             bool isOutdated = false;
             try
             {
-                var assemblyManager = LoaderApp.Instance?.AssemblyStatusManager;
-                if (assemblyManager != null) isOutdated = assemblyManager.IsRuntimeOutdated();
+                isOutdated = LoaderApp.Instance?.AssemblyStatusManager?.IsRuntimeOutdated() ?? false;
             }
             catch { }
-
-            if (isOutdated)
-            {
-                return $"Rca.Runtime.dll: Loaded - OUTDATED - {folder} (hash: {TruncateHash(runtimeAssembly.Hash)})";
-            }
-            else
-            {
-                return $"Rca.Runtime.dll: Loaded - Current - {folder} (hash: {TruncateHash(runtimeAssembly.Hash)})";
-            }
+            return isOutdated
+                ? $"Rca.Runtime.dll: Loaded - OUTDATED - {folder} (hash: {TruncateHash(runtimeAssembly.Hash)})"
+                : $"Rca.Runtime.dll: Loaded - Current - {folder} (hash: {TruncateHash(runtimeAssembly.Hash)})";
         }
 
         private string FormatSignalStatus(SignalInfo signalInfo)

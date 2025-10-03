@@ -4,7 +4,8 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using Rca.Loader.Restart;
 using Rca.Loader; // ensure LoaderApp access
-using System.Diagnostics;
+using Rca.Loader.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Rca.Loader.Commands
 {
@@ -14,6 +15,8 @@ namespace Rca.Loader.Commands
     [Transaction(TransactionMode.Manual)]
     public class ReloadRuntimeCommand : IExternalCommand
     {
+        private static readonly ILogger Log = LoaderLog.GetLogger<ReloadRuntimeCommand>();
+
         /// <summary>
         /// Executes the command.
         /// </summary>
@@ -29,6 +32,7 @@ namespace Rca.Loader.Commands
                 {
                     message = "Runtime manager not available";
                     TaskDialog.Show("RCA Loader Error", "Runtime manager is not available. Please restart Revit.");
+                    Log.LogWarning("Execute aborted: RuntimeManager missing");
                     return Result.Failed;
                 }
 
@@ -40,8 +44,7 @@ namespace Rca.Loader.Commands
                     {
                         MainIcon = TaskDialogIcon.TaskDialogIconWarning,
                         MainInstruction = "Loader components are outdated",
-                        MainContent = "A new version of the Loader components is available. " +
-                                     "Revit must be restarted to use the new version.\n\n" +
+                        MainContent = "A new version of the Loader components is available. Revit must be restarted to use the new version.\n\n" +
                                      "Would you like to restart Revit now or just reload the Runtime?",
                         CommonButtons = TaskDialogCommonButtons.None
                     };
@@ -51,18 +54,15 @@ namespace Rca.Loader.Commands
                     td.AddCommandLink(TaskDialogCommandLinkId.CommandLink3, "Cancel", "Don't reload or restart");
 
                     var result = td.Show();
-
+                    Log.LogInformation("Loader outdated dialog result={Result}", result);
                     switch (result)
                     {
                         case TaskDialogResult.CommandLink1:
                             // Restart Revit
                             var restartManager = new RestartManager(LoaderApp.Instance.AssemblyStatusManager);
-                            if (restartManager.ShowRestartDialog())
-                            {
-                                // Restart initiated, return success
-                                return Result.Succeeded;
-                            }
-                            return Result.Cancelled;
+                            bool restart = restartManager.ShowRestartDialog();
+                            Log.LogInformation("Restart dialog invoked restart={Restart}", restart);
+                            return restart ? Result.Succeeded : Result.Cancelled;
 
                         case TaskDialogResult.CommandLink2:
                             // Just reload runtime, continue with normal flow
@@ -78,6 +78,7 @@ namespace Rca.Loader.Commands
                 var runtimeLoaded = LoaderApp.Instance.RuntimeManager.IsRuntimeLoaded;
                 if (!runtimeLoaded)
                 {
+                    Log.LogInformation("Runtime not loaded - performing initial ReloadLatest");
                     var success = LoaderApp.Instance.RuntimeManager.ReloadLatest(out var error);
                     if (success)
                     {
@@ -92,12 +93,10 @@ namespace Rca.Loader.Commands
 
                         return Result.Succeeded;
                     }
-                    else
-                    {
-                        message = error ?? "Unknown error";
-                        TaskDialog.Show("RCA Loader Error", $"Failed to reload runtime: {error}");
-                        return Result.Failed;
-                    }
+                    message = error ?? "Unknown error";
+                    Log.LogWarning("Initial runtime load failed error={Error}", error);
+                    TaskDialog.Show("RCA Loader Error", $"Failed to reload runtime: {error}");
+                    return Result.Failed;
                 }
 
                 // Runtime is loaded - check whether it is outdated
@@ -105,6 +104,7 @@ namespace Rca.Loader.Commands
                 if (!runtimeOutdated)
                 {
                     TaskDialog.Show("RCA Loader", "All assemblies are up to date. No reload needed.");
+                    Log.LogInformation("Reload not needed - assemblies up to date");
                     return Result.Succeeded;
                 }
 
@@ -118,22 +118,22 @@ namespace Rca.Loader.Commands
                         LoaderApp.Instance.RuntimeManager.CurrentRuntimePath);
 
                     TaskDialog.Show("RCA Loader", "Runtime reloaded successfully!");
+                    Log.LogInformation("Runtime reloaded successfully (outdated path updated)");
 
                     // Replace dockable content with runtime UI
                     TryReplaceDockableContent();
 
                     return Result.Succeeded;
                 }
-                else
-                {
-                    message = reloadError ?? "Unknown error";
-                    TaskDialog.Show("RCA Loader Error", $"Failed to reload runtime: {reloadError}");
-                    return Result.Failed;
-                }
+                message = reloadError ?? "Unknown error";
+                Log.LogWarning("Runtime reload failed error={Error}", reloadError);
+                TaskDialog.Show("RCA Loader Error", $"Failed to reload runtime: {reloadError}");
+                return Result.Failed;
             }
             catch (Exception ex)
             {
                 message = ex.Message;
+                Log.LogError(ex, "Unhandled exception in ReloadRuntimeCommand.Execute");
                 TaskDialog.Show("RCA Loader Error", $"Error reloading runtime: {ex.Message}");
                 return Result.Failed;
             }
@@ -146,31 +146,29 @@ namespace Rca.Loader.Commands
                 var host = LoaderApp.Instance?.PanelHost;
                 if (host == null)
                 {
-                    Debug.WriteLine("No PanelHost available to replace content");
+                    Log.LogWarning("PanelHost unavailable for content replacement");
                     return;
                 }
-
                 var runtimeManager = LoaderApp.Instance?.RuntimeManager;
                 if (runtimeManager == null)
                 {
-                    Debug.WriteLine("RuntimeManager is null");
+                    Log.LogWarning("RuntimeManager null during content replacement");
                     return;
                 }
-
-                string? createError;
-                var content = runtimeManager.CreateRuntimeDockableContent(out createError);
+                var content = runtimeManager.CreateRuntimeDockableContent(out var createError);
                 if (content != null)
                 {
                     host.SetContent(content);
+                    Log.LogInformation("Dockable content replaced successfully contentType={Type}", content.GetType().FullName);
                 }
                 else
                 {
-                    Debug.WriteLine($"Failed to create runtime dockable content: {createError}");
+                    Log.LogWarning("Failed to create runtime dockable content error={Error}", createError);
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error replacing dockable content: {ex.Message}");
+                Log.LogError(ex, "Error replacing dockable content");
             }
         }
     }

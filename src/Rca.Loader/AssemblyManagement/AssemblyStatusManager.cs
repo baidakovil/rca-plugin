@@ -12,8 +12,6 @@ namespace Rca.Loader.AssemblyManagement
 {
     /// <summary>
     /// Tracks hash / path metadata for Loader + Runtime assemblies and exposes change state.
-    /// Rewritten to use the unified logging system instead of Debug.WriteLine.
-    /// WHY: Centralizing logging enables cross-domain correlation and persistence in unified log files.
     /// </summary>
     public class AssemblyStatusManager
     {

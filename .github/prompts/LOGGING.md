@@ -1,200 +1,146 @@
 ## 1. КОНТЕКСТ
-В моем addin-проекте на .net 8 есть две ключевые части:  Loader и Runtime. Такое разделение позволяет производить разработку, не перезагружая Revit целиком, что долго и неудобно. Система работает.
+(Обновлено после миграции unified logging v1)
 
-Loader состоит из двух проектов: Rca.Loader и Rca.Loader.Contracts. 
-
-Runtime состоит из нескольких проектов, включая Rca.Contracts, Rca.Core и Rca.UI, которые собираются в один dll через ILRepack и используя ALC  загружаются и перезагружаются во время Runtime с помощью Loader.
-
-Важно, что Rca.Contracts не зависит от Rca.Loader, а Rca.Loader не зависит от Rca.Contracts. Таким образом, я могу во время разработка вносить изменения в конракты и на лету перезагружать их в Runtime.
-
-Теперь мне нужно сделать систему логгирования для нужд отладки, и для пользователя тоже. Система логгирования обязательно должна работать еще на этапе до загрузки Rca.Runtime, т.к. многие ключевые события происходят при загрузке плагина и при загрузке/перезагрузке Runtime. То есть, мне нужна сложная сущность, которая используется одновременно Loader'ом и Runtime'ом.
+В addin-проекте две части: Loader (стабильный домен) и Runtime (горяче‑перезагружаемый через ALC). Требовалась система логирования, работающая:
+- до загрузки Runtime (инициализация Loader)
+- во время hot-reload Runtime
+- без дублирования контрактов и потери типовой идентичности
 
 ## 2. ОБЩЕЕ ОПИСАНИЕ СИСТЕМЫ
-Требуется реализовать унифицированную, безопасную для горячей перегрузки (ALC-safe) систему логгирования с разделением обязанностей:
-- Runtime отвечает за формирование структурированных логов и их потоковую отправку в Loader по выделенному устойчивому каналу.
-- Loader выступает как единый приемник, обогащает лог-записи (enrichment), распределяет их в подключаемые приемники (sinks) и управляет политиками хранения.
-- Выделенный постоянный Named Pipe канал для логов отделен от канала управляющих команд (разные pipe name). Высокая живучесть: падение / перезагрузка Runtime не нарушает работу основной системы — Runtime переподключается.
-- Основные цели: детерминированность, отказоустойчивость, простота расширения, контролируемое потребление памяти, отсутствие циклических зависимостей.
+Единый канал: Runtime формирует структурированные записи → отправляет строками JSON (JSONL) в Loader по выделенному `NamedPipe` (`RCA_LOG_PIPE`). Loader:
+1. Принимает
+2. Десериализует
+3. Обогащает (enrichment)
+4. Записывает в sinks (файл + Debug)
+5. Использует внутренний логгер (LoaderInternalLogger) для собственных сообщений с теми же sinks
 
-## 3. ПРИМЕНЯЕМЫЕ ТЕХНОЛОГИИ
+В Runtime есть fallback и emergency файлы при сбоях транспорта / сериализации.
+
+## 3. ТЕХНОЛОГИИ
 - .NET 8 / C# 12
-- `Microsoft.Extensions.Logging.Abstractions` (Runtime)
-- Named Pipes (`System.IO.Pipes`) — отдельный лог-пайп `RCA_LOG_PIPE`
-- `System.Text.Json` с настроенными опциями
-- Потокобезопасные счетчики через `Interlocked`
-- При необходимости (этап 2) `ArrayPool<byte>` и примитивный пул объектов
-- `StreamWriter` для файлового лога
-- Минимум внешних библиотек
-- Unit-тесты — в последующих этапах, НЕ в первой итерации
+- `Microsoft.Extensions.Logging.Abstractions` только на стороне Runtime / UI (минимум зависимостей)
+- Named Pipes (`System.IO.Pipes`)
+- `System.Text.Json` (camelCase, ignore null)
+- Потокобезопасные счетчики (`Interlocked`)
+- Локальные файлы: `%LOCALAPPDATA%/RCA/Logs`
 
-## 4. АРХИТЕКТУРА РЕШЕНИЯ
+## 4. АРХИТЕКТУРА (ФАКТИЧЕСКОЕ СОСТОЯНИЕ ПОСЛЕ МИГРАЦИИ)
 
-### 4.1 Логические Компоненты
-1. `Rca.Logging.Contracts`
-   - DTO: `LogEntryDto`
-     - Поля: SchemaVersion, TimestampTicks (Local time), Level, Category, Message, Exception, Scope (Dictionary<string, object?>?), RuntimeSessionId, SequenceId, RuntimeProcessId, ALCInstanceId?, IsFallback, Flags (битовые признаки: 1=SerializationFailed, 2=FallbackUsed)
-   - (Оставляем только необходимые для первой версии типы: DTO + возможно enum уровня; лишних интерфейсов не вводить.)
+### 4.1 Контракты (`Rca.Logging.Contracts`)
+Record `LogEntryDto` + флаги (`LoggingFlags`), `LoggingSchema.Version`.
+Основные поля (Runtime → Loader):
+- SchemaVersion
+- TimestampTicks (Local)
+- Level (string)
+- Category
+- Message
+- Exception (flattened string)
+- RuntimeSessionId
+- SequenceId (per runtime)
+- RuntimeProcessId
+- ALCInstanceId? (optional)
+- IsFallback
+- Flags (битовые: 1=SerializationFailed, 2=FallbackUsed)
+- IsPing (служебный keepalive)
 
-2. Runtime:
-   - `NamedPipeLoggerProvider` (реализует `ILoggerProvider`)
-   - `NamedPipeLogger` (реализует `ILogger`)
-   - Генерация SequenceId: статический `long` с `Interlocked.Increment`
-   - Отправка: немедленная сериализация и запись строки JSON в pipe (одна запись — одна строка)
-   - Нет очереди и нет flush worker
-   - При ошибке транспорта → переключение в fallback-режим (запись в локальный файл), периодические попытки переподключения при следующих лог-вызовах
-   - Fallback файл: `%LOCALAPPDATA%\RCA\Logs\runtime-fallback-YYYYMMDD.log`
-3. Loader:
-   - `LoggingPipeServerService` — persistent соединение (один клиент в типичном сценарии). При разрыве ждёт повторного подключения.
-   - Построчное чтение (JSONL). Каждая строка → попытка десериализации → обогащение → запись.
-   - Enrichment:
-     - LoaderProcessId
-     - GlobalSequenceId (`Interlocked.Increment` внутри Loader)
-     - ReceivedTimestamp
-   - Выводы (встроенные, без интерфейсов sink'ов):
-     - FileLogWriter (один файл на запуск Revit; каталог `%LOCALAPPDATA%\RCA\Logs\`, формат имени `rca-logs-<timestamp>.log`)
-     - DebugWriter (`System.Diagnostics.Debug.WriteLine`)
-   - Возможность позже добавить новый вывод будет оформлена через рефакторинг (не заранее).
-4. Sinks:
-   - `FileSink` (один файл на каждый запуск Revit. файлы записываются в По умолчанию FileSink должен писать в папку `%LOCALAPPDATA%\RCA\Logs\`)
-   - `DebugSink` (`System.Diagnostics.Debug.WriteLine`)
-   - Расширяемость без правок в `LogDispatcher`
-5. Мониторинг / Keepalive:
-   - Runtime отправляет каждые N секунд служебную "PING" запись (SchemaVersion та же, Level="Trace", Category="__ping") либо специальный флаг.
-   - Loader отслеживает таймаут и закрывает соединение при отсутствии активности > 30s.
-   - Runtime при ошибке записи → помечает состояние как “Disconnected” → вступает политика backoff
-6. Политика Повторных Попыток / Backoff:
-   - Экспоненциальный рост: 50ms → 200ms → 500ms → 1s → 2s → 5s (cap)
-   - Jitter: +/- 20% случайное отклонение
-   - Reset backoff при первой успешной передаче батча
-   - Максимум попыток подряд безуспешных: например 300 (≈ несколько минут) → переход в “LongSleepMode” (например 30s пауза) пока пользователь не возобновит работу
-7. Flags:
-   - `SerializationFailed` (1)
-   - `FallbackUsed` (2) — проставляется в Runtime при записи в fallback
-8. Удаление устаревшей системы:
-   - Старый `DebugLogService` полностью заменяется новой системой
-   - Все вызовы прямого вывода переводятся на `ILogger`
-   - Этап миграции через адаптер — исключен (не использовать)
-9. Сериализация:
-  - Каждый `LogEntryDto` → одна строка JSON UTF-8
-   - Ошибка сериализации → emergency файл `%LOCALAPPDATA%\RCA\Logs\runtime-emergency-YYYYMMDD.log` + флаг SerializationFailed (запись НЕ отправляется)
+Enrichment (Loader‑only, в отдельной структуре):
+- GlobalSequenceId
+- ReceivedTimestamp
+- LoaderProcessId
 
-10. Производительность:
-    - Текущий объем логов невелик → отказ от очередей и батчей.
-    - На этапе 2 можно добавить интернирование категорий и аренду буферов.
-11. Версионирование:
-- `SchemaVersion = "1"`
-   - Несовпадение схемы → Loader игнорирует и пишет строку в `incompatible-schema.log` (реализовать на этапе 2)
-12. Безопасность / Стойкость:
-    - Отказ при неконтролируемом росте файла fallback (> фиксированного размера, напр. 50MB) — начать новый файл с суффиксом `_partN`
-    - Защита от “бурста”: ограничить одну операцию flush не более чем X ms (предотвращение голодания фонового потока)
+### 4.2 Runtime
+Компоненты:
+- `NamedPipeLoggerProvider` / `NamedPipeLogger` – интеграция с `ILogger`
+- `PipeLogTransport` – подключение, backoff, пинг, fallback, emergency
+- Backoff: 50 → 200 → 500 → 1000 → 2000 → 5000 ms (+/-20% jitter) с ресетом при успехе
+- Fallback rotation: новый part после 50MB или смены даты
+- Emergency файл: plain text строка при неудачной сериализации / ошибках fallback
+- Keepalive Ping каждые 10s (`IsPing=true`, `Category="__ping"`) – Loader игнорирует
 
-### 4.2 Потоки и Жизненный Цикл
-- Runtime: вызов `Logger.Log` → формирование DTO → сериализация → (попытка отправки) или fallback.
-- Loader: один поток чтения из pipe → синхронная обработка/запись.
-- Unload ALC: Dispose провайдера закрывает соединение (best effort).
+### 4.3 Loader
+Компоненты:
+- `LoggingPipeServerService` – постоянный цикл accept/read (один клиент). После disconnect – ждет новое подключение Runtime
+- `LoaderLog` (статический фасад) + `LoaderInternalLogger` – внутренний логгер Loader; пишет преждевременно (до прихода Runtime) в файл и Debug через те же sinks
+- Sinks: `FileLogSink`, `DebugSink`
+- Порядок: чтение строки → Json deserialize → версия проверяется → фильтр Ping → enrichment → запись sinks
 
-### 4.3 Надежность и Ошибки
-- Сериализация: JsonException → emergency файл + инкремент счетчика → запись пропущена.
-- Транспорт: IOException/ObjectDisposedException → переключение в fallback, при следующей записи пробуем переподключение.
-- Никогда не бросаем исключения наружу из `Logger.Log`.
-- Успешная отправка сбрасывает параметры backoff.
+### 4.4 UI (Rca.UI)
+Для устранения `Debug.WriteLine` добавлен легкий адаптер на основе именованного пайпа (использует те же контракты). Он формирует собственный SessionId (например `UI-<guid>`) и последовательность — это НЕ влияет на RuntimeSessionId (разделение источников видно в логе). UI сообщения появляются в том же файле, что и Runtime/Loader.
 
-### 4.4 Расширяемость (минималистичная)
-- Позже можно выделить интерфейсы для sink'ов и сериализации — сейчас отказаться для простоты.
-- Потенциальный шаг: добавить бинарный протокол без изменения внешнего API `ILogger`.
+### 4.5 Отказоустойчивость
+| Сбой | Обнаружение | Реакция | Потеря данных |
+|------|-------------|---------|---------------|
+| Сериализация (JsonException) | try/catch на сериализации | Emergency файл + флаг SerializationFailed | Конкретная запись (структура не уходит) |
+| Pipe connect timeout / отказ | Исключение при Connect | Backoff + fallback запись | Нет (запись в fallback) |
+| Pipe write IOException | Исключение при WriteLine | ForceDisconnect + fallback | Возможна 1 запись (partial) |
+| Перегрузка runtime | Disconnect pipe | Loader ждет; Runtime переподключается | Нет, пока fallback работает |
+| Fallback файл > 50MB | Перед записью проверка размера | Новый partN файл | Нет |
+| Повреждение emergency | Последний барьер – игнорируем | Потеря только этой строки |
 
-### 4.5 Принципы SOLID (адаптация к упрощению)
-- SRP соблюдён: провайдер отвечает только за интеграцию с `ILogger`, transport — в одном небольшом классе.
-- OCP: Потенциальное расширение через последующее выделение sink-интерфейсов (отложено).
-- DIP: На данном этапе сознательно упрощено (минимум абстракций). Позже возможно внедрение.
-- Исключённые интерфейсы (`ILogSink`, `ILogSequenceProvider`) признаны преждевременными.
+### 4.6 Решения по загрузке сборок
+`Rca.Logging.Contracts` добавлен в `NonCollectibleAssemblies` → загружается в Default ALC. Это устраняет FileLoad и гарантирует единую идентичность типов DTO при hot-reload. В деплой каталог runtime копия DLL кладётся для резолюции на старте, но RuntimeLoadContext переиспользует уже загруженную версию.
 
-### 4.6 Формат LogEntryDto (упрощённый)
-- string SchemaVersion
-- long TimestampTicks
-- string Level
-- string Category
-- string Message
-- string? Exception
-- Dictionary<string, object?>? Scope (примитивы: string,bool,long,double)
-- string RuntimeSessionId
-- long SequenceId
-- int RuntimeProcessId
-- int? ALCInstanceId
-- bool IsFallback
-- int Flags (битовые признаки: 1=SerializationFailed, 2=FallbackUsed)
+### 4.7 LoaderInternalLogger / LoaderLog
+`LoaderLog` обеспечивает:
+- Ранний лог (до подключения Runtime)
+- Единый формат записей LOADER|...
+- Переиспользование тех же sinks без дополнительной конфигурации
+Логгер реализован без `ILoggerFactory` для минимизации зависимостей и упрощения (прямая запись в sinks).
 
-(Enriched Loader-only: GlobalSequenceId, ReceivedTimestamp, LoaderProcessId — не входят в DTO Runtime.)
+### 4.8 Удаление Debug.WriteLine
+Заменено в Loader, Runtime, Service слоях. Остатки в UI мигрированы через адаптер (см. 4.4). Прямое использование `Debug.WriteLine` осталось только внутри `DebugSink` (осознанно – завершающий consumer).
 
-## 5. ЗАВИСИМОСТИ ПРОЕКТОВ (ДО / ПОСЛЕ)
+## 5. ОТКЛОНЕНИЯ ОТ ИЗНАЧАЛЬНОГО ПЛАНА
+| План | Фактическое | Причина |
+|------|-------------|---------|
+| Отдельный LogDispatcher + Loader внутренний лог через тот же dispatcher | Объединено через `LoaderLog` (минимальная прослойка) | Снижение связности, ранний лог до старта pipe сервера |
+| Ping policy + disconnect по таймауту >30s (этап 2) | Таймаут отключен (только пинг) | Будет добавлено позднее – не критично для этапа 1 миграции |
+| Интерфейсы sinks | Отложено | Простота и производительность |
+| Binary protocol | Отложено | Достаточно JSON при малом объёме |
 
-### 5.1 ДО
-- Нет проекта логгирования
-- Присутствует устаревший `DebugLogService` (локальный Singleton)
+## 6. ПОТЕНЦИАЛЬНЫЕ УЛУЧШЕНИЯ (BACKLOG)
+1. Watchdog времени последнего пакета (idle timeout → форсировать reconnect)
+2. Политика retention (очистка старых логов по возрасту / размеру)
+3. Structured scopes (сервер расширяет JSON) – сейчас scope не сериализуется
+4. Управляемый уровень логирования (dynamic level switch через командный pipe)
+5. Binary framing (length-prefixed) для снижения накладных расходов при burst
+6. Сбор метрик: счетчик пропущенных, сериализационных ошибок, объём fallback
+7. Пакетный flush для fallback (сейчас sync запись каждой строки)
+8. UI sink для отображения последних N логов прямо в панеле
 
-### 5.2 ПОСЛЕ
-- Новый проект: `Rca.Logging.Contracts` (никаких зависимостей на Loader / Runtime / Core)
-- Runtime → `Rca.Logging.Contracts` + `Microsoft.Extensions.Logging.Abstractions`
-- Loader → `Rca.Logging.Contracts`
-- Полное удаление прямого использования `DebugLogService` (в конце этапа 2)
-- Запрещено добавлять `Rca.Logging.Contracts` в `Rca.Contracts`
+## 7. ИЗВЕСТНЫЕ ОГРАНИЧЕНИЯ
+| Область | Ограничение | Риск | Митигация |
+|---------|-------------|------|-----------|
+| Нет retention | Неограниченный рост каталога | Переполнение диска | Periodic cleanup task (backlog #2) |
+| Single-client pipe | Один Runtime в момент времени | Масштабирование | Именовать pipe с SessionId при multi-runtime |
+| Нет scope сериализации | Потеря контекста запросов | Меньше семантики | Реализовать scope capture |
+| Fallback JSON без компрессии | Большой размер при длительном офлайн'e | Диск | Добавить сжатие / max parts |
+| Нет бинарного протокола | Накладные расходы JSON | Производительность | Backlog #5 |
+| Простая backoff policy | Нет long-sleep / metrics | Увеличен шум | Расширить стратегию |
 
+## 8. GUIDELINES ДЛЯ НОВОГО КОДА
+- Никогда не бросать исключение наружу из `ILogger.Log`
+- Любая новая подсистема логируется через `LoaderLog.GetLogger<T>()` (на стороне Loader) или через `NamedPipeLoggerProvider` (Runtime / UI)
+- Не добавлять зависимости от `ILoggerFactory` без веской причины (ограничение hot-reload издержек)
+- Для крупных операций логировать: start, success, fail (с opId)
 
----
+## 9. ПРИМЕРЫ
+### Runtime
+```csharp
+var provider = new NamedPipeLoggerProvider("RCA_LOG_PIPE", sessionId);
+var log = provider.CreateLogger("MyFeature.Startup");
+log.LogInformation("Runtime feature initialized {Version}", version);
+```
+### Loader
+```csharp
+private static readonly ILogger Log = LoaderLog.GetLogger<HotReloadService>();
+Log.LogInformation("Reload request received path={Path}", path);
+```
+### UI
+```csharp
+private static readonly ILogger Log = UiLog.GetLogger<RcaDockablePanel>();
+Log.LogDebug("Panel XAML loaded variant={Variant}");
+```
 
-## ТРЕБОВАНИЯ К ОБРАБОТКЕ ОШИБОК (УТОЧНЕНИЕ)
-1. Сериализация:
-   - Любой `JsonException` → emergency файл + инкремент счетчика + флаг SerializationFailed
-   - Запись не попадает в основной pipe
-2. Транспорт:
-   - IOException / ObjectDisposedException → закрыть текущее соединение, перейти в fallback, инициировать backoff
-3. Очередь:
-   - При purge логировать событие (одна служебная запись в emergency)
-4. Ограничения на silent swallow: Ничто не исчезает без следа — либо файл emergency, либо счетчик
-
-## ПОЛИТИКА BACKOFF (ДЕТАЛИ)
-- Начальная задержка: 50ms
-- Рост: 50 → 200 → 500 → 1000 → 2000 → 5000 (cap)
-- Сброс после успешной отправки
-- Jitter и long-sleep — на этапе 2
-- Keepalive: ping каждые 10s (этап 2)
-
-## ПРОИЗВОДИТЕЛЬНОСТЬ
-- Нет очереди → минимальные накладные расходы
-- Логи предполагаются низкообъёмными
-
-## ИНСТРУКЦИИ ДЛЯ ГЕНЕРАЦИИ КОДА
-Не вводить интерфейсы sink'ов и провайдеров последовательностей — упростить
-Подготовить код к возможному расширению (методами разбиения, но без преждевременных абстракций)
-Не добавлять лишних зависимостей; не усложнять архитектуру.
-
-Генерация кода должна быть разбита на этапы. После каждого этапа проверяй, что билд проходит с помощью команды `dotnet build`.
-
-ЭТАП 1:
-- Создать проект `Rca.Logging.Contracts` (TargetFramework net8.0-windows, Nullable enable)
-- Добавить `LogEntryDto` + константы (уровни, флаги)
-
-ЭТАП 2:
-Runtime: `NamedPipeLoggerProvider` + `NamedPipeLogger`:
-   - Генерация последовательного `SequenceId` через `Interlocked.Increment`
-   - Немедленная сериализация и запись в pipe; при недоступности → fallback
-
-ЭТАП 3:
-Реализовать подключение pipe с ленивым установлением и backoff при ошибках
-
-ЭТАП 4:
-- Loader: `LoggingPipeServerService` + чтение построчно + обогащение + запись в файл и Debug
-- Реализовать FileLogWriter (один файл на запуск) + DebugWriter
-- Добавить fallback файл в Runtime
-- Emergency лог для ошибок сериализации
-
-ЭТАП 5:
-- Добавить jitter в backoff
-- Добавить keepalive ping. Keepalive не должна быть в пользовательских логах
-- Emergency лог при ошибках сериализации
-- Enrichment в Loader (GlobalSequenceId, ReceivedTimestamp). Использовать Local Time в Timestamp
-- Ограничение размера файлов
-- Дополнительные флаги и совместимость схем
-- Удалить вызовы `DebugLogService` (этап 2)
-
-Теперь приступай к генерации кода. Начни с этапа 1. Жду готовый логгер!
+## 10. РЕЗЮМЕ
+Система достигает целей первой итерации: детерминированная доставка, отсутствие циклов зависимостей, устойчивость к hot-reload, fallback / emergency каналы, унификация источников. Дальнейшие улучшения сконцентрированы вокруг наблюдаемости, управления объёмом и динамической конфигурации.

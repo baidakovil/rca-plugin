@@ -4,21 +4,20 @@ using System.Windows.Controls;
 using System.Windows.Threading;
 using Rca.Loader.Contracts;
 using Autodesk.Revit.UI;
-using System.Diagnostics;
+using Rca.Loader.Logging; // unified logging
+using Microsoft.Extensions.Logging;
 
 namespace Rca.Loader.UI
 {
     /// <summary>
     /// Minimal host control used by the Loader to register a DockablePane at Revit startup.
-    /// The control displays a simple placeholder UI and allows runtime content to be swapped in.
+    /// Provides a placeholder and later swaps in runtime-provided WPF content.
+    /// to ensure visibility in central log files and chronological correlation with runtime events.
     /// </summary>
     public class DockablePanelHost : UserControl, IRuntimePanelHost
     {
+        private static readonly ILogger Log = LoaderLog.GetLogger<DockablePanelHost>();
         private readonly ContentControl contentHost;
-
-        /// <summary>
-        /// Timeout for UI content swap operations. If the content set operation does not complete within this time, a placeholder will be shown.
-        /// </summary>
         private static readonly TimeSpan SetContentTimeout = TimeSpan.FromSeconds(5);
 
         /// <summary>
@@ -46,6 +45,7 @@ namespace Rca.Loader.UI
             grid.Children.Add(contentHost);
 
             this.Content = grid;
+            Log.LogDebug("DockablePanelHost constructed with placeholder");
         }
 
         /// <inheritdoc/>
@@ -67,60 +67,52 @@ namespace Rca.Loader.UI
                 }
                 catch (TimeoutException)
                 {
-                    Debug.WriteLine($"[DockablePanelHost] SetContent invoke timed out after {SetContentTimeout.TotalSeconds}s");
+                    Log.LogWarning("SetContent invoke timed out after {Seconds}s; showing placeholder", SetContentTimeout.TotalSeconds);
                     // Fallback to placeholder
                     ShowPlaceholder();
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[DockablePanelHost] Exception while setting content: {ex.Message}");
+                Log.LogError(ex, "Exception while setting content; reverting to placeholder");
                 ShowPlaceholder();
             }
         }
 
         /// <inheritdoc/>
-        public FrameworkElement? GetContent()
-        {
-            return contentHost.Content as FrameworkElement;
-        }
+        public FrameworkElement? GetContent() => contentHost.Content as FrameworkElement;
 
         private void SetContentInternal(FrameworkElement? content)
         {
             // Dispose previous content if it implements IDisposable
             if (contentHost.Content is IDisposable disposable)
             {
-                try
-                {
-                    disposable.Dispose();
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"[DockablePanelHost] Exception disposing old content: {ex.Message}");
-                }
+                try { disposable.Dispose(); }
+                catch (Exception ex) { Log.LogDebug(ex, "Exception disposing previous content"); }
             }
 
             // If content is null, revert to placeholder
             if (content == null)
             {
+                Log.LogDebug("SetContentInternal received null – restoring placeholder");
                 ShowPlaceholder();
                 return;
             }
 
             contentHost.Content = content;
-            Debug.WriteLine("[DockablePanelHost] Runtime content set successfully");
+            Log.LogInformation("Runtime content set successfully (type={Type})", content.GetType().FullName);
         }
 
         private void ShowPlaceholder()
         {
-            var placeholder = new TextBlock
+            contentHost.Content = new TextBlock
             {
                 Text = "RCA: loading runtime...",
                 Margin = new Thickness(10),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center
             };
-            contentHost.Content = placeholder;
+            Log.LogTrace("Placeholder content displayed");
         }
     }
 }
