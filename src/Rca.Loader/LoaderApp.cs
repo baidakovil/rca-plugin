@@ -1,14 +1,13 @@
 using System;
-using System.Diagnostics;
 using Autodesk.Revit.UI;
-using Autodesk.Revit.DB;
 using Autodesk.Revit.UI.Events;
 using Rca.Loader.Contracts;
 using Rca.Loader.Services;
 using Rca.Loader.Infrastructure;
 using Rca.Loader.AssemblyManagement;
 using Rca.Loader.UI;
-using Rca.Loader.Logging; // added for logging pipe
+using Rca.Loader.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Rca.Loader
 {
@@ -24,6 +23,7 @@ namespace Rca.Loader
         private AssemblyStatusManager? assemblyStatusManager;
         private UIControlledApplication? uiControlledApp;
         private LoggingPipeServerService? loggingPipe; // logging server
+        private ILogger _log = LoaderLog.GetLogger<LoaderApp>();
 
         /// <summary>
         /// The dockable pane id used to register the RCA panel.
@@ -78,8 +78,7 @@ namespace Rca.Loader
 
             try
             {
-                Debug.WriteLine("RCA Loader starting up");
-
+                _log.LogInformation("Loader startup begin");
                 this.uiControlledApp = application;
 
                 // Initialize assembly status manager
@@ -112,12 +111,12 @@ namespace Rca.Loader
                     }
                     catch (Exception exPane)
                     {
-                        Debug.WriteLine($"Failed to show dockable pane: {exPane.Message}");
+                        _log.LogWarning(exPane, "Failed to show dockable pane");
                     }
                 }
-                catch (Exception ex)
+                catch (Exception exReg)
                 {
-                    Debug.WriteLine($"Failed to register RCA dockable pane: {ex.Message}");
+                    _log.LogError(exReg, "Failed to register dockable pane");
                 }
 
                 // Hook into application events for auto-initialization
@@ -128,17 +127,16 @@ namespace Rca.Loader
                 var statusDisplay = ((RibbonService)ribbonService).StatusDisplay;
                 if (statusDisplay != null && assemblyStatusManager != null)
                 {
-                    Debug.WriteLine("Updating status display with initial values");
+                    _log.LogDebug("Updating status display with initial values: loaderHash={LoaderHash} runtimeHash={RuntimeHash}", assemblyStatusManager.CurrentInfo.LoaderComponents.Hash, assemblyStatusManager.CurrentInfo.RuntimeAssembly.Hash);
                     statusDisplay.UpdateStatus(assemblyStatusManager.CurrentInfo);
                 }
     #endif
-
-                Debug.WriteLine("RCA Loader startup completed");
+                _log.LogInformation("Loader startup completed successfully");
                 return Result.Succeeded;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error during RCA Loader startup: {ex.Message}\n{ex.StackTrace}");
+                _log.LogCritical(ex, "Loader startup failed");
                 TaskDialog.Show("RCA Loader Error", ex.ToString());
                 return Result.Failed;
             }
@@ -153,7 +151,7 @@ namespace Rca.Loader
         {
             try
             {
-                Debug.WriteLine("RCA Loader shutting down");
+                _log.LogInformation("Loader shutdown begin");
 
                 // Unsubscribe from events
                 if (uiControlledApp != null)
@@ -164,11 +162,11 @@ namespace Rca.Loader
                 pipeServer?.Stop();
                 loggingPipe?.Dispose();
                 RuntimeManager.UnloadRuntime();
-                Debug.WriteLine("RCA Loader shutdown completed");
+                _log.LogInformation("Loader shutdown completed");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error during RCA Loader shutdown: {ex.Message}");
+                _log.LogError(ex, "Error during loader shutdown");
             }
             return Result.Succeeded;
         }
@@ -182,7 +180,7 @@ namespace Rca.Loader
         {
             if (uiapp == null && sender is UIApplication uiApplication)
             {
-                Debug.WriteLine("Auto-initializing pipe server via Idling event");
+                _log.LogDebug("Idling initialization for pipe server");
                 InitializeWithUIApplication(uiApplication);
 
                 // Unsubscribe after successful initialization
@@ -217,33 +215,29 @@ namespace Rca.Loader
                 var statusDisplay = ((RibbonService)ribbonService).StatusDisplay;
                 if (statusDisplay != null && assemblyStatusManager != null)
                 {
-                    Debug.WriteLine($"[LoaderApp] UpdateStatusDisplay: loaderHash={assemblyStatusManager.CurrentInfo.LoaderComponents.Hash}, runtimeHash={assemblyStatusManager.CurrentInfo.RuntimeAssembly.Hash}, msbuildSignal={assemblyStatusManager.CurrentInfo.LastMSBuildSignal.Time} - {assemblyStatusManager.CurrentInfo.LastMSBuildSignal.Event}");
+                    _log.LogDebug("UpdateStatusDisplay loaderHash={LoaderHash} runtimeHash={RuntimeHash} msbuild={Signal}", assemblyStatusManager.CurrentInfo.LoaderComponents.Hash, assemblyStatusManager.CurrentInfo.RuntimeAssembly.Hash, $"{assemblyStatusManager.CurrentInfo.LastMSBuildSignal.Time}-{assemblyStatusManager.CurrentInfo.LastMSBuildSignal.Event}");
                     statusDisplay.UpdateStatus(assemblyStatusManager.CurrentInfo);
                 }
                 else
                 {
-                    Debug.WriteLine("[LoaderApp] UpdateStatusDisplay: statusDisplay or assemblyStatusManager is null");
+                    _log.LogDebug("UpdateStatusDisplay skipped: null dependencies");
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error updating status display: {ex.Message}");
+                _log.LogWarning(ex, "Error updating status display");
             }
     #endif
         }
 
         private void StartPipeServer()
         {
-            if (uiapp == null)
-            {
-                throw new InvalidOperationException("UIApplication not initialized");
-            }
-
-            Debug.WriteLine("Starting pipe server");
+            if (uiapp == null) throw new InvalidOperationException("UIApplication not initialized");
+            _log.LogInformation("Starting command pipe server");
             commandHandler = new RuntimeCommandHandler(RuntimeManager, uiapp);
             pipeServer = new PipeServerService(LoaderConstants.PipeName, commandHandler.HandlePipeCommandAsync);
             pipeServer.Start();
-            Debug.WriteLine("Pipe server started");
+            _log.LogInformation("Command pipe server started");
         }
     }
 }

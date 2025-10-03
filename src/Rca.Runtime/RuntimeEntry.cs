@@ -1,18 +1,22 @@
 using System;
-using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using Rca.Contracts.Infrastructure;
 using Rca.Core.Services;
 using Rca.Contracts;
+using Rca.Runtime.Logging;
 
 namespace Rca.Runtime
 {
     /// <summary>
-    /// Main entry point for the runtime module that's loaded by the Rca.Loader.
+    /// Main entry point for the runtime module loaded by the Loader. Uses named pipe logger provider.
     /// </summary>
     public class RuntimeEntry
     {
         private readonly ServiceContainer container;
-        
+        private readonly ILogger _log;
+        private static readonly string SessionId = Guid.NewGuid().ToString("N");
+        private static NamedPipeLoggerProvider? _provider; // keep reference to avoid premature dispose
+
         /// <summary>
         /// Initializes a new instance of the RuntimeEntry class.
         /// </summary>
@@ -20,8 +24,10 @@ namespace Rca.Runtime
         {
             // Initialize the container in the constructor
             container = ServiceContainer.Instance;
+            _provider ??= new NamedPipeLoggerProvider("RCA_LOG_PIPE", SessionId);
+            _log = _provider.CreateLogger(nameof(RuntimeEntry));
         }
-        
+
         /// <summary>
         /// Initializes the runtime and sets up required services
         /// </summary>
@@ -29,16 +35,16 @@ namespace Rca.Runtime
         {
             try
             {
-                Debug.WriteLine("RCA Runtime initializing...");
+                _log.LogInformation("Runtime initializing (session={Session})", SessionId);
                 
                 // Register core services
                 RegisterServices();
                 
-                Debug.WriteLine("RCA Runtime initialized successfully");
+                _log.LogInformation("Runtime initialized successfully");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error initializing runtime: {ex}");
+                _log.LogCritical(ex, "Runtime initialization failed");
             }
         }
 
@@ -52,22 +58,22 @@ namespace Rca.Runtime
                 // Register a standalone RevitContext if not already registered
                 if (!container.IsRegistered<IRevitContext>())
                 {
-                    Debug.WriteLine("Registering StandaloneRevitContext");
                     container.Register<IRevitContext>(new StandaloneRevitContext());
+                    _log.LogDebug("Registered StandaloneRevitContext");
                 }
                 
                 // Register the Python execution service if not already registered
                 if (!container.IsRegistered<IPythonExecutionService>())
                 {
-                    Debug.WriteLine("Registering PythonExecutionService");
                     container.Register<IPythonExecutionService>(new PythonExecutionService());
+                    _log.LogDebug("Registered PythonExecutionService");
                 }
                 
                 // Other service registrations would go here
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error registering services: {ex}");
+                _log.LogError(ex, "Error registering runtime services");
             }
         }
 
@@ -78,15 +84,15 @@ namespace Rca.Runtime
         {
             try
             {
-                Debug.WriteLine("RCA Runtime shutting down...");
+                _log.LogInformation("Runtime shutting down");
                 
                 // Perform any cleanup needed
                 
-                Debug.WriteLine("RCA Runtime shutdown complete");
+                _log.LogInformation("Runtime shutdown complete");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error shutting down runtime: {ex}");
+                _log.LogError(ex, "Error during runtime shutdown");
             }
         }
     }

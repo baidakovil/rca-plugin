@@ -5,13 +5,22 @@ using System.Reflection;
 using System.Diagnostics;
 using System.Collections.Generic;
 using Rca.Loader.Infrastructure;
+using Microsoft.Extensions.Logging; // new
+using Rca.Loader.Logging; // logger helper
 
 namespace Rca.Loader.AssemblyManagement
 {
+    /// <summary>
+    /// Tracks hash / path metadata for Loader + Runtime assemblies and exposes change state.
+    /// Rewritten to use the unified logging system instead of Debug.WriteLine.
+    /// WHY: Centralizing logging enables cross-domain correlation and persistence in unified log files.
+    /// </summary>
     public class AssemblyStatusManager
     {
         private const string LoaderVersionFilePattern = "HashLoader - *.txt";
         private const string RuntimeVersionFilePattern = "HashRuntime - *.txt";
+
+        private readonly ILogger _log = LoaderLog.GetLogger<AssemblyStatusManager>();
 
         public AssemblyStatusManager()
         {
@@ -23,6 +32,8 @@ namespace Rca.Loader.AssemblyManagement
         {
             try
             {
+                _log.LogInformation("Initializing assembly status manager");
+
                 // Read loader hash from current executing assembly
                 var loaderAsm = Assembly.GetExecutingAssembly();
                 var loaderHash = AttributeMetadataLoader.TryGetFromLoadedAssembly(loaderAsm, "SourceHash");
@@ -67,7 +78,10 @@ namespace Rca.Loader.AssemblyManagement
                                         rHash = fileHash;
                                 }
                             }
-                            catch { }
+                            catch (Exception exF)
+                            {
+                                _log.LogDebug(exF, "Failed secondary runtime hash read");
+                            }
                         }
 
                         CurrentInfo.RuntimeAssembly.Hash = string.IsNullOrEmpty(rHash) ? AttributeMetadataLoader.MissingMarker : rHash;
@@ -109,7 +123,7 @@ namespace Rca.Loader.AssemblyManagement
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error initializing assembly status: {ex.Message}");
+                _log.LogError(ex, "Error initializing assembly status");
             }
         }
 
@@ -124,7 +138,7 @@ namespace Rca.Loader.AssemblyManagement
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error reading version file in {dir}: {ex.Message}");
+                _log.LogDebug(ex, "Error reading version file in {Dir}", dir);
                 return null;
             }
         }
@@ -141,7 +155,7 @@ namespace Rca.Loader.AssemblyManagement
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error getting latest temp dll folder: {ex.Message}");
+                _log.LogWarning(ex, "Error getting latest temp dll folder");
                 return string.Empty;
             }
         }
@@ -155,16 +169,13 @@ namespace Rca.Loader.AssemblyManagement
                 CurrentInfo.RuntimeAssembly.Path = runtimePath;
                 var hash = AttributeMetadataLoader.TryGetFromFile(runtimePath, "SourceHash");
                 CurrentInfo.RuntimeAssembly.Hash = string.IsNullOrEmpty(hash) ? AttributeMetadataLoader.MissingMarker : hash;
-                Debug.WriteLine($"[AssemblyStatusManager] UpdateHashesAfterReload: path={runtimePath}, oldHash={oldHash}, newHash={CurrentInfo.RuntimeAssembly.Hash}");
+                _log.LogInformation("Runtime hash updated after reload old={OldHash} new={NewHash}", oldHash, CurrentInfo.RuntimeAssembly.Hash);
                 // Refresh UI after reload
-                try {
-                    Debug.WriteLine("[AssemblyStatusManager] Calling UpdateStatusDisplay after reload");
-                    LoaderApp.Instance?.UpdateStatusDisplay();
-                } catch { }
+                try { LoaderApp.Instance?.UpdateStatusDisplay(); } catch { }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error updating hashes after reload: {ex.Message}");
+                _log.LogError(ex, "Error updating hashes after reload");
             }
         }
 
@@ -177,7 +188,7 @@ namespace Rca.Loader.AssemblyManagement
                     ? tempDllPath
                     : GetLatestTempDllFolder();
 
-                Debug.WriteLine($"[AssemblyStatusManager] ProcessMsBuildSignal: tempDllPath={tempDllPath}, resolved={latest}");
+                _log.LogDebug("ProcessMsBuildSignal tempDllPath={Temp} resolved={Resolved}", tempDllPath, latest);
 
                 if (!string.IsNullOrEmpty(latest))
                 {
@@ -190,7 +201,7 @@ namespace Rca.Loader.AssemblyManagement
                     if (File.Exists(runtimeDll))
                     {
                         runtimeHash = AttributeMetadataLoader.TryGetFromFile(runtimeDll, "SourceHash");
-                        Debug.WriteLine($"[AssemblyStatusManager] ProcessMsBuildSignal: runtimeDll={runtimeDll}, runtimeHash={runtimeHash}");
+                        _log.LogDebug("Runtime hash candidate {Hash} from {Dll}", runtimeHash, runtimeDll);
                     }
 
                     // Loader hash - try loader DLL in the provided folder; if not present, fall back to deployed loader path
@@ -200,13 +211,13 @@ namespace Rca.Loader.AssemblyManagement
                     {
                         loaderHash = AttributeMetadataLoader.TryGetFromFile(loaderDllInTemp, "SourceHash");
                         deployFolderMeta = AttributeMetadataLoader.TryGetFromFile(loaderDllInTemp, "DeployFolder");
-                        Debug.WriteLine($"[AssemblyStatusManager] ProcessMsBuildSignal: loaderDllInTemp={loaderDllInTemp}, loaderHash={loaderHash}, deployFolderMeta={deployFolderMeta}");
+                        _log.LogDebug("Loader hash candidate {Hash} deployMeta={Deploy} from {Dll}", loaderHash, deployFolderMeta, loaderDllInTemp);
                     }
                     else if (File.Exists(LoaderConstants.LoaderAssemblyPath))
                     {
                         loaderHash = AttributeMetadataLoader.TryGetFromFile(LoaderConstants.LoaderAssemblyPath, "SourceHash");
                         deployFolderMeta = AttributeMetadataLoader.TryGetFromFile(LoaderConstants.LoaderAssemblyPath, "DeployFolder");
-                        Debug.WriteLine($"[AssemblyStatusManager] ProcessMsBuildSignal: loaderAssemblyPath={LoaderConstants.LoaderAssemblyPath}, loaderHash={loaderHash}, deployFolderMeta={deployFolderMeta}");
+                        _log.LogDebug("Loader deployed hash candidate {Hash} deployMeta={Deploy}", loaderHash, deployFolderMeta);
                     }
 
                     // If DeployFolder metadata available prefer that for display
@@ -228,18 +239,15 @@ namespace Rca.Loader.AssemblyManagement
                     var oldSignal = $"{CurrentInfo.LastMSBuildSignal.Time} - {CurrentInfo.LastMSBuildSignal.Event}";
                     CurrentInfo.LastMSBuildSignal.Time = DateTime.Now.ToString("HH:mm:ss");
                     CurrentInfo.LastMSBuildSignal.Event = ev;
-                    Debug.WriteLine($"[AssemblyStatusManager] ProcessMsBuildSignal: oldSignal={oldSignal}, newSignal={CurrentInfo.LastMSBuildSignal.Time} - {ev}");
+                    _log.LogInformation("MSBuild signal processed prev={Prev} new={NewTime} {Event}", oldSignal, CurrentInfo.LastMSBuildSignal.Time, ev);
 
                     // Refresh UI after processing MSBuild signal
-                    try {
-                        Debug.WriteLine("[AssemblyStatusManager] Calling UpdateStatusDisplay after MSBuild signal");
-                        LoaderApp.Instance?.UpdateStatusDisplay();
-                    } catch { }
+                    try { LoaderApp.Instance?.UpdateStatusDisplay(); } catch { }
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error processing msbuild signal: {ex.Message}");
+                _log.LogError(ex, "Error processing msbuild signal");
             }
         }
 
@@ -257,7 +265,11 @@ namespace Rca.Loader.AssemblyManagement
                 // If deployed loader not found, conservatively assume not outdated
                 return false;
             }
-            catch { return false; }
+            catch (Exception ex)
+            {
+                _log.LogDebug(ex, "IsLoaderOutdated check failed");
+                return false;
+            }
         }
 
         public bool IsRuntimeOutdated()
@@ -281,7 +293,11 @@ namespace Rca.Loader.AssemblyManagement
 
                 return !string.IsNullOrEmpty(runtimeHash) && runtimeHash != CurrentInfo.RuntimeAssembly.Hash;
             }
-            catch { return false; }
+            catch (Exception ex)
+            {
+                _log.LogDebug(ex, "IsRuntimeOutdated check failed");
+                return false;
+            }
         }
 
         public void UpdateLoaderComponentsHashesAfterRestart(string loaderDir)
@@ -312,7 +328,7 @@ namespace Rca.Loader.AssemblyManagement
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error updating loader hashes after restart: {ex.Message}");
+                _log.LogError(ex, "Error updating loader hashes after restart");
             }
         }
 

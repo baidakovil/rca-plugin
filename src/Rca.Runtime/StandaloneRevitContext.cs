@@ -1,30 +1,33 @@
 using System;
-using System.Diagnostics;
 using System.Reflection;
 using System.IO;
 using Rca.Contracts;
 using Rca.Contracts.Infrastructure;
+using Microsoft.Extensions.Logging;
+using Rca.Runtime.Logging;
 
 namespace Rca.Runtime
 {
     /// <summary>
-    /// A standalone implementation of IRevitContext for use when running outside of Revit.
-    /// Also ensures required assemblies are loaded correctly.
+    /// Standalone implementation of IRevitContext used when executing outside Revit.
+    /// Ensures dependent assemblies are loaded and registers minimal services.
     /// </summary>
     public class StandaloneRevitContext : IRevitContext
     {
+        private readonly ILogger _log;
+
         /// <summary>
         /// Initializes a new instance of the StandaloneRevitContext class and ensures
         /// all required assemblies are loaded.
         /// </summary>
         public StandaloneRevitContext()
         {
-            // Ensure all required assemblies are loaded
+            var provider = new NamedPipeLoggerProvider("RCA_LOG_PIPE", Guid.NewGuid().ToString("N"));
+            _log = provider.CreateLogger(nameof(StandaloneRevitContext));
             EnsureAssembliesLoaded();
-            
-            Debug.WriteLine("StandaloneRevitContext initialized successfully");
+            _log.LogInformation("StandaloneRevitContext initialized");
         }
-        
+
         /// <summary>
         /// Ensures all required assemblies for the standalone mode are loaded.
         /// </summary>
@@ -37,48 +40,35 @@ namespace Rca.Runtime
                 
                 if (runtimeDir == null)
                 {
-                    Debug.WriteLine("Could not determine runtime directory");
+                    _log.LogWarning("Runtime directory not determined");
                     return;
                 }
                 
                 // List of assemblies we need to ensure are loaded
-                string[] requiredAssemblies = new[]
-                {
-                    "Rca.Core.dll",
-                    "Rca.UI.dll",
-                    "Rca.Network.dll",
-                    "Rca.Contracts.dll"
-                };
+                string[] required = { "Rca.Core.dll", "Rca.UI.dll", "Rca.Network.dll", "Rca.Contracts.dll" };
                 
-                foreach (var assemblyName in requiredAssemblies)
+                foreach (var asmFile in required)
                 {
-                    string assemblyPath = Path.Combine(runtimeDir, assemblyName);
+                    var path = Path.Combine(runtimeDir, asmFile);
                     
                     // Check if the assembly exists
-                    if (File.Exists(assemblyPath))
+                    if (!File.Exists(path)) { _log.LogDebug("Assembly file not found {File}", path); continue; }
+                    try
                     {
-                        try
+                        // Try to load the assembly if it's not already loaded
+                        if (!IsAssemblyLoaded(asmFile))
                         {
-                            // Try to load the assembly if it's not already loaded
-                            if (!IsAssemblyLoaded(assemblyName))
-                            {
-                                Debug.WriteLine($"Loading assembly: {assemblyName}");
-                                Assembly.LoadFrom(assemblyPath);
-                                Debug.WriteLine($"Successfully loaded: {assemblyName}");
-                            }
-                            else
-                            {
-                                Debug.WriteLine($"Assembly already loaded: {assemblyName}");
-                            }
+                            Assembly.LoadFrom(path);
+                            _log.LogDebug("Loaded {Asm}", asmFile);
                         }
-                        catch (Exception ex)
+                        else
                         {
-                            Debug.WriteLine($"Error loading assembly {assemblyName}: {ex.Message}");
+                            _log.LogTrace("Already loaded {Asm}", asmFile);
                         }
                     }
-                    else
+                    catch (Exception exLoad)
                     {
-                        Debug.WriteLine($"Assembly file not found: {assemblyPath}");
+                        _log.LogWarning(exLoad, "Error loading assembly {Asm}", asmFile);
                     }
                 }
                 
@@ -87,26 +77,23 @@ namespace Rca.Runtime
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error ensuring assemblies loaded: {ex.Message}");
+                _log.LogError(ex, "Error ensuring assemblies loaded");
             }
         }
         
         /// <summary>
         /// Checks if an assembly with the given name is already loaded.
         /// </summary>
-        /// <param name="assemblyName">Name of the assembly file to check.</param>
+        /// <param name="assemblyFile">Name of the assembly file to check.</param>
         /// <returns>True if already loaded, false otherwise.</returns>
-        private bool IsAssemblyLoaded(string assemblyName)
+        private bool IsAssemblyLoaded(string assemblyFile)
         {
-            string nameWithoutExtension = Path.GetFileNameWithoutExtension(assemblyName);
+            string name = Path.GetFileNameWithoutExtension(assemblyFile);
             
             foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
             {
-                if (!asm.IsDynamic && 
-                    string.Equals(asm.GetName().Name, nameWithoutExtension, StringComparison.OrdinalIgnoreCase))
-                {
+                if (!asm.IsDynamic && string.Equals(asm.GetName().Name, name, StringComparison.OrdinalIgnoreCase))
                     return true;
-                }
             }
             
             return false;
@@ -120,15 +107,13 @@ namespace Rca.Runtime
             try
             {
                 var container = ServiceContainer.Instance;
-                Debug.WriteLine("Obtained ServiceContainer instance");
+                _log.LogDebug("ServiceContainer obtained for standalone context");
                 
-                // Any additional service registrations can go here
-                // Example: if (!container.IsRegistered<ISomeService>())
-                //          container.Register<ISomeService>(new SomeServiceImpl());
+                // Future service registrations could be added here.
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error registering services: {ex.Message}");
+                _log.LogWarning(ex, "Error registering services in standalone context");
             }
         }
 
@@ -140,12 +125,12 @@ namespace Rca.Runtime
         {
             get
             {
-                Debug.WriteLine("StandaloneRevitContext: Accessing CurrentUIApplication (null-placeholder in standalone mode)");
+                _log.LogTrace("Access CurrentUIApplication placeholder");
                 return new object(); // Return a placeholder object instead of null
             }
             set
             {
-                Debug.WriteLine("StandaloneRevitContext: Setting CurrentUIApplication (ignored in standalone mode)");
+                _log.LogTrace("Attempt to set CurrentUIApplication ignored in standalone context");
                 // Intentionally ignored in standalone mode
             }
         }

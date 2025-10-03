@@ -8,16 +8,20 @@ using Autodesk.Revit.UI;
 using Rca.Loader.Contracts;
 using Rca.Loader.Infrastructure;
 using Rca.Contracts.Infrastructure;
+using Rca.Loader.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Rca.Loader.Services
 {
     /// <summary>
     /// Manages loading, unloading, and interactions with the runtime assembly.
+    /// Provides detailed structured logs for every lifecycle operation.
     /// </summary>
     public class RuntimeManager : IRuntimeManager
     {
         private RuntimeLoadContext? currentContext;
-        private IRuntime? currentRuntime;
+        private object? currentRuntimeInstance;
+        private readonly ILogger _log = LoaderLog.GetLogger<RuntimeManager>();
 
         /// <summary>
         /// Gets the currently loaded runtime context, if any.
@@ -27,7 +31,7 @@ namespace Rca.Loader.Services
         /// <summary>
         /// Gets whether a runtime is currently loaded.
         /// </summary>
-        public bool IsRuntimeLoaded => currentRuntime != null;
+        public bool IsRuntimeLoaded => currentRuntimeInstance != null;
 
         /// <summary>
         /// Gets the path of the currently loaded runtime, if any.
@@ -57,6 +61,7 @@ namespace Rca.Loader.Services
             if (currentContext == null)
             {
                 error = "Runtime not loaded";
+                _log.LogWarning("Dockable content requested but runtime not loaded");
                 return null;
             }
 
@@ -70,13 +75,15 @@ namespace Rca.Loader.Services
                         var factory = ServiceContainer.Instance.Resolve<IRuntimePanelFactory>();
                         if (factory != null)
                         {
-                            return factory.CreatePanel();
+                            var panel = factory.CreatePanel();
+                            _log.LogInformation("Panel created via IRuntimePanelFactory ({Type})", factory.GetType().FullName);
+                            return panel;
                         }
                     }
                 }
-                catch
+                catch (Exception exFac)
                 {
-                    // If service resolution fails, continue to fallback logic below.
+                    _log.LogDebug(exFac, "Factory resolution failed - continuing to reflection fallback");
                 }
 
                 // Fallback minimal reflection: locate runtime assembly and try to instantiate 'RcaDockablePanel' via parameterless ctor.
@@ -86,40 +93,52 @@ namespace Rca.Loader.Services
                 if (assembly == null)
                 {
                     error = "Runtime assembly not found in load context";
+                    _log.LogWarning("{Msg}", error);
                     return null;
                 }
 
                 var panelType = assembly.GetTypes().FirstOrDefault(t => t.Name == "RcaDockablePanel");
                 if (panelType == null)
                 {
-                    error = "RcaDockablePanel type not found in runtime assembly. Runtime should register IRuntimePanelFactory in ServiceContainer.";
+                    error = "RcaDockablePanel type not found (runtime should register IRuntimePanelFactory)";
+                    _log.LogWarning("{Msg}", error);
                     return null;
                 }
 
-                var paramlessCtor = panelType.GetConstructor(Type.EmptyTypes);
-                if (paramlessCtor != null)
+                var ctor = panelType.GetConstructor(Type.EmptyTypes);
+                if (ctor == null)
                 {
-                    var instance = paramlessCtor.Invoke(null);
-                    if (instance is FrameworkElement fe) return fe;
-
-                    // If it is a UserControl, try extracting Content
-                    var contentProp = instance?.GetType().GetProperty("Content");
-                    if (contentProp != null)
-                    {
-                        var contentVal = contentProp.GetValue(instance) as FrameworkElement;
-                        if (contentVal != null) return contentVal;
-                    }
-
-                    error = "Created instance is not a FrameworkElement";
+                    error = "No parameterless constructor for RcaDockablePanel";
+                    _log.LogWarning("{Msg}", error);
                     return null;
                 }
 
-                error = "No parameterless constructor found for RcaDockablePanel. Runtime must either register IRuntimePanelFactory or expose a parameterless constructor.";
+                var instance = ctor.Invoke(null);
+                if (instance is FrameworkElement fe)
+                {
+                    _log.LogInformation("Panel created via reflection path (type={Type})", panelType.FullName);
+                    return fe;
+                }
+
+                var contentProp = instance?.GetType().GetProperty("Content");
+                if (contentProp != null)
+                {
+                    var contentVal = contentProp.GetValue(instance) as FrameworkElement;
+                    if (contentVal != null)
+                    {
+                        _log.LogInformation("Panel content extracted from Content property (type={Type})", panelType.FullName);
+                        return contentVal;
+                    }
+                }
+
+                error = "Created instance is not a FrameworkElement";
+                _log.LogWarning("{Msg}", error);
                 return null;
             }
             catch (Exception ex)
             {
                 error = ex.ToString();
+                _log.LogError(ex, "Error creating dockable content");
                 return null;
             }
         }
@@ -132,69 +151,46 @@ namespace Rca.Loader.Services
         /// <returns>True if successful, false otherwise.</returns>
         public bool ReloadRuntime(string? folderPath, out string? error)
         {
+            var opId = Guid.NewGuid().ToString("N");
+            _log.LogInformation("ReloadRuntime start opId={Op} path={Path}", opId, folderPath);
             try
             {
-                if (string.IsNullOrWhiteSpace(folderPath))
-                {
-                    error = "Folder path missing";
-                    return false;
-                }
-
+                if (string.IsNullOrWhiteSpace(folderPath)) { error = "Folder path missing"; _log.LogWarning("{Msg} opId={Op}", error, opId); return false; }
                 var runtimeDll = Path.Combine(folderPath, LoaderConstants.RuntimeFileName);
-                if (!File.Exists(runtimeDll))
-                {
-                    error = $"Runtime dll not found: {runtimeDll}";
-                    return false;
-                }
+                if (!File.Exists(runtimeDll)) { error = $"Runtime dll not found: {runtimeDll}"; _log.LogWarning("{Msg} opId={Op}", error, opId); return false; }
 
                 UnloadRuntime();
-
-                // Create new context and set runtime path for assembly resolution
                 currentContext = new RuntimeLoadContext();
                 currentContext.SetRuntimePath(runtimeDll);
-
-                // Pre-load IronPython assemblies to avoid collectible assembly issues
                 PreloadIronPythonAssemblies(folderPath);
 
                 // Load and initialize the runtime
                 var assembly = currentContext.LoadFromAssemblyPath(runtimeDll);
                 var runtimeType = FindRuntimeEntryType(assembly);
-
-                if (runtimeType == null)
-                {
-                    error = "RuntimeEntry class not found";
-                    return false;
-                }
+                if (runtimeType == null) { error = "RuntimeEntry class not found"; _log.LogWarning("{Msg} opId={Op}", error, opId); return false; }
 
                 var instance = Activator.CreateInstance(runtimeType);
-                if (instance == null)
-                {
-                    error = "Failed to create runtime instance";
-                    return false;
-                }
+                if (instance == null) { error = "Failed to create runtime instance"; _log.LogWarning("{Msg} opId={Op}", error, opId); return false; }
 
                 var initMethod = runtimeType.GetMethod("Initialize");
-                if (initMethod == null)
-                {
-                    error = "Initialize method not found on RuntimeEntry";
-                    return false;
-                }
+                if (initMethod == null) { error = "Initialize method not found on RuntimeEntry"; _log.LogWarning("{Msg} opId={Op}", error, opId); return false; }
 
                 currentContext.SetRuntimeInstance(instance);
                 initMethod.Invoke(instance, null);
-
+                currentRuntimeInstance = instance;
                 error = null;
+                _log.LogInformation("ReloadRuntime success opId={Op}", opId);
                 return true;
             }
             catch (Exception ex)
             {
                 error = ex.ToString();
+                _log.LogError(ex, "ReloadRuntime failed opId={Op}", opId);
                 return false;
             }
         }
 
-        private Type? FindRuntimeEntryType(Assembly assembly) =>
-            assembly.GetTypes().FirstOrDefault(type => type.Name == "RuntimeEntry" && !type.IsAbstract);
+        private Type? FindRuntimeEntryType(Assembly assembly) => assembly.GetTypes().FirstOrDefault(t => t.Name == "RuntimeEntry" && !t.IsAbstract);
 
         /// <summary>
         /// Pre-loads IronPython assemblies in the default context to avoid collectible assembly issues.
@@ -202,35 +198,24 @@ namespace Rca.Loader.Services
         /// <param name="runtimeFolder">The runtime folder containing the assemblies.</param>
         private void PreloadIronPythonAssemblies(string runtimeFolder)
         {
-            var pythonAssemblies = new[]
-            {
-                "Microsoft.Dynamic.dll", "Microsoft.Scripting.dll",
-                "IronPython.dll", "IronPython.Modules.dll"
-            };
-
+            var pythonAssemblies = new[] { "Microsoft.Dynamic.dll", "Microsoft.Scripting.dll", "IronPython.dll", "IronPython.Modules.dll" };
             foreach (var assemblyFile in pythonAssemblies)
             {
                 var assemblyPath = Path.Combine(runtimeFolder, assemblyFile);
-                if (File.Exists(assemblyPath))
+                if (!File.Exists(assemblyPath)) continue;
+                try
                 {
-                    try
+                    var assemblyName = Path.GetFileNameWithoutExtension(assemblyFile);
+                    var existing = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => !a.IsDynamic && string.Equals(a.GetName().Name, assemblyName, StringComparison.OrdinalIgnoreCase));
+                    if (existing == null)
                     {
-                        var assemblyName = Path.GetFileNameWithoutExtension(assemblyFile);
-
-                        // Check if already loaded
-                        var existingAssembly = AppDomain.CurrentDomain.GetAssemblies()
-                            .FirstOrDefault(a => !a.IsDynamic &&
-                                string.Equals(a.GetName().Name, assemblyName, StringComparison.OrdinalIgnoreCase));
-
-                        if (existingAssembly == null)
-                        {
-                            AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath);
-                        }
+                        AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath);
+                        _log.LogDebug("Preloaded python assembly {Asm}", assemblyFile);
                     }
-                    catch
-                    {
-                        // Continue with other assemblies if one fails
-                    }
+                }
+                catch (Exception ex)
+                {
+                    _log.LogDebug(ex, "Failed preloading python assembly {Asm}", assemblyFile);
                 }
             }
         }
@@ -240,34 +225,47 @@ namespace Rca.Loader.Services
         /// </summary>
         public void UnloadRuntime()
         {
+            if (currentContext == null) return;
+            var opId = Guid.NewGuid().ToString("N");
+            _log.LogInformation("UnloadRuntime start opId={Op} path={Path}", opId, currentContext.RuntimePath);
             try
             {
-                if (currentContext?.RuntimeInstance != null)
+                try
                 {
-                    var rtType = currentContext.RuntimeInstance.GetType();
-                    var shutdownMethod = rtType.GetMethod("Shutdown");
-                    shutdownMethod?.Invoke(currentContext.RuntimeInstance, null);
+                    if (currentContext.RuntimeInstance != null)
+                    {
+                        var rtType = currentContext.RuntimeInstance.GetType();
+                        var shutdown = rtType.GetMethod("Shutdown");
+                        shutdown?.Invoke(currentContext.RuntimeInstance, null);
+                    }
                 }
-            }
-            catch { }
+                catch (Exception exShutdown)
+                {
+                    _log.LogDebug(exShutdown, "Runtime shutdown hook failed opId={Op}", opId);
+                }
 
-            currentRuntime = null;
+                currentRuntimeInstance = null;
 
-            if (currentContext != null)
-            {
-                // Clear panel content before unloading runtime to avoid pinned references
                 try
                 {
                     var host = LoaderApp.Instance?.PanelHost;
                     host?.SetContent(null);
                 }
-                catch { }
+                catch (Exception exPanel)
+                {
+                    _log.LogDebug(exPanel, "Failed clearing panel host content opId={Op}", opId);
+                }
 
                 currentContext.Unload();
                 currentContext = null;
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
                 GC.Collect();
+                _log.LogInformation("UnloadRuntime complete opId={Op}", opId);
+            }
+            catch (Exception ex)
+            {
+                _log.LogError(ex, "UnloadRuntime failure opId={Op}", opId);
             }
         }
 
@@ -281,19 +279,16 @@ namespace Rca.Loader.Services
             if (!Directory.Exists(LoaderConstants.RuntimeDeployRoot))
             {
                 error = $"Runtime root not found: {LoaderConstants.RuntimeDeployRoot}";
+                _log.LogWarning("{Msg}", error);
                 return false;
             }
-
-            var latest = Directory.GetDirectories(LoaderConstants.RuntimeDeployRoot)
-                .OrderByDescending(d => d)
-                .FirstOrDefault();
-
+            var latest = Directory.GetDirectories(LoaderConstants.RuntimeDeployRoot).OrderByDescending(d => d).FirstOrDefault();
             if (latest == null)
             {
                 error = "No runtime versions found";
+                _log.LogWarning("{Msg}", error);
                 return false;
             }
-
             return ReloadRuntime(latest, out error);
         }
     }
