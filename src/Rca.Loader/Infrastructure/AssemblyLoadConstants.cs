@@ -5,36 +5,41 @@ namespace Rca.Loader.Infrastructure
 {
     /// <summary>
     /// Constants for assembly loading and runtime management.
+    /// NOTE: Assemblies listed in NonCollectibleAssemblies are always loaded (or reused) from the default context.
+    /// This avoids loading multiple copies across the collectible RuntimeLoadContext which would otherwise
+    /// break type identity (e.g. logging contracts shared between Loader and Runtime) or leak memory.
     /// </summary>
     public static class AssemblyLoadConstants
     {
         /// <summary>
-        /// Assembly names that must be loaded in the default context to avoid collectible assembly issues.
+        /// Assembly names that must be loaded in the default context to avoid collectible assembly issues for DLR / IronPython.
         /// </summary>
-        public static readonly string[] PythonAssemblies = 
+        public static readonly string[] PythonAssemblies =
         {
-            "IronPython", 
-            "IronPython.Modules", 
+            "IronPython",
+            "IronPython.Modules",
             "IronPython.StdLib",
-            "Microsoft.Scripting", 
-            "Microsoft.Dynamic", 
+            "Microsoft.Scripting",
+            "Microsoft.Dynamic",
             "DynamicLanguageRuntime"
         };
 
         /// <summary>
-        /// Assembly names that should not be loaded in collectible contexts.
+        /// Assembly names that should not be loaded into a collectible context. They are first resolved from Default context.
+        /// Added Rca.Logging.Contracts to ensure a single shared copy is used for LogEntryDto across Loader + Runtime.
         /// </summary>
-        public static readonly string[] NonCollectibleAssemblies = 
+        public static readonly string[] NonCollectibleAssemblies =
         {
-            "Rca.Loader.Contracts", 
-            "IronPython", 
-            "IronPython.Modules", 
+            "Rca.Loader.Contracts",
+            "Rca.Logging.Contracts", // shared logging DTOs (avoid duplicate load + FileLoadException)
+            "IronPython",
+            "IronPython.Modules",
             "IronPython.StdLib",
-            "Microsoft.Scripting", 
-            "Microsoft.Dynamic", 
+            "Microsoft.Scripting",
+            "Microsoft.Dynamic",
             "DynamicLanguageRuntime",
-            "System.Numerics", 
-            "Microsoft.CSharp", 
+            "System.Numerics",
+            "Microsoft.CSharp",
             "System.Dynamic.Runtime"
         };
 

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
@@ -106,6 +106,7 @@
       <RuntimeDeployFiles Include="$(TargetDir)IronPython*.dll" />
       <RuntimeDeployFiles Include="$(TargetDir)Microsoft.Scripting.dll" />
       <RuntimeDeployFiles Include="$(TargetDir)Microsoft.Dynamic.dll" />
+      <RuntimeDeployFiles Include="$(TargetDir)Rca.Logging.Contracts.dll" />
     </ItemGroup>
     <Copy SourceFiles="@(RuntimeDeployFiles)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" />
     <ItemGroup>
