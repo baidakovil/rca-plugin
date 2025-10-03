@@ -9,10 +9,6 @@ using Rca.Logging.Contracts;
 
 namespace Rca.Loader.Logging;
 
-/// <summary>
-/// Persistent named pipe server for receiving runtime log entries as JSONL.
-/// One reader loop processes lines synchronously: deserialize, enrich, dispatch.
-/// </summary>
 public sealed class LoggingPipeServerService : IDisposable
 {
     private readonly string _pipeName;
@@ -55,7 +51,7 @@ public sealed class LoggingPipeServerService : IDisposable
                 while (!ct.IsCancellationRequested && server.IsConnected)
                 {
                     var line = await reader.ReadLineAsync().ConfigureAwait(false);
-                    if (line == null) break; // disconnect
+                    if (line == null) break;
                     ProcessLine(line);
                 }
             }
@@ -77,6 +73,12 @@ public sealed class LoggingPipeServerService : IDisposable
         {
             var dto = JsonSerializer.Deserialize<LogEntryDto>(line, _jsonOptions);
             if (dto == null) return;
+            if (dto.SchemaVersion != LoggingSchema.Version)
+            {
+                // incompatible now -> skip (future: write special file)
+                return;
+            }
+            if (dto.IsPing) return; // suppress keepalive pings
             var enriched = new EnrichedLogEntry(dto)
             {
                 GlobalSequenceId = Interlocked.Increment(ref _globalSeq),
@@ -104,9 +106,6 @@ public sealed class LoggingPipeServerService : IDisposable
     }
 }
 
-/// <summary>
-/// Enriched wrapper with loader-only fields.
-/// </summary>
 public sealed class EnrichedLogEntry
 {
     public EnrichedLogEntry(LogEntryDto dto) => Dto = dto;
@@ -116,9 +115,6 @@ public sealed class EnrichedLogEntry
     public int LoaderProcessId { get; set; }
 }
 
-/// <summary>
-/// Simple dispatcher writing to file and debug sinks.
-/// </summary>
 internal sealed class LogDispatcher : IDisposable
 {
     private readonly FileLogSink _fileSink = new();
@@ -154,7 +150,7 @@ internal sealed class FileLogSink : IDisposable
         try
         {
             var d = e.Dto;
-            _writer.WriteLine($"{e.GlobalSequenceId}|{new DateTime(d.TimestampTicks):O}|{d.Level}|{d.Category}|{Escape(d.Message)}|F={d.Flags}|Seq={d.SequenceId}|Proc={d.RuntimeProcessId}|Sess={d.RuntimeSessionId}");
+            _writer.WriteLine($"{e.GlobalSequenceId}|{new DateTime(d.TimestampTicks):O}|Recv:{e.ReceivedTimestamp:O}|{d.Level}|{d.Category}|{Escape(d.Message)}|F={d.Flags}|Seq={d.SequenceId}|Proc={d.RuntimeProcessId}|Sess={d.RuntimeSessionId}");
         }
         catch (Exception ex)
         {

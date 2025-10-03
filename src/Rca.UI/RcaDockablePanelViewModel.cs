@@ -5,18 +5,19 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using Rca.UI.Views;
 
 namespace Rca.UI.ViewModels
 {
     /// <summary>
     /// ViewModel for the RcaDockablePanel. Handles Python code execution and UI commands.
+    /// Debug log window removed.
     /// </summary>
     public class RcaDockablePanelViewModel : INotifyPropertyChanged
     {
         private string inputText = string.Empty;
         private string outputText = string.Empty;
         private readonly IPythonExecutionService pythonService;
+        private readonly Func<UIApplication?> uiappProvider;
 
         /// <summary>
         /// Command to show hello world dialog.
@@ -26,10 +27,6 @@ namespace Rca.UI.ViewModels
         /// Command to execute Python code.
         /// </summary>
         public ICommand ExecutePythonCommand { get; }
-        /// <summary>
-        /// Command to show debug information.
-        /// </summary>
-        public ICommand ShowDebugInfoCommand { get; }
 
         /// <summary>
         /// The Python code input by the user.
@@ -52,21 +49,14 @@ namespace Rca.UI.ViewModels
         /// <summary>
         /// Initializes a new instance of the RcaDockablePanelViewModel class.
         /// </summary>
-        private readonly Func<UIApplication?> uiappProvider;
-        private readonly Func<DebugInfoWindow> debugInfoWindowFactory;
-
         public RcaDockablePanelViewModel(
-            Func<UIApplication?> uiappProvider, 
-            IPythonExecutionService pythonService,
-            Func<DebugInfoWindow> debugInfoWindowFactory
-            )
+            Func<UIApplication?> uiappProvider,
+            IPythonExecutionService pythonService)
         {
             this.uiappProvider = uiappProvider;
             this.pythonService = pythonService;
-            this.debugInfoWindowFactory = debugInfoWindowFactory;
             ClickCommand = new RelayCommand(OnHelloClicked);
             ExecutePythonCommand = new RelayCommand(async _ => await OnExecutePython(), _ => !string.IsNullOrWhiteSpace(InputText));
-            ShowDebugInfoCommand = new RelayCommand(_ => OnShowDebugInfo());
         }
 
         private async Task OnExecutePython()
@@ -99,15 +89,6 @@ namespace Rca.UI.ViewModels
         private void OnHelloClicked(object parameter)
         {
             TaskDialog.Show("RCA Plugin", "Hello, World from RCA Chat Assistant!");
-        }
-
-        /// <summary>
-        /// Opens the debug information window.
-        /// /// </summary>
-        private void OnShowDebugInfo()
-        {
-            var win = debugInfoWindowFactory();
-            win.Show();
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

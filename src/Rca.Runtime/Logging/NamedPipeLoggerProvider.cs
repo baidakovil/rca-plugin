@@ -10,10 +10,6 @@ using Rca.Logging.Contracts;
 
 namespace Rca.Runtime.Logging;
 
-/// <summary>
-/// Logger provider that sends structured log entries over a dedicated named pipe to the Loader.
-/// Responsible only for lifecycle and logger caching; transport/backoff handled by <see cref="PipeLogTransport"/>.
-/// </summary>
 public sealed class NamedPipeLoggerProvider : ILoggerProvider
 {
     private readonly ConcurrentDictionary<string, NamedPipeLogger> _loggers = new();
@@ -53,9 +49,6 @@ public sealed class NamedPipeLoggerProvider : ILoggerProvider
     }
 }
 
-/// <summary>
-/// Simple transport encapsulating pipe connection, reconnection with backoff, and fallback/emergency logging.
-/// </summary>
 internal sealed class PipeLogTransport : IDisposable
 {
     private readonly string _pipeName;
@@ -72,7 +65,8 @@ internal sealed class PipeLogTransport : IDisposable
     // backoff
     private int _backoffIndex;
     private DateTime _nextAttempt = DateTime.MinValue;
-    private static readonly int[] BackoffMs = new[] { 50, 200, 500, 1000, 2000, 5000 };
+    private static readonly int[] BackoffMsBase = new[] { 50, 200, 500, 1000, 2000, 5000 };
+    private readonly Random _rng = new();
 
     // paths
     private readonly string _baseDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RCA", "Logs");
@@ -80,6 +74,13 @@ internal sealed class PipeLogTransport : IDisposable
     private StreamWriter? _fallbackWriter;
     private DateTime _fallbackDate;
     private int _disposed;
+    private DateTime _lastPing = DateTime.UtcNow;
+    private static readonly TimeSpan PingInterval = TimeSpan.FromSeconds(10);
+    private const string PingCategory = "__ping";
+
+    private const long MaxFallbackFileBytes = 50L * 1024 * 1024; // 50MB
+    private long _currentFallbackBytes;
+    private int _fallbackPart;
 
     public PipeLogTransport(string pipeName, JsonSerializerOptions jsonOptions, string runtimeSessionId, int? alcInstanceId, int runtimeProcessId)
     {
@@ -98,11 +99,11 @@ internal sealed class PipeLogTransport : IDisposable
         try
         {
             EnsureConnected();
+            MaybeSendPing();
             if (_state == 1 && _writer != null)
             {
                 var json = JsonSerializer.Serialize(dto, _jsonOptions);
                 _writer.WriteLine(json);
-                _writer.Flush();
                 if (_backoffIndex != 0) _backoffIndex = 0; // reset after success
                 return;
             }
@@ -122,6 +123,31 @@ internal sealed class PipeLogTransport : IDisposable
         WriteFallback(dto);
     }
 
+    private void MaybeSendPing()
+    {
+        if (DateTime.UtcNow - _lastPing < PingInterval) return;
+        _lastPing = DateTime.UtcNow;
+        if (_state != 1 || _writer == null) return;
+        var ping = new LogEntryDto
+        {
+            TimestampTicks = DateTime.Now.Ticks,
+            Level = LogLevel.Trace.ToString(),
+            Category = PingCategory,
+            Message = "PING",
+            RuntimeSessionId = _runtimeSessionId,
+            SequenceId = NextSequenceId(),
+            RuntimeProcessId = _runtimeProcessId,
+            ALCInstanceId = _alcInstanceId,
+            IsPing = true
+        };
+        try
+        {
+            var json = JsonSerializer.Serialize(ping, _jsonOptions);
+            _writer.WriteLine(json);
+        }
+        catch { }
+    }
+
     private void EnsureConnected()
     {
         if (_disposed == 1) return;
@@ -139,8 +165,10 @@ internal sealed class PipeLogTransport : IDisposable
         catch (Exception)
         {
             // schedule next attempt with backoff
-            int delay = BackoffMs[Math.Min(_backoffIndex, BackoffMs.Length - 1)];
-            _backoffIndex = Math.Min(_backoffIndex + 1, BackoffMs.Length - 1);
+            int baseDelay = BackoffMsBase[Math.Min(_backoffIndex, BackoffMsBase.Length - 1)];
+            _backoffIndex = Math.Min(_backoffIndex + 1, BackoffMsBase.Length - 1);
+            double jitterFactor = 0.8 + _rng.NextDouble() * 0.4; // +/-20%
+            int delay = (int)(baseDelay * jitterFactor);
             _nextAttempt = DateTime.UtcNow.AddMilliseconds(delay);
             ForceDisconnect();
         }
@@ -159,26 +187,35 @@ internal sealed class PipeLogTransport : IDisposable
         try
         {
             var now = DateTime.Now; // local time per requirements
-            if (_fallbackWriter == null || _fallbackDate.Date != now.Date)
-            {
-                lock (_fileLock)
-                {
-                    if (_fallbackWriter == null || _fallbackDate.Date != now.Date)
-                    {
-                        _fallbackWriter?.Dispose();
-                        string path = Path.Combine(_baseDir, $"runtime-fallback-{now:yyyyMMdd}.log");
-                        _fallbackWriter = new StreamWriter(new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite)) { AutoFlush = true };
-                        _fallbackDate = now.Date;
-                    }
-                }
-            }
+            EnsureFallbackWriter(now);
             var enriched = dto with { IsFallback = true, Flags = dto.Flags | LoggingFlags.FallbackUsed };
             var json = JsonSerializer.Serialize(enriched, _jsonOptions);
             _fallbackWriter!.WriteLine(json);
+            _currentFallbackBytes += Encoding.UTF8.GetByteCount(json) + 2;
         }
         catch (Exception ex)
         {
             WriteEmergency(dto, dto.Flags | LoggingFlags.FallbackUsed, ex);
+        }
+    }
+
+    private void EnsureFallbackWriter(DateTime now)
+    {
+        if (_fallbackWriter == null || _fallbackDate.Date != now.Date || _currentFallbackBytes > MaxFallbackFileBytes)
+        {
+            lock (_fileLock)
+            {
+                if (_fallbackWriter == null || _fallbackDate.Date != now.Date || _currentFallbackBytes > MaxFallbackFileBytes)
+                {
+                    _fallbackWriter?.Dispose();
+                    if (_fallbackDate.Date != now.Date) { _fallbackPart = 0; }
+                    string path = Path.Combine(_baseDir, $"runtime-fallback-{now:yyyyMMdd}_part{_fallbackPart}.log");
+                    _fallbackPart++;
+                    _fallbackWriter = new StreamWriter(new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite)) { AutoFlush = true };
+                    _fallbackDate = now.Date;
+                    _currentFallbackBytes = new FileInfo(path).Length;
+                }
+            }
         }
     }
 
@@ -193,7 +230,7 @@ internal sealed class PipeLogTransport : IDisposable
         catch { /* last resort: swallow */ }
     }
 
-    private static string Safe(string? s) => s == null ? string.Empty : s.Length > 200 ? s.Substring(0, 200) : s;
+    private static string Safe(string? s) => s == null ? string.Empty : s.Length > 200 ? s[..200] : s;
 
     public void Dispose()
     {
@@ -204,9 +241,6 @@ internal sealed class PipeLogTransport : IDisposable
     }
 }
 
-/// <summary>
-/// Implementation of <see cref="ILogger"/> that packages log state into a <see cref="LogEntryDto"/>.
-/// </summary>
 internal sealed class NamedPipeLogger : ILogger
 {
     private readonly string _category;
@@ -227,7 +261,6 @@ internal sealed class NamedPipeLogger : ILogger
     }
 
     public IDisposable BeginScope<TState>(TState state) where TState : notnull => NullScope.Instance;
-
     public bool IsEnabled(LogLevel logLevel) => logLevel != LogLevel.None;
 
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
@@ -248,7 +281,8 @@ internal sealed class NamedPipeLogger : ILogger
                 RuntimeProcessId = _runtimeProcessId,
                 ALCInstanceId = _alcInstanceId,
                 IsFallback = false,
-                Flags = 0
+                Flags = 0,
+                IsPing = false
             };
             _transport.Write(dto);
         }
@@ -258,9 +292,5 @@ internal sealed class NamedPipeLogger : ILogger
         }
     }
 
-    private sealed class NullScope : IDisposable
-    {
-        public static readonly NullScope Instance = new();
-        public void Dispose() { }
-    }
+    private sealed class NullScope : IDisposable { public static readonly NullScope Instance = new(); public void Dispose() { } }
 }

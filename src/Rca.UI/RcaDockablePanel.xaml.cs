@@ -4,7 +4,6 @@ using Rca.UI.ViewModels;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
@@ -20,8 +19,7 @@ namespace Rca.UI.Views
     {
         public RcaDockablePanel(
             Func<UIApplication?> uiappProvider, 
-            IPythonExecutionService pythonService,
-            Func<DebugInfoWindow> debugInfoWindowFactory)
+            IPythonExecutionService pythonService)
         {
             try
             {
@@ -36,13 +34,7 @@ namespace Rca.UI.Views
                     pythonService = new NullPythonExecutionService();
                 }
                 
-                if (debugInfoWindowFactory == null)
-                {
-                    Debug.WriteLine("Warning: RcaDockablePanel created with null debugInfoWindowFactory");
-                    debugInfoWindowFactory = () => new DebugInfoWindow(new NullDebugLogService());
-                }
-                
-                DataContext = new RcaDockablePanelViewModel(uiappProvider, pythonService, debugInfoWindowFactory);
+                DataContext = new RcaDockablePanelViewModel(uiappProvider, pythonService);
             }
             catch (Exception ex)
             {
@@ -97,8 +89,6 @@ namespace Rca.UI.Views
         /// </summary>
         private string RemoveClassDirective(string xamlContent)
         {
-            Debug.WriteLine("Removing x:Class directive from XAML");
-            
             // Use regex to remove the x:Class attribute
             string pattern = @"x:Class=""[^""]+""";
             string result = Regex.Replace(xamlContent, pattern, "");
@@ -218,36 +208,6 @@ namespace Rca.UI.Views
             public void SetRevitContext(object context)
             {
                 // Do nothing
-            }
-        }
-        
-        /// <summary>
-        /// Null implementation for standalone mode
-        /// </summary>
-        private class NullDebugLogService : IDebugLogService
-        {
-            public System.Collections.ObjectModel.ReadOnlyObservableCollection<IDebugLogEntry> Entries => 
-                new System.Collections.ObjectModel.ReadOnlyObservableCollection<IDebugLogEntry>(
-                    new System.Collections.ObjectModel.ObservableCollection<IDebugLogEntry>());
-                    
-            public void LogError(string message)
-            {
-                Debug.WriteLine($"[ERROR] {message}");
-            }
-
-            public void LogInfo(string message)
-            {
-                Debug.WriteLine($"[INFO] {message}");
-            }
-
-            public void LogPythonOutput(string message)
-            {
-                Debug.WriteLine($"[PYTHON] {message}");
-            }
-            
-            public void LogCustom(string message, DebugLogType type)
-            {
-                Debug.WriteLine($"[{type}] {message}");
             }
         }
     }

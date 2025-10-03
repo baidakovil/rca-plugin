@@ -7,6 +7,7 @@ namespace Rca.UI.Services
 {
     /// <summary>
     /// Service for resolving dependencies with graceful fallbacks to default implementations.
+    /// Debug log service removed.
     /// </summary>
     public class ServiceResolver
     {
@@ -55,7 +56,6 @@ namespace Rca.UI.Services
             return typeof(T) switch
             {
                 var t when t == typeof(IPythonExecutionService) => DefaultServices.CreatePythonExecutionService() as T,
-                var t when t == typeof(IDebugLogService) => DefaultServices.CreateDebugLogService() as T,
                 var t when t == typeof(IRevitContext) => DefaultServices.CreateRevitContext() as T,
                 _ => null
             };

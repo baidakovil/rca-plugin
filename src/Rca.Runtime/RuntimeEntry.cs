@@ -56,13 +56,6 @@ namespace Rca.Runtime
                     container.Register<IRevitContext>(new StandaloneRevitContext());
                 }
                 
-                // Register the debug log service if not already registered
-                if (!container.IsRegistered<IDebugLogService>())
-                {
-                    Debug.WriteLine("Registering DebugLogService");
-                    container.Register<IDebugLogService>(DebugLogService.Instance);
-                }
-                
                 // Register the Python execution service if not already registered
                 if (!container.IsRegistered<IPythonExecutionService>())
                 {

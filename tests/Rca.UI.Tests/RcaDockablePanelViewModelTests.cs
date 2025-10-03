@@ -24,8 +24,7 @@ namespace Rca.UI.Tests
             
             var vm = new RcaDockablePanelViewModel(
                 nullUiAppProvider,
-                python,
-                () => null!); // Use null-forgiving operator for the debugInfoWindowFactory since we don't use it in this test
+                python);
             
             vm.InputText = "print('hi')";
 

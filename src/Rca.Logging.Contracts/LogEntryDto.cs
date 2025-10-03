@@ -76,6 +76,11 @@ public sealed record LogEntryDto
     /// Bit flags for special conditions (see <see cref="LoggingFlags"/>).
     /// </summary>
     public int Flags { get; init; }
+
+    /// <summary>
+    /// Keepalive marker excluded from user log sinks.
+    /// </summary>
+    public bool IsPing { get; init; }
 }
 
 /// <summary>
@@ -104,4 +109,9 @@ public static class LoggingFlags
     /// Set when the entry was written using fallback path (local file) instead of pipe transport.
     /// </summary>
     public const int FallbackUsed = 1 << 1;
+
+    /// <summary>
+    /// Set when the log entry's schema is incompatible with the current version.
+    /// </summary>
+    public const int IncompatibleSchema = 1 << 2;
 }

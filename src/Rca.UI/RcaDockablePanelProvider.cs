@@ -1,23 +1,23 @@
 using Autodesk.Revit.UI;
-using Rca.Contracts;
 using System;
+using Rca.Contracts;
 
 namespace Rca.UI.Views
 {
+    /// <summary>
+    /// Provides the dockable panel. Debug logging UI removed in favor of unified logging system.
+    /// </summary>
     public class RcaDockablePanelProvider : IDockablePaneProvider
     {
         private readonly Func<UIApplication> uiappProvider;
         private readonly IPythonExecutionService pythonService;
-        private readonly IDebugLogService debugLogService;
 
         public RcaDockablePanelProvider(
             Func<UIApplication> uiappProvider,
-            IPythonExecutionService pythonService,
-            IDebugLogService debugLogService)
+            IPythonExecutionService pythonService)
         {
             this.uiappProvider = uiappProvider;
             this.pythonService = pythonService;
-            this.debugLogService = debugLogService;
         }
 
         public void SetupDockablePane(DockablePaneProviderData data)
@@ -25,10 +25,7 @@ namespace Rca.UI.Views
             if (data is null)
                 throw new ArgumentNullException(nameof(data));
 
-            // Create debug info window factory
-            Func<DebugInfoWindow> debugInfoWindowFactory = () => new DebugInfoWindow(debugLogService);
-
-            data.FrameworkElement = new RcaDockablePanel(uiappProvider, pythonService, debugInfoWindowFactory);
+            data.FrameworkElement = new RcaDockablePanel(() => uiappProvider(), pythonService);
             data.InitialState = new DockablePaneState
             {
                 DockPosition = DockPosition.Tabbed,
