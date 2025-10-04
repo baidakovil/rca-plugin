@@ -30,8 +30,8 @@ namespace Rca.TestAdapter
                 if (!CheckPipeServerResponsive())
                 {
                     Console.WriteLine("ERROR: RCA pipe server not responsive.");
-                    Console.WriteLine("The RCA plugin should auto-initialize when Revit starts. Please wait a moment and try again.");
-                    Console.WriteLine("If the issue persists, try clicking the 'Initialize' button in the RCA ribbon tab in Revit.");
+                    Console.WriteLine("The RCA plugin should auto-initialize when Revit starts.");
+                    Console.WriteLine("Please wait a moment for initialization to complete and try again.");
                     return false;
                 }
                 

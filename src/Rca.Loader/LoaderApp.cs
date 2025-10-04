@@ -13,6 +13,7 @@ namespace Rca.Loader
 {
     /// <summary>
     /// Main entry point for the RCA Loader Revit add-in.
+    /// Automatically initializes pipe server when UIApplication becomes available.
     /// </summary>
     public class LoaderApp : IExternalApplication
     {
@@ -24,6 +25,7 @@ namespace Rca.Loader
         private UIControlledApplication? uiControlledApp;
         private LoggingPipeServerService? loggingPipe; // logging server
         private ILogger _log = LoaderLog.GetLogger<LoaderApp>();
+        private bool isInitialized = false; // Track initialization state
 
         /// <summary>
         /// The dockable pane id used to register the RCA panel.
@@ -166,26 +168,40 @@ namespace Rca.Loader
 
         /// <summary>
         /// Handles the Idling event to auto-initialize pipe server when UIApplication becomes available.
+        /// Also monitors pipe server health and restarts if needed.
         /// </summary>
         /// <param name="sender">The event sender.</param>
         /// <param name="e">The event arguments.</param>
         private void OnApplicationIdling(object? sender, IdlingEventArgs e)
         {
-            if (uiapp == null && sender is UIApplication uiApplication)
+            // First-time initialization when UIApplication becomes available
+            if (!isInitialized && uiapp == null && sender is UIApplication uiApplication)
             {
-                _log.LogDebug("Idling initialization for pipe server");
+                _log.LogDebug("Auto-initializing pipe server on first Idling event");
                 InitializeWithUIApplication(uiApplication);
+                isInitialized = true;
+                return;
+            }
 
-                // Unsubscribe after successful initialization
-                if (uiControlledApp != null)
+            // Health check: restart pipe server if it stopped unexpectedly
+            if (isInitialized && uiapp != null && pipeServer != null && !pipeServer.IsRunning)
+            {
+                _log.LogWarning("Pipe server stopped unexpectedly, restarting...");
+                try
                 {
-                    uiControlledApp.Idling -= OnApplicationIdling;
+                    StartPipeServer();
+                    _log.LogInformation("Pipe server restarted successfully");
+                }
+                catch (Exception ex)
+                {
+                    _log.LogError(ex, "Failed to restart pipe server");
                 }
             }
         }
 
         /// <summary>
         /// Initializes the UIApplication and starts the pipe server.
+        /// This method is called automatically on first Idling event.
         /// </summary>
         /// <param name="uiapp">The Revit UI application.</param>
         public void InitializeWithUIApplication(UIApplication uiapp)
@@ -194,6 +210,7 @@ namespace Rca.Loader
             {
                 this.uiapp = uiapp;
                 StartPipeServer();
+                _log.LogInformation("Pipe server auto-initialized successfully");
             }
         }
 

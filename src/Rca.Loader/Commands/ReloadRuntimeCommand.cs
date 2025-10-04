@@ -28,7 +28,8 @@ namespace Rca.Loader.Commands
         {
             try
             {
-                if (LoaderApp.Instance?.RuntimeManager == null)
+                var loaderInstance = LoaderApp.Instance;
+                if (loaderInstance?.RuntimeManager == null)
                 {
                     message = "Runtime manager not available";
                     TaskDialog.Show("RCA Loader Error", "Runtime manager is not available. Please restart Revit.");
@@ -37,7 +38,7 @@ namespace Rca.Loader.Commands
                 }
 
                 // Check if loader is outdated first
-                if (LoaderApp.Instance.AssemblyStatusManager?.IsLoaderOutdated() == true)
+                if (loaderInstance.AssemblyStatusManager?.IsLoaderOutdated() == true)
                 {
                     // Show dialog with options to restart Revit or just reload runtime
                     var td = new TaskDialog("Loader Update Available")
@@ -59,7 +60,7 @@ namespace Rca.Loader.Commands
                     {
                         case TaskDialogResult.CommandLink1:
                             // Restart Revit
-                            var restartManager = new RestartManager(LoaderApp.Instance.AssemblyStatusManager);
+                            var restartManager = new RestartManager(loaderInstance.AssemblyStatusManager);
                             bool restart = restartManager.ShowRestartDialog();
                             Log.LogInformation("Restart dialog invoked restart={Restart}", restart);
                             return restart ? Result.Succeeded : Result.Cancelled;
@@ -75,16 +76,19 @@ namespace Rca.Loader.Commands
                 }
 
                 // If runtime is not currently loaded, attempt to load the latest runtime directly
-                var runtimeLoaded = LoaderApp.Instance.RuntimeManager.IsRuntimeLoaded;
+                var runtimeLoaded = loaderInstance.RuntimeManager.IsRuntimeLoaded;
                 if (!runtimeLoaded)
                 {
                     Log.LogInformation("Runtime not loaded - performing initial ReloadLatest");
-                    var success = LoaderApp.Instance.RuntimeManager.ReloadLatest(out var error);
+                    var success = loaderInstance.RuntimeManager.ReloadLatest(out var error);
                     if (success)
                     {
                         // Update runtime hash after successful reload
-                        LoaderApp.Instance.AssemblyStatusManager?.UpdateHashesAfterReload(
-                            LoaderApp.Instance.RuntimeManager.CurrentRuntimePath);
+                        if (loaderInstance.AssemblyStatusManager != null)
+                        {
+                            loaderInstance.AssemblyStatusManager.UpdateHashesAfterReload(
+                                loaderInstance.RuntimeManager.CurrentRuntimePath);
+                        }
 
                         TaskDialog.Show("RCA Loader", "Runtime reloaded successfully!");
 
@@ -102,15 +106,15 @@ namespace Rca.Loader.Commands
                 // Runtime is loaded - check whether it is outdated
                 // IMPORTANT: First update CurrentInfo from latest folder, then check if outdated
                 // This ensures we compare against the actual latest version on disk
-                var latest = LoaderApp.Instance.AssemblyStatusManager?.GetLatestTempDllFolder() ?? string.Empty;
+                var latest = loaderInstance.AssemblyStatusManager?.GetLatestTempDllFolder() ?? string.Empty;
                 if (!string.IsNullOrEmpty(latest))
                 {
                     Log.LogDebug("Updating CurrentInfo from latest folder before outdated check: {Folder}", latest);
-                    LoaderApp.Instance.AssemblyStatusManager?.ProcessMsBuildSignal(latest);
-                    LoaderApp.Instance?.UpdateStatusDisplay();
+                    loaderInstance.AssemblyStatusManager?.ProcessMsBuildSignal(latest);
+                    loaderInstance.UpdateStatusDisplay();
                 }
                 
-                bool runtimeOutdated = LoaderApp.Instance.AssemblyStatusManager?.IsRuntimeOutdated() ?? false;
+                bool runtimeOutdated = loaderInstance.AssemblyStatusManager?.IsRuntimeOutdated() ?? false;
                 if (!runtimeOutdated)
                 {
                     TaskDialog.Show("RCA Loader", "All assemblies are up to date. No reload needed.");
@@ -119,13 +123,16 @@ namespace Rca.Loader.Commands
                 }
 
                 // Normal runtime reload flow (runtime was loaded and flagged outdated)
-                var reloadSuccess = LoaderApp.Instance.RuntimeManager.ReloadLatest(out var reloadError);
+                var reloadSuccess = loaderInstance.RuntimeManager.ReloadLatest(out var reloadError);
 
                 if (reloadSuccess)
                 {
                     // Update runtime hash after successful reload
-                    LoaderApp.Instance.AssemblyStatusManager?.UpdateHashesAfterReload(
-                        LoaderApp.Instance.RuntimeManager.CurrentRuntimePath);
+                    if (loaderInstance.AssemblyStatusManager != null)
+                    {
+                        loaderInstance.AssemblyStatusManager.UpdateHashesAfterReload(
+                            loaderInstance.RuntimeManager.CurrentRuntimePath);
+                    }
 
                     TaskDialog.Show("RCA Loader", "Runtime reloaded successfully!");
                     Log.LogInformation("Runtime reloaded successfully (outdated path updated)");
@@ -176,15 +183,18 @@ namespace Rca.Loader.Commands
                 try
                 {
                     var uiApp = LoaderApp.Instance?.UIApplication;
-                    if (uiApp != null)
+                    if (uiApp == null)
                     {
-                        var paneId = new DockablePaneId(new Guid("3D5A1C2B-4F8E-4D3F-AF1E-1234567890AB"));
-                        var pane = uiApp.GetDockablePane(paneId);
-                        if (pane != null && !pane.IsShown())
-                        {
-                            pane.Show();
-                            Log.LogDebug("Dockable pane shown");
-                        }
+                        Log.LogDebug("UIApplication not available, cannot auto-show dockable pane");
+                        return;
+                    }
+                    
+                    var paneId = new DockablePaneId(new Guid("3D5A1C2B-4F8E-4D3F-AF1E-1234567890AB"));
+                    var pane = uiApp.GetDockablePane(paneId);
+                    if (pane != null && !pane.IsShown())
+                    {
+                        pane.Show();
+                        Log.LogDebug("Dockable pane shown");
                     }
                 }
                 catch (Exception exShow)

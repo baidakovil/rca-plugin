@@ -15,11 +15,11 @@ namespace Rca.Loader.Services
 {
     /// <summary>
     /// Handles creation and configuration of Revit ribbon UI components.
+    /// In DEBUG builds, adds controls to standard Add-Ins tab for development.
     /// </summary>
     public class RibbonService : IRibbonService
     {
-        private const string TabName = "RCA";
-        private const string PanelName = "Loader";
+        private const string PanelName = "RCA Debug";
         private static readonly ILogger Log = LoaderLog.GetLogger<RibbonService>();
 
 #if DEBUG
@@ -30,7 +30,8 @@ namespace Rca.Loader.Services
 #endif
 
         /// <summary>
-        /// Builds the RCA ribbon tab and panels in Revit.
+        /// Builds the RCA ribbon controls in Revit's standard Add-Ins tab.
+        /// Uses the built-in Tab.AddIns constant to ensure proper tab reference.
         /// </summary>
         /// <param name="application">The Revit UI controlled application.</param>
         public void BuildRibbon(object application)
@@ -38,73 +39,90 @@ namespace Rca.Loader.Services
             if (application is not UIControlledApplication uiApp)
                 throw new ArgumentException("Application must be a UIControlledApplication", nameof(application));
 
-            try { uiApp.CreateRibbonTab(TabName); } catch { }
-            var panel = uiApp.CreateRibbonPanel(TabName, PanelName);
-            Log.LogInformation("Ribbon panel created tab={Tab} panel={Panel}", TabName, PanelName);
-
-            // Initialize command - must be called first to set up the UIApplication
-            // This will be invisible to users but can be triggered by the test adapter
-            uiApp.CreateRibbonPanel(TabName, "Hidden").AddItem(new PushButtonData(
-                "RCA_Initialize",
-                "Initialize",
-                Assembly.GetExecutingAssembly().Location,
-                typeof(InitializerCommand).FullName));
-
-            // Button: Reload Runtime (latest)
-            var reloadBtn = new PushButtonData(
-                "RCA_ReloadRuntime",
-                "Reload\nRuntime",
-                Assembly.GetExecutingAssembly().Location,
-                typeof(ReloadRuntimeCommand).FullName);
-            var reloadPush = panel.AddItem(reloadBtn) as PushButton;
-            AssignEmbeddedIcons(reloadPush,
-                iconFileName: "ReloadRuntime16.png",
-                tooltip: "Reload the latest deployed runtime.");
-            Log.LogDebug("Reload runtime button added");
-
 #if DEBUG
-            // Create Debug panel and three stacked status TextBoxes (only in DEBUG builds)
+            // In DEBUG builds, add controls to standard Add-Ins tab using the built-in constant
             try
             {
-                var debugPanel = uiApp.CreateRibbonPanel(TabName, "Debug");
+                // Use the built-in Revit API constant for Add-Ins tab
+                var panel = uiApp.CreateRibbonPanel(Tab.AddIns, PanelName);
+                Log.LogInformation("Ribbon panel created in Add-Ins tab, panel={Panel}", PanelName);
 
-                // Do not assign images to TextBoxData to avoid icons displaying next to textboxes
-                TextBoxData tb1 = new TextBoxData("RCA_StatusLine1") { Name = "Assembly Status", ToolTip = "Shows status of loaded assemblies" };
-                TextBoxData tb2 = new TextBoxData("RCA_StatusLine2") { Name = "Runtime Status" };
-                TextBoxData tb3 = new TextBoxData("RCA_StatusLine3") { Name = "Signal Status" };
+                // Button: Show RCA Panel
+                var showPanelBtn = new PushButtonData(
+                    "RCA_ShowPanel",
+                    "Show\nRCA Panel",
+                    Assembly.GetExecutingAssembly().Location,
+                    typeof(ShowDockablePanelCommand).FullName);
+                var showPanelPush = panel.AddItem(showPanelBtn) as PushButton;
+                AssignEmbeddedIcons(showPanelPush,
+                    iconFileName: "OpenAssistant16.png",
+                    tooltip: "Show the RCA Chat Assistant panel");
+                Log.LogDebug("Show panel button added to {Panel}", PanelName);
+
+                // Button: Reload Runtime (latest)
+                var reloadBtn = new PushButtonData(
+                    "RCA_ReloadRuntime",
+                    "Reload\nRuntime",
+                    Assembly.GetExecutingAssembly().Location,
+                    typeof(ReloadRuntimeCommand).FullName);
+                var reloadPush = panel.AddItem(reloadBtn) as PushButton;
+                AssignEmbeddedIcons(reloadPush,
+                    iconFileName: "ReloadRuntime16.png",
+                    tooltip: "Reload the latest deployed runtime.");
+                Log.LogDebug("Reload runtime button added to {Panel}", PanelName);
+
+                // Add separator for visual grouping
+                panel.AddSeparator();
+
+                // Create three stacked status TextBoxes
+                TextBoxData tb1 = new TextBoxData("RCA_StatusLine1") 
+                { 
+                    Name = "Assembly Status", 
+                    ToolTip = "Shows status of loaded assemblies" 
+                };
+                TextBoxData tb2 = new TextBoxData("RCA_StatusLine2") 
+                { 
+                    Name = "Runtime Status",
+                    ToolTip = "Shows runtime assembly information"
+                };
+                TextBoxData tb3 = new TextBoxData("RCA_StatusLine3") 
+                { 
+                    Name = "Signal Status",
+                    ToolTip = "Shows MSBuild signal information"
+                };
 
                 // Add them as stacked items
-                var items = debugPanel.AddStackedItems(tb1, tb2, tb3);
+                var items = panel.AddStackedItems(tb1, tb2, tb3);
 
                 if (items == null)
                 {
                     Log.LogWarning("AddStackedItems returned null for debug textboxes");
+                    return;
                 }
 
                 // The returned list maps to the created controls in the same order
-                TextBox? line1 = items != null && items.Count > 0 ? items[0] as TextBox : null;
-                TextBox? line2 = items != null && items.Count > 1 ? items[1] as TextBox : null;
-                TextBox? line3 = items != null && items.Count > 2 ? items[2] as TextBox : null;
+                TextBox? line1 = items.Count > 0 ? items[0] as TextBox : null;
+                TextBox? line2 = items.Count > 1 ? items[1] as TextBox : null;
+                TextBox? line3 = items.Count > 2 ? items[2] as TextBox : null;
 
                 if (line1 == null || line2 == null || line3 == null)
                 {
-                    Log.LogWarning("One or more ribbon textboxes are null line1={L1} line2={L2} line3={L3}", line1 != null, line2 != null, line3 != null);
+                    Log.LogWarning("One or more ribbon textboxes are null line1={L1} line2={L2} line3={L3}", 
+                        line1 != null, line2 != null, line3 != null);
+                    return;
                 }
 
-                if (line1 != null && line2 != null && line3 != null)
-                {
-                    StatusDisplay = new RibbonStatusDisplay();
-                    StatusDisplay.Initialize(line1, line2, line3);
-
-                    // Set tooltip on first textbox
-                    line1.ToolTip = "Shows status of loaded assemblies";
-                    Log.LogInformation("Debug status display initialized");
-                }
+                StatusDisplay = new RibbonStatusDisplay();
+                StatusDisplay.Initialize(line1, line2, line3);
+                Log.LogInformation("Debug status display initialized in {Panel}", PanelName);
             }
             catch (Exception ex)
             {
-                Log.LogWarning(ex, "Failed to create debug UI (DEBUG build)");
+                Log.LogWarning(ex, "Failed to create debug UI in Add-Ins tab");
             }
+#else
+            // In RELEASE builds, do nothing - no UI needed
+            Log.LogInformation("RELEASE build - no ribbon UI created");
 #endif
         }
 

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
@@ -16,13 +16,13 @@
 
   <!-- 
     Project references for Runtime dependencies.
-    These assemblies will be merged into Rca.Runtime.dll by ILRepack.
+    These assemblies will be merged into Rca.Runtime.dll by ILRepack
     
     NOTE: Rca.Logging.Contracts is NOT included here because it's now merged into Rca.Loader.dll.
     Runtime accesses Logging.Contracts types through the Rca.Loader reference below.
     However, Rca.UI has a ProjectReference to Logging.Contracts for its own compilation,
     which means Logging.Contracts.dll gets copied to Runtime output. We exclude it from copy
-    to avoid type ambiguity (types should only come from Rca.Loader.dll).
+    to avoid type ambiguity (types should only come from Rca.Loader.dll)
   -->
   <ItemGroup>
     <ProjectReference Include="..\Rca.Core\Rca.Core.csproj" />

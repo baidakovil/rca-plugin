@@ -6,7 +6,9 @@ namespace Rca.Loader.Contracts
     public interface IRibbonService
     {
         /// <summary>
-        /// Builds the RCA ribbon tab and panels in Revit.
+        /// Builds the RCA ribbon controls in Revit's Add-Ins tab.
+        /// In DEBUG builds, creates controls for development and testing.
+        /// In RELEASE builds, no UI is created.
         /// </summary>
         /// <param name="application">The Revit UI controlled application.</param>
         void BuildRibbon(object application);
