@@ -55,6 +55,14 @@
   <!-- Embedded resources (images, icons, etc.) -->
   <ItemGroup>
     <EmbeddedResource Include="Resources\\*.png" />
+    <Content Include="Resources\\settings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>settings.json</Link>
+    </Content>
+    <Content Include="Resources\\Rca.addin">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Rca.addin</Link>
+    </Content>
   </ItemGroup>
 
   <!-- 
@@ -326,7 +334,38 @@
     
     <Message Text="Loader deployment completed successfully" Importance="High" />
   </Target>
-  
+
+  <!--
+    Target: DeploySettingsJson
+    
+    Deploys settings.json to %ProgramData%\Autodesk\Revit\Addins\{RevitVersion}\Revit Chat Assistant\
+    Only copies if file doesn't exist (preserves user settings).
+    Similar to .addin file deployment logic.
+  -->
+  <Target Name="DeploySettingsJson" AfterTargets="Build">
+    <PropertyGroup>
+      <SettingsDestDir>$(ProgramData)\Autodesk\Revit\Addins\$(RcaRevitVersion)\Revit Chat Assistant</SettingsDestDir>
+      <SettingsDestPath>$(SettingsDestDir)\settings.json</SettingsDestPath>
+      <SettingsSourcePath>$(TargetDir)settings.json</SettingsSourcePath>
+    </PropertyGroup>
+
+    <!-- Create directory if it doesn't exist -->
+    <MakeDir Directories="$(SettingsDestDir)" />
+
+    <!-- Copy settings.json only if it doesn't exist (don't overwrite user settings) -->
+    <Copy SourceFiles="$(SettingsSourcePath)" 
+          DestinationFiles="$(SettingsDestPath)" 
+          SkipUnchangedFiles="true"
+          Condition="!Exists('$(SettingsDestPath)')" />
+
+    <Message Text="Settings file deployed to: $(SettingsDestPath)" 
+             Importance="High" 
+             Condition="!Exists('$(SettingsDestPath)')" />
+    <Message Text="Settings file already exists, skipping deployment: $(SettingsDestPath)" 
+             Importance="Low" 
+             Condition="Exists('$(SettingsDestPath)')" />
+  </Target>
+
   <!-- Import common build configuration (Revit paths, API references, etc.) -->
   <Import Project="..\..\build\Common.targets" />
 </Project>

@@ -7,6 +7,7 @@ using Rca.Loader.Infrastructure;
 using Rca.Loader.AssemblyManagement;
 using Rca.Loader.UI;
 using Rca.Loader.Logging;
+using Rca.Loader.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Rca.Loader
@@ -14,6 +15,7 @@ namespace Rca.Loader
     /// <summary>
     /// Main entry point for the RCA Loader Revit add-in.
     /// Automatically initializes pipe server when UIApplication becomes available.
+    /// Optionally auto-loads runtime based on settings.
     /// </summary>
     public class LoaderApp : IExternalApplication
     {
@@ -26,6 +28,7 @@ namespace Rca.Loader
         private LoggingPipeServerService? loggingPipe; // logging server
         private ILogger _log = LoaderLog.GetLogger<LoaderApp>();
         private bool isInitialized = false; // Track initialization state
+        private Settings settings; // Application settings
 
         /// <summary>
         /// The dockable pane id used to register the RCA panel.
@@ -66,6 +69,9 @@ namespace Rca.Loader
             Instance = this;
             RuntimeManager = new RuntimeManager();
             ribbonService = new RibbonService();
+            
+            // Load settings early
+            settings = SettingsService.LoadSettings();
         }
 
         /// <summary>
@@ -169,6 +175,7 @@ namespace Rca.Loader
         /// <summary>
         /// Handles the Idling event to auto-initialize pipe server when UIApplication becomes available.
         /// Also monitors pipe server health and restarts if needed.
+        /// Optionally auto-loads runtime based on settings.
         /// </summary>
         /// <param name="sender">The event sender.</param>
         /// <param name="e">The event arguments.</param>
@@ -180,6 +187,18 @@ namespace Rca.Loader
                 _log.LogDebug("Auto-initializing pipe server on first Idling event");
                 InitializeWithUIApplication(uiApplication);
                 isInitialized = true;
+                
+                // Auto-load runtime if enabled in settings
+                if (settings.AutoLoadRuntimeOnStartup)
+                {
+                    _log.LogInformation("Auto-loading runtime (AutoLoadRuntimeOnStartup=true)");
+                    AutoLoadRuntime();
+                }
+                else
+                {
+                    _log.LogInformation("Skipping auto-load runtime (AutoLoadRuntimeOnStartup=false)");
+                }
+                
                 return;
             }
 
@@ -198,6 +217,117 @@ namespace Rca.Loader
                 }
             }
         }
+
+        /// <summary>
+        /// Automatically loads the latest runtime on startup.
+        /// Called during first Idling event if AutoLoadRuntimeOnStartup setting is true.
+        /// </summary>
+        private void AutoLoadRuntime()
+        {
+            try
+            {
+                if (RuntimeManager.IsRuntimeLoaded)
+                {
+                    _log.LogDebug("Runtime already loaded, skipping auto-load");
+                    return;
+                }
+
+                _log.LogInformation("Auto-loading latest runtime");
+                var success = RuntimeManager.ReloadLatest(out var error);
+                
+                if (success)
+                {
+                    // Update runtime hash after successful reload
+                    if (assemblyStatusManager != null)
+                    {
+                        assemblyStatusManager.UpdateHashesAfterReload(RuntimeManager.CurrentRuntimePath);
+                        UpdateStatusDisplay();
+                    }
+
+                    // Inject runtime UI into dockable panel host
+                    TryInjectRuntimeUI();
+                    
+                    _log.LogInformation("Runtime auto-loaded successfully from {Path}", RuntimeManager.CurrentRuntimePath);
+
+#if DEBUG
+                    // Auto-show panel if enabled in debug settings
+                    if (settings.Debug.AutoShowPanelOnLoad && uiapp != null)
+                    {
+                        _log.LogDebug("Auto-showing dockable panel (Debug.AutoShowPanelOnLoad=true)");
+                        TryShowDockablePanel();
+                    }
+#endif
+                }
+                else
+                {
+                    _log.LogWarning("Auto-load runtime failed: {Error}", error);
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.LogError(ex, "Exception during auto-load runtime");
+            }
+        }
+
+        /// <summary>
+        /// Attempts to inject runtime UI into the dockable panel host after successful runtime load.
+        /// </summary>
+        private void TryInjectRuntimeUI()
+        {
+            try
+            {
+                var host = PanelHost;
+                if (host == null)
+                {
+                    _log.LogWarning("PanelHost unavailable for UI injection");
+                    return;
+                }
+
+                var content = RuntimeManager.CreateRuntimeDockableContent(out var error);
+                if (content != null)
+                {
+                    host.SetContent(content);
+                    _log.LogInformation("Runtime UI injected successfully");
+                }
+                else
+                {
+                    _log.LogWarning("Failed to create runtime UI: {Error}", error);
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.LogError(ex, "Error injecting runtime UI");
+            }
+        }
+
+#if DEBUG
+        /// <summary>
+        /// Attempts to show the dockable panel.
+        /// Only available in DEBUG builds.
+        /// </summary>
+        private void TryShowDockablePanel()
+        {
+            try
+            {
+                if (uiapp == null)
+                {
+                    _log.LogDebug("UIApplication not available, cannot show dockable pane");
+                    return;
+                }
+
+                var pane = uiapp.GetDockablePane(DockablePaneId);
+                if (pane != null && !pane.IsShown())
+                {
+                    pane.Show();
+                    _log.LogDebug("Dockable pane auto-shown");
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.LogDebug(ex, "Error auto-showing dockable pane");
+            }
+        }
+#endif
 
         /// <summary>
         /// Initializes the UIApplication and starts the pipe server.

@@ -7,8 +7,8 @@ namespace Rca.Loader.Contracts
     {
         /// <summary>
         /// Builds the RCA ribbon controls in Revit's Add-Ins tab.
-        /// In DEBUG builds, creates controls for development and testing.
-        /// In RELEASE builds, no UI is created.
+        /// Creates "Intelligence Tools" panel (always visible) with Revit Chat Assistant button.
+        /// In DEBUG builds, also creates "RCA Debug" panel with development tools.
         /// </summary>
         /// <param name="application">The Revit UI controlled application.</param>
         void BuildRibbon(object application);

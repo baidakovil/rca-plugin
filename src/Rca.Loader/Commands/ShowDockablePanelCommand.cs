@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 namespace Rca.Loader.Commands
 {
     /// <summary>
-    /// External command to show the RCA dockable panel.
+    /// External command to show the Revit Chat Assistant dockable panel.
     /// If the panel is already visible, this command brings it to focus.
     /// </summary>
     [Transaction(TransactionMode.ReadOnly)]
@@ -24,7 +24,7 @@ namespace Rca.Loader.Commands
         );
 
         /// <summary>
-        /// Executes the command to show the dockable panel.
+        /// Executes the command to show the Revit Chat Assistant dockable panel.
         /// </summary>
         /// <param name="commandData">The command data.</param>
         /// <param name="message">Error message.</param>
@@ -49,7 +49,7 @@ namespace Rca.Loader.Commands
                 {
                     message = "Dockable panel not found";
                     TaskDialog.Show("RCA Loader Error", 
-                        "Could not find the RCA dockable panel. Please restart Revit.");
+                        "Could not find the Revit Chat Assistant panel. Please restart Revit.");
                     Log.LogWarning("Dockable pane not found with ID={PaneId}", PaneId.Guid);
                     return Result.Failed;
                 }
@@ -58,11 +58,11 @@ namespace Rca.Loader.Commands
                 if (!pane.IsShown())
                 {
                     pane.Show();
-                    Log.LogInformation("Dockable pane shown");
+                    Log.LogInformation("Revit Chat Assistant panel shown");
                 }
                 else
                 {
-                    Log.LogDebug("Dockable pane already visible");
+                    Log.LogDebug("Revit Chat Assistant panel already visible");
                 }
 
                 return Result.Succeeded;
@@ -70,7 +70,7 @@ namespace Rca.Loader.Commands
             catch (Exception ex)
             {
                 message = ex.Message;
-                Log.LogError(ex, "Error showing dockable panel");
+                Log.LogError(ex, "Error showing Revit Chat Assistant panel");
                 TaskDialog.Show("RCA Loader Error", $"Error showing panel: {ex.Message}");
                 return Result.Failed;
             }

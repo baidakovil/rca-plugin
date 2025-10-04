@@ -75,34 +75,24 @@
   <!-- 
     Generate Rca.addin file to Revit addins directory
     This target only runs for the Loader project (GenerateRcaAddinFile=true)
-    Creates the XML manifest that tells Revit how to load the RCA plugin
+    Copies the pre-configured .addin file from Resources to Revit addins directory
   -->
   <Target Name="GenerateRcaAddinFile" AfterTargets="Build" Condition="'$(GenerateRcaAddinFile)' == 'true'">
     <PropertyGroup>
-      <AddinXmlContent>
-        <![CDATA[<?xml version="1.0" encoding="utf-8"?>
-<RevitAddIns>
-  <AddIn Type="Application">
-    <Name>Revit Chat Assistant</Name>
-    <Assembly>Rca\Rca.Loader.dll</Assembly>
-    <FullClassName>Rca.Loader.LoaderApp</FullClassName>
-    <AddInId>69632772-0062-48b8-a275-c42ae27ec46e</AddInId>
-    <VendorId>RCA</VendorId>
-    <VendorDescription>Revit Chat Assistant, https://github.com/baidakovil</VendorDescription>
-  </AddIn>
-</RevitAddIns>]]>
-      </AddinXmlContent>
+      <!-- Source addin file from output directory (copied there by Content element) -->
+      <AddinSourceFile>$(TargetDir)Rca.addin</AddinSourceFile>
+      <AddinDestFile>$(RcaRevitAddinsDir)\Rca.addin</AddinDestFile>
     </PropertyGroup>
     
     <!-- Create Rca subdirectory if it doesn't exist -->
     <MakeDir Directories="$(RcaAddinDir)" Condition="!Exists('$(RcaAddinDir)')" />
     
-    <!-- Write the .addin manifest file -->
-    <WriteLinesToFile File="$(RcaRevitAddinsDir)\Rca.addin"
-                      Lines="$(AddinXmlContent)"
-                      Overwrite="true" />
+    <!-- Copy the .addin file from Resources (via output dir) to Revit addins directory -->
+    <Copy SourceFiles="$(AddinSourceFile)" 
+          DestinationFiles="$(AddinDestFile)" 
+          SkipUnchangedFiles="true" />
                       
-    <Message Text="Generated Rca.addin at $(RcaRevitAddinsDir)" Importance="high" />
+    <Message Text="Deployed Rca.addin from $(AddinSourceFile) to $(AddinDestFile)" Importance="high" />
   </Target>
 
   <!-- 

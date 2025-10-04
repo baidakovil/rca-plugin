@@ -15,11 +15,12 @@ namespace Rca.Loader.Services
 {
     /// <summary>
     /// Handles creation and configuration of Revit ribbon UI components.
-    /// In DEBUG builds, adds controls to standard Add-Ins tab for development.
+    /// Creates "Intelligence Tools" panel (always visible) and "RCA Debug" panel (DEBUG only).
     /// </summary>
     public class RibbonService : IRibbonService
     {
-        private const string PanelName = "RCA Debug";
+        private const string IntelligenceToolsPanelName = "Intelligence Tools";
+        private const string DebugPanelName = "RCA Debug";
         private static readonly ILogger Log = LoaderLog.GetLogger<RibbonService>();
 
 #if DEBUG
@@ -31,7 +32,7 @@ namespace Rca.Loader.Services
 
         /// <summary>
         /// Builds the RCA ribbon controls in Revit's standard Add-Ins tab.
-        /// Uses the built-in Tab.AddIns constant to ensure proper tab reference.
+        /// Creates "Intelligence Tools" panel (always) and "RCA Debug" panel (DEBUG only).
         /// </summary>
         /// <param name="application">The Revit UI controlled application.</param>
         public void BuildRibbon(object application)
@@ -39,25 +40,35 @@ namespace Rca.Loader.Services
             if (application is not UIControlledApplication uiApp)
                 throw new ArgumentException("Application must be a UIControlledApplication", nameof(application));
 
-#if DEBUG
-            // In DEBUG builds, add controls to standard Add-Ins tab using the built-in constant
+            // Create "Intelligence Tools" panel - always visible in both DEBUG and RELEASE
             try
             {
-                // Use the built-in Revit API constant for Add-Ins tab
-                var panel = uiApp.CreateRibbonPanel(Tab.AddIns, PanelName);
-                Log.LogInformation("Ribbon panel created in Add-Ins tab, panel={Panel}", PanelName);
+                var intelligencePanel = uiApp.CreateRibbonPanel(Tab.AddIns, IntelligenceToolsPanelName);
+                Log.LogInformation("Intelligence Tools panel created in Add-Ins tab");
 
-                // Button: Show RCA Panel
+                // Button: Revit Chat Assistant - opens the dockable panel
                 var showPanelBtn = new PushButtonData(
                     "RCA_ShowPanel",
-                    "Show\nRCA Panel",
+                    "Revit Chat\nAssistant",
                     Assembly.GetExecutingAssembly().Location,
                     typeof(ShowDockablePanelCommand).FullName);
-                var showPanelPush = panel.AddItem(showPanelBtn) as PushButton;
+                var showPanelPush = intelligencePanel.AddItem(showPanelBtn) as PushButton;
                 AssignEmbeddedIcons(showPanelPush,
                     iconFileName: "OpenAssistant16.png",
-                    tooltip: "Show the RCA Chat Assistant panel");
-                Log.LogDebug("Show panel button added to {Panel}", PanelName);
+                    tooltip: "Open Revit Chat Assistant panel");
+                Log.LogInformation("Revit Chat Assistant button added to Intelligence Tools panel");
+            }
+            catch (Exception ex)
+            {
+                Log.LogError(ex, "Failed to create Intelligence Tools panel");
+            }
+
+#if DEBUG
+            // Create "RCA Debug" panel - only in DEBUG builds
+            try
+            {
+                var debugPanel = uiApp.CreateRibbonPanel(Tab.AddIns, DebugPanelName);
+                Log.LogInformation("RCA Debug panel created in Add-Ins tab");
 
                 // Button: Reload Runtime (latest)
                 var reloadBtn = new PushButtonData(
@@ -65,14 +76,14 @@ namespace Rca.Loader.Services
                     "Reload\nRuntime",
                     Assembly.GetExecutingAssembly().Location,
                     typeof(ReloadRuntimeCommand).FullName);
-                var reloadPush = panel.AddItem(reloadBtn) as PushButton;
+                var reloadPush = debugPanel.AddItem(reloadBtn) as PushButton;
                 AssignEmbeddedIcons(reloadPush,
                     iconFileName: "ReloadRuntime16.png",
                     tooltip: "Reload the latest deployed runtime.");
-                Log.LogDebug("Reload runtime button added to {Panel}", PanelName);
+                Log.LogDebug("Reload runtime button added to RCA Debug panel");
 
                 // Add separator for visual grouping
-                panel.AddSeparator();
+                debugPanel.AddSeparator();
 
                 // Create three stacked status TextBoxes
                 TextBoxData tb1 = new TextBoxData("RCA_StatusLine1") 
@@ -92,7 +103,7 @@ namespace Rca.Loader.Services
                 };
 
                 // Add them as stacked items
-                var items = panel.AddStackedItems(tb1, tb2, tb3);
+                var items = debugPanel.AddStackedItems(tb1, tb2, tb3);
 
                 if (items == null)
                 {
@@ -114,15 +125,14 @@ namespace Rca.Loader.Services
 
                 StatusDisplay = new RibbonStatusDisplay();
                 StatusDisplay.Initialize(line1, line2, line3);
-                Log.LogInformation("Debug status display initialized in {Panel}", PanelName);
+                Log.LogInformation("Debug status display initialized in RCA Debug panel");
             }
             catch (Exception ex)
             {
-                Log.LogWarning(ex, "Failed to create debug UI in Add-Ins tab");
+                Log.LogWarning(ex, "Failed to create RCA Debug panel");
             }
 #else
-            // In RELEASE builds, do nothing - no UI needed
-            Log.LogInformation("RELEASE build - no ribbon UI created");
+            Log.LogInformation("RELEASE build - only Intelligence Tools panel created");
 #endif
         }
 

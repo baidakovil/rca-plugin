@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Revit Chat Assistant settings file",
+  
+  // General settings (available in all builds)
+  "autoLoadRuntimeOnStartup": true,
+  
+  // Debug-only settings (only used in DEBUG builds)
+  "debug": {
+    "verboseLogging": true,
+    "autoShowPanelOnLoad": false
+  }
+}
