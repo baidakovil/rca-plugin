@@ -45,19 +45,23 @@ The RCA plugin uses **ILRepack** to merge multiple assemblies into single deploy
 **File:** `src/Rca.Loader/Rca.Loader.csproj`
 
 ```
-1. GenerateLoaderSourceHashAndMetadata (BeforeTargets="CoreCompile")
-   ├─ Build SourceHashGenerator tool
-   ├─ Generate source hash from Loader + Loader.Contracts sources
-   ├─ Write hash to intermediate file
-   └─ Generate RcaLoaderAssemblyMetadata.cs with attributes
+1. BuildSourceHashGenerator (BeforeTargets="GenerateLoaderSourceHash")
+   └─ Compile SourceHashGenerator tool (incremental - only if outdated)
 
-2. CoreCompile
-   └─ Compile Rca.Loader.dll (includes generated metadata)
+2. GenerateLoaderSourceHash (BeforeTargets="CoreCompile")
+   ├─ Execute SourceHashGenerator tool
+   ├─ Scan source files in Loader + Loader.Contracts directories
+   ├─ Compute SHA256 hash (truncated to 6 chars for readability)
+   ├─ Write hash to intermediate file: source-hash-loader.txt
+   └─ Expose hash as RcaLoaderSourceHash property
 
-3. Build
+3. CoreCompile
+   └─ Compile Rca.Loader.dll (NO assembly metadata generated in source code)
+
+4. Build
    └─ Standard build output
 
-4. RepackLoader (AfterTargets="Build")
+5. RepackLoader (AfterTargets="Build")
    ├─ Create temp directory for Revit API references
    ├─ Copy RevitAPI.dll and RevitAPIUI.dll to temp dir
    ├─ Create internalize exclude list (Rca.Loader.Contracts)
@@ -69,13 +73,28 @@ The RCA plugin uses **ILRepack** to merge multiple assemblies into single deploy
    │  └─ /lib:<temp-dir> (resolve Revit API)
    ├─ Replace original with merged
    ├─ Delete Rca.Loader.Contracts.dll
-   ├─ Build AttributeInjector tool
-   └─ Run AttributeInjector to inject metadata post-merge
+   └─ Clean up temp directory
 
-5. DeployLoaderToTemp (AfterTargets="RepackLoader")
+6. BuildAttributeInjector (AfterTargets="RepackLoader")
+   └─ Compile AttributeInjector tool (incremental - only if outdated)
+
+7. InjectLoaderAttributes (AfterTargets="BuildAttributeInjector")
+   ├─ Run AttributeInjector to inject assembly metadata POST-merge
+   └─ Injected attributes:
+      ├─ AssemblyMetadata("SourceHash", <computed-hash>)
+      ├─ AssemblyMetadata("DeployFolder", <timestamp>)
+      └─ AssemblyInformationalVersion("Hash: <hash>, Folder: <timestamp>")
+
+8. DeployLoaderToTemp (AfterTargets="InjectLoaderAttributes")
    ├─ Copy merged Rca.Loader.dll to hot-reload deploy folder
-   └─ Write HashLoader - <hash>.txt version file
+   └─ Write version file: SourceHash-Loader-<hash>.txt
 ```
+
+**Key Changes:**
+- ✅ **NO source code generation** - Assembly metadata is NOT injected as C# source code before compilation
+- ✅ **Post-merge injection** - AttributeInjector injects metadata directly into IL after ILRepack
+- ✅ **Incremental tool compilation** - Tools only rebuild if their source files change
+- ✅ **Unified naming** - Version files use PascalCase: `SourceHash-Loader-<hash>.txt`
 
 ### Runtime Build Pipeline
 
@@ -97,39 +116,81 @@ The RCA plugin uses **ILRepack** to merge multiple assemblies into single deploy
 ```
 
 ```
-1. GenerateSourceHashAndMetadata (BeforeTargets="CoreCompile")
-   ├─ Build SourceHashGenerator tool
-   ├─ Generate source hash from all Runtime source roots
-   └─ Generate RcaAssemblyMetadata.cs with attributes
+1. BuildSourceHashGenerator (BeforeTargets="GenerateRuntimeSourceHash")
+   └─ Compile SourceHashGenerator tool (incremental - only if outdated)
 
-2. CoreCompile
-   └─ Compile Rca.Runtime.dll (includes generated metadata)
+2. GenerateRuntimeSourceHash (BeforeTargets="CoreCompile")
+   ├─ Execute SourceHashGenerator tool
+   ├─ Scan source files in all Runtime source roots
+   ├─ Compute SHA256 hash (truncated to 6 chars for readability)
+   ├─ Write hash to intermediate file: source-hash-runtime.txt
+   └─ Expose hash as RcaSourceHash property
 
-3. Build
+3. CoreCompile
+   └─ Compile Rca.Runtime.dll (NO assembly metadata generated in source code)
+
+4. Build
    └─ Standard build output
 
-4. RepackRuntime (AfterTargets="Build")
+5. RepackRuntime (AfterTargets="Build")
    ├─ Run ILRepack:
    │  ├─ Input: Rca.Runtime.dll + Rca.Core.dll + Rca.UI.dll + 
    │  │         Rca.Network.dll + Rca.Contracts.dll
    │  ├─ Output: Rca.Runtime.dll (in-place)
    │  ├─ Options: /copyattrs /parallel /internalize /xmldocs
    │  └─ /lib:<TargetDir> (find dependencies)
-   ├─ Build AttributeInjector tool
-   └─ Run AttributeInjector with Revit API path for resolution
+   └─ All types internalized (no exclude list)
 
-5. DeployRuntime (AfterTargets="RepackRuntime")
+6. BuildAttributeInjector (AfterTargets="RepackRuntime")
+   └─ Compile AttributeInjector tool (incremental - only if outdated)
+
+7. InjectRuntimeAttributes (AfterTargets="BuildAttributeInjector")
+   ├─ Run AttributeInjector to inject assembly metadata POST-merge
+   └─ Injected attributes (same as Loader):
+      ├─ AssemblyMetadata("SourceHash", <computed-hash>)
+      ├─ AssemblyMetadata("DeployFolder", <timestamp>)
+      └─ AssemblyInformationalVersion("Hash: <hash>, Folder: <timestamp>")
+
+8. DeployRuntime (AfterTargets="InjectRuntimeAttributes")
    ├─ Copy merged Rca.Runtime.dll to hot-reload deploy folder
    ├─ Copy individual DLLs (for debugging/inspection)
    ├─ Copy IronPython assemblies
    ├─ Copy Rca.Logging.Contracts.dll
    ├─ Copy merged Rca.Loader.dll (needed for contract types)
    ├─ Copy Lib folder (Python stdlib)
-   └─ Write HashRuntime - <hash>.txt version file
+   └─ Write version file: SourceHash-Runtime-<hash>.txt
 
-6. ReloadRuntime (AfterTargets="DeployRuntime", Condition="HotReloadNotify==true")
+9. ReloadRuntime (AfterTargets="DeployRuntime", Condition="HotReloadNotify==true")
    └─ Send RELOAD_RUNTIME command via named pipe to running Loader
 ```
+
+## Build Constants and Naming Conventions
+
+**File:** `src/Rca.Loader/Infrastructure/BuildConstants.cs`
+
+All metadata keys and file patterns are centralized in `BuildConstants` to avoid magic strings:
+
+```csharp
+public static class BuildConstants
+{
+    // Assembly metadata keys (used by AttributeInjector and AssemblyStatusManager)
+    public const string SourceHashMetadataKey = "SourceHash";
+    public const string DeployFolderMetadataKey = "DeployFolder";
+
+    // Version file patterns (used by AssemblyStatusManager)
+    public const string LoaderHashFilePattern = "SourceHash-Loader-*.txt";
+    public const string RuntimeHashFilePattern = "SourceHash-Runtime-*.txt";
+
+    // Intermediate file names (used by MSBuild targets)
+    public const string LoaderHashIntermediateFile = "source-hash-loader.txt";
+    public const string RuntimeHashIntermediateFile = "source-hash-runtime.txt";
+}
+```
+
+**Naming Convention:**
+- ✅ **Deploy-time version files:** PascalCase with component name: `SourceHash-Loader-<hash>.txt`, `SourceHash-Runtime-<hash>.txt`
+- ✅ **Intermediate files:** kebab-case: `source-hash-loader.txt`, `source-hash-runtime.txt`
+- ✅ **Metadata keys:** PascalCase: `"SourceHash"`, `"DeployFolder"`
 
 ## Key Build Properties
 
@@ -141,7 +202,7 @@ The RCA plugin uses **ILRepack** to merge multiple assemblies into single deploy
 ```
 
 - **Why timestamp is shared:** Ensures Loader and Runtime deployed together have matching folder names
-- **Why disable AssemblyInformationalVersion:** Prevents duplicate attributes - we inject them post-merge
+- **Why disable AssemblyInformationalVersion:** Prevents duplicate attributes - AttributeInjector injects them post-merge
 
 ### Common Properties (`build/Common.targets`)
 
@@ -151,10 +212,12 @@ The RCA plugin uses **ILRepack** to merge multiple assemblies into single deploy
 <RcaAddinDir>$(RcaRevitAddinsDir)\Rca</RcaAddinDir>
 <RcaRuntimeDeployRoot>$(LocalAppData)\RCA\Runtime</RcaRuntimeDeployRoot>
 <RcaHotReloadDeployDir>$(LocalAppData)\RCA\Runtime\$(RcaHotReloadTimestamp)</RcaHotReloadDeployDir>
+<BaseOutputPath>$(SolutionDir)bin\</BaseOutputPath>
 ```
 
 - **RcaAddinDir:** Where Loader.dll is deployed for Revit to load
 - **RcaHotReloadDeployDir:** Timestamped folder for hot-reload deployments
+- **BaseOutputPath:** Unified output directory for all build artifacts
 
 ## ILRepack Configuration Details
 
@@ -220,6 +283,11 @@ ILRepack.exe
 - **Version tracking:** Visible in Windows Explorer properties (ProductVersion)
 - **Deploy folder correlation:** Links assembly to its deploy folder
 
+**New: No Source Code Generation**
+- ❌ **OLD approach:** Generate `RcaLoaderAssemblyMetadata.cs` and `RcaAssemblyMetadata.cs` before compilation
+- ✅ **NEW approach:** Inject all attributes post-merge using AttributeInjector only
+- **Why:** Eliminates redundant source code generation and potential attribute conflicts
+
 ## Assembly Reference Strategy
 
 ### Why Runtime References Merged Loader.dll
@@ -274,18 +342,18 @@ public static readonly string[] NonCollectibleAssemblies =
 ### Hot-Reload Deploy Folder
 ```
 %LOCALAPPDATA%\RCA\Runtime\<timestamp>\
-├── Rca.Runtime.dll         (merged)
-├── Rca.Loader.dll          (merged, for contract types)
-├── Rca.Core.dll            (original, for debugging)
-├── Rca.UI.dll              (original, for debugging)
-├── Rca.Network.dll         (original, for debugging)
-├── Rca.Contracts.dll       (original, for debugging)
+├── Rca.Runtime.dll                 (merged)
+├── Rca.Loader.dll                  (merged, for contract types)
+├── Rca.Core.dll                    (original, for debugging)
+├── Rca.UI.dll                      (original, for debugging)
+├── Rca.Network.dll                 (original, for debugging)
+├── Rca.Contracts.dll               (original, for debugging)
 ├── Rca.Logging.Contracts.dll
 ├── IronPython*.dll
 ├── Microsoft.Scripting.dll
 ├── Microsoft.Dynamic.dll
-├── HashRuntime - <hash>.txt
-├── HashLoader - <hash>.txt
+├── SourceHash-Runtime-<hash>.txt   ← NEW: Unified PascalCase naming
+├── SourceHash-Loader-<hash>.txt    ← NEW: Unified PascalCase naming
 └── Lib\  (Python stdlib)
 ```
 
@@ -300,7 +368,7 @@ public static readonly string[] NonCollectibleAssemblies =
 
 ```
 1. Tools (SourceHashGenerator, AttributeInjector)
-   └─ Built on-demand before use
+   └─ Built incrementally (only when source changes)
 
 2. Contracts (Rca.Contracts, Rca.Logging.Contracts, Rca.Loader.Contracts)
    └─ No dependencies, build first
@@ -331,6 +399,38 @@ public static readonly string[] NonCollectibleAssemblies =
 - `ReferenceOutputAssembly=false` — Don't use project output, use assembly Reference instead
 - Forces Loader to build before Runtime without creating circular dependency
 
+## Incremental Compilation
+
+### Tool Compilation Strategy
+
+**Old approach:**
+```xml
+<!-- ALWAYS rebuild tools on every build -->
+<Exec Command="dotnet build $(SourceHashProject)" />
+```
+
+**New approach:**
+```xml
+<!-- Only rebuild if tool source is newer than executable -->
+<Target Name="BuildSourceHashGenerator" BeforeTargets="GenerateLoaderSourceHash">
+  <PropertyGroup>
+    <SourceHashProjectModTime>$([System.IO.File]::GetLastWriteTime('$(SourceHashProject)').Ticks)</SourceHashProjectModTime>
+    <SourceHashExeModTime Condition="Exists('$(SourceHashExe)')">$([System.IO.File]::GetLastWriteTime('$(SourceHashExe)').Ticks)</SourceHashExeModTime>
+    <SourceHashExeModTime Condition="!Exists('$(SourceHashExe)')">0</SourceHashExeModTime>
+  </PropertyGroup>
+  
+  <MSBuild Projects="$(SourceHashProject)"
+           Targets="Build"
+           Properties="Configuration=$(Configuration)"
+           Condition="'$(SourceHashProjectModTime)' &gt; '$(SourceHashExeModTime)'" />
+</Target>
+```
+
+**Benefits:**
+- ✅ Faster builds when tools haven't changed
+- ✅ Uses `MSBuild` task instead of `Exec` for better integration
+- ✅ Proper condition using Ticks (numeric comparison)
+
 ## Common Build Issues and Solutions
 
 ### Issue: "Could not load Rca.Loader.Contracts"
@@ -349,6 +449,13 @@ public static readonly string[] NonCollectibleAssemblies =
 **Cause:** Runtime tries to build before Loader
 **Solution:** Check ProjectReference with `ReferenceOutputAssembly=false` exists
 
+### Issue: "Product Version" not showing in Windows Explorer
+**Cause:** AssemblyInformationalVersion not injected properly
+**Solution:** 
+- ✅ Ensure `GenerateAssemblyInformationalVersionAttribute=false` in `.csproj`
+- ✅ Verify `AttributeInjector` runs successfully
+- ✅ Check injected attributes using `AttributeInjector inspect <assembly>`
+
 ## Strategic Considerations
 
 ### Pros of Current ILRepack Approach
@@ -356,6 +463,8 @@ public static readonly string[] NonCollectibleAssemblies =
 ✅ Fewer type identity issues
 ✅ Cleaner hot-reload tracking
 ✅ Single source-hash per unit
+✅ **NEW:** No redundant source code generation
+✅ **NEW:** Incremental tool compilation reduces build time
 
 ### Cons of Current ILRepack Approach
 ❌ Complex build configuration
@@ -390,7 +499,7 @@ public static readonly string[] NonCollectibleAssemblies =
 
 ## Future Improvements
 
-1. **Cache AttributeInjector build** - Don't rebuild every time
+1. ✅ ~~Cache AttributeInjector build~~ - DONE: Incremental compilation implemented
 2. **Parallel ILRepack** - Loader and Runtime could merge in parallel
 3. **Incremental merge check** - Skip merge if inputs unchanged
 4. **Merge validation** - Automated tests to verify merged assemblies load correctly

@@ -6,7 +6,6 @@
     <Nullable>enable</Nullable>
     <AssemblyName>Rca.UI</AssemblyName>
     <RootNamespace>Rca.UI</RootNamespace>
-    <BaseOutputPath>$(SolutionDir)bin\</BaseOutputPath>
 	<PlatformTarget>x64</PlatformTarget>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
@@ -37,15 +36,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="RevitAPI">
-      <HintPath>..\..\libs\Revit\2026\RevitAPI.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="RevitAPIUI">
-      <HintPath>..\..\libs\Revit\2026\RevitAPIUI.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-  </ItemGroup>
+  <!-- Revit API references provided by Common.targets -->
+  <Import Project="..\..\build\Common.targets" />
 
 </Project>

@@ -5,8 +5,9 @@
     <Nullable>enable</Nullable>
     <AssemblyName>Rca.Contracts</AssemblyName>
     <RootNamespace>Rca.Contracts</RootNamespace>
-    <BaseOutputPath>$(SolutionDir)bin\</BaseOutputPath>
 	<PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
+
+  <!-- No Revit API references needed for Contracts project -->
 
 </Project>

@@ -6,8 +6,18 @@
     <AssemblyName>Rca.Runtime</AssemblyName>
     <RootNamespace>Rca.Runtime</RootNamespace>
     <PlatformTarget>x64</PlatformTarget>
+    
+    <!-- 
+      Disable auto-generation of AssemblyInformationalVersionAttribute.
+      AttributeInjector will inject all assembly attributes post-ILRepack merge.
+    -->
+    <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
   </PropertyGroup>
 
+  <!-- 
+    Project references for Runtime dependencies.
+    These assemblies will be merged into Rca.Runtime.dll by ILRepack.
+  -->
   <ItemGroup>
     <ProjectReference Include="..\Rca.Core\Rca.Core.csproj" />
     <ProjectReference Include="..\Rca.UI\Rca.UI.csproj" />
@@ -16,7 +26,16 @@
     <ProjectReference Include="..\Rca.Logging.Contracts\Rca.Logging.Contracts.csproj" />
   </ItemGroup>
 
-  <!-- Reference the merged Rca.Loader.dll (built by Loader project) -->
+  <!-- 
+    Reference to merged Rca.Loader.dll (built by Loader project).
+    
+    Why reference merged Loader.dll?
+    Runtime needs access to contract types (IRuntimePanelFactory, etc.) from Rca.Loader.Contracts,
+    which are merged into Rca.Loader.dll. These types remain public (excluded from internalization)
+    to allow cross-AssemblyLoadContext communication.
+    
+    Private=True ensures Loader.dll is copied to Runtime output directory.
+  -->
   <ItemGroup>
     <Reference Include="Rca.Loader">
       <HintPath>..\Rca.Loader\bin\$(Configuration)\net8.0-windows\Rca.Loader.dll</HintPath>
@@ -24,7 +43,13 @@
     </Reference>
   </ItemGroup>
 
-  <!-- Ensure Loader is built before Runtime (for merged Rca.Loader.dll reference) -->
+  <!-- 
+    Ensure Loader builds before Runtime (for merged Rca.Loader.dll availability).
+    
+    ReferenceOutputAssembly=false prevents using Loader as a project reference
+    (we use the merged assembly Reference above instead).
+    This ProjectReference only enforces build order.
+  -->
   <ItemGroup>
     <ProjectReference Include="..\Rca.Loader\Rca.Loader.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
@@ -32,60 +57,111 @@
     </ProjectReference>
   </ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="RevitAPI">
-      <HintPath>$(SolutionDir)libs\Revit\2026\RevitAPI.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="RevitAPIUI">
-      <HintPath>$(SolutionDir)libs\Revit\2026\RevitAPIUI.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-  </ItemGroup>
-
+  <!-- NuGet package references -->
   <ItemGroup>
     <PackageReference Include="ilrepack" Version="2.0.34" PrivateAssets="all" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
   </ItemGroup>
 
+  <!-- 
+    Enable IronPython content inclusion.
+    Common.targets will copy IronPython DLLs and Lib folder to output directory.
+  -->
   <PropertyGroup>
     <IncludeIronPythonContent>true</IncludeIronPythonContent>
   </PropertyGroup>
 
+  <!-- 
+    Property definitions for build tools (SourceHashGenerator and AttributeInjector).
+    These tools are compiled as needed during the build process.
+  -->
   <PropertyGroup>
     <SourceHashProject>$(SolutionDir)src\Tools\SourceHashGenerator\SourceHashGenerator.csproj</SourceHashProject>
     <SourceHashExe>$(SolutionDir)src\Tools\SourceHashGenerator\bin\$(Configuration)\net8.0\SourceHashGenerator.exe</SourceHashExe>
-    <SourceRootList>$(MSBuildProjectDirectory);$(SolutionDir)src\Rca.Core;$(SolutionDir)src\Rca.UI;$(SolutionDir)src\Rca.Network;$(SolutionDir)src\Rca.Contracts</SourceRootList>
-    <SourceHashIntermediate>$(IntermediateOutputPath)source-hash.runtime.txt</SourceHashIntermediate>
+    <AttributeInjectorProject>$(SolutionDir)src\Tools\AttributeInjector\AttributeInjector.csproj</AttributeInjectorProject>
+    <AttributeInjectorExe>$(SolutionDir)src\Tools\AttributeInjector\bin\$(Configuration)\net8.0\AttributeInjector.exe</AttributeInjectorExe>
+    <RevitLibsDir>$(RcaRevitLibsPath)</RevitLibsDir>
   </PropertyGroup>
 
-  <Target Name="GenerateSourceHashAndMetadata" BeforeTargets="CoreCompile">
-    <Exec Command="dotnet build &quot;$(SourceHashProject)&quot; -c $(Configuration)" />
-    <Exec Command="&quot;$(SourceHashExe)&quot; --roots &quot;$(SourceRootList)&quot; --out &quot;$(SourceHashIntermediate)&quot;" />
+  <!-- 
+    Property definitions for source hash generation.
+    SourceRootList: directories to scan for source files (all projects merged into Runtime).
+    SourceHashIntermediateFile: intermediate output file for computed hash.
+  -->
+  <PropertyGroup>
+    <SourceRootList>$(MSBuildProjectDirectory);$(SolutionDir)src\Rca.Core;$(SolutionDir)src\Rca.UI;$(SolutionDir)src\Rca.Network;$(SolutionDir)src\Rca.Contracts</SourceRootList>
+    <SourceHashIntermediateFile>$(IntermediateOutputPath)source-hash-runtime.txt</SourceHashIntermediateFile>
+  </PropertyGroup>
 
-    <ReadLinesFromFile File="$(SourceHashIntermediate)">
+  <!-- 
+    Target: BuildSourceHashGenerator
+    
+    Compiles SourceHashGenerator tool only if it's outdated or doesn't exist.
+    This provides incremental compilation - tool is not rebuilt on every build.
+    Uses file modification time (Ticks) for comparison to ensure numeric comparison.
+  -->
+  <Target Name="BuildSourceHashGenerator" BeforeTargets="GenerateRuntimeSourceHash">
+    <PropertyGroup>
+      <SourceHashProjectModTime>$([System.IO.File]::GetLastWriteTime('$(SourceHashProject)').Ticks)</SourceHashProjectModTime>
+      <SourceHashExeModTime Condition="Exists('$(SourceHashExe)')">$([System.IO.File]::GetLastWriteTime('$(SourceHashExe)').Ticks)</SourceHashExeModTime>
+      <SourceHashExeModTime Condition="!Exists('$(SourceHashExe)')">0</SourceHashExeModTime>
+    </PropertyGroup>
+    
+    <MSBuild Projects="$(SourceHashProject)"
+             Targets="Build"
+             Properties="Configuration=$(Configuration)"
+             Condition="'$(SourceHashProjectModTime)' &gt; '$(SourceHashExeModTime)'" />
+  </Target>
+
+  <!-- 
+    Target: GenerateRuntimeSourceHash
+    
+    Generates source hash for all Runtime source code (Runtime + Core + UI + Network + Contracts).
+    Hash is written to intermediate file and exposed as RcaSourceHash property.
+    
+    Why BeforeTargets="CoreCompile"?
+    We need the hash value available for later targets, but we do NOT inject it
+    as source code anymore - AttributeInjector handles all metadata injection post-merge.
+  -->
+  <Target Name="GenerateRuntimeSourceHash" BeforeTargets="CoreCompile" DependsOnTargets="BuildSourceHashGenerator">
+    <!-- Execute SourceHashGenerator tool to compute hash -->
+    <Exec Command="&quot;$(SourceHashExe)&quot; --roots &quot;$(SourceRootList)&quot; --out &quot;$(SourceHashIntermediateFile)&quot;" />
+
+    <!-- Read computed hash from intermediate file -->
+    <ReadLinesFromFile File="$(SourceHashIntermediateFile)">
       <Output TaskParameter="Lines" ItemName="SourceHashLines" />
     </ReadLinesFromFile>
 
+    <!-- Expose hash as MSBuild property for use in later targets -->
     <PropertyGroup>
       <RcaSourceHash>%(SourceHashLines.Identity)</RcaSourceHash>
     </PropertyGroup>
-
-    <ItemGroup>
-      <RcaAssemblyMetadataLines Include="[assembly: System.Reflection.AssemblyMetadata(&quot;SourceHash&quot;, &quot;$(RcaSourceHash)&quot;)]" />
-      <RcaAssemblyMetadataLines Include="[assembly: System.Reflection.AssemblyMetadata(&quot;DeployFolder&quot;, &quot;$(RcaHotReloadTimestamp)&quot;)]" />
-    </ItemGroup>
-    <WriteLinesToFile File="$(IntermediateOutputPath)RcaAssemblyMetadata.cs" Overwrite="true" Lines="@(RcaAssemblyMetadataLines)" />
-
-    <ItemGroup>
-      <Compile Include="$(IntermediateOutputPath)RcaAssemblyMetadata.cs" />
-    </ItemGroup>
+    
+    <Message Text="Runtime source hash generated: $(RcaSourceHash)" Importance="High" />
   </Target>
 
+  <!-- 
+    Target: RepackRuntime
+    
+    Merges Rca.Runtime.dll, Rca.Core.dll, Rca.UI.dll, Rca.Network.dll, and Rca.Contracts.dll
+    into a single assembly using ILRepack.
+    
+    Steps:
+    1. Collect all assemblies to merge
+    2. Run ILRepack with full internalization (all types become internal)
+    3. Merged assembly replaces original Rca.Runtime.dll in output directory
+    
+    Why full internalization?
+    Unlike Loader, Runtime types don't need to be accessed from outside the merged assembly.
+    All types become internal, reducing API surface and preventing conflicts.
+  -->
   <Target Name="RepackRuntime" AfterTargets="Build">
+    <!-- Path to ILRepack executable from NuGet package -->
     <PropertyGroup>
       <IlRepackExe>$(UserProfile)\.nuget\packages\ilrepack\2.0.34\tools\ILRepack.exe</IlRepackExe>
     </PropertyGroup>
+    
+    <!-- Collect all assemblies to merge -->
     <ItemGroup>
       <InputAssemblies Include="$(TargetDir)Rca.Core.dll" />
       <InputAssemblies Include="$(TargetDir)Rca.UI.dll" />
@@ -93,65 +169,217 @@
       <InputAssemblies Include="$(TargetDir)Rca.Contracts.dll" />
       <InputAssemblies Include="$(TargetPath)" />
     </ItemGroup>
-    <Message Text="ILRepack runtime assemblies -> Rca.Runtime.dll" Importance="High" />
+    
+    <Message Text="ILRepack merging runtime assemblies into Rca.Runtime.dll" Importance="High" />
+    
+    <!-- 
+      Execute ILRepack to merge assemblies.
+      Options:
+      - /lib: directory to search for dependencies (TargetDir contains all DLLs)
+      - /copyattrs: copy assembly-level attributes (will be replaced by AttributeInjector)
+      - /parallel: enable parallel processing
+      - /internalize: make all types internal (no exclude file - full internalization)
+      - /xmldocs: merge XML documentation files
+      - /out: output merged assembly path (in-place replacement)
+    -->
     <Exec Command="&quot;$(IlRepackExe)&quot; /lib:$(TargetDir) /copyattrs /parallel /internalize /xmldocs /out:$(TargetDir)Rca.Runtime.dll @(InputAssemblies-&gt;'&quot;%(Identity)&quot;',' ')" />
-
-    <PropertyGroup>
-      <AttributeInjectorProject>$(SolutionDir)src\Tools\AttributeInjector\AttributeInjector.csproj</AttributeInjectorProject>
-      <AttributeInjectorExe>$(SolutionDir)src\Tools\AttributeInjector\bin\$(Configuration)\net8.0\AttributeInjector.exe</AttributeInjectorExe>
-      <RevitLibsDir>$(SolutionDir)libs\Revit\2026</RevitLibsDir>
-    </PropertyGroup>
-    <Exec Command="dotnet build &quot;$(AttributeInjectorProject)&quot; -c $(Configuration)" />
-    <Error Condition="!Exists('$(AttributeInjectorExe)')" Text="AttributeInjector executable not found at $(AttributeInjectorExe)" />
-    <Exec Command="&quot;$(AttributeInjectorExe)&quot; &quot;$(TargetDir)Rca.Runtime.dll&quot; &quot;$(RcaHotReloadTimestamp)&quot; &quot;$(RcaSourceHash)&quot; &quot;$(RevitLibsDir)&quot;" ContinueOnError="true" />
-    <Message Condition="'$(MSBuildLastTaskResult)' == 'false'" Text="WARNING: AttributeInjector failed." Importance="High" />
+    
+    <Message Text="ILRepack completed successfully - merged assembly created" Importance="High" />
   </Target>
 
-  <Target Name="DeployRuntime" AfterTargets="RepackRuntime">
+  <!-- 
+    Target: BuildAttributeInjector
+    
+    Compiles AttributeInjector tool only if it's outdated or doesn't exist.
+    This provides incremental compilation - tool is not rebuilt on every build.
+    Uses file modification time (Ticks) for comparison to ensure numeric comparison.
+  -->
+  <Target Name="BuildAttributeInjector" AfterTargets="RepackRuntime">
+    <PropertyGroup>
+      <AttributeInjectorProjectModTime>$([System.IO.File]::GetLastWriteTime('$(AttributeInjectorProject)').Ticks)</AttributeInjectorProjectModTime>
+      <AttributeInjectorExeModTime Condition="Exists('$(AttributeInjectorExe)')">$([System.IO.File]::GetLastWriteTime('$(AttributeInjectorExe)').Ticks)</AttributeInjectorExeModTime>
+      <AttributeInjectorExeModTime Condition="!Exists('$(AttributeInjectorExe)')">0</AttributeInjectorExeModTime>
+    </PropertyGroup>
+    
+    <MSBuild Projects="$(AttributeInjectorProject)"
+             Targets="Build"
+             Properties="Configuration=$(Configuration)"
+             Condition="'$(AttributeInjectorProjectModTime)' &gt; '$(AttributeInjectorExeModTime)'" />
+  </Target>
+
+  <!-- 
+    Target: InjectRuntimeAttributes
+    
+    Injects assembly metadata attributes into the merged Runtime assembly using AttributeInjector.
+    
+    Why post-ILRepack injection?
+    ILRepack's /copyattrs doesn't preserve custom AssemblyMetadata attributes correctly.
+    AttributeInjector uses Mono.Cecil to inject attributes directly into the IL after merge.
+    
+    Injected attributes:
+    - AssemblyMetadata("DeployFolder", timestamp)
+    - AssemblyMetadata("SourceHash", hash)
+    - AssemblyInformationalVersion (visible in Windows Explorer as Product Version)
+    
+    Why pass RevitLibsDir?
+    AttributeInjector needs to resolve Revit API references when reading the merged assembly.
+  -->
+  <Target Name="InjectRuntimeAttributes" AfterTargets="BuildAttributeInjector" DependsOnTargets="BuildAttributeInjector">
+    <!-- Fail if AttributeInjector executable not found -->
+    <Error Condition="!Exists('$(AttributeInjectorExe)')" 
+           Text="AttributeInjector executable not found at $(AttributeInjectorExe)" />
+    
+    <!-- 
+      Execute AttributeInjector.
+      Arguments:
+      1. Target assembly path (merged Rca.Runtime.dll)
+      2. Deploy folder timestamp (embedded as metadata for correlation)
+      3. Source hash (embedded as metadata for version tracking)
+      4. Revit libs directory (for assembly resolution)
+    -->
+    <Exec Command="&quot;$(AttributeInjectorExe)&quot; &quot;$(TargetDir)Rca.Runtime.dll&quot; &quot;$(RcaHotReloadTimestamp)&quot; &quot;$(RcaSourceHash)&quot; &quot;$(RevitLibsDir)&quot;" 
+          ContinueOnError="true" />
+    
+    <!-- Warn if injection failed but don't fail the build -->
+    <Message Condition="'$(MSBuildLastTaskResult)' == 'false'" 
+             Text="WARNING: AttributeInjector failed - assembly metadata may be incomplete" 
+             Importance="High" />
+    
+    <Message Condition="'$(MSBuildLastTaskResult)' != 'false'"
+             Text="Assembly attributes injected successfully" 
+             Importance="High" />
+  </Target>
+
+  <!-- 
+    Target: DeployRuntime
+    
+    Deploys Runtime assemblies to hot-reload directory.
+    
+    Deployed files:
+    - Rca.Runtime.dll (merged)
+    - Individual DLLs (Core, UI, Network, Contracts) for debugging/inspection
+    - IronPython assemblies and stdlib
+    - Rca.Logging.Contracts.dll (not merged, used for logging)
+    - Rca.Loader.dll (needed for contract type access)
+    - Lib folder (Python standard library)
+    
+    Version tracking file:
+    - SourceHash-Runtime-{hash}.txt contains the runtime source hash
+  -->
+  <Target Name="DeployRuntime" AfterTargets="InjectRuntimeAttributes">
     <PropertyGroup>
       <RuntimeDeployDir>$(RcaHotReloadDeployDir)</RuntimeDeployDir>
     </PropertyGroup>
+    
+    <!-- Create deploy directory if it doesn't exist -->
     <MakeDir Directories="$(RuntimeDeployDir)" />
+    
+    <!-- Collect all files to deploy -->
     <ItemGroup>
+      <!-- Merged runtime assembly -->
       <RuntimeDeployFiles Include="$(TargetDir)Rca.Runtime.dll" />
+      
+      <!-- Individual assemblies for debugging/inspection -->
       <RuntimeDeployFiles Include="$(TargetDir)Rca.Core.dll" />
       <RuntimeDeployFiles Include="$(TargetDir)Rca.UI.dll" />
       <RuntimeDeployFiles Include="$(TargetDir)Rca.Network.dll" />
       <RuntimeDeployFiles Include="$(TargetDir)Rca.Contracts.dll" />
+      
+      <!-- IronPython runtime -->
       <RuntimeDeployFiles Include="$(TargetDir)IronPython*.dll" />
       <RuntimeDeployFiles Include="$(TargetDir)Microsoft.Scripting.dll" />
       <RuntimeDeployFiles Include="$(TargetDir)Microsoft.Dynamic.dll" />
+      
+      <!-- Logging contracts (not merged, used by loader and runtime) -->
       <RuntimeDeployFiles Include="$(TargetDir)Rca.Logging.Contracts.dll" />
+      
+      <!-- Merged Loader assembly (needed for contract type access) -->
       <RuntimeDeployFiles Include="$(TargetDir)Rca.Loader.dll" />
     </ItemGroup>
+    
+    <!-- Copy all deploy files -->
     <Copy SourceFiles="@(RuntimeDeployFiles)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" />
+    
+    <!-- Copy Python standard library (Lib folder) -->
     <ItemGroup>
       <LibFiles Include="$(TargetDir)Lib\**\*.*" />
     </ItemGroup>
-    <Copy SourceFiles="@(LibFiles)" DestinationFiles="@(LibFiles-&gt;'$(RuntimeDeployDir)\Lib\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="@(LibFiles)!=''" />
+    <Copy SourceFiles="@(LibFiles)" 
+          DestinationFiles="@(LibFiles-&gt;'$(RuntimeDeployDir)\Lib\%(RecursiveDir)%(Filename)%(Extension)')" 
+          SkipUnchangedFiles="true" 
+          Condition="@(LibFiles)!=''" />
+    
+    <!-- 
+      Write runtime version file with PascalCase naming convention.
+      Format: SourceHash-Runtime-{hash}.txt
+      Content: source hash value
+      
+      Purpose: Allows build system and AssemblyStatusManager to quickly identify
+      deployed runtime version without parsing assembly metadata.
+    -->
     <PropertyGroup>
-      <RuntimeVersionFile>$(RuntimeDeployDir)\HashRuntime - $(RcaSourceHash).txt</RuntimeVersionFile>
+      <RuntimeVersionFile>$(RuntimeDeployDir)\SourceHash-Runtime-$(RcaSourceHash).txt</RuntimeVersionFile>
     </PropertyGroup>
     <WriteLinesToFile File="$(RuntimeVersionFile)" Lines="$(RcaSourceHash)" Overwrite="true" />
+    
     <Message Text="Deployed Runtime to hot-reload directory: $(RuntimeDeployDir)" Importance="High" />
   </Target>
 
+  <!-- 
+    Property: HotReloadNotify
+    
+    Controls whether hot-reload notification is sent to running Loader via named pipe.
+    Default: true (send notification)
+    Can be disabled by setting HotReloadNotify=false in build command.
+  -->
   <PropertyGroup>
     <HotReloadNotify Condition="'$(HotReloadNotify)' == ''">true</HotReloadNotify>
   </PropertyGroup>
 
+  <!-- 
+    Target: ReloadRuntime
+    
+    Sends RELOAD_RUNTIME command to running Loader via named pipe after deployment.
+    
+    Why named pipe notification?
+    When Runtime is deployed by the build, the running Loader instance needs to be notified
+    so it can reload the new Runtime version without restarting Revit.
+    
+    Command payload:
+    - Command: "RELOAD_RUNTIME"
+    - Payload: timestamped deploy directory path (escaped for JSON)
+    
+    The Loader's PipeServerService receives this command and triggers RuntimeManager to reload.
+  -->
   <Target Name="ReloadRuntime" AfterTargets="DeployRuntime" Condition="'$(HotReloadNotify)' == 'true'">
     <PropertyGroup>
       <PipeName>RCA_PIPE</PipeName>
+      <!-- Escape backslashes in path for JSON payload -->
       <RuntimeDeployDirEscaped>$([System.String]::Copy('$(RuntimeDeployDir)').Replace('\\','\\\\'))</RuntimeDeployDirEscaped>
-      <PsHotReloadCmd>powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "try { $p = New-Object System.IO.Pipes.NamedPipeClientStream('.', '$(PipeName)', [System.IO.Pipes.PipeDirection]::InOut); $p.Connect(2000); $sw = New-Object System.IO.StreamWriter($p); $sw.AutoFlush = $true; $sr = New-Object System.IO.StreamReader($p); $msg = '{\"Command\":\"RELOAD_RUNTIME\", \"Payload\":\"$(RuntimeDeployDirEscaped)\"}'; $sw.WriteLine($msg); $resp = $sr.ReadLine(); Write-Host 'HotReload response:' $resp; $p.Close() } catch { Write-Warning ('HotReload failed: ' + $_.Exception.Message) }"</PsHotReloadCmd>
+      
+      <!-- 
+        PowerShell script to send reload command via named pipe.
+        Connects to pipe, sends JSON command, reads response, and closes connection.
+      -->
+      <PsHotReloadCmd>powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "try { $p = New-Object System.IO.Pipes.NamedPipeClientStream('.', '$(PipeName)', [System.IO.Pipes.PipeDirection]::InOut); $p.Connect(2000); $sw = New-Object System.IO.StreamWriter($p); $sw.AutoFlush = $true; $sr = New-Object System.IO.StreamReader($p); $msg = '{\"Command\":\"RELOAD_RUNTIME\", \"Payload\":\"$(RuntimeDeployDirEscaped)\"}'; $sw.WriteLine($msg); $resp = $sr.ReadLine(); Write-host 'HotReload response:' $resp; $p.Close() } catch { Write-Warning ('HotReload failed: ' + $_.Exception.Message) }"</PsHotReloadCmd>
     </PropertyGroup>
+    
     <Message Text="Sending RELOAD_RUNTIME command to pipe server" Importance="High" />
+    
+    <!-- Execute PowerShell command, ignore exit code (Loader might not be running) -->
     <Exec Command="$(PsHotReloadCmd)" IgnoreExitCode="true" />
   </Target>
+  
+  <!-- 
+    Target: ReloadRuntimeDisabled
+    
+    Placeholder target that runs when HotReloadNotify=false.
+    Logs that notification was skipped.
+  -->
   <Target Name="ReloadRuntimeDisabled" AfterTargets="DeployRuntime" Condition="'$(HotReloadNotify)' != 'true'">
-    <Message Text="HotReload notification disabled" Importance="Low" />
+    <Message Text="HotReload notification disabled (HotReloadNotify=false)" Importance="Low" />
   </Target>
 
+  <!-- Import common build configuration (Revit paths, API references, etc.) -->
   <Import Project="..\..\build\Common.targets" />
 </Project>
