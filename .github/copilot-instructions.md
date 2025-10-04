@@ -56,7 +56,7 @@ Follow these guidelines to generate clean, maintainable C# code for AI-first dev
 27. Write unit tests for all non-UI logic in separate test projects following [csharp-nunit.prompt.md](instructions/csharp-nunit.prompt.md).
 28. Use dependency injection for services and providers to enable proper testing.
 29. Follow [csharp-async.prompt.md](instructions/csharp-async.prompt.md) for async code patterns.
-30. Test hot-reloading with both Runtime updates and Loader updates to verify restart behavior.
+30. When task is approved to be done, update documentation in the [docs](docs) folder. Do not create excessive documentation, but ensure all non-trivial logic is explained.
 
 ## Development Workflow
 
