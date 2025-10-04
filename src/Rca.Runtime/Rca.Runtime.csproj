@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
@@ -363,47 +363,45 @@
   </PropertyGroup>
 
   <!-- 
-    Target: ReloadRuntime
+    Target: NotifyBuildCompleted
     
-    Sends RELOAD_RUNTIME command to running Loader via named pipe after deployment.
+    Sends BUILD_COMPLETED command to running Loader via named pipe after deployment.
     
-    Why named pipe notification?
-    When Runtime is deployed by the build, the running Loader instance needs to be notified
-    so it can reload the new Runtime version without restarting Revit.
+    Why this is simple now:
+    - No payload required (addin finds latest folder itself)
+    - No path escaping needed
+    - Just a signal that new build is available
+    - Addin reads hashes from DLLs and decides what to do
     
-    Command payload:
-    - Command: "RELOAD_RUNTIME"
-    - Payload: timestamped deploy directory path (escaped for JSON)
-    
-    The Loader's PipeServerService receives this command and triggers RuntimeManager to reload.
+    Benefits over old approach:
+    - More reliable (no complex JSON payload)
+    - Single source of truth (addin controls version detection)
+    - Better UX (user gets interactive dialog).
   -->
-  <Target Name="ReloadRuntime" AfterTargets="DeployRuntime" Condition="'$(HotReloadNotify)' == 'true'">
+  <Target Name="NotifyBuildCompleted" AfterTargets="DeployRuntime" Condition="'$(HotReloadNotify)' == 'true'">
     <PropertyGroup>
       <PipeName>RCA_PIPE</PipeName>
-      <!-- Escape backslashes in path for JSON payload -->
-      <RuntimeDeployDirEscaped>$([System.String]::Copy('$(RuntimeDeployDir)').Replace('\\','\\\\'))</RuntimeDeployDirEscaped>
-      
       <!-- 
-        PowerShell script to send reload command via named pipe.
-        Connects to pipe, sends JSON command, reads response, and closes connection.
+        PowerShell script to send BUILD_COMPLETED command via named pipe.
+        Simple message: just notify that build happened, no payload.
       -->
-      <PsHotReloadCmd>powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "try { $p = New-Object System.IO.Pipes.NamedPipeClientStream('.', '$(PipeName)', [System.IO.Pipes.PipeDirection]::InOut); $p.Connect(2000); $sw = New-Object System.IO.StreamWriter($p); $sw.AutoFlush = $true; $sr = New-Object System.IO.StreamReader($p); $msg = '{\"Command\":\"RELOAD_RUNTIME\", \"Payload\":\"$(RuntimeDeployDirEscaped)\"}'; $sw.WriteLine($msg); $resp = $sr.ReadLine(); Write-host 'HotReload response:' $resp; $p.Close() } catch { Write-Warning ('HotReload failed: ' + $_.Exception.Message) }"</PsHotReloadCmd>
+      <PsNotifyCmd>powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "try { $p = New-Object System.IO.Pipes.NamedPipeClientStream('.', '$(PipeName)', [System.IO.Pipes.PipeDirection]::InOut); $p.Connect(3000); $sw = New-Object System.IO.StreamWriter($p); $sw.AutoFlush = $true; $sr = New-Object System.IO.StreamReader($p); $msg = '{\"Command\":\"BUILD_COMPLETED\",\"Payload\":\"\"}'; $sw.WriteLine($msg); $resp = $sr.ReadLine(); Write-Host 'Build notification response:' $resp; $p.Close() } catch { Write-Warning ('Build notification failed: ' + $_.Exception.Message) }"</PsNotifyCmd>
     </PropertyGroup>
     
-    <Message Text="Sending RELOAD_RUNTIME command to pipe server" Importance="High" />
+    <Message Text="Notifying Revit addin about completed build" Importance="High" />
     
     <!-- Execute PowerShell command, ignore exit code (Loader might not be running) -->
-    <Exec Command="$(PsHotReloadCmd)" IgnoreExitCode="true" />
+    <Exec Command="$(PsNotifyCmd)" IgnoreExitCode="true" />
   </Target>
   
   <!-- 
-    Target: ReloadRuntimeDisabled
+    Target: NotifyBuildDisabled
     
     Placeholder target that runs when HotReloadNotify=false.
     Logs that notification was skipped.
   -->
-  <Target Name="ReloadRuntimeDisabled" AfterTargets="DeployRuntime" Condition="'$(HotReloadNotify)' != 'true'">
-    <Message Text="HotReload notification disabled (HotReloadNotify=false)" Importance="Low" />
+  <Target Name="NotifyBuildDisabled" AfterTargets="DeployRuntime" Condition="'$(HotReloadNotify)' != 'true'">
+    <Message Text="Build notification disabled (HotReloadNotify=false)" Importance="Low" />
   </Target>
 
   <!-- Import common build configuration (Revit paths, API references, etc.) -->

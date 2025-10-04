@@ -9,7 +9,7 @@ namespace Rca.Loader.AssemblyManagement
     /// This class serves as the data model for the LoadedAssemblies.json file
     /// that persists assembly state between Revit sessions.
     /// Loader and Contracts are treated as a single unit since they
-    /// are always deployed and updated together.
+    /// are always deployed and updated together
     /// </remarks>
     public class LoadedAssembliesInfo
     {
@@ -25,8 +25,16 @@ namespace Rca.Loader.AssemblyManagement
         
         /// <summary>
         /// Gets or sets information about the Rca.Runtime.dll assembly.
+        /// This represents the DISCOVERED version (what's on disk), not necessarily what's loaded.
         /// </summary>
         public AssemblyInfo RuntimeAssembly { get; set; } = new AssemblyInfo();
+        
+        /// <summary>
+        /// Gets or sets information about the ACTUALLY LOADED runtime assembly.
+        /// This is updated only after successful ReloadRuntime operation.
+        /// Used to compare with RuntimeAssembly to determine if reload is needed.
+        /// </summary>
+        public AssemblyInfo LoadedRuntimeAssembly { get; set; } = new AssemblyInfo();
         
         /// <summary>
         /// Gets or sets information about the last MSBuild signal received.

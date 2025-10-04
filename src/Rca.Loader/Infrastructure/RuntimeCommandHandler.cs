@@ -89,6 +89,7 @@ namespace Rca.Loader.Infrastructure
             {
                 PipeCommands.Reload => HandleReloadCommand(cmd),
                 PipeCommands.ReloadRuntime => HandleReloadRuntimeCommand(cmd),
+                PipeCommands.BuildCompleted => HandleBuildCompletedCommand(),
                 PipeCommands.Status => HandleStatusCommand(),
                 _ => PipeResponseFactory.UnknownCommand(cmd.Command)
             };
@@ -213,6 +214,87 @@ namespace Rca.Loader.Infrastructure
             {
                 Log.LogError(ex, "Error in HandleStatusCommand");
                 return PipeResponseFactory.Error($"Error getting status: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Handles BUILD_COMPLETED command from MSBuild.
+        /// 
+        /// This command is sent after a successful build to notify the running addin
+        /// that new assemblies are available. The handler:
+        /// 1. Finds the latest deploy folder automatically
+        /// 2. Reads hashes from DLLs to detect what changed
+        /// 3. Updates UI status display
+        /// 4. Triggers ReloadRuntimeCommand to show dialog to user
+        /// 
+        /// Why trigger ReloadRuntimeCommand instead of showing dialog directly:
+        /// - Reuses existing, well-tested dialog logic
+        /// - Avoids code duplication
+        /// - Ensures consistent UX across manual and automatic triggers
+        /// </summary>
+        /// <returns>Success response indicating command was processed.</returns>
+        private PipeResponse HandleBuildCompletedCommand()
+        {
+            Log.LogInformation("Handling BUILD_COMPLETED notification from MSBuild");
+            
+            try
+            {
+                // 1. Find the latest deploy folder
+                var latest = assemblyStatusManager?.GetLatestTempDllFolder() ?? string.Empty;
+                if (string.IsNullOrEmpty(latest))
+                {
+                    Log.LogWarning("No deploy folders found after build notification");
+                    return PipeResponseFactory.Success("NO_DEPLOY_FOUND");
+                }
+                
+                Log.LogDebug("Latest deploy folder: {Folder}", latest);
+                
+                // 2. Process the build signal - updates CurrentInfo with new hashes
+                assemblyStatusManager?.ProcessMsBuildSignal(latest);
+                
+                // 3. Update UI status display
+                try { LoaderApp.Instance?.UpdateStatusDisplay(); } catch { }
+                
+                // 4. Trigger ReloadRuntimeCommand via ExternalEvent
+                //    This reuses existing dialog logic from ReloadRuntimeCommand
+                //    which already handles Loader outdated, Runtime outdated scenarios
+                TriggerReloadRuntimeCommand();
+                
+                Log.LogInformation("BUILD_COMPLETED processed, ReloadRuntimeCommand triggered");
+                return PipeResponseFactory.Success("ReloadRuntimeCommand triggered");
+            }
+            catch (Exception ex)
+            {
+                Log.LogError(ex, "Error handling BUILD_COMPLETED");
+                return PipeResponseFactory.Error($"Error processing build notification: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Triggers ReloadRuntimeCommand via ExternalEvent on UI thread.
+        /// 
+        /// Why this approach:
+        /// - BUILD_COMPLETED arrives on background thread (named pipe)
+        /// - ReloadRuntimeCommand contains all dialog logic we need
+        /// - ExternalEvent is Revit API's mechanism for executing commands programmatically
+        /// - Avoids code duplication of dialog logic
+        /// </summary>
+        private void TriggerReloadRuntimeCommand()
+        {
+            try
+            {
+                Log.LogDebug("Creating ExternalEvent to trigger ReloadRuntimeCommand");
+                
+                // Create a simple handler that invokes ReloadRuntimeCommand
+                var handler = new TriggerCommandHandler("ReloadRuntimeCommand");
+                var externalEvent = ExternalEvent.Create(handler);
+                externalEvent.Raise();
+                
+                Log.LogDebug("ExternalEvent raised successfully");
+            }
+            catch (Exception ex)
+            {
+                Log.LogError(ex, "Error raising ExternalEvent for ReloadRuntimeCommand");
             }
         }
 

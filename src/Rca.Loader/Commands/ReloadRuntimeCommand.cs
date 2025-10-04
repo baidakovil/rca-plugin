@@ -100,6 +100,16 @@ namespace Rca.Loader.Commands
                 }
 
                 // Runtime is loaded - check whether it is outdated
+                // IMPORTANT: First update CurrentInfo from latest folder, then check if outdated
+                // This ensures we compare against the actual latest version on disk
+                var latest = LoaderApp.Instance.AssemblyStatusManager?.GetLatestTempDllFolder() ?? string.Empty;
+                if (!string.IsNullOrEmpty(latest))
+                {
+                    Log.LogDebug("Updating CurrentInfo from latest folder before outdated check: {Folder}", latest);
+                    LoaderApp.Instance.AssemblyStatusManager?.ProcessMsBuildSignal(latest);
+                    LoaderApp.Instance?.UpdateStatusDisplay();
+                }
+                
                 bool runtimeOutdated = LoaderApp.Instance.AssemblyStatusManager?.IsRuntimeOutdated() ?? false;
                 if (!runtimeOutdated)
                 {

@@ -52,22 +52,21 @@ namespace Rca.Loader.AssemblyManagement
                 string? runtimePathFromRuntimeManager = LoaderApp.Instance?.RuntimeManager?.CurrentRuntimePath;
                 if (!string.IsNullOrEmpty(runtimePathFromRuntimeManager) && File.Exists(runtimePathFromRuntimeManager))
                 {
-                    CurrentInfo.RuntimeAssembly.Path = runtimePathFromRuntimeManager;
-                    // For a runtime that is loaded into the process, prefer reflection reading
-                    // to ensure we get the attributes from the in-memory assembly
+                    // Runtime is actually loaded - read its hash 
                     var loadedRuntimeAsm = AppDomain.CurrentDomain.GetAssemblies()
                         .FirstOrDefault(a => !a.IsDynamic && string.Equals(Path.GetFileName(a.Location), LoaderConstants.RuntimeFileName, StringComparison.OrdinalIgnoreCase));
 
+                    string? rHash = null;
                     if (loadedRuntimeAsm != null)
                     {
-                        var rHash = AttributeMetadataLoader.TryGetFromLoadedAssembly(loadedRuntimeAsm, BuildConstants.SourceHashMetadataKey);
+                        rHash = AttributeMetadataLoader.TryGetFromLoadedAssembly(loadedRuntimeAsm, BuildConstants.SourceHashMetadataKey);
 
                         // If reflection didn't return a usable value, try reading from the on-disk runtime DLL
                         if (string.IsNullOrEmpty(rHash) || rHash == AttributeMetadataLoader.MissingMarker)
                         {
                             try
                             {
-                                if (!string.IsNullOrEmpty(runtimePathFromRuntimeManager) && File.Exists(runtimePathFromRuntimeManager))
+                                if (File.Exists(runtimePathFromRuntimeManager))
                                 {
                                     var fileHash = AttributeMetadataLoader.TryGetFromFile(runtimePathFromRuntimeManager, BuildConstants.SourceHashMetadataKey);
                                     if (!string.IsNullOrEmpty(fileHash) && fileHash != AttributeMetadataLoader.MissingMarker)
@@ -79,14 +78,21 @@ namespace Rca.Loader.AssemblyManagement
                                 _log.LogDebug(exF, "Failed secondary runtime hash read");
                             }
                         }
-
-                        CurrentInfo.RuntimeAssembly.Hash = string.IsNullOrEmpty(rHash) ? AttributeMetadataLoader.MissingMarker : rHash;
                     }
                     else
                     {
-                        var hash = AttributeMetadataLoader.TryGetFromFile(runtimePathFromRuntimeManager, BuildConstants.SourceHashMetadataKey);
-                        CurrentInfo.RuntimeAssembly.Hash = string.IsNullOrEmpty(hash) ? AttributeMetadataLoader.MissingMarker : hash;
+                        rHash = AttributeMetadataLoader.TryGetFromFile(runtimePathFromRuntimeManager, BuildConstants.SourceHashMetadataKey);
                     }
+
+                    var finalHash = string.IsNullOrEmpty(rHash) ? AttributeMetadataLoader.MissingMarker : rHash;
+                    
+                    // Update LOADED runtime info (this is what's actually in memory)
+                    CurrentInfo.LoadedRuntimeAssembly.Path = runtimePathFromRuntimeManager;
+                    CurrentInfo.LoadedRuntimeAssembly.Hash = finalHash;
+                    
+                    // Also initialize discovered runtime to same values initially
+                    CurrentInfo.RuntimeAssembly.Path = runtimePathFromRuntimeManager;
+                    CurrentInfo.RuntimeAssembly.Hash = finalHash;
                 }
                 else
                 {
@@ -97,20 +103,31 @@ namespace Rca.Loader.AssemblyManagement
                         var runtimeDll = Path.Combine(latest, LoaderConstants.RuntimeFileName);
                         if (File.Exists(runtimeDll))
                         {
-                            CurrentInfo.RuntimeAssembly.Path = runtimeDll;
                             var hash = AttributeMetadataLoader.TryGetFromFile(runtimeDll, BuildConstants.SourceHashMetadataKey);
-                            CurrentInfo.RuntimeAssembly.Hash = string.IsNullOrEmpty(hash) ? AttributeMetadataLoader.MissingMarker : hash;
+                            var finalHash = string.IsNullOrEmpty(hash) ? AttributeMetadataLoader.MissingMarker : hash;
+                            
+                            // Set discovered runtime (what's on disk)
+                            CurrentInfo.RuntimeAssembly.Path = runtimeDll;
+                            CurrentInfo.RuntimeAssembly.Hash = finalHash;
+                            
+                            // Loaded runtime is empty (nothing loaded yet)
+                            CurrentInfo.LoadedRuntimeAssembly.Path = string.Empty;
+                            CurrentInfo.LoadedRuntimeAssembly.Hash = AttributeMetadataLoader.MissingMarker;
                         }
                         else
                         {
                             CurrentInfo.RuntimeAssembly.Path = string.Empty;
                             CurrentInfo.RuntimeAssembly.Hash = AttributeMetadataLoader.MissingMarker;
+                            CurrentInfo.LoadedRuntimeAssembly.Path = string.Empty;
+                            CurrentInfo.LoadedRuntimeAssembly.Hash = AttributeMetadataLoader.MissingMarker;
                         }
                     }
                     else
                     {
                         CurrentInfo.RuntimeAssembly.Path = string.Empty;
                         CurrentInfo.RuntimeAssembly.Hash = AttributeMetadataLoader.MissingMarker;
+                        CurrentInfo.LoadedRuntimeAssembly.Path = string.Empty;
+                        CurrentInfo.LoadedRuntimeAssembly.Hash = AttributeMetadataLoader.MissingMarker;
                     }
                 }
 
@@ -168,11 +185,24 @@ namespace Rca.Loader.AssemblyManagement
             try
             {
                 if (string.IsNullOrEmpty(runtimePath) || !File.Exists(runtimePath)) return;
-                var oldHash = CurrentInfo.RuntimeAssembly.Hash;
-                CurrentInfo.RuntimeAssembly.Path = runtimePath;
+                
+                // Read hash from the newly loaded runtime
                 var hash = AttributeMetadataLoader.TryGetFromFile(runtimePath, BuildConstants.SourceHashMetadataKey);
-                CurrentInfo.RuntimeAssembly.Hash = string.IsNullOrEmpty(hash) ? AttributeMetadataLoader.MissingMarker : hash;
-                _log.LogInformation("Runtime hash updated after reload old={OldHash} new={NewHash}", oldHash, CurrentInfo.RuntimeAssembly.Hash);
+                var newHash = string.IsNullOrEmpty(hash) ? AttributeMetadataLoader.MissingMarker : hash;
+                
+                var oldLoadedHash = CurrentInfo.LoadedRuntimeAssembly.Hash;
+                
+                // Update LOADED runtime info (this is what's actually in memory now)
+                CurrentInfo.LoadedRuntimeAssembly.Path = runtimePath;
+                CurrentInfo.LoadedRuntimeAssembly.Hash = newHash;
+                
+                // Also update discovered runtime info to match (since we just loaded it)
+                CurrentInfo.RuntimeAssembly.Path = runtimePath;
+                CurrentInfo.RuntimeAssembly.Hash = newHash;
+                
+                _log.LogInformation("Runtime hash updated after reload oldLoaded={OldHash} newLoaded={NewHash}", 
+                    oldLoadedHash, newHash);
+                
                 // Refresh UI after reload
                 try { LoaderApp.Instance?.UpdateStatusDisplay(); } catch { }
             }
@@ -223,26 +253,48 @@ namespace Rca.Loader.AssemblyManagement
                         _log.LogDebug("Loader deployed hash candidate {Hash} deployMeta={Deploy}", loaderHash, deployFolderMeta);
                     }
 
-                    // If DeployFolder metadata available prefer that for display
-                    if (!string.IsNullOrEmpty(deployFolderMeta) && deployFolderMeta != AttributeMetadataLoader.MissingMarker)
-                    {
-                        CurrentInfo.LoaderComponents.Path = deployFolderMeta;
-                    }
-                    else
-                    {
-                        // Do not expose actual folder name; use explicit marker so developers can see metadata is missing
-                        CurrentInfo.LoaderComponents.Path = AttributeMetadataLoader.MissingMarker;
-                    }
-
+                    // Determine what changed BEFORE updating CurrentInfo
                     bool loaderChanged = !string.IsNullOrEmpty(loaderHash) && loaderHash != CurrentInfo.LoaderComponents.Hash;
                     bool runtimeChanged = !string.IsNullOrEmpty(runtimeHash) && runtimeHash != CurrentInfo.RuntimeAssembly.Hash;
 
                     var ev = DetermineEventType(loaderChanged, runtimeChanged);
-                    // record event in LastMSBuildSignal
+                    
+                    // Record event in LastMSBuildSignal
                     var oldSignal = $"{CurrentInfo.LastMSBuildSignal.Time} - {CurrentInfo.LastMSBuildSignal.Event}";
                     CurrentInfo.LastMSBuildSignal.Time = DateTime.Now.ToString("HH:mm:ss");
                     CurrentInfo.LastMSBuildSignal.Event = ev;
                     _log.LogInformation("MSBuild signal processed prev={Prev} new={NewTime} {Event}", oldSignal, CurrentInfo.LastMSBuildSignal.Time, ev);
+
+                    // CRITICAL FIX: Update CurrentInfo with new hashes and paths
+                    // This must happen AFTER determining what changed, but BEFORE UI refresh
+                    // so that IsLoaderOutdated() and IsRuntimeOutdated() see the latest values
+                    
+                    // Update loader info if we found a new hash
+                    if (!string.IsNullOrEmpty(loaderHash))
+                    {
+                        var oldLoaderHash = CurrentInfo.LoaderComponents.Hash;
+                        CurrentInfo.LoaderComponents.Hash = loaderHash;
+                        
+                        // Update deploy folder metadata for UI display
+                        if (!string.IsNullOrEmpty(deployFolderMeta) && deployFolderMeta != AttributeMetadataLoader.MissingMarker)
+                        {
+                            CurrentInfo.LoaderComponents.Path = deployFolderMeta;
+                        }
+                        
+                        _log.LogDebug("Loader info updated: hash={OldHash}->{NewHash} path={Path}", 
+                            oldLoaderHash, loaderHash, deployFolderMeta);
+                    }
+                    
+                    // Update runtime info if we found a new hash
+                    if (!string.IsNullOrEmpty(runtimeHash))
+                    {
+                        var oldRuntimeHash = CurrentInfo.RuntimeAssembly.Hash;
+                        CurrentInfo.RuntimeAssembly.Hash = runtimeHash;
+                        CurrentInfo.RuntimeAssembly.Path = runtimeDll;
+                        
+                        _log.LogDebug("Runtime info updated: hash={OldHash}->{NewHash} path={Path}", 
+                            oldRuntimeHash, runtimeHash, runtimeDll);
+                    }
 
                     // Refresh UI after processing MSBuild signal
                     try { LoaderApp.Instance?.UpdateStatusDisplay(); } catch { }
@@ -283,18 +335,34 @@ namespace Rca.Loader.AssemblyManagement
                 var runtimeLoaded = LoaderApp.Instance?.RuntimeManager?.IsRuntimeLoaded ?? false;
                 if (!runtimeLoaded) return true;
 
+                // Get the latest deploy folder
                 var latest = GetLatestTempDllFolder();
                 if (string.IsNullOrEmpty(latest)) return false;
 
                 var runtimeDll = Path.Combine(latest, LoaderConstants.RuntimeFileName);
                 if (!File.Exists(runtimeDll)) return false;
 
-                var runtimeHash = AttributeMetadataLoader.TryGetFromFile(runtimeDll, BuildConstants.SourceHashMetadataKey);
+                // Read hash from the DISCOVERED runtime (on disk)
+                var discoveredHash = AttributeMetadataLoader.TryGetFromFile(runtimeDll, BuildConstants.SourceHashMetadataKey);
 
-                // If we don't have a recorded hash for currently loaded runtime, consider it outdated (not loaded or unknown)
-                if (string.IsNullOrEmpty(CurrentInfo.RuntimeAssembly.Hash) || CurrentInfo.RuntimeAssembly.Hash == AttributeMetadataLoader.MissingMarker) return true;
+                // CRITICAL FIX: Compare discovered hash with LOADED hash, not with RuntimeAssembly.Hash
+                // RuntimeAssembly.Hash was updated by ProcessMsBuildSignal, so comparing with it always returns false
+                // LoadedRuntimeAssembly.Hash is updated only after actual reload, so it represents what's in memory
+                var loadedHash = CurrentInfo.LoadedRuntimeAssembly.Hash;
+                
+                // If we don't have a recorded hash for currently loaded runtime, consider it outdated
+                if (string.IsNullOrEmpty(loadedHash) || loadedHash == AttributeMetadataLoader.MissingMarker)
+                {
+                    _log.LogDebug("IsRuntimeOutdated: no loaded hash recorded, treating as outdated");
+                    return true;
+                }
 
-                return !string.IsNullOrEmpty(runtimeHash) && runtimeHash != CurrentInfo.RuntimeAssembly.Hash;
+                var isOutdated = !string.IsNullOrEmpty(discoveredHash) && discoveredHash != loadedHash;
+                
+                _log.LogDebug("IsRuntimeOutdated: discovered={Discovered} loaded={Loaded} result={Outdated}",
+                    discoveredHash, loadedHash, isOutdated);
+                
+                return isOutdated;
             }
             catch (Exception ex)
             {

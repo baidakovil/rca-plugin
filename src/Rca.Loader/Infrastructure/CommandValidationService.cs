@@ -39,6 +39,7 @@ namespace Rca.Loader.Infrastructure
                 PipeCommands.RunTests => ValidateRunTestsCommand(command, out validationError),
                 PipeCommands.TestInit => ValidateTestInitCommand(command, out validationError),
                 PipeCommands.ReloadRuntime => ValidateReloadRuntimeCommand(command, out validationError),
+                PipeCommands.BuildCompleted => ValidateBuildCompletedCommand(command, out validationError),
                 _ => CreateUnknownCommandError(command.Command, out validationError)
             };
         }
@@ -116,6 +117,13 @@ namespace Rca.Loader.Infrastructure
             return true;
         }
 
+        private static bool ValidateBuildCompletedCommand(PipeCommand command, out string validationError)
+        {
+            // BUILD_COMPLETED doesn't require a payload - MSBuild just sends a signal
+            validationError = string.Empty;
+            return true;
+        }
+
         private static bool CreateUnknownCommandError(string commandName, out string validationError)
         {
             validationError = $"Unknown command: {commandName}";
@@ -170,5 +178,12 @@ namespace Rca.Loader.Infrastructure
         /// Command to reload the runtime and update assembly status.
         /// </summary>
         public const string ReloadRuntime = "RELOAD_RUNTIME";
+        
+        /// <summary>
+        /// Command sent by MSBuild to notify that a new build is available.
+        /// Addin should check for updates and prompt user if needed.
+        /// Payload is optional and ignored - addin finds latest folder automatically.
+        /// </summary>
+        public const string BuildCompleted = "BUILD_COMPLETED";
     }
 }
