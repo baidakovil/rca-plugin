@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
@@ -13,8 +13,23 @@
     <ProjectReference Include="..\Rca.UI\Rca.UI.csproj" />
     <ProjectReference Include="..\Rca.Network\Rca.Network.csproj" />
     <ProjectReference Include="..\Rca.Contracts\Rca.Contracts.csproj" />
-    <ProjectReference Include="..\Rca.Loader\Rca.Loader.csproj" />
     <ProjectReference Include="..\Rca.Logging.Contracts\Rca.Logging.Contracts.csproj" />
+  </ItemGroup>
+
+  <!-- Reference the merged Rca.Loader.dll (built by Loader project) -->
+  <ItemGroup>
+    <Reference Include="Rca.Loader">
+      <HintPath>..\Rca.Loader\bin\$(Configuration)\net8.0-windows\Rca.Loader.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Ensure Loader is built before Runtime (for merged Rca.Loader.dll reference) -->
+  <ItemGroup>
+    <ProjectReference Include="..\Rca.Loader\Rca.Loader.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
+    </ProjectReference>
   </ItemGroup>
 
   <ItemGroup>
@@ -107,6 +122,7 @@
       <RuntimeDeployFiles Include="$(TargetDir)Microsoft.Scripting.dll" />
       <RuntimeDeployFiles Include="$(TargetDir)Microsoft.Dynamic.dll" />
       <RuntimeDeployFiles Include="$(TargetDir)Rca.Logging.Contracts.dll" />
+      <RuntimeDeployFiles Include="$(TargetDir)Rca.Loader.dll" />
     </ItemGroup>
     <Copy SourceFiles="@(RuntimeDeployFiles)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" />
     <ItemGroup>

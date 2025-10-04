@@ -104,6 +104,10 @@ namespace Rca.Loader.Infrastructure
                 {
                     assemblyStatusManager?.ProcessMsBuildSignal(cmd.Payload);
                     try { LoaderApp.Instance?.UpdateStatusDisplay(); } catch { }
+                    
+                    // Inject runtime UI into dockable panel host
+                    TryInjectRuntimeUI();
+                    
                     Log.LogInformation("Runtime reloaded via explicit folder payload path={Path}", cmd.Payload);
                 }
                 return result ? PipeResponseFactory.Success(errorMessage ?? string.Empty) : PipeResponseFactory.Error(errorMessage ?? "Unknown reload error");
@@ -147,6 +151,10 @@ namespace Rca.Loader.Infrastructure
                     assemblyStatusManager?.UpdateHashesAfterReload(runtimeManager.CurrentRuntimePath);
                     // Refresh UI to show updated hash/path
                     try { LoaderApp.Instance?.UpdateStatusDisplay(); } catch { }
+                    
+                    // Inject runtime UI into dockable panel host
+                    TryInjectRuntimeUI();
+                    
                     Log.LogInformation("ReloadRuntime completed (latest={Latest})", latest);
                     return PipeResponseFactory.Success("ReloadRuntime completed successfully");
                 }
@@ -157,6 +165,37 @@ namespace Rca.Loader.Infrastructure
             {
                 Log.LogError(ex, "Error in HandleReloadRuntimeCommand");
                 return PipeResponseFactory.Error($"Error in ReloadRuntime: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Attempts to inject runtime UI into the dockable panel host after successful runtime load.
+        /// </summary>
+        private void TryInjectRuntimeUI()
+        {
+            try
+            {
+                var host = LoaderApp.Instance?.PanelHost;
+                if (host == null)
+                {
+                    Log.LogWarning("PanelHost unavailable for UI injection");
+                    return;
+                }
+
+                var content = runtimeManager.CreateRuntimeDockableContent(out var error);
+                if (content != null)
+                {
+                    host.SetContent(content);
+                    Log.LogInformation("Runtime UI injected successfully");
+                }
+                else
+                {
+                    Log.LogWarning("Failed to create runtime UI: {Error}", error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.LogError(ex, "Error injecting runtime UI");
             }
         }
 

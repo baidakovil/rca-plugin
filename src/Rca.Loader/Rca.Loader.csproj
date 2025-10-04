@@ -80,6 +80,7 @@
       <IlRepackTempDir>$(IntermediateOutputPath)ilrepack_$(MSBuildProjectName)</IlRepackTempDir>
       <IlRepackPath>$(USERPROFILE)\.nuget\packages\ilrepack\2.0.34\tools\ILRepack.exe</IlRepackPath>
       <MergedOutput>$(TargetDir)Rca.Loader.Merged.dll</MergedOutput>
+      <InternalizeExcludeFile>$(IntermediateOutputPath)internalize-exclude.txt</InternalizeExcludeFile>
     </PropertyGroup>
 
     <MakeDir Directories="$(IlRepackTempDir)" />
@@ -87,11 +88,14 @@
     <!-- Copy reference DLLs to temp dir to allow ILRepack to resolve them -->
     <Copy SourceFiles="@(ReferenceDlls)" DestinationFolder="$(IlRepackTempDir)" SkipUnchangedFiles="false" />
 
+    <!-- Create internalize exclude list to keep Rca.Loader.Contracts types public -->
+    <WriteLinesToFile File="$(InternalizeExcludeFile)" Lines="Rca.Loader.Contracts" Overwrite="true" />
+
     <!-- Fail early if ILRepack not found -->
     <Error Condition="!Exists('$(IlRepackPath)')" Text="ILRepack not found at: $(IlRepackPath)" />
 
-    <!-- Run ILRepack to create merged assembly; ensure attributes are preserved from the compiled assembly -->
-    <Exec Command="&quot;$(IlRepackPath)&quot; /out:&quot;$(MergedOutput)&quot; &quot;$(TargetPath)&quot; &quot;$(TargetDir)Rca.Loader.Contracts.dll&quot; /xmldocs /copyattrs /parallel /internalize /lib:&quot;$(IlRepackTempDir)&quot;" />
+    <!-- Run ILRepack with internalize exclude list to keep contract types public -->
+    <Exec Command="&quot;$(IlRepackPath)&quot; /out:&quot;$(MergedOutput)&quot; &quot;$(TargetPath)&quot; &quot;$(TargetDir)Rca.Loader.Contracts.dll&quot; /xmldocs /copyattrs /parallel /internalize:&quot;$(InternalizeExcludeFile)&quot; /lib:&quot;$(IlRepackTempDir)&quot;" />
 
     <!-- Replace the original with the merged file -->
     <Copy SourceFiles="$(MergedOutput)" DestinationFiles="$(TargetPath)" />

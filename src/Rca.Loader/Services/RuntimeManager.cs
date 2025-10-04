@@ -40,104 +40,48 @@ namespace Rca.Loader.Services
 
         /// <summary>
         /// Contract-compatible CreateRuntimeDockableContent without UIApplication parameter.
-        /// Delegates to internal implementation.
+        /// Uses SharedServiceRegistry to resolve factory across AssemblyLoadContext boundary.
         /// </summary>
         /// <param name="error">Out error message.</param>
         /// <returns>FrameworkElement or null.</returns>
         public FrameworkElement? CreateRuntimeDockableContent(out string? error)
-        {
-            return CreateRuntimeDockableContentInternal(null, out error);
-        }
-
-        /// <summary>
-        /// Internal implementation that accepts an optional UIApplication for provider creation.
-        /// Preferred approach: ask the shared ServiceContainer for a registered IRuntimePanelFactory provided by runtime.
-        /// Fallback: attempt to instantiate a type named 'RcaDockablePanel' using a parameterless constructor.
-        /// </summary>
-        private FrameworkElement? CreateRuntimeDockableContentInternal(UIApplication? uiapp, out string? error)
         {
             error = null;
 
             if (currentContext == null)
             {
                 error = "Runtime not loaded";
-                _log.LogWarning("Dockable content requested but runtime not loaded");
+                _log.LogWarning("CreateRuntimeDockableContent called but runtime not loaded");
                 return null;
             }
 
             try
             {
-                // First, prefer resolving a runtime-provided factory via the shared ServiceContainer.
-                try
+                // Resolve factory from SharedServiceRegistry (lives in non-collectible Loader context)
+                var factory = SharedServiceRegistry.Resolve<IRuntimePanelFactory>();
+                if (factory == null)
                 {
-                    if (ServiceContainer.Instance.IsRegistered<IRuntimePanelFactory>())
-                    {
-                        var factory = ServiceContainer.Instance.Resolve<IRuntimePanelFactory>();
-                        if (factory != null)
-                        {
-                            var panel = factory.CreatePanel();
-                            _log.LogInformation("Panel created via IRuntimePanelFactory ({Type})", factory.GetType().FullName);
-                            return panel;
-                        }
-                    }
-                }
-                catch (Exception exFac)
-                {
-                    _log.LogDebug(exFac, "Factory resolution failed - continuing to reflection fallback");
-                }
-
-                // Fallback minimal reflection: locate runtime assembly and try to instantiate 'RcaDockablePanel' via parameterless ctor.
-                var assembly = currentContext.Assemblies.FirstOrDefault(a =>
-                    !a.IsDynamic && string.Equals(Path.GetFileName(a.Location), LoaderConstants.RuntimeFileName, StringComparison.OrdinalIgnoreCase));
-
-                if (assembly == null)
-                {
-                    error = "Runtime assembly not found in load context";
+                    error = "IRuntimePanelFactory not registered - Runtime may not have initialized properly";
                     _log.LogWarning("{Msg}", error);
                     return null;
                 }
 
-                var panelType = assembly.GetTypes().FirstOrDefault(t => t.Name == "RcaDockablePanel");
-                if (panelType == null)
+                _log.LogDebug("Creating panel via factory (type={Type})", factory.GetType().FullName);
+                var panel = factory.CreatePanel();
+                
+                if (panel == null)
                 {
-                    error = "RcaDockablePanel type not found (runtime should register IRuntimePanelFactory)";
+                    error = "Factory.CreatePanel() returned null";
                     _log.LogWarning("{Msg}", error);
                     return null;
                 }
 
-                var ctor = panelType.GetConstructor(Type.EmptyTypes);
-                if (ctor == null)
-                {
-                    error = "No parameterless constructor for RcaDockablePanel";
-                    _log.LogWarning("{Msg}", error);
-                    return null;
-                }
-
-                var instance = ctor.Invoke(null);
-                if (instance is FrameworkElement fe)
-                {
-                    _log.LogInformation("Panel created via reflection path (type={Type})", panelType.FullName);
-                    return fe;
-                }
-
-                var contentProp = instance?.GetType().GetProperty("Content");
-                if (contentProp != null)
-                {
-                    var contentVal = contentProp.GetValue(instance) as FrameworkElement;
-                    if (contentVal != null)
-                    {
-                        _log.LogInformation("Panel content extracted from Content property (type={Type})", panelType.FullName);
-                        return contentVal;
-                    }
-                }
-
-                error = "Created instance is not a FrameworkElement";
-                _log.LogWarning("{Msg}", error);
-                return null;
+                _log.LogInformation("Panel created successfully via factory");
+                return panel;
             }
             catch (Exception ex)
             {
-                error = ex.ToString();
+                error = $"Error creating dockable content: {ex.Message}";
                 _log.LogError(ex, "Error creating dockable content");
                 return null;
             }

@@ -103,16 +103,9 @@ namespace Rca.Loader
                     // Store reference to the host as contract interface for later swapping
                     PanelHost = host;
 
-                    // Ensure pane is visible
-                    try
-                    {
-                        var pane = application.GetDockablePane(DockablePaneId);
-                        pane.Show();
-                    }
-                    catch (Exception exPane)
-                    {
-                        _log.LogWarning(exPane, "Failed to show dockable pane");
-                    }
+                    // Do NOT try to show pane here - Revit hasn't finished registration yet
+                    // Pane will be shown automatically when user clicks on it or via command
+                    _log.LogInformation("Dockable pane registered successfully id={Id}", DockablePaneId.Guid);
                 }
                 catch (Exception exReg)
                 {

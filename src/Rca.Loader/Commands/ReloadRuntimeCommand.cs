@@ -144,26 +144,42 @@ namespace Rca.Loader.Commands
             try
             {
                 var host = LoaderApp.Instance?.PanelHost;
-                if (host == null)
-                {
-                    Log.LogWarning("PanelHost unavailable for content replacement");
-                    return;
-                }
                 var runtimeManager = LoaderApp.Instance?.RuntimeManager;
-                if (runtimeManager == null)
+                
+                if (host == null || runtimeManager == null)
                 {
-                    Log.LogWarning("RuntimeManager null during content replacement");
+                    Log.LogWarning("PanelHost or RuntimeManager unavailable");
                     return;
                 }
-                var content = runtimeManager.CreateRuntimeDockableContent(out var createError);
-                if (content != null)
+
+                var content = runtimeManager.CreateRuntimeDockableContent(out var error);
+                if (content == null)
                 {
-                    host.SetContent(content);
-                    Log.LogInformation("Dockable content replaced successfully contentType={Type}", content.GetType().FullName);
+                    Log.LogWarning("Failed to create runtime UI: {Error}", error);
+                    return;
                 }
-                else
+
+                host.SetContent(content);
+                Log.LogInformation("Runtime UI loaded successfully");
+                
+                // Show the dockable pane now that we have content
+                try
                 {
-                    Log.LogWarning("Failed to create runtime dockable content error={Error}", createError);
+                    var uiApp = LoaderApp.Instance?.UIApplication;
+                    if (uiApp != null)
+                    {
+                        var paneId = new DockablePaneId(new Guid("3D5A1C2B-4F8E-4D3F-AF1E-1234567890AB"));
+                        var pane = uiApp.GetDockablePane(paneId);
+                        if (pane != null && !pane.IsShown())
+                        {
+                            pane.Show();
+                            Log.LogDebug("Dockable pane shown");
+                        }
+                    }
+                }
+                catch (Exception exShow)
+                {
+                    Log.LogDebug(exShow, "Could not auto-show dockable pane");
                 }
             }
             catch (Exception ex)
