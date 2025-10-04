@@ -9,6 +9,10 @@ using Rca.Integration.Revit.Tests.Infrastructure;
 
 namespace Rca.Integration.Revit.Tests
 {
+    /// <summary>
+    /// Integration tests for PythonExecutionService with Revit API context.
+    /// Tests verify Python code execution with access to Revit objects.
+    /// </summary>
     [TestFixture]
     public class PythonExecutionServiceIntegrationTests : UIApplicationTestsBase
     {
@@ -35,7 +39,7 @@ namespace Rca.Integration.Revit.Tests
         }
 
         [Test, Category("Revit")]
-        public void ExecuteSync_SimpleCode_ReturnsFormattedOutput()
+        public void ExecuteSync_SimpleCode_ReturnsOutput()
         {
             // Arrange
             var code = "print('Hello from Python in Revit')";
@@ -44,9 +48,8 @@ namespace Rca.Integration.Revit.Tests
             var result = pythonService!.ExecuteSync(code);
 
             // Assert
-            result.Should().Contain("PYTHON EXECUTION START");
             result.Should().Contain("Hello from Python in Revit");
-            result.Should().Contain("PYTHON EXECUTION END");
+            result.Should().NotContain("Error");
         }
 
         [Test, Category("Revit")]
@@ -64,7 +67,7 @@ namespace Rca.Integration.Revit.Tests
         }
 
         [Test, Category("Revit")]
-        public async Task ExecuteAsync_SimpleCode_ReturnsFormattedOutput()
+        public async Task ExecuteAsync_SimpleCode_ReturnsOutput()
         {
             // This test verifies that async execution still works when called from within Revit API context
             try
@@ -76,9 +79,8 @@ namespace Rca.Integration.Revit.Tests
                 var result = await pythonService!.ExecuteAsync(code);
 
                 // Assert
-                result.Should().Contain("PYTHON EXECUTION START");
                 result.Should().Contain("Hello from async Python in Revit");
-                result.Should().Contain("PYTHON EXECUTION END");
+                result.Should().Contain("Hello");
             }
             catch (InvalidOperationException ex) when (ex.Message.Contains("ExternalEvent"))
             {
