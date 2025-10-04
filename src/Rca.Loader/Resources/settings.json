@@ -8,6 +8,12 @@
   // Debug-only settings (only used in DEBUG builds)
   "debug": {
     "verboseLogging": true,
-    "autoShowPanelOnLoad": false
+    "autoShowPanelOnLoad": false,
+    "restartScriptPath": "%USERPROFILE%\\rca-plugin\\build\\Scripts\\RestartRevitGraceful.ps1",
+    
+    // Optional: Revit project file to open on restart
+    // Supports environment variables and network paths
+    // Example: "\\\\Mac\\Home\\Documents\\Project1.rvt"
+    "revitProjectFilePath": "\\\\Mac\\Home\\Documents\\Project1.rvt"
   }
 }

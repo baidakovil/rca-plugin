@@ -37,6 +37,21 @@ namespace Rca.Loader.Configuration
         /// Default: false
         /// </summary>
         public bool AutoShowPanelOnLoad { get; set; } = false;
+
+        /// <summary>
+        /// Gets or sets the path to the PowerShell restart script.
+        /// Supports environment variables (e.g., %USERPROFILE%, %TEMP%).
+        /// Default: %USERPROFILE%\rca-plugin\build\Scripts\RestartRevitGraceful.ps1
+        /// </summary>
+        public string RestartScriptPath { get; set; } = @"%USERPROFILE%\rca-plugin\build\Scripts\RestartRevitGraceful.ps1";
+
+        /// <summary>
+        /// Gets or sets the path to the Revit project file to open on restart.
+        /// Supports environment variables and network paths.
+        /// If empty or null, Revit will start without opening a project.
+        /// Example: \\Mac\Home\Documents\Project1.rvt
+        /// </summary>
+        public string? RevitProjectFilePath { get; set; }
     }
 #endif
 }

@@ -1,3 +1,7 @@
+# RestartRevitGraceful.ps1
+# Gracefully restarts Revit with updated Loader assembly
+# Integrates with RCA unified logging system via named pipe
+
 param(
     [Parameter(Mandatory=$true)]
     [string]$SourcePath,
@@ -8,23 +12,19 @@ param(
     [Parameter(Mandatory=$true)]
     [string]$RevitExecutable,
     
-    [Parameter(Mandatory=$true)]
-    [string]$JsonFilePath
+    [Parameter(Mandatory=$false)]
+    [string]$FilePath = $null
 )
 
-# Helper function for logging
-function Write-LogMessage {
-    param(
-        [string]$Message,
-        [string]$LogFile = "$env:TEMP\RcaRestartLog.txt"
-    )
-    
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    "$timestamp - $Message" | Out-File -FilePath $LogFile -Append
-}
+# Import RCA logging module
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Import-Module (Join-Path $scriptDir "RcaLogging.psm1") -Force
 
-Write-LogMessage "RestartRevitGraceful script started"
-Write-LogMessage "Parameters: SourcePath=$SourcePath, TargetPath=$TargetPath, RevitExecutable=$RevitExecutable"
+# Use unified logging with fallback to file
+$logCategory = "RestartScript"
+
+Write-RcaLog "RestartRevitGraceful script started" -Level "Information" -Category $logCategory
+Write-RcaLog "Parameters: SourcePath=$SourcePath, TargetPath=$TargetPath, RevitExecutable=$RevitExecutable" -Level "Debug" -Category $logCategory
 
 try {
     # 1. Check for merged Loader assembly
@@ -32,20 +32,27 @@ try {
     $loaderSourcePath = Join-Path $SourcePath $loaderFile
     
     if (!(Test-Path $loaderSourcePath)) {
-        $errorMsg = "Error: Required merged Loader assembly not found at $loaderSourcePath"
-        Write-LogMessage $errorMsg
+        $errorMsg = "Required merged Loader assembly not found at $loaderSourcePath"
+        Write-RcaLog $errorMsg -Level "Error" -Category $logCategory
         throw $errorMsg
     }
     
+    Write-RcaLog "Found Loader assembly at $loaderSourcePath" -Level "Debug" -Category $logCategory
+    
     # 2. Find Revit process
+    Write-RcaLog "Searching for Revit process: $RevitExecutable" -Level "Debug" -Category $logCategory
     $revitProcess = Get-Process | Where-Object { $_.Path -eq $RevitExecutable }
+    
     if (!$revitProcess) {
-        Write-LogMessage "Error: Revit process not found with path: $RevitExecutable"
+        $errorMsg = "Revit process not found with path: $RevitExecutable"
+        Write-RcaLog $errorMsg -Level "Error" -Category $logCategory
         exit 1
     }
 
+    Write-RcaLog "Found Revit process (PID: $($revitProcess.Id))" -Level "Information" -Category $logCategory
+
     # 3. Gracefully close Revit
-    Write-LogMessage "Closing Revit gracefully..."
+    Write-RcaLog "Closing Revit gracefully..." -Level "Information" -Category $logCategory
     $revitProcess.CloseMainWindow() | Out-Null
     
     # Wait for Revit to close gracefully (up to 30 seconds)
@@ -56,6 +63,8 @@ try {
     while ((Get-Date).Subtract($startTime).TotalSeconds -lt $timeoutSeconds) {
         if ($revitProcess.HasExited) {
             $closed = $true
+            $elapsedSeconds = [math]::Round((Get-Date).Subtract($startTime).TotalSeconds, 1)
+            Write-RcaLog "Revit closed gracefully after $elapsedSeconds seconds" -Level "Information" -Category $logCategory
             break
         }
         Start-Sleep -Seconds 1
@@ -63,60 +72,50 @@ try {
 
     # 4. Force close if not exited
     if (!$closed) {
-        Write-LogMessage "Forcing Revit to close..."
+        Write-RcaLog "Revit did not close gracefully within $timeoutSeconds seconds, forcing close" -Level "Warning" -Category $logCategory
         $revitProcess.Kill()
         Start-Sleep -Seconds 2
+        Write-RcaLog "Revit process terminated forcefully" -Level "Information" -Category $logCategory
     }
 
     # 5. Copy updated assembly
     if (!(Test-Path $TargetPath)) {
-        Write-LogMessage "Creating target directory: $TargetPath"
+        Write-RcaLog "Creating target directory: $TargetPath" -Level "Debug" -Category $logCategory
         New-Item -Path $TargetPath -ItemType Directory -Force | Out-Null
     }
     
-    Write-LogMessage "Copying merged Loader assembly..."
+    Write-RcaLog "Copying merged Loader assembly from $loaderSourcePath to $TargetPath" -Level "Information" -Category $logCategory
     Copy-Item -Path $loaderSourcePath -Destination (Join-Path $TargetPath $loaderFile) -Force
     
     # Verify the copy was successful
-    if (!(Test-Path (Join-Path $TargetPath $loaderFile))) {
-        $errorMsg = "Failed to copy Loader assembly to target directory"
-        Write-LogMessage $errorMsg
+    $targetLoaderPath = Join-Path $TargetPath $loaderFile
+    if (!(Test-Path $targetLoaderPath)) {
+        $errorMsg = "Failed to copy Loader assembly to $targetLoaderPath"
+        Write-RcaLog $errorMsg -Level "Error" -Category $logCategory
         throw $errorMsg
     }
     
-    # 6. Update JSON file
-    Write-LogMessage "Updating JSON file: $JsonFilePath"
-    
-    if (Test-Path $JsonFilePath) {
-        try {
-            $json = Get-Content -Path $JsonFilePath -Raw | ConvertFrom-Json
-            
-            # Update the loader path in the JSON file
-            
-            # Update JSON state
-            $json.LoaderComponents.Path = $TargetPath
-            $json.LastMSBuildSignal.Time = (Get-Date -Format "HH:mm:ss")
-            $json.LastMSBuildSignal.Event = "restart completed"
-            
-            $json | ConvertTo-Json -Depth 4 | Set-Content -Path $JsonFilePath
-        } catch {
-            Write-LogMessage "Error updating JSON: $_"
-            throw $_
-        }
-    } else {
-        $errorMsg = "JSON file not found: $JsonFilePath"
-        Write-LogMessage $errorMsg
-        throw $errorMsg
-    }
+    $fileSize = (Get-Item $targetLoaderPath).Length
+    Write-RcaLog "Successfully copied Loader assembly ($fileSize bytes)" -Level "Information" -Category $logCategory
 
-    # 7. Restart Revit
-    Write-LogMessage "Restarting Revit..."
-    Start-Process -FilePath $RevitExecutable
+    # 6. Restart Revit
+    if ($FilePath) {
+        Write-RcaLog "Restarting Revit with file: $FilePath" -Level "Information" -Category $logCategory
+        Start-Process -FilePath $RevitExecutable -ArgumentList "`"$FilePath`""
+    } else {
+        Write-RcaLog "Restarting Revit: $RevitExecutable" -Level "Information" -Category $logCategory
+        Start-Process -FilePath $RevitExecutable
+    }
     
-    Write-LogMessage "RestartRevitGraceful script completed successfully"
+    Write-RcaLog "RestartRevitGraceful script completed successfully" -Level "Information" -Category $logCategory
     exit 0
 } 
 catch {
-    Write-LogMessage "Error in RestartRevitGraceful script: $_"
+    Write-RcaLog "Fatal error in RestartRevitGraceful script: $_" -Level "Critical" -Category $logCategory
+    Write-RcaLog "Stack trace: $($_.ScriptStackTrace)" -Level "Error" -Category $logCategory
     exit 1
+}
+finally {
+    # Clean up module
+    Remove-Module RcaLogging -ErrorAction SilentlyContinue
 }

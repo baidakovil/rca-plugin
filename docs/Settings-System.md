@@ -77,6 +77,8 @@ Default settings template deployed during build:
 |---------|------|---------|-------------|
 | `debug.verboseLogging` | bool | `true` | Enable verbose logging for debugging |
 | `debug.autoShowPanelOnLoad` | bool | `false` | Automatically show the dockable panel after runtime loads |
+| `debug.restartScriptPath` | string | `%USERPROFILE%\rca-plugin\build\Scripts\RestartRevitGraceful.ps1` | Path to the PowerShell restart script (supports environment variables) |
+| `debug.revitProjectFilePath` | string | `null` | Revit project file to open on restart (supports environment variables and network paths, e.g., `\\Mac\Home\Documents\Project1.rvt`) |
 
 ## Usage Example
 

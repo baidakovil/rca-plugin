@@ -2,9 +2,11 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Diagnostics;
+using System.Linq;
 using Autodesk.Revit.UI;
 using Rca.Loader.AssemblyManagement;
 using Rca.Loader.Infrastructure;
+using Rca.Loader.Configuration;
 using Rca.Loader.Logging;
 using Microsoft.Extensions.Logging;
 
@@ -91,27 +93,60 @@ namespace Rca.Loader.Restart
             }
         }
 
-    /// <summary>
-    /// Executes the PowerShell restart script.
-    /// <summary>
-    public bool ExecuteRestartScript(out string error)
+        /// <summary>
+        /// Executes the PowerShell restart script.
+        /// </summary>
+        public bool ExecuteRestartScript(out string error)
         {
             try
             {
                 var sourcePath = _statusManager.GetLatestTempDllFolder();
-                if (string.IsNullOrEmpty(sourcePath)) { error = "Source path not found"; Log.LogWarning("Restart script aborted: source path missing"); return false; }
-                var targetPath = LoaderConstants.RevitAddinDir;
-                if (string.IsNullOrEmpty(targetPath) || !Directory.Exists(targetPath)) { error = "Target path not found"; Log.LogWarning("Restart script aborted: target path invalid path={Path}", targetPath); return false; }
-
-                if (!File.Exists(ScriptPath))
-                {
-                    var altPath = Path.Combine(Directory.GetCurrentDirectory(), "build", "Scripts", ScriptFilename);
-                    if (!File.Exists(altPath)) { error = $"Restart script not found at: {ScriptPath}"; Log.LogWarning("Restart script not found both primary and alt"); return false; }
-                    ExecuteScript(altPath, sourcePath, targetPath, out error);
-                    return string.IsNullOrEmpty(error);
+                if (string.IsNullOrEmpty(sourcePath)) 
+                { 
+                    error = "Source path not found"; 
+                    Log.LogWarning("Restart script aborted: source path missing"); 
+                    return false; 
                 }
-                ExecuteScript(ScriptPath, sourcePath, targetPath, out error);
-                return string.IsNullOrEmpty(error);
+                
+                var targetPath = LoaderConstants.RevitAddinDir;
+                if (string.IsNullOrEmpty(targetPath) || !Directory.Exists(targetPath)) 
+                { 
+                    error = "Target path not found"; 
+                    Log.LogWarning("Restart script aborted: target path invalid path={Path}", targetPath); 
+                    return false; 
+                }
+
+#if DEBUG
+                // In DEBUG builds, get script path from settings
+                var settings = SettingsService.LoadSettings();
+                var configuredPath = settings.Debug?.RestartScriptPath ?? string.Empty;
+                
+                if (!string.IsNullOrWhiteSpace(configuredPath))
+                {
+                    var expandedPath = PathExpander.ExpandPath(configuredPath);
+                    Log.LogDebug("Configured restart script path: {Path} (expanded: {Expanded})", 
+                        configuredPath, expandedPath);
+                    
+                    if (File.Exists(expandedPath))
+                    {
+                        Log.LogInformation("Using restart script from settings: {Path}", expandedPath);
+                        ExecuteScript(expandedPath, sourcePath, targetPath, out error);
+                        return string.IsNullOrEmpty(error);
+                    }
+                    else
+                    {
+                        Log.LogWarning("Configured restart script not found: {Path}", expandedPath);
+                    }
+                }
+                
+                error = $"Restart script not found at configured path: {configuredPath}";
+                return false;
+#else
+                // In RELEASE builds, restart functionality is not available
+                error = "Restart functionality is only available in DEBUG builds";
+                Log.LogInformation("Restart skipped - not available in RELEASE builds");
+                return false;
+#endif
             }
             catch (Exception ex)
             {
@@ -128,12 +163,36 @@ namespace Rca.Loader.Restart
             {
                 var revitProcess = Process.GetCurrentProcess();
                 var revitExecutable = revitProcess.MainModule?.FileName ?? string.Empty;
-                if (string.IsNullOrEmpty(revitExecutable)) { error = "Could not determine Revit executable path"; Log.LogWarning("Revit executable path missing"); return; }
+                if (string.IsNullOrEmpty(revitExecutable)) 
+                { 
+                    error = "Could not determine Revit executable path"; 
+                    Log.LogWarning("Revit executable path missing"); 
+                    return; 
+                }
+
+#if DEBUG
+                // Get project file path from settings if configured
+                var settings = SettingsService.LoadSettings();
+                var projectFilePath = settings.Debug?.RevitProjectFilePath;
+                
+                // Build PowerShell arguments
+                var arguments = $"-ExecutionPolicy Bypass -File \"{scriptPath}\" -SourcePath \"{sourcePath}\" -TargetPath \"{targetPath}\" -RevitExecutable \"{revitExecutable}\"";
+                
+                // Add file path parameter if configured
+                if (!string.IsNullOrWhiteSpace(projectFilePath))
+                {
+                    var expandedFilePath = PathExpander.ExpandPath(projectFilePath);
+                    arguments += $" -FilePath \"{expandedFilePath}\"";
+                    Log.LogInformation("Restart script will open Revit with file: {FilePath}", expandedFilePath);
+                }
+#else
+                var arguments = $"-ExecutionPolicy Bypass -File \"{scriptPath}\" -SourcePath \"{sourcePath}\" -TargetPath \"{targetPath}\" -RevitExecutable \"{revitExecutable}\"";
+#endif
 
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = PowerShellPath,
-                    Arguments = $"-ExecutionPolicy Bypass -File \"{scriptPath}\" -SourcePath \"{sourcePath}\" -TargetPath \"{targetPath}\" -RevitExecutable \"{revitExecutable}\"",
+                    Arguments = arguments,
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardOutput = true,
@@ -141,8 +200,15 @@ namespace Rca.Loader.Restart
                 };
 
                 using var process = Process.Start(startInfo);
-                if (process == null) { error = "Failed to start PowerShell process"; Log.LogWarning("Failed to start powershell scriptPath={Script}", scriptPath); }
-                else { Log.LogInformation("Restart script launched scriptPath={Script}", scriptPath); }
+                if (process == null) 
+                { 
+                    error = "Failed to start PowerShell process"; 
+                    Log.LogWarning("Failed to start powershell scriptPath={Script}", scriptPath); 
+                }
+                else 
+                { 
+                    Log.LogInformation("Restart script launched scriptPath={Script}", scriptPath); 
+                }
             }
             catch (Exception ex)
             {
