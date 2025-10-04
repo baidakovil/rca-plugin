@@ -26,6 +26,8 @@ Quick file links (implementation)
 - Pipe server (receives RELOAD/RELOAD_RUNTIME/etc): `src/Rca.Loader/Services/PipeServerService.cs`
 - Runtime command handling (payload processing): `src/Rca.Loader/Infrastructure/RuntimeCommandHandler.cs`
 - Reload external command (UI entry): `src/Rca.Loader/Commands/ReloadRuntimeCommand.cs`
+- UI hot-reload architecture: `docs/UI-HotReload-Architecture.md`
+- ILRepack build system: `docs/HRS-ILRepack.md`
 
 ## LoadedAssemblies.json — when and how it is updated
 
@@ -263,5 +265,29 @@ Where to change/extend
 - Add or change commands in `CommandValidationService` (`src/Rca.Loader/Infrastructure/CommandValidationService.cs`) and `PipeCommands` constant list.
 - Implement handling logic in `RuntimeCommandHandler` (`src/Rca.Loader/Infrastructure/RuntimeCommandHandler.cs`).
 - Adjust wire-level behavior (buffer sizes, one-command-per-connection) in `PipeServerService` (`src/Rca.Loader/Services/PipeServerService.cs`).
+
+This document intentionally avoids speculation and focuses on the current code. If you change the build or deployment flow, update this document accordingly.
+
+## Dockable Panel UI Hot-Reload
+
+The system supports hot-reloading of the dockable panel UI without restarting Revit. This is achieved through a proxy pattern that separates the persistent Loader context from the collectible Runtime context.
+
+Key components:
+- `SharedServiceRegistry` (`src/Rca.Loader.Contracts/SharedServiceRegistry.cs`) — Static cross-context service registry living in non-collectible Loader.Contracts namespace
+- `DockablePanelHost` (`src/Rca.Loader/UI/DockablePanelHost.cs`) — Persistent placeholder in Loader that swaps content dynamically
+- `RuntimePanelFactory` (`src/Rca.Runtime/UI/RuntimePanelFactory.cs`) — Factory registered by Runtime to create UI with dependencies
+- `IRuntimePanelFactory` (`src/Rca.Loader.Contracts/IRuntimePanelFactory.cs`) — Contract interface for cross-context UI creation
+- `IRuntimePanelHost` (`src/Rca.Loader.Contracts/IRuntimePanelHost.cs`) — Contract interface for content injection
+
+UI reload flow:
+1. Loader registers `DockablePanelHost` with Revit on startup (does NOT show pane immediately to avoid race condition)
+2. Runtime loads and registers `RuntimePanelFactory` in `SharedServiceRegistry`
+3. `RuntimeManager.CreateRuntimeDockableContent()` resolves factory from `SharedServiceRegistry`
+4. Factory creates `RcaDockablePanel` with resolved dependencies (PythonService, etc)
+5. UI is injected into `DockablePanelHost` via `SetContent(FrameworkElement)`
+6. Pane is shown after successful content injection
+7. On Runtime unload, panel content is cleared and placeholder restored
+
+See `docs/UI-HotReload-Architecture.md` for detailed architecture documentation.
 
 This document intentionally avoids speculation and focuses on the current code. If you change the build or deployment flow, update this document accordingly.
