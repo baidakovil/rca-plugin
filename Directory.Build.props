@@ -1,11 +1,28 @@
 <Project>
   <PropertyGroup>
     <SolutionDir Condition="'$(SolutionDir)' == ''">$(MSBuildThisFileDirectory)</SolutionDir>
-    <!-- Shared timestamp for hot-reload deployments, set once per build -->
+    
+    <!-- 
+      Shared timestamp for hot-reload deployments.
+      
+      CRITICAL: This timestamp must be identical for all projects in a single build
+      to ensure Loader and Runtime deploy to the SAME folder.
+      
+      Priority order:
+      1. RCA_BUILD_TIMESTAMP environment variable (set by CI/CD or manual build)
+      2. Local time fallback (may create different timestamps if projects build at different times)
+      
+      IMPORTANT: For consistent builds, set RCA_BUILD_TIMESTAMP before building:
+      
+      PowerShell: 
+        $env:RCA_BUILD_TIMESTAMP = (Get-Date).ToString("yyyyMMdd_HHmmss")
+        dotnet build
+      
+      Cmd:
+        set RCA_BUILD_TIMESTAMP=%date:~10,4%%date:~4,2%%date:~7,2%_%time:~0,2%%time:~3,2%%time:~6,2%
+        dotnet build
+    -->
+    <RcaHotReloadTimestamp Condition="'$(RcaHotReloadTimestamp)' == '' AND '$(RCA_BUILD_TIMESTAMP)' != ''">$(RCA_BUILD_TIMESTAMP)</RcaHotReloadTimestamp>
     <RcaHotReloadTimestamp Condition="'$(RcaHotReloadTimestamp)' == ''">$([System.DateTime]::Now.ToString("yyyyMMdd_HHmmss"))</RcaHotReloadTimestamp>
-    <!-- Prevent SDK from auto-generating AssemblyInformationalVersion across projects to avoid duplicate attributes when we inject explicitly -->
-    <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
   </PropertyGroup>
-  
-  <!-- Define properties in rca-plugin.sln.targets instead -->
 </Project>

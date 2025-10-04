@@ -1,9 +1,10 @@
+extern alias LoaderMerged;
 using System;
 using Microsoft.Extensions.Logging;
 using Rca.Core.Services;
 using Rca.Contracts;
 using Rca.Runtime.Logging;
-using Rca.Loader.Contracts;
+using LoaderMerged::Rca.Loader.Contracts;
 using Rca.Runtime.UI;
 
 namespace Rca.Runtime
@@ -24,6 +25,20 @@ namespace Rca.Runtime
         {
             _provider ??= new NamedPipeLoggerProvider("RCA_LOG_PIPE", SessionId);
             _log = _provider.CreateLogger(nameof(RuntimeEntry));
+        }
+
+        /// <summary>
+        /// Gets the shared logger provider instance for use across Runtime components.
+        /// This ensures all Runtime logging uses the same pipe connection.
+        /// </summary>
+        /// <returns>The shared NamedPipeLoggerProvider instance.</returns>
+        public static NamedPipeLoggerProvider GetLoggerProvider()
+        {
+            if (_provider == null)
+            {
+                throw new InvalidOperationException("LoggerProvider not initialized. RuntimeEntry must be instantiated first.");
+            }
+            return _provider;
         }
 
         /// <summary>

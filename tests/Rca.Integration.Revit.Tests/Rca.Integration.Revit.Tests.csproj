@@ -17,10 +17,32 @@
   <ItemGroup>
     <ProjectReference Include="../../src/Rca.Core/Rca.Core.csproj" />
     <ProjectReference Include="../../src/Rca.Contracts/Rca.Contracts.csproj" />
-    <!-- Reference to Loader only, not Contracts -->
-    <ProjectReference Include="../../src/Rca.Loader/Rca.Loader.csproj" />
   </ItemGroup>
   
+  <!-- 
+    Reference to merged Rca.Loader.dll (built by Loader project).
+    
+    Why not ProjectReference?
+    - Loader is merged with ILRepack and reference assemblies in obj/ are deleted
+    - Using Reference with HintPath to unified output directory
+    
+    ReferenceOutputAssembly=false ProjectReference enforces build order only.
+  -->
+  <ItemGroup>
+    <Reference Include="Rca.Loader">
+      <HintPath>..\..\bin\$(Configuration)\$(TargetFramework)\Rca.Loader.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+  </ItemGroup>
+  
+  <!-- Ensure Loader builds before this test project -->
+  <ItemGroup>
+    <ProjectReference Include="../../src/Rca.Loader/Rca.Loader.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
+    </ProjectReference>
+  </ItemGroup>
+
   <ItemGroup>
     <Reference Include="RevitAPI">
       <HintPath>..\..\libs\Revit\2026\RevitAPI.dll</HintPath>

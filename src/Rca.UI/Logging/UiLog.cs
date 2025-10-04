@@ -1,7 +1,6 @@
 using System;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
-using Rca.Logging.Contracts;
 using System.IO.Pipes;
 using System.Text.Json;
 using System.Text;
@@ -15,6 +14,9 @@ namespace Rca.UI.Logging
     /// a hard compile-time dependency on runtime logging transport types. Used only to eliminate
     /// residual Debug.WriteLine calls inside UI project so that all diagnostic output funnels through
     /// the unified named pipe if available, falling back silently otherwise.
+    /// 
+    /// NOTE: This is a standalone implementation that does NOT depend on Rca.Logging.Contracts.
+    /// It uses an internal DTO structure that matches the contract for serialization.
     /// </summary>
     internal static class UiLog
     {
@@ -79,8 +81,12 @@ namespace Rca.UI.Logging
                 try
                 {
                     var msg = formatter(state, exception);
-                    var dto = new LogEntryDto
+                    
+                    // Create inline DTO that matches Rca.Logging.Contracts.LogEntryDto structure
+                    // This avoids compile-time dependency on Logging.Contracts
+                    var dto = new
                     {
+                        SchemaVersion = "1",
                         TimestampTicks = DateTime.Now.Ticks,
                         Level = logLevel.ToString(),
                         Category = _category,
@@ -93,6 +99,7 @@ namespace Rca.UI.Logging
                         Flags = 0,
                         IsPing = false
                     };
+                    
                     EnsureConnected();
                     if (_state == PipeState.Connected && _writer != null)
                     {

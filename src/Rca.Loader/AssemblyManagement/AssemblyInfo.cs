@@ -18,9 +18,7 @@ namespace Rca.Loader.AssemblyManagement
         /// <summary>
         /// Gets or sets the SHA256 hash of the assembly file content.
         /// </summary>
-        /// <remarks>
-        /// The hash is used to detect changes in the assembly between builds.
-        /// </remarks>
+        /// <remarks>The hash is used to detect changes in the assembly between builds.</remarks>
         public string Hash { get; set; } = string.Empty;
     }
 }

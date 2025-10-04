@@ -29,7 +29,7 @@
     Fallback to UTC timestamp if not set by Directory.Build.props.
   -->
   <PropertyGroup>
-    <RcaHotReloadTimestamp Condition="'$(RcaHotReloadTimestamp)' == ''">$([System.DateTime]::UtcNow.ToString("yyyyMMdd_HHmmss"))</RcaHotReloadTimestamp>
+    <RcaHotReloadTimestamp Condition="'$(RcaHotReloadTimestamp)' == ''">$([System.DateTime]::Now.ToString("yyyyMMdd_HHmmss"))</RcaHotReloadTimestamp>
   </PropertyGroup>
   
   <!-- Project references for Loader dependencies -->
@@ -84,11 +84,11 @@
 
   <!-- 
     Property definitions for source hash generation.
-    SourceRootList: directories to scan for source files (Loader + Loader.Contracts).
+    SourceRootList: directories to scan for source files (Loader + Loader.Contracts + Logging.Contracts).
     SourceHashIntermediateFile: intermediate output file for computed hash.
   -->
   <PropertyGroup>
-    <SourceRootList>$(MSBuildProjectDirectory);$(SolutionDir)src\Rca.Loader.Contracts</SourceRootList>
+    <SourceRootList>$(MSBuildProjectDirectory);$(SolutionDir)src\Rca.Loader.Contracts;$(SolutionDir)src\Rca.Logging.Contracts</SourceRootList>
     <SourceHashIntermediateFile>$(IntermediateOutputPath)source-hash-loader.txt</SourceHashIntermediateFile>
   </PropertyGroup>
 
@@ -117,10 +117,6 @@
     
     Generates source hash for Loader + Loader.Contracts source code.
     Hash is written to intermediate file and exposed as RcaLoaderSourceHash property.
-    
-    Why BeforeTargets="CoreCompile"?
-    We need the hash value available during compilation, but we do NOT inject it
-    as source code anymore - AttributeInjector handles all metadata injection post-merge.
   -->
   <Target Name="GenerateLoaderSourceHash" BeforeTargets="CoreCompile" DependsOnTargets="BuildSourceHashGenerator">
     <!-- Execute SourceHashGenerator tool to compute hash -->
@@ -143,20 +139,19 @@
   <!-- 
     Target: RepackLoader
     
-    Merges Rca.Loader.dll and Rca.Loader.Contracts.dll into a single assembly using ILRepack.
+    Merges Rca.Loader.dll, Rca.Loader.Contracts.dll, and Rca.Logging.Contracts.dll into a single assembly using ILRepack.
     
     Steps:
     1. Create temporary directory for Revit API references (required by ILRepack /lib option)
     2. Copy RevitAPI.dll and RevitAPIUI.dll to temp dir
-    3. Create internalize exclude list to keep Rca.Loader.Contracts types public
-       (Runtime needs access to contract interfaces like IRuntimePanelFactory)
+    3. Create internalize exclude list to keep Rca.Loader.Contracts and Rca.Logging.Contracts types public
     4. Run ILRepack to merge assemblies
     5. Replace original Rca.Loader.dll with merged version
-    6. Delete separate Rca.Loader.Contracts.dll (now internalized in merged assembly)
+    6. Delete separate Rca.Loader.Contracts.dll and Rca.Logging.Contracts.dll (now merged)
     7. Clean up temporary directory
   -->
   <Target Name="RepackLoader" AfterTargets="Build">
-    <Message Text="Merging Rca.Loader.dll and Rca.Loader.Contracts.dll using ILRepack" Importance="High" />
+    <Message Text="Merging Rca.Loader.dll, Rca.Loader.Contracts.dll, and Rca.Logging.Contracts.dll using ILRepack" Importance="High" />
 
     <!-- Define reference DLLs needed for ILRepack assembly resolution -->
     <ItemGroup>
@@ -190,16 +185,17 @@
 
     <!-- 
       Create internalize exclude list.
-      Rca.Loader.Contracts types must remain public so Runtime can access them
-      across AssemblyLoadContext boundary (e.g., IRuntimePanelFactory interface).
+      Both Rca.Loader.Contracts and Rca.Logging.Contracts types must remain public:
+      - Loader.Contracts: so Runtime can access them across AssemblyLoadContext boundary
+      - Logging.Contracts: so Runtime can serialize/deserialize LogEntryDto without separate DLL
     -->
-    <WriteLinesToFile File="$(InternalizeExcludeFile)" Lines="Rca.Loader.Contracts" Overwrite="true" />
+    <WriteLinesToFile File="$(InternalizeExcludeFile)" Lines="Rca.Loader.Contracts;Rca.Logging.Contracts" Overwrite="true" />
 
     <!-- Fail early if ILRepack executable not found -->
     <Error Condition="!Exists('$(IlRepackPath)')" Text="ILRepack not found at: $(IlRepackPath)" />
 
     <!-- 
-      Execute ILRepack to merge assemblies.
+      Execute ILRepack to merge assemblies including Logging.Contracts.
       Options:
       - /out: output merged assembly path
       - /xmldocs: merge XML documentation files
@@ -208,18 +204,18 @@
       - /internalize: make all types internal except those in exclude file
       - /lib: directory to search for reference assemblies
     -->
-    <Exec Command="&quot;$(IlRepackPath)&quot; /out:&quot;$(MergedOutput)&quot; &quot;$(TargetPath)&quot; &quot;$(TargetDir)Rca.Loader.Contracts.dll&quot; /xmldocs /copyattrs /parallel /internalize:&quot;$(InternalizeExcludeFile)&quot; /lib:&quot;$(IlRepackTempDir)&quot;" />
+    <Exec Command="&quot;$(IlRepackPath)&quot; /out:&quot;$(MergedOutput)&quot; &quot;$(TargetPath)&quot; &quot;$(TargetDir)Rca.Loader.Contracts.dll&quot; &quot;$(TargetDir)Rca.Logging.Contracts.dll&quot; /xmldocs /copyattrs /parallel /internalize:&quot;$(InternalizeExcludeFile)&quot; /lib:&quot;$(IlRepackTempDir)&quot;" />
 
     <!-- Replace original assembly with merged version -->
     <Copy SourceFiles="$(MergedOutput)" DestinationFiles="$(TargetPath)" />
 
-    <!-- Delete separate Contracts DLL and temporary merged file -->
-    <Delete Files="$(TargetDir)Rca.Loader.Contracts.dll;$(MergedOutput)" />
+    <!-- Delete separate Contracts DLLs and temporary merged file -->
+    <Delete Files="$(TargetDir)Rca.Loader.Contracts.dll;$(TargetDir)Rca.Logging.Contracts.dll;$(MergedOutput)" />
 
     <!-- Clean up temporary directory -->
     <RemoveDir Directories="$(IlRepackTempDir)" />
 
-    <Message Text="ILRepack completed successfully - merged assembly created" Importance="High" />
+    <Message Text="ILRepack completed successfully - merged assembly created with Logging.Contracts" Importance="High" />
   </Target>
 
   <!-- 
@@ -227,10 +223,11 @@
     
     Compiles AttributeInjector tool only if it's outdated or doesn't exist.
     This provides incremental compilation - tool is not rebuilt on every build.
-    Uses file modification time (Ticks) for comparison to ensure numeric comparison.
   -->
   <Target Name="BuildAttributeInjector" AfterTargets="RepackLoader">
     <PropertyGroup>
+      <AttributeInjectorProject>$(SolutionDir)src\Tools\AttributeInjector\AttributeInjector.csproj</AttributeInjectorProject>
+      <AttributeInjectorExe>$(SolutionDir)src\Tools\AttributeInjector\bin\$(Configuration)\net8.0\AttributeInjector.exe</AttributeInjectorExe>
       <AttributeInjectorProjectModTime>$([System.IO.File]::GetLastWriteTime('$(AttributeInjectorProject)').Ticks)</AttributeInjectorProjectModTime>
       <AttributeInjectorExeModTime Condition="Exists('$(AttributeInjectorExe)')">$([System.IO.File]::GetLastWriteTime('$(AttributeInjectorExe)').Ticks)</AttributeInjectorExeModTime>
       <AttributeInjectorExeModTime Condition="!Exists('$(AttributeInjectorExe)')">0</AttributeInjectorExeModTime>
@@ -247,19 +244,22 @@
     
     Injects assembly metadata attributes into the merged Loader assembly using AttributeInjector.
     
-    Why post-ILRepack injection?
-    ILRepack's /copyattrs doesn't preserve custom AssemblyMetadata attributes correctly.
-    AttributeInjector uses Mono.Cecil to inject attributes directly into the IL after merge.
+    CRITICAL: Runs AFTER RepackLoader to inject attributes into the merged DLL.
+    This solves the MSBuild cache problem - attributes are injected directly into
+    the final DLL after all merging is complete.
     
-    Injected attributes:
-    - AssemblyMetadata("DeployFolder", timestamp)
-    - AssemblyMetadata("SourceHash", hash)
-    - AssemblyInformationalVersion (visible in Windows Explorer as Product Version)
+    After injection, we MUST:
+    1. Update file timestamp to signal MSBuild that file changed
+    2. Delete intermediate files from obj/ to prevent cache restoration
   -->
   <Target Name="InjectLoaderAttributes" AfterTargets="BuildAttributeInjector" DependsOnTargets="BuildAttributeInjector">
     <!-- Fail if AttributeInjector executable not found -->
     <Error Condition="!Exists('$(AttributeInjectorExe)')" 
            Text="AttributeInjector executable not found at $(AttributeInjectorExe)" />
+    
+    <Message Text="Injecting attributes into $(TargetPath)" Importance="High" />
+    <Message Text="  DeployFolder: $(RcaHotReloadTimestamp)" Importance="High" />
+    <Message Text="  SourceHash: $(RcaLoaderSourceHash)" Importance="High" />
     
     <!-- 
       Execute AttributeInjector.
@@ -271,7 +271,23 @@
     <Exec Command="&quot;$(AttributeInjectorExe)&quot; &quot;$(TargetPath)&quot; &quot;$(RcaHotReloadTimestamp)&quot; &quot;$(RcaLoaderSourceHash)&quot;" 
           ContinueOnError="false" />
     
-    <Message Text="Assembly attributes injected successfully" Importance="High" />
+    <!-- 
+      CRITICAL: Update file timestamp using Touch task to signal MSBuild that file was modified.
+      Without this, MSBuild may ignore the modified file and restore old version from cache.
+    -->
+    <Touch Files="$(TargetPath)" AlwaysCreate="false" />
+    
+    <!-- 
+      CRITICAL: Delete intermediate output files to prevent MSBuild from caching
+      the pre-injection version of the DLL.
+    -->
+    <ItemGroup>
+      <FilesToClean Include="$(IntermediateOutputPath)$(TargetFileName)" />
+      <FilesToClean Include="$(IntermediateOutputPath)**\$(TargetFileName)" />
+    </ItemGroup>
+    <Delete Files="@(FilesToClean)" ContinueOnError="true" />
+    
+    <Message Text="Assembly attributes injected successfully, timestamp updated, and cache cleared" Importance="High" />
   </Target>
   
   <!-- 
@@ -280,12 +296,10 @@
     Deploys merged Loader assembly to hot-reload directory (same timestamped folder as Runtime).
     Creates version tracking file for debugging and validation.
     
-    Why deploy Loader to hot-reload directory?
-    - Runtime needs access to Loader.Contracts types (merged into Rca.Loader.dll)
-    - Allows validation of loader/runtime version compatibility
-    - Supports assembly status tracking in AssemblyStatusManager
+    CRITICAL: Must run AFTER InjectLoaderAttributes completes to ensure
+    we copy the DLL with injected metadata, not the pre-injection version.
   -->
-  <Target Name="DeployLoaderToTemp" AfterTargets="InjectLoaderAttributes">
+  <Target Name="DeployLoaderToTemp" AfterTargets="InjectLoaderAttributes" DependsOnTargets="InjectLoaderAttributes">
     <PropertyGroup>
       <RuntimeDeployDir>$(RcaHotReloadDeployDir)</RuntimeDeployDir>
     </PropertyGroup>
@@ -293,7 +307,10 @@
     <!-- Create deploy directory if it doesn't exist -->
     <MakeDir Directories="$(RuntimeDeployDir)" />
     
-    <!-- Copy merged Loader assembly to deploy directory -->
+    <!-- 
+      Copy merged Loader assembly to deploy directory.
+      SkipUnchangedFiles=false ensures we always copy.
+    -->
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" />
     
     <Message Text="Copied Loader assembly to hot-reload directory: $(RuntimeDeployDir)" Importance="High" />
@@ -301,10 +318,6 @@
     <!-- 
       Write loader version file with PascalCase naming convention.
       Format: SourceHash-Loader-{hash}.txt
-      Content: source hash value
-      
-      Purpose: Allows build system and AssemblyStatusManager to quickly identify
-      deployed loader version without parsing assembly metadata.
     -->
     <PropertyGroup>
       <LoaderVersionFile>$(RuntimeDeployDir)\SourceHash-Loader-$(RcaLoaderSourceHash).txt</LoaderVersionFile>

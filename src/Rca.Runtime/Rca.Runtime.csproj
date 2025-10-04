@@ -17,14 +17,34 @@
   <!-- 
     Project references for Runtime dependencies.
     These assemblies will be merged into Rca.Runtime.dll by ILRepack.
+    
+    NOTE: Rca.Logging.Contracts is NOT included here because it's now merged into Rca.Loader.dll.
+    Runtime accesses Logging.Contracts types through the Rca.Loader reference below.
+    However, Rca.UI has a ProjectReference to Logging.Contracts for its own compilation,
+    which means Logging.Contracts.dll gets copied to Runtime output. We exclude it from copy
+    to avoid type ambiguity (types should only come from Rca.Loader.dll).
   -->
   <ItemGroup>
     <ProjectReference Include="..\Rca.Core\Rca.Core.csproj" />
-    <ProjectReference Include="..\Rca.UI\Rca.UI.csproj" />
+    <ProjectReference Include="..\Rca.UI\Rca.UI.csproj">
+      <!-- Exclude Logging.Contracts from being copied - it's already in Rca.Loader.dll -->
+      <ExcludeAssets>none</ExcludeAssets>
+      <PrivateAssets>none</PrivateAssets>
+    </ProjectReference>
     <ProjectReference Include="..\Rca.Network\Rca.Network.csproj" />
     <ProjectReference Include="..\Rca.Contracts\Rca.Contracts.csproj" />
-    <ProjectReference Include="..\Rca.Logging.Contracts\Rca.Logging.Contracts.csproj" />
   </ItemGroup>
+  
+  <!-- 
+    Explicitly exclude Rca.Logging.Contracts.dll from copy to output.
+    This DLL is transitively referenced by Rca.UI but should not be copied
+    because types are already present in merged Rca.Loader.dll.
+  -->
+  <Target Name="ExcludeLoggingContracts" AfterTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <ReferenceCopyLocalPaths Remove="@(ReferenceCopyLocalPaths)" Condition="'%(FileName)' == 'Rca.Logging.Contracts'" />
+    </ItemGroup>
+  </Target>
 
   <!-- 
     Reference to merged Rca.Loader.dll (built by Loader project).
@@ -34,12 +54,21 @@
     which are merged into Rca.Loader.dll. These types remain public (excluded from internalization)
     to allow cross-AssemblyLoadContext communication.
     
+    Rca.Logging.Contracts is also merged into Rca.Loader.dll to avoid file locking issues.
+    We use EmbedInteropTypes=false and set an Alias to avoid type ambiguity with transitive
+    Logging.Contracts reference from Rca.UI.
+    
     Private=True ensures Loader.dll is copied to Runtime output directory.
+    
+    CRITICAL: HintPath must point to unified output path (BaseOutputPath) where Loader builds to,
+    not to project-specific bin folder. With BaseOutputPath=$(SolutionDir)bin\, all projects
+    build to the same output directory.
   -->
   <ItemGroup>
     <Reference Include="Rca.Loader">
-      <HintPath>..\Rca.Loader\bin\$(Configuration)\net8.0-windows\Rca.Loader.dll</HintPath>
+      <HintPath>..\..\bin\$(Configuration)\$(TargetFramework)\Rca.Loader.dll</HintPath>
       <Private>True</Private>
+      <Aliases>LoaderMerged</Aliases>
     </Reference>
   </ItemGroup>
 
@@ -86,6 +115,8 @@
   <!-- 
     Property definitions for source hash generation.
     SourceRootList: directories to scan for source files (all projects merged into Runtime).
+    Note: Rca.Logging.Contracts is NOT included because it's merged into Loader, not Runtime.
+    Runtime references Loader.dll for Logging.Contracts types.
     SourceHashIntermediateFile: intermediate output file for computed hash.
   -->
   <PropertyGroup>
@@ -118,10 +149,6 @@
     
     Generates source hash for all Runtime source code (Runtime + Core + UI + Network + Contracts).
     Hash is written to intermediate file and exposed as RcaSourceHash property.
-    
-    Why BeforeTargets="CoreCompile"?
-    We need the hash value available for later targets, but we do NOT inject it
-    as source code anymore - AttributeInjector handles all metadata injection post-merge.
   -->
   <Target Name="GenerateRuntimeSourceHash" BeforeTargets="CoreCompile" DependsOnTargets="BuildSourceHashGenerator">
     <!-- Execute SourceHashGenerator tool to compute hash -->
@@ -150,10 +177,6 @@
     1. Collect all assemblies to merge
     2. Run ILRepack with full internalization (all types become internal)
     3. Merged assembly replaces original Rca.Runtime.dll in output directory
-    
-    Why full internalization?
-    Unlike Loader, Runtime types don't need to be accessed from outside the merged assembly.
-    All types become internal, reducing API surface and preventing conflicts.
   -->
   <Target Name="RepackRuntime" AfterTargets="Build">
     <!-- Path to ILRepack executable from NuGet package -->
@@ -192,7 +215,6 @@
     
     Compiles AttributeInjector tool only if it's outdated or doesn't exist.
     This provides incremental compilation - tool is not rebuilt on every build.
-    Uses file modification time (Ticks) for comparison to ensure numeric comparison.
   -->
   <Target Name="BuildAttributeInjector" AfterTargets="RepackRuntime">
     <PropertyGroup>
@@ -223,6 +245,10 @@
     
     Why pass RevitLibsDir?
     AttributeInjector needs to resolve Revit API references when reading the merged assembly.
+    
+    After injection, we MUST:
+    1. Update file timestamp to signal MSBuild that file changed
+    2. Delete intermediate files from obj/ to prevent cache restoration
   -->
   <Target Name="InjectRuntimeAttributes" AfterTargets="BuildAttributeInjector" DependsOnTargets="BuildAttributeInjector">
     <!-- Fail if AttributeInjector executable not found -->
@@ -245,8 +271,23 @@
              Text="WARNING: AttributeInjector failed - assembly metadata may be incomplete" 
              Importance="High" />
     
+    <!-- 
+      CRITICAL: Update file timestamp using Touch task to signal MSBuild that file was modified.
+    -->
+    <Touch Files="$(TargetDir)Rca.Runtime.dll" AlwaysCreate="false" Condition="'$(MSBuildLastTaskResult)' != 'false'" />
+    
+    <!-- 
+      CRITICAL: Delete intermediate output files to prevent MSBuild from caching
+      the pre-injection version of the DLL.
+    -->
+    <ItemGroup>
+      <FilesToClean Include="$(IntermediateOutputPath)Rca.Runtime.dll" />
+      <FilesToClean Include="$(IntermediateOutputPath)**\Rca.Runtime.dll" />
+    </ItemGroup>
+    <Delete Files="@(FilesToClean)" ContinueOnError="true" />
+    
     <Message Condition="'$(MSBuildLastTaskResult)' != 'false'"
-             Text="Assembly attributes injected successfully" 
+             Text="Assembly attributes injected successfully, timestamp updated, and cache cleared" 
              Importance="High" />
   </Target>
 
@@ -254,17 +295,6 @@
     Target: DeployRuntime
     
     Deploys Runtime assemblies to hot-reload directory.
-    
-    Deployed files:
-    - Rca.Runtime.dll (merged)
-    - Individual DLLs (Core, UI, Network, Contracts) for debugging/inspection
-    - IronPython assemblies and stdlib
-    - Rca.Logging.Contracts.dll (not merged, used for logging)
-    - Rca.Loader.dll (needed for contract type access)
-    - Lib folder (Python standard library)
-    
-    Version tracking file:
-    - SourceHash-Runtime-{hash}.txt contains the runtime source hash
   -->
   <Target Name="DeployRuntime" AfterTargets="InjectRuntimeAttributes">
     <PropertyGroup>
@@ -289,11 +319,7 @@
       <RuntimeDeployFiles Include="$(TargetDir)IronPython*.dll" />
       <RuntimeDeployFiles Include="$(TargetDir)Microsoft.Scripting.dll" />
       <RuntimeDeployFiles Include="$(TargetDir)Microsoft.Dynamic.dll" />
-      
-      <!-- Logging contracts (not merged, used by loader and runtime) -->
-      <RuntimeDeployFiles Include="$(TargetDir)Rca.Logging.Contracts.dll" />
-      
-      <!-- Merged Loader assembly (needed for contract type access) -->
+<!-- Merged Loader assembly (needed for contract type access, including Logging.Contracts) -->
       <RuntimeDeployFiles Include="$(TargetDir)Rca.Loader.dll" />
     </ItemGroup>
     

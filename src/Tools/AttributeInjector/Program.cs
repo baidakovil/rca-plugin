@@ -185,12 +185,14 @@ namespace AttributeInjector
                 infoAttr.ConstructorArguments.Add(new CustomAttributeArgument(module.TypeSystem.String, productVersion));
                 asmDef.CustomAttributes.Add(infoAttr);
 
-                // Inject product/company/description/title/fileversion for Explorer
+                // Inject product/company/description/title for metadata
                 var product = $"RCA Runtime";
                 var company = "RCA";
                 var description = $"DeployFolder: {deployFolder}; SourceHash: {sourceHash}";
                 var title = $"RCA Runtime (hash: {sourceHash})";
-                var fileVersion = sourceHash; // or derive semver; using hash for uniqueness
+                
+                // AssemblyFileVersion must be valid semantic version (e.g., "1.0.0.0")
+                var fileVersion = "1.0.0.0";
 
                 if (!string.IsNullOrEmpty(product))
                 {
@@ -216,22 +218,41 @@ namespace AttributeInjector
                     a.ConstructorArguments.Add(new CustomAttributeArgument(module.TypeSystem.String, title));
                     asmDef.CustomAttributes.Add(a);
                 }
-                if (!string.IsNullOrEmpty(fileVersion))
-                {
-                    var a = new CustomAttribute(fileVerCtor);
-                    a.ConstructorArguments.Add(new CustomAttributeArgument(module.TypeSystem.String, fileVersion));
-                    asmDef.CustomAttributes.Add(a);
-                }
+                
+                // AssemblyFileVersion - must be valid version format for native resources
+                var fileVerAttr = new CustomAttribute(fileVerCtor);
+                fileVerAttr.ConstructorArguments.Add(new CustomAttributeArgument(module.TypeSystem.String, fileVersion));
+                asmDef.CustomAttributes.Add(fileVerAttr);
 
-                // Determine output path: write to temp then move to outPath if provided, else replace original
+                // Determine output path: write to temp then replace original using atomic move operation
                 var finalPath = outPath ?? assemblyPath;
                 var tempPath = finalPath + ".tmp";
+                
+                // Write modified assembly to temporary file
                 asmDef.Write(tempPath);
 
-                // If writing to a different path and target file is locked, File.Copy will throw; let caller handle.
-                File.Copy(tempPath, finalPath, true);
-                File.Delete(tempPath);
-
+                // Replace original file with modified version using atomic operations
+                // Delete target file first to avoid File.Move issues with overwrite
+                if (File.Exists(finalPath))
+                {
+                    try 
+                    {
+                        File.Delete(finalPath);
+                    }
+                    catch (Exception exDel)
+                    {
+                        Console.Error.WriteLine($"Warning: Could not delete target file {finalPath}: {exDel.Message}");
+                        Console.Error.WriteLine("Attempting copy instead...");
+                        File.Copy(tempPath, finalPath, true);
+                        File.Delete(tempPath);
+                        goto skipMove;
+                    }
+                }
+                
+                // Move temp file to final location (atomic operation)
+                File.Move(tempPath, finalPath);
+                
+skipMove:
                 // Diagnostics: re-open written file and list metadata to confirm persistence
                 try
                 {

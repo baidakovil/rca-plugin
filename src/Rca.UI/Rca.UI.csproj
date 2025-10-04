@@ -20,9 +20,14 @@
     <EmbeddedResource Include="**\*.xaml" />
   </ItemGroup>
 
+  <!--
+    Project references.
+
+    NOTE: Rca.Logging.Contracts is NOT referenced here anymore.
+    UiLog uses an inline anonymous type for logging DTO to avoid dependency.
+  -->
   <ItemGroup>
     <ProjectReference Include="..\Rca.Contracts\Rca.Contracts.csproj" />
-    <ProjectReference Include="..\Rca.Logging.Contracts\Rca.Logging.Contracts.csproj" />
   </ItemGroup>
 
 	<ItemGroup>

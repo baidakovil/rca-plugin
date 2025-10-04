@@ -115,20 +115,46 @@
     During hot-reload development, the Loader assembly in Revit addins dir should NOT be
     automatically updated by the build (requires Revit restart). Updates are handled by
     the explicit restart workflow via RestartManager.
+    
+    CRITICAL: Must depend on InjectLoaderAttributes to ensure we copy the DLL AFTER
+    AttributeInjector has modified it, not before.
+    
+    CRITICAL: Must copy from $(TargetPath) not $(OutputPath), because $(TargetPath) is
+    the file modified by AttributeInjector, while $(OutputPath) may contain stale cached version.
   -->
-  <Target Name="InitialSetupCopyToRevitAddins" AfterTargets="Build" 
-          Condition="'$(IsLoaderProject)' == 'true' AND !Exists('$(RcaAddinDir)\Rca.Loader.dll')">
+  <Target Name="InitialSetupCopyToRevitAddins" AfterTargets="DeployLoaderToTemp" DependsOnTargets="InjectLoaderAttributes">
+    <!-- Dynamic check for whether to copy - evaluated at target execution time -->
+    <PropertyGroup>
+      <ShouldCopyToAddin>false</ShouldCopyToAddin>
+      <ShouldCopyToAddin Condition="'$(IsLoaderProject)' == 'true' AND !Exists('$(RcaAddinDir)\Rca.Loader.dll')">true</ShouldCopyToAddin>
+    </PropertyGroup>
     
-    <!-- Create Rca subdirectory if it doesn't exist -->
-    <MakeDir Directories="$(RcaAddinDir)" Condition="!Exists('$(RcaAddinDir)')" />
-    
-    <!-- Copy the merged Loader DLL to the Revit addins directory -->
-    <Copy
-      SourceFiles="$(OutputPath)Rca.Loader.dll"
-      DestinationFolder="$(RcaAddinDir)"
-      SkipUnchangedFiles="true" />
-      
-    <Message Text="Performed initial setup - copied Loader assembly to $(RcaAddinDir)" 
+    <!-- Diagnostic message showing evaluation results -->
+    <Message Text="InitialSetup check: IsLoaderProject=$(IsLoaderProject), AddinExists=$([System.IO.File]::Exists('$(RcaAddinDir)\Rca.Loader.dll')), WillCopy=$(ShouldCopyToAddin)" 
              Importance="High" />
+    
+    <!-- Create Rca subdirectory if it doesn't exist and we're going to copy -->
+    <MakeDir Directories="$(RcaAddinDir)" Condition="'$(ShouldCopyToAddin)' == 'true' AND !Exists('$(RcaAddinDir)')" />
+    
+    <!-- 
+      Copy the merged Loader DLL to the Revit addins directory.
+      CRITICAL: Use $(TargetPath) as source, not $(OutputPath)Rca.Loader.dll
+      $(TargetPath) is the file modified by AttributeInjector with correct metadata
+    -->
+    <Copy
+      SourceFiles="$(TargetPath)"
+      DestinationFolder="$(RcaAddinDir)"
+      SkipUnchangedFiles="false"
+      Condition="'$(ShouldCopyToAddin)' == 'true'" />
+      
+    <!-- Success message when copy performed -->
+    <Message Text="Performed initial setup - copied Loader assembly from $(TargetPath) to $(RcaAddinDir)" 
+             Importance="High"
+             Condition="'$(ShouldCopyToAddin)' == 'true'" />
+    
+    <!-- Informational message when copy skipped -->
+    <Message Text="Skipped initial setup - Loader already exists in $(RcaAddinDir)" 
+             Importance="High"
+             Condition="'$(ShouldCopyToAddin)' == 'false' AND '$(IsLoaderProject)' == 'true'" />
   </Target>
 </Project>

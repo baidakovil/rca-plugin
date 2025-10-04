@@ -1,3 +1,4 @@
+extern alias LoaderMerged;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
@@ -6,7 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using Microsoft.Extensions.Logging;
-using Rca.Logging.Contracts;
+using LoaderMerged::Rca.Logging.Contracts;
 
 namespace Rca.Runtime.Logging;
 

@@ -1,0 +1,104 @@
+diff --git a/src/Rca.Runtime/Rca.Runtime.csproj b/src/Rca.Runtime/Rca.Runtime.csproj
+index 2d77c21..627b46a 100644
+--- a/src/Rca.Runtime/Rca.Runtime.csproj
++++ b/src/Rca.Runtime/Rca.Runtime.csproj
+@@ -35,10 +35,14 @@
+     to allow cross-AssemblyLoadContext communication.
+     
+     Private=True ensures Loader.dll is copied to Runtime output directory.
++    
++    CRITICAL: HintPath must point to unified output path (BaseOutputPath) where Loader builds to,
++    not to project-specific bin folder. With BaseOutputPath=$(SolutionDir)bin\, all projects
++    build to the same output directory.
+   -->
+   <ItemGroup>
+     <Reference Include="Rca.Loader">
+-      <HintPath>..\Rca.Loader\bin\$(Configuration)\net8.0-windows\Rca.Loader.dll</HintPath>
++      <HintPath>..\..\bin\$(Configuration)\$(TargetFramework)\Rca.Loader.dll</HintPath>
+       <Private>True</Private>
+     </Reference>
+   </ItemGroup>
+@@ -118,10 +122,6 @@
+     
+     Generates source hash for all Runtime source code (Runtime + Core + UI + Network + Contracts).
+     Hash is written to intermediate file and exposed as RcaSourceHash property.
+-    
+-    Why BeforeTargets="CoreCompile"?
+-    We need the hash value available for later targets, but we do NOT inject it
+-    as source code anymore - AttributeInjector handles all metadata injection post-merge.
+   -->
+   <Target Name="GenerateRuntimeSourceHash" BeforeTargets="CoreCompile" DependsOnTargets="BuildSourceHashGenerator">
+     <!-- Execute SourceHashGenerator tool to compute hash -->
+@@ -150,10 +150,6 @@
+     1. Collect all assemblies to merge
+     2. Run ILRepack with full internalization (all types become internal)
+     3. Merged assembly replaces original Rca.Runtime.dll in output directory
+-    
+-    Why full internalization?
+-    Unlike Loader, Runtime types don't need to be accessed from outside the merged assembly.
+-    All types become internal, reducing API surface and preventing conflicts.
+   -->
+   <Target Name="RepackRuntime" AfterTargets="Build">
+     <!-- Path to ILRepack executable from NuGet package -->
+@@ -192,7 +188,6 @@
+     
+     Compiles AttributeInjector tool only if it's outdated or doesn't exist.
+     This provides incremental compilation - tool is not rebuilt on every build.
+-    Uses file modification time (Ticks) for comparison to ensure numeric comparison.
+   -->
+   <Target Name="BuildAttributeInjector" AfterTargets="RepackRuntime">
+     <PropertyGroup>
+@@ -223,6 +218,10 @@
+     
+     Why pass RevitLibsDir?
+     AttributeInjector needs to resolve Revit API references when reading the merged assembly.
++    
++    After injection, we MUST:
++    1. Update file timestamp to signal MSBuild that file changed
++    2. Delete intermediate files from obj/ to prevent cache restoration
+   -->
+   <Target Name="InjectRuntimeAttributes" AfterTargets="BuildAttributeInjector" DependsOnTargets="BuildAttributeInjector">
+     <!-- Fail if AttributeInjector executable not found -->
+@@ -245,8 +244,23 @@
+              Text="WARNING: AttributeInjector failed - assembly metadata may be incomplete" 
+              Importance="High" />
+     
++    <!-- 
++      CRITICAL: Update file timestamp using Touch task to signal MSBuild that file was modified.
++    -->
++    <Touch Files="$(TargetDir)Rca.Runtime.dll" AlwaysCreate="false" Condition="'$(MSBuildLastTaskResult)' != 'false'" />
++    
++    <!-- 
++      CRITICAL: Delete intermediate output files to prevent MSBuild from caching
++      the pre-injection version of the DLL.
++    -->
++    <ItemGroup>
++      <FilesToClean Include="$(IntermediateOutputPath)Rca.Runtime.dll" />
++      <FilesToClean Include="$(IntermediateOutputPath)**\Rca.Runtime.dll" />
++    </ItemGroup>
++    <Delete Files="@(FilesToClean)" ContinueOnError="true" />
++    
+     <Message Condition="'$(MSBuildLastTaskResult)' != 'false'"
+-             Text="Assembly attributes injected successfully" 
++             Text="Assembly attributes injected successfully, timestamp updated, and cache cleared" 
+              Importance="High" />
+   </Target>
+ 
+@@ -254,17 +268,6 @@
+     Target: DeployRuntime
+     
+     Deploys Runtime assemblies to hot-reload directory.
+-    
+-    Deployed files:
+-    - Rca.Runtime.dll (merged)
+-    - Individual DLLs (Core, UI, Network, Contracts) for debugging/inspection
+-    - IronPython assemblies and stdlib
+-    - Rca.Logging.Contracts.dll (not merged, used for logging)
+-    - Rca.Loader.dll (needed for contract type access)
+-    - Lib folder (Python standard library)
+-    
+-    Version tracking file:
+-    - SourceHash-Runtime-{hash}.txt contains the runtime source hash
+   -->
+   <Target Name="DeployRuntime" AfterTargets="InjectRuntimeAttributes">
+     <PropertyGroup>
