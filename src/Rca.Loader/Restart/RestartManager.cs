@@ -108,7 +108,7 @@ namespace Rca.Loader.Restart
                     return false; 
                 }
                 
-                var targetPath = LoaderConstants.RevitAddinDir;
+                var targetPath = LoaderConstants.RcaAddinDir;
                 if (string.IsNullOrEmpty(targetPath) || !Directory.Exists(targetPath)) 
                 { 
                     error = "Target path not found"; 
