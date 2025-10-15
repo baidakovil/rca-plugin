@@ -28,10 +28,7 @@ Write-RcaLog "Parameters: SourcePath=$SourcePath, TargetPath=$TargetPath, RevitE
 
 try {
     # Ensure required source files exist
-    $required = @(
-        'Rca.Loader.dll','Rca.Loader.Contracts.dll','Rca.Logging.Contracts.dll',
-        'Rca.Runtime.dll','Rca.Core.dll','Rca.Network.dll','Rca.UI.dll','Rca.Contracts.dll'
-    )
+    $required = @('Rca.Loader.dll','Rca.Loader.Contracts.dll','Rca.Logging.Contracts.dll')
 
     foreach ($f in $required) {
         $fp = Join-Path $SourcePath $f

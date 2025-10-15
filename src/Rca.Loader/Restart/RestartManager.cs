@@ -19,13 +19,13 @@ namespace Rca.Loader.Restart
     {
         private static readonly ILogger Log = LoaderLog.GetLogger<RestartManager>();
         private readonly AssemblyStatusManager _statusManager;
-        private const string PowerShellPath = "powershell.exe";
         private const string ScriptFilename = "RestartRevitGraceful.ps1";
-        private static readonly string ScriptPath = Path.Combine(
-            Path.GetDirectoryName(typeof(RestartManager).Assembly.Location) ?? string.Empty,
-            "..", "..", "..", "build", "Scripts", ScriptFilename);
+    // Build script path using current user profile to avoid hardcoding the username
+    private static readonly string ScriptPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        "rca-plugin", "build", "Scripts", ScriptFilename);
 
-        public RestartManager(AssemblyStatusManager statusManager)
+    public RestartManager(AssemblyStatusManager statusManager)
         {
             _statusManager = statusManager ?? throw new ArgumentNullException(nameof(statusManager));
         }
@@ -105,33 +105,13 @@ namespace Rca.Loader.Restart
                 }
 
 #if DEBUG
-                // In DEBUG builds, allow using a configured path from future settings; fallback empty if not available
-                string configuredPath = string.Empty; // placeholder until SettingsService is introduced for new settings
-                if (!string.IsNullOrWhiteSpace(configuredPath))
-                {
-                    var expandedPath = PathExpander.ExpandPath(configuredPath);
-                    Log.LogDebug("Configured restart script path: {Path} (expanded: {Expanded})", 
-                        configuredPath, expandedPath);
-                    
-                    if (File.Exists(expandedPath))
-                    {
-                        Log.LogInformation("Using restart script from settings: {Path}", expandedPath);
-                        ExecuteScript(expandedPath, sourcePath, targetPath, out error);
-                        return string.IsNullOrEmpty(error);
-                    }
-                    else
-                    {
-                        Log.LogWarning("Configured restart script not found: {Path}", expandedPath);
-                    }
-                }
-                
-                // Fallback to solution script
+                // Use hardcoded script path (minimal fix)
                 if (File.Exists(ScriptPath))
                 {
                     ExecuteScript(ScriptPath, sourcePath, targetPath, out error);
                     return string.IsNullOrEmpty(error);
                 }
-                error = $"Restart script not found at default path: {ScriptPath}";
+                error = $"Restart script not found at path: {ScriptPath}";
                 return false;
 #else
                 error = "Restart functionality is only available in DEBUG builds";
