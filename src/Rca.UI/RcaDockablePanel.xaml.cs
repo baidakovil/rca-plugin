@@ -3,38 +3,33 @@ using Rca.Contracts;
 using Rca.UI.ViewModels;
 using System;
 using System.IO;
-using System.Text.RegularExpressions;
+using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Markup;
 using Microsoft.Extensions.Logging;
-using Rca.UI.Logging; // UI dynamic logging adapter
+using Rca.UI.Logging;
 
 namespace Rca.UI.Views
 {
     /// <summary>
-    /// Interaction logic for RcaDockablePanel.xaml.
-    /// Uses UiLog adapter to send logs to unified pipeline when Runtime logging provider is available.
+    /// Dockable panel view. Loads XAML deterministically from a known embedded resource.
     /// </summary>
     public partial class RcaDockablePanel : UserControl
     {
         private static readonly ILogger Log = UiLog.GetLogger<RcaDockablePanel>();
+        private const string ManifestXamlResource = "Rca.UI.RcaDockablePanel.xaml";
 
-        public RcaDockablePanel(
-            Func<UIApplication?> uiappProvider,
-            IPythonExecutionService pythonService)
+        public RcaDockablePanel(Func<UIApplication?> uiappProvider, IPythonExecutionService pythonService)
         {
             try
             {
-                Log.LogDebug("Constructing panel instance");
-                LoadXaml();
+                LoadXamlFromResource();
 
                 if (pythonService == null)
-                {
-                    Log.LogWarning("Panel created with null pythonService - using NullPythonExecutionService");
                     pythonService = new NullPythonExecutionService();
-                }
 
                 DataContext = new RcaDockablePanelViewModel(uiappProvider, pythonService);
                 Log.LogInformation("Panel DataContext assigned (vmType={VmType})", DataContext?.GetType().FullName);
@@ -42,12 +37,6 @@ namespace Rca.UI.Views
             catch (Exception ex)
             {
                 Log.LogError(ex, "Error initializing RcaDockablePanel");
-                MessageBox.Show(
-                    $"Error initializing RcaDockablePanel: {ex.Message}\n\n{ex.StackTrace}",
-                    "RcaDockablePanel Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-
                 Content = new TextBlock
                 {
                     Text = $"Error loading UI: {ex.Message}",
@@ -59,114 +48,55 @@ namespace Rca.UI.Views
             }
         }
 
-        private void LoadXaml()
+        /// <summary>
+        /// Loads the panel content from embedded XAML.
+        /// </summary>
+        private void LoadXamlFromResource()
         {
-            // Prefer compiled BAML to guarantee that XAML changes are picked up after rebuild
-            try
-            {
-                Log.LogTrace("Loading XAML via InitializeComponent (compiled BAML)");
-                InitializeComponent();
-                return;
-            }
-            catch (Exception initEx)
-            {
-                Log.LogDebug(initEx, "InitializeComponent failed, attempting embedded XAML fallback");
-            }
+            var asm = GetType().Assembly;
+            using var s = asm.GetManifestResourceStream(ManifestXamlResource)
+                ?? throw new InvalidOperationException($"Manifest resource not found: {ManifestXamlResource}");
+            using var sr = new StreamReader(s, Encoding.UTF8);
+            var xaml = sr.ReadToEnd();
 
-            // Fallback to embedded XAML text if available
-            try
-            {
-                string? xamlContent = GetEmbeddedXaml();
-                if (!string.IsNullOrEmpty(xamlContent))
-                {
-                    xamlContent = RemoveClassDirective(xamlContent);
-                    LoadFromXamlString(xamlContent);
-                    Log.LogDebug("Loaded XAML from embedded resource (length={Len})", xamlContent.Length);
-                    return;
-                }
+            var sanitized = StripXClass(xaml);
+            var ctx = new ParserContext();
+            ctx.XmlnsDictionary.Add(string.Empty, "http://schemas.microsoft.com/winfx/2006/xaml/presentation");
+            ctx.XmlnsDictionary.Add("x", "http://schemas.microsoft.com/winfx/2006/xaml");
+            ctx.XmlnsDictionary.Add("mc", "http://schemas.openxmlformats.org/markup-compatibility/2006");
+            ctx.XmlnsDictionary.Add("d", "http://schemas.microsoft.com/expression/blend/2008");
 
-                Log.LogWarning("Embedded XAML not found and InitializeComponent failed - UI may be empty");
-            }
-            catch (Exception ex)
-            {
-                Log.LogError(ex, "Error loading XAML from embedded resource");
-                throw new InvalidOperationException($"Failed to load XAML for RcaDockablePanel: {ex.Message}", ex);
-            }
+            var content = XamlReader.Parse(sanitized, ctx);
+            ApplyLoadedContent(content);
         }
 
-        private string RemoveClassDirective(string xamlContent)
+        private static string StripXClass(string xaml)
         {
-            const string pattern = "x:Class=\"[^\"]+\"";
-            return Regex.Replace(xamlContent, pattern, "");
+            if (string.IsNullOrEmpty(xaml)) return xaml;
+            const string marker = "x:Class=\"";
+            var idx = xaml.IndexOf(marker, StringComparison.Ordinal);
+            if (idx < 0) return xaml;
+            var start = idx;
+            var end = xaml.IndexOf('"', start + marker.Length);
+            if (end < 0) return xaml;
+            int removeEnd = end + 1;
+            while (removeEnd < xaml.Length && char.IsWhiteSpace(xaml[removeEnd])) removeEnd++;
+            return xaml.Remove(start, removeEnd - start);
         }
 
-        private string? GetEmbeddedXaml()
+        private void ApplyLoadedContent(object? content)
         {
-            var resourceNames = new[]
+            if (content is Grid grid)
             {
-                "Rca.UI.RcaDockablePanel.xaml",
-                "Rca.UI.Views.RcaDockablePanel.xaml",
-                "Rca.Runtime.Rca.UI.RcaDockablePanel.xaml",
-                "Rca.Runtime.Rca.UI.Views.RcaDockablePanel.xaml"
-            };
-
-            var assembly = GetType().Assembly;
-            Log.LogDebug("Searching XAML resources assembly={Assembly}", assembly.FullName);
-
-            foreach (var resourceName in resourceNames)
-            {
-                try
-                {
-                    using var stream = assembly.GetManifestResourceStream(resourceName);
-                    if (stream == null) continue;
-                    using var reader = new StreamReader(stream);
-                    var xaml = reader.ReadToEnd();
-                    Log.LogDebug("Loaded embedded XAML resource {Resource} size={Size}", resourceName, xaml.Length);
-                    return xaml;
-                }
-                catch (Exception ex)
-                {
-                    Log.LogDebug(ex, "Failed loading resource {Resource}", resourceName);
-                }
+                Content = grid;
             }
-
-            Log.LogDebug("Embedded XAML not found (listing resources)");
-            foreach (var res in assembly.GetManifestResourceNames())
-                Log.LogTrace("Resource: {Name}", res);
-            return null;
-        }
-
-        private void LoadFromXamlString(string xamlContent)
-        {
-            Log.LogTrace("Parsing XAML string");
-            var context = new ParserContext();
-            context.XmlnsDictionary.Add("", "http://schemas.microsoft.com/winfx/2006/xaml/presentation");
-            context.XmlnsDictionary.Add("x", "http://schemas.microsoft.com/winfx/2006/xaml");
-            context.XmlnsDictionary.Add("mc", "http://schemas.openxmlformats.org/markup-compatibility/2006");
-            context.XmlnsDictionary.Add("d", "http://schemas.microsoft.com/expression/blend/2008");
-            try
+            else if (content is UserControl uc)
             {
-                object content = XamlReader.Parse(xamlContent, context);
-                switch (content)
-                {
-                    case Grid grid:
-                        Content = grid;
-                        Log.LogDebug("Parsed XAML as Grid");
-                        break;
-                    case UserControl uc:
-                        Content = uc.Content;
-                        Log.LogDebug("Parsed XAML as UserControl contentType={Type}", uc.Content?.GetType().Name);
-                        break;
-                    default:
-                        Content = content;
-                        Log.LogDebug("Parsed XAML as {Type}", content.GetType().Name);
-                        break;
-                }
+                Content = uc.Content;
             }
-            catch (Exception ex)
+            else
             {
-                Log.LogError(ex, "Error parsing XAML string");
-                throw;
+                Content = content as UIElement;
             }
         }
 

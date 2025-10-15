@@ -11,9 +11,13 @@
     <RcaArtifactsDir>$(SolutionDir)build\artifacts\hashes</RcaArtifactsDir>
     <RcaLoaderHashFile>$(RcaArtifactsDir)\loader.txt</RcaLoaderHashFile>
     <RcaRuntimeHashFile>$(RcaArtifactsDir)\runtime.txt</RcaRuntimeHashFile>
+
+    <!-- Per-build stamp for deduplication (already used across solution) -->
+    <RcaBuildStamp>$(RcaHotReloadTimestamp)</RcaBuildStamp>
+    <RcaLoaderDoneFile>$(RcaArtifactsDir)\loader.$(RcaBuildStamp).done</RcaLoaderDoneFile>
+    <RcaRuntimeDoneFile>$(RcaArtifactsDir)\runtime.$(RcaBuildStamp).done</RcaRuntimeDoneFile>
   </PropertyGroup>
 
-  <!-- Build the hash tool if needed -->
   <Target Name="BuildSourceHashGenerator" BeforeTargets="GenerateHash">
     <PropertyGroup>
       <SourceHashProjectModTime>$([System.IO.File]::GetLastWriteTime('$(SourceHashProject)').Ticks)</SourceHashProjectModTime>
@@ -23,19 +27,18 @@
     <MSBuild Projects="$(SourceHashProject)" Targets="Build" Properties="Configuration=$(Configuration)" Condition="'$(SourceHashProjectModTime)' &gt; '$(SourceHashExeModTime)' or !Exists('$(SourceHashExe)')" />
   </Target>
 
-  <!-- 1) GenerateHash: compute group hashes once per build into solution-level artifacts. Fails build on errors. -->
+  <!-- Compute each group hash only once per build (per RcaBuildStamp), serialized via named mutex -->
   <Target Name="GenerateHash" BeforeTargets="CoreCompile" DependsOnTargets="BuildSourceHashGenerator">
-    <Message Text="GenerateHash: recomputing Loader and Runtime hashes" Importance="High" />
+    <Message Text="GenerateHash: ensuring Loader/Runtime hashes exist for stamp $(RcaBuildStamp) (serialized)" Importance="High" />
 
     <MakeDir Directories="$(RcaArtifactsDir)" />
 
-    <!-- Compute Loader hash (fail build on error) -->
-    <Exec Command="&quot;$(SourceHashExe)&quot; --roots &quot;$(RcaLoaderRoots)&quot; --out &quot;$(RcaLoaderHashFile)&quot;" />
+    <PropertyGroup>
+      <PsCmd>&quot;$m = New-Object System.Threading.Mutex($false, 'Global\RCA_GenerateHash'); try { $null = $m.WaitOne(); if (!(Test-Path '&quot;$(RcaLoaderDoneFile)&quot;')) { &amp; '&quot;$(SourceHashExe)&quot;' --roots '&quot;$(RcaLoaderRoots)&quot;' --out '&quot;$(RcaLoaderHashFile)&quot;'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; Set-Content -Path '&quot;$(RcaLoaderDoneFile)&quot;' -Value (Get-Date -Format o) } if (!(Test-Path '&quot;$(RcaRuntimeDoneFile)&quot;')) { &amp; '&quot;$(SourceHashExe)&quot;' --roots '&quot;$(RcaRuntimeRoots)&quot;' --out '&quot;$(RcaRuntimeHashFile)&quot;'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; Set-Content -Path '&quot;$(RcaRuntimeDoneFile)&quot;' -Value (Get-Date -Format o) } } finally { try { $m.ReleaseMutex() | Out-Null } catch {} }&quot;</PsCmd>
+    </PropertyGroup>
 
-    <!-- Compute Runtime hash (fail build on error) -->
-    <Exec Command="&quot;$(SourceHashExe)&quot; --roots &quot;$(RcaRuntimeRoots)&quot; --out &quot;$(RcaRuntimeHashFile)&quot;" />
+    <Exec Command='powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command $(PsCmd)' />
 
-    <!-- Validate artifacts exist -->
     <Error Condition="!Exists('$(RcaLoaderHashFile)')" Text="GenerateHash failed: $(RcaLoaderHashFile) not created" />
     <Error Condition="!Exists('$(RcaRuntimeHashFile)')" Text="GenerateHash failed: $(RcaRuntimeHashFile) not created" />
   </Target>

@@ -68,7 +68,11 @@ namespace Rca.Loader.Services
                     return null;
                 }
 
-                _log.LogDebug("Creating panel via factory (type={Type})", factory.GetType().FullName);
+                _log.LogDebug("Creating panel via factory (type={Type} asm={Asm} loc={Loc})",
+                    factory.GetType().FullName,
+                    SafeAsmName(factory.GetType().Assembly),
+                    SafeAsmLoc(factory.GetType().Assembly));
+
                 var panel = factory.CreatePanel();
                 
                 if (panel == null)
@@ -76,6 +80,20 @@ namespace Rca.Loader.Services
                     error = "Factory.CreatePanel() returned null";
                     _log.LogWarning("{Msg}", error);
                     return null;
+                }
+
+                var pt = panel.GetType();
+                var pasm = pt.Assembly;
+                _log.LogInformation("Panel created type={Type} asm={Asm} loc={Loc}",
+                    pt.FullName,
+                    SafeAsmName(pasm),
+                    SafeAsmLoc(pasm));
+
+                if (!string.IsNullOrEmpty(CurrentRuntimePath))
+                {
+                    var expectedDir = Path.GetDirectoryName(CurrentRuntimePath) ?? string.Empty;
+                    var actualDir = SafeAsmDir(pasm);
+                    _log.LogDebug("Panel assembly directory check expected={Expected} actual={Actual}", expectedDir, actualDir);
                 }
 
                 _log.LogInformation("Panel created successfully via factory");
@@ -87,6 +105,19 @@ namespace Rca.Loader.Services
                 _log.LogError(ex, "Error creating dockable content");
                 return null;
             }
+        }
+
+        private static string SafeAsmName(Assembly asm)
+        {
+            try { return asm.FullName ?? asm.GetName().Name ?? "(no name)"; } catch { return "(name error)"; }
+        }
+        private static string SafeAsmLoc(Assembly asm)
+        {
+            try { return asm.Location; } catch { return "(no location)"; }
+        }
+        private static string SafeAsmDir(Assembly asm)
+        {
+            try { return Path.GetDirectoryName(asm.Location) ?? string.Empty; } catch { return string.Empty; }
         }
 
         /// <summary>
