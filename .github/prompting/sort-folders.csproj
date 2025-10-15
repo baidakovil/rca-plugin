@@ -1,0 +1,11 @@
+<Target Name="CopyTestsToLatestRuntime">
+  <ItemGroup>
+    <RuntimeFolders Include="$(LOCALAPPDATA)\RCA\Runtime\*" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <LatestFolder>@(RuntimeFolders->Reverse(), '')</LatestFolder>
+  </PropertyGroup>
+
+  <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(LatestFolder)" />
+</Target>
