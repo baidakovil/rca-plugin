@@ -8,22 +8,29 @@ using System.Reflection;
 namespace Rca.Loader.Infrastructure
 {
     /// <summary>
-    /// Helper to read assembly metadata attributes from loaded assemblies (reflection)
-    /// or from assembly files on disk without loading them into the default context.
-    /// Always returns <see cref="MissingMarker"/> when the requested metadata cannot be read.
+    /// Provides safe, disk-only access to <see cref="AssemblyMetadataAttribute"/> values on assemblies.
     /// </summary>
+    /// <remarks>
+    /// This helper never loads target assemblies into the Default load context. Instead it uses
+    /// <see cref="System.Reflection.MetadataLoadContext"/> with a path-based resolver to read custom attributes
+    /// directly from files on disk. If metadata cannot be read, the method returns a stable marker value
+    /// <see cref="MissingMarker"/>. No alternative sources or heuristics are used.
+    /// </remarks>
     public static class AttributeMetadataLoader
     {
         /// <summary>
-        /// Marker returned when metadata cannot be read. Use a value without path separators.
+        /// Marker returned when a metadata value is missing or cannot be read.
         /// </summary>
         public const string MissingMarker = "none";
 
         /// <summary>
-        /// Reads an AssemblyMetadata attribute from a loaded assembly using reflection.
-        /// Returns <see cref="MissingMarker"/> when the key is not present or on error.
-        /// NOTE: Prefer <see cref="TryGetFromFile"/> to follow the rule of reading metadata from disk.
+        /// Attempts to read a metadata value from an already loaded assembly instance.
         /// </summary>
+        /// <param name="asm">The loaded assembly.</param>
+        /// <param name="key">The metadata key (for example, <see cref="BuildConstants.SourceHashMetadataKey"/>).</param>
+        /// <returns>
+        /// The metadata value if present; otherwise <see cref="MissingMarker"/>.
+        /// </returns>
         public static string TryGetFromLoadedAssembly(Assembly asm, string key)
         {
             try
@@ -42,10 +49,14 @@ namespace Rca.Loader.Infrastructure
         }
 
         /// <summary>
-        /// Reads an AssemblyMetadata attribute from an assembly file on disk using MetadataLoadContext.
-        /// Returns <see cref="MissingMarker"/> when the key is not present or on error.
-        /// This does not load the assembly into the default context and avoids executing code.
+        /// Attempts to read a metadata value from an assembly file on disk without loading it into the Default context.
+        /// Only attributes embedded in the DLL are considered.
         /// </summary>
+        /// <param name="filePath">Full path to the assembly file.</param>
+        /// <param name="key">The metadata key (for example, <see cref="BuildConstants.SourceHashMetadataKey"/>).</param>
+        /// <returns>
+        /// The metadata value if present; otherwise <see cref="MissingMarker"/>.
+        /// </returns>
         public static string TryGetFromFile(string filePath, string key)
         {
             try
@@ -56,69 +67,43 @@ namespace Rca.Loader.Infrastructure
                 var (resolver, coreName) = CreatePathResolver(filePath);
                 using var mlc = new System.Reflection.MetadataLoadContext(resolver, coreName);
                 var asm = mlc.LoadFromAssemblyPath(Path.GetFullPath(filePath));
-                if (asm != null)
+                if (asm == null)
+                    return MissingMarker;
+
+                foreach (var cad in asm.GetCustomAttributesData())
                 {
-                    foreach (var cad in asm.GetCustomAttributesData())
+                    try
                     {
-                        try
-                        {
-                            if (!string.Equals(cad.AttributeType.FullName, typeof(AssemblyMetadataAttribute).FullName, StringComparison.Ordinal))
-                                continue;
-                            if (cad.ConstructorArguments.Count < 2)
-                                continue;
-                            var k = cad.ConstructorArguments[0].Value as string;
-                            if (!string.Equals(k, key, StringComparison.OrdinalIgnoreCase))
-                                continue;
-                            var v = cad.ConstructorArguments[1].Value as string;
-                            return string.IsNullOrEmpty(v) ? MissingMarker : v;
-                        }
-                        catch { }
+                        if (!string.Equals(cad.AttributeType.FullName, typeof(AssemblyMetadataAttribute).FullName, StringComparison.Ordinal))
+                            continue;
+                        if (cad.ConstructorArguments.Count < 2)
+                            continue;
+                        var k = cad.ConstructorArguments[0].Value as string;
+                        if (!string.Equals(k, key, StringComparison.OrdinalIgnoreCase))
+                            continue;
+                        var v = cad.ConstructorArguments[1].Value as string;
+                        return string.IsNullOrEmpty(v) ? MissingMarker : v;
+                    }
+                    catch
+                    {
+                        // ignore malformed attribute entries and keep scanning
                     }
                 }
+
+                return MissingMarker;
             }
             catch
             {
-                // ignore and try fallback
+                return MissingMarker;
             }
-
-            // Fallback path: version marker files in the same directory (written by build targets)
-            try
-            {
-                if (string.Equals(key, BuildConstants.SourceHashMetadataKey, StringComparison.Ordinal))
-                {
-                    var dir = Path.GetDirectoryName(filePath);
-                    if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
-                    {
-                        var rt = Directory.GetFiles(dir, "SourceHash-Runtime-*.txt").FirstOrDefault();
-                        if (!string.IsNullOrEmpty(rt))
-                        {
-                            var line = SafeReadFirstLine(rt);
-                            if (!string.IsNullOrWhiteSpace(line)) return line.Trim();
-                        }
-                        var ld = Directory.GetFiles(dir, "SourceHash-Loader-*.txt").FirstOrDefault();
-                        if (!string.IsNullOrEmpty(ld))
-                        {
-                            var line = SafeReadFirstLine(ld);
-                            if (!string.IsNullOrWhiteSpace(line)) return line.Trim();
-                        }
-                    }
-                }
-            }
-            catch { }
-
-            return MissingMarker;
         }
 
-        private static string SafeReadFirstLine(string path)
-        {
-            try
-            {
-                using var sr = new StreamReader(new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
-                return sr.ReadLine() ?? string.Empty;
-            }
-            catch { return string.Empty; }
-        }
-
+        /// <summary>
+        /// Creates a path-based resolver for <see cref="System.Reflection.MetadataLoadContext"/> seeded with
+        /// the target assembly path, its directory, and known framework assemblies.
+        /// </summary>
+        /// <param name="primaryAssemblyPath">Full path to the assembly file to inspect.</param>
+        /// <returns>A tuple containing the configured <see cref="PathAssemblyResolver"/> and the core assembly name.</returns>
         private static (PathAssemblyResolver Resolver, string CoreAssemblyName) CreatePathResolver(string primaryAssemblyPath)
         {
             var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -126,20 +111,18 @@ namespace Rca.Loader.Infrastructure
                 Path.GetFullPath(primaryAssemblyPath)
             };
 
-            // Include directory of the target assembly
             var dir = Path.GetDirectoryName(primaryAssemblyPath);
             if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
             {
                 foreach (var f in EnumerateDllsSafe(dir)) paths.Add(f);
             }
 
-            // Add essential core assemblies explicitly
             var coreCandidates = new[]
             {
-                typeof(object).Assembly,                                  // System.Private.CoreLib
-                typeof(AssemblyMetadataAttribute).Assembly,               // System.Runtime / System.Reflection
-                typeof(Enumerable).Assembly,                              // System.Linq
-                typeof(Uri).Assembly                                      // System.Private.Uri / System.Runtime.Extensions
+                typeof(object).Assembly,
+                typeof(AssemblyMetadataAttribute).Assembly,
+                typeof(Enumerable).Assembly,
+                typeof(Uri).Assembly
             };
 
             string coreAssemblyName = typeof(object).Assembly.GetName().Name ?? "System.Private.CoreLib";
@@ -160,10 +143,9 @@ namespace Rca.Loader.Infrastructure
                         }
                     }
                 }
-                catch { /* ignore */ }
+                catch { }
             }
 
-            // Also try to add already loaded framework assemblies with valid locations
             foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
             {
                 try
@@ -180,6 +162,11 @@ namespace Rca.Loader.Infrastructure
             return (new PathAssemblyResolver(paths), coreAssemblyName);
         }
 
+        /// <summary>
+        /// Enumerates DLL files inside a directory defensively, skipping files that cannot be resolved to full paths.
+        /// </summary>
+        /// <param name="directory">The directory to scan.</param>
+        /// <returns>An enumerable of full DLL paths in the specified directory.</returns>
         private static IEnumerable<string> EnumerateDllsSafe(string directory)
         {
             IEnumerable<string> files;

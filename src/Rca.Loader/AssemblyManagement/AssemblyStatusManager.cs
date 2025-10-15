@@ -13,7 +13,7 @@ namespace Rca.Loader.AssemblyManagement
     /// <summary>
     /// Tracks hash and path metadata for Loader and Runtime assemblies and exposes change state.
     /// Uses BuildConstants for consistent metadata key names and file patterns.
-    /// IMPORTANT: Metadata is ALWAYS read from files on disk, never from already loaded assemblies.
+    /// IMPORTANT: Metadata is ALWAYS read from files on disk, never from already loaded assemblies
     /// </summary>
     public class AssemblyStatusManager
     {
@@ -179,6 +179,20 @@ namespace Rca.Loader.AssemblyManagement
                 CurrentInfo.RuntimeAssembly.Path = runtimePath;
                 CurrentInfo.RuntimeAssembly.Hash = finalHash;
 
+                // Also refresh loader from latest deploy if missing
+                if (CurrentInfo.LoaderComponents.Hash == AttributeMetadataLoader.MissingMarker)
+                {
+                    var (lok, lhash, _) = TryReadLoaderGroupHash(folder);
+                    if (lok)
+                    {
+                        CurrentInfo.LoaderComponents.Hash = lhash;
+                        var stamp = Path.GetFileName(folder);
+                        if (string.IsNullOrEmpty(CurrentInfo.LoaderComponents.Path) || CurrentInfo.LoaderComponents.Path == AttributeMetadataLoader.MissingMarker)
+                            CurrentInfo.LoaderComponents.Path = stamp ?? AttributeMetadataLoader.MissingMarker;
+                        _log.LogDebug("Loader info refreshed from runtime folder after reload stamp={Stamp} hash={Hash}", stamp, lhash);
+                    }
+                }
+
                 _log.LogInformation("Runtime hash updated after reload oldLoaded={OldHash} newLoaded={NewHash}", oldLoadedHash, finalHash);
                 try { LoaderApp.Instance?.UpdateStatusDisplay(); } catch { }
             }
@@ -225,6 +239,25 @@ namespace Rca.Loader.AssemblyManagement
                         if (!string.IsNullOrEmpty(lDeploy) && lDeploy != AttributeMetadataLoader.MissingMarker)
                             CurrentInfo.LoaderComponents.Path = lDeploy;
                         _log.LogDebug("Loader info updated: hash={Old}->{New} deploy={Deploy}", oldLoaderHashSnapshot, lHash, lDeploy);
+                    }
+                }
+
+                // Fallback if loader hash still missing
+                if (CurrentInfo.LoaderComponents.Hash == AttributeMetadataLoader.MissingMarker)
+                {
+                    var (lok, lhash, lreason) = TryReadLoaderGroupHash(latest);
+                    if (lok)
+                    {
+                        var old = oldLoaderHashSnapshot;
+                        CurrentInfo.LoaderComponents.Hash = lhash;
+                        var stamp = Path.GetFileName(latest);
+                        if (string.IsNullOrEmpty(CurrentInfo.LoaderComponents.Path) || CurrentInfo.LoaderComponents.Path == AttributeMetadataLoader.MissingMarker)
+                            CurrentInfo.LoaderComponents.Path = stamp ?? AttributeMetadataLoader.MissingMarker;
+                        _log.LogDebug("Loader fallback update from latest deploy hash={Old}->{New} stamp={Stamp}", old, lhash, stamp);
+                    }
+                    else
+                    {
+                        _log.LogDebug("Loader fallback update failed: {Reason}", lreason);
                     }
                 }
 

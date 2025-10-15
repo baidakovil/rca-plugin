@@ -61,6 +61,19 @@ namespace Rca.UI.Views
 
         private void LoadXaml()
         {
+            // Prefer compiled BAML to guarantee that XAML changes are picked up after rebuild
+            try
+            {
+                Log.LogTrace("Loading XAML via InitializeComponent (compiled BAML)");
+                InitializeComponent();
+                return;
+            }
+            catch (Exception initEx)
+            {
+                Log.LogDebug(initEx, "InitializeComponent failed, attempting embedded XAML fallback");
+            }
+
+            // Fallback to embedded XAML text if available
             try
             {
                 string? xamlContent = GetEmbeddedXaml();
@@ -71,12 +84,12 @@ namespace Rca.UI.Views
                     Log.LogDebug("Loaded XAML from embedded resource (length={Len})", xamlContent.Length);
                     return;
                 }
-                Log.LogDebug("Falling back to InitializeComponent()");
-                InitializeComponent();
+
+                Log.LogWarning("Embedded XAML not found and InitializeComponent failed - UI may be empty");
             }
             catch (Exception ex)
             {
-                Log.LogError(ex, "Error loading XAML");
+                Log.LogError(ex, "Error loading XAML from embedded resource");
                 throw new InvalidOperationException($"Failed to load XAML for RcaDockablePanel: {ex.Message}", ex);
             }
         }

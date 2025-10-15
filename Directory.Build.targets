@@ -1,5 +1,5 @@
 <Project>
-  <!-- Using SourceHashGenerator tool to compute group-level source hashes and inject assembly metadata uniformly. -->
+  <!-- Using SourceHashGenerator tool to compute group-level source hashes and emit assembly metadata uniformly. -->
 
   <PropertyGroup>
     <!-- Paths to SourceHashGenerator tool -->
@@ -7,7 +7,7 @@
     <SourceHashExe>$(SolutionDir)src\Tools\SourceHashGenerator\bin\$(Configuration)\net8.0\SourceHashGenerator.exe</SourceHashExe>
   </PropertyGroup>
 
-  <!-- Compute Loader and Runtime group hashes once per build per project context. Safe and deterministic as tool sorts inputs. -->
+  <!-- Build the hash tool if needed -->
   <Target Name="BuildSourceHashGenerator" BeforeTargets="ComputeRcaGroupHashes">
     <PropertyGroup>
       <SourceHashProjectModTime>$([System.IO.File]::GetLastWriteTime('$(SourceHashProject)').Ticks)</SourceHashProjectModTime>
@@ -17,8 +17,8 @@
     <MSBuild Projects="$(SourceHashProject)" Targets="Build" Properties="Configuration=$(Configuration)" Condition="'$(SourceHashProjectModTime)' &gt; '$(SourceHashExeModTime)'" />
   </Target>
 
-  <!-- Compute hashes BEFORE GenerateAssemblyInfo so they can be embedded as attributes -->
-  <Target Name="ComputeRcaGroupHashes" BeforeTargets="GenerateAssemblyInfo" DependsOnTargets="BuildSourceHashGenerator">
+  <!-- Compute hashes once per build per project context -->
+  <Target Name="ComputeRcaGroupHashes" BeforeTargets="CoreCompile" DependsOnTargets="BuildSourceHashGenerator">
     <PropertyGroup>
       <!-- Loader group projects: Rca.Loader, Rca.Loader.Contracts, Rca.Logging.Contracts -->
       <RcaLoaderRoots>$(SolutionDir)src\Rca.Loader;$(SolutionDir)src\Rca.Loader.Contracts;$(SolutionDir)src\Rca.Logging.Contracts</RcaLoaderRoots>
@@ -29,8 +29,8 @@
     </PropertyGroup>
 
     <!-- Compute Loader hash -->
-    <Exec Command="&quot;$(SourceHashExe)&quot; --roots &quot;$(RcaLoaderRoots)&quot; --out &quot;$(LoaderHashIntermediateFile)&quot;" />
-    <ReadLinesFromFile File="$(LoaderHashIntermediateFile)">
+    <Exec Command="&quot;$(SourceHashExe)&quot; --roots &quot;$(RcaLoaderRoots)&quot; --out &quot;$(LoaderHashIntermediateFile)&quot;" IgnoreExitCode="true" />
+    <ReadLinesFromFile File="$(LoaderHashIntermediateFile)" Condition="Exists('$(LoaderHashIntermediateFile)')">
       <Output TaskParameter="Lines" ItemName="LoaderSourceHashLines" />
     </ReadLinesFromFile>
     <PropertyGroup>
@@ -38,8 +38,8 @@
     </PropertyGroup>
 
     <!-- Compute Runtime hash -->
-    <Exec Command="&quot;$(SourceHashExe)&quot; --roots &quot;$(RcaRuntimeRoots)&quot; --out &quot;$(RuntimeHashIntermediateFile)&quot;" />
-    <ReadLinesFromFile File="$(RuntimeHashIntermediateFile)">
+    <Exec Command="&quot;$(SourceHashExe)&quot; --roots &quot;$(RcaRuntimeRoots)&quot; --out &quot;$(RuntimeHashIntermediateFile)&quot;" IgnoreExitCode="true" />
+    <ReadLinesFromFile File="$(RuntimeHashIntermediateFile)" Condition="Exists('$(RuntimeHashIntermediateFile)')">
       <Output TaskParameter="Lines" ItemName="RuntimeSourceHashLines" />
     </ReadLinesFromFile>
     <PropertyGroup>
@@ -49,7 +49,7 @@
     <Message Text="RCA Hashes: Loader=$(RcaLoaderSourceHash) Runtime=$(RcaRuntimeSourceHash)" Importance="High" />
   </Target>
 
-  <!-- Classify project into group by name; minimal duplication here -->
+  <!-- Classify project into group by name -->
   <PropertyGroup>
     <IsLoaderGroupProject>false</IsLoaderGroupProject>
     <IsRuntimeGroupProject>false</IsRuntimeGroupProject>
@@ -57,27 +57,29 @@
     <IsRuntimeGroupProject Condition="'$(MSBuildProjectName)' == 'Rca.Core' or '$(MSBuildProjectName)' == 'Rca.Runtime' or '$(MSBuildProjectName)' == 'Rca.Network' or '$(MSBuildProjectName)' == 'Rca.UI' or '$(MSBuildProjectName)' == 'Rca.Contracts'">true</IsRuntimeGroupProject>
   </PropertyGroup>
 
-  <!-- Add attributes just before GenerateAssemblyInfo so values are available and used by Roslyn -->
-  <Target Name="AddAssemblyMetadataAttributes" BeforeTargets="GenerateAssemblyInfo" DependsOnTargets="ComputeRcaGroupHashes">
-    <ItemGroup Condition="'$(IsLoaderGroupProject)' == 'true'">
-      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-        <_Parameter1>SourceHash</_Parameter1>
-        <_Parameter2>$(RcaLoaderSourceHash)</_Parameter2>
-      </AssemblyAttribute>
-      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-        <_Parameter1>DeployFolder</_Parameter1>
-        <_Parameter2>$(RcaHotReloadTimestamp)</_Parameter2>
-      </AssemblyAttribute>
+  <!-- Emit C# source file with assembly metadata to guarantee inclusion regardless of GenerateAssemblyInfo -->
+  <Target Name="EmitAssemblyMetadataSource" BeforeTargets="CoreCompile" DependsOnTargets="ComputeRcaGroupHashes">
+    <PropertyGroup>
+      <MetadataSource>$(IntermediateOutputPath)Rca.AssemblyMetadata.g.cs</MetadataSource>
+      <ThisSourceHash Condition="'$(IsLoaderGroupProject)' == 'true'">$(RcaLoaderSourceHash)</ThisSourceHash>
+      <ThisSourceHash Condition="'$(IsRuntimeGroupProject)' == 'true' and '$(ThisSourceHash)' == ''">$(RcaRuntimeSourceHash)</ThisSourceHash>
+      <!-- Fallback to stable per-build timestamp if hash tool produced empty output -->
+      <ThisSourceHash Condition="'$(ThisSourceHash)' == ''">$(RcaHotReloadTimestamp)</ThisSourceHash>
+      <ThisDeployFolder>$(RcaHotReloadTimestamp)</ThisDeployFolder>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <_MetadataLines Include="// &lt;auto-generated/&gt;" />
+      <_MetadataLines Include='[assembly: System.Reflection.AssemblyMetadata(&quot;SourceHash&quot;, &quot;$(ThisSourceHash)&quot;)]' />
+      <_MetadataLines Include='[assembly: System.Reflection.AssemblyMetadata(&quot;DeployFolder&quot;, &quot;$(ThisDeployFolder)&quot;)]' />
+      <_MetadataLines Include="namespace Rca.Generated { internal static class __RcaAssemblyMetadataAnchor { } }" />
     </ItemGroup>
-    <ItemGroup Condition="'$(IsRuntimeGroupProject)' == 'true'">
-      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-        <_Parameter1>SourceHash</_Parameter1>
-        <_Parameter2>$(RcaRuntimeSourceHash)</_Parameter2>
-      </AssemblyAttribute>
-      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-        <_Parameter1>DeployFolder</_Parameter1>
-        <_Parameter2>$(RcaHotReloadTimestamp)</_Parameter2>
-      </AssemblyAttribute>
+
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+    <WriteLinesToFile File="$(MetadataSource)" Lines="@(_MetadataLines)" Overwrite="true" />
+
+    <ItemGroup>
+      <Compile Include="$(MetadataSource)" Visible="false" />
     </ItemGroup>
   </Target>
 
@@ -94,9 +96,9 @@
     </ItemGroup>
     <Copy SourceFiles="@(LoaderDeployFiles)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" />
     <PropertyGroup>
-      <LoaderVersionFile>$(RuntimeDeployDir)\SourceHash-Loader-$(RcaLoaderSourceHash).txt</LoaderVersionFile>
+      <LoaderVersionFile>$(RuntimeDeployDir)\SourceHash-Loader-$(ThisSourceHash).txt</LoaderVersionFile>
     </PropertyGroup>
-    <WriteLinesToFile File="$(LoaderVersionFile)" Lines="$(RcaLoaderSourceHash)" Overwrite="true" />
+    <WriteLinesToFile File="$(LoaderVersionFile)" Lines="$(ThisSourceHash)" Overwrite="true" />
     <Message Text="Loader group deployed to $(RuntimeDeployDir)" Importance="High" />
   </Target>
 
@@ -122,9 +124,9 @@
     </ItemGroup>
     <Copy SourceFiles="@(LibFiles)" DestinationFiles="@(LibFiles-&gt;'$(RuntimeDeployDir)\Lib\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="@(LibFiles)!=''" />
     <PropertyGroup>
-      <RuntimeVersionFile>$(RuntimeDeployDir)\SourceHash-Runtime-$(RcaRuntimeSourceHash).txt</RuntimeVersionFile>
+      <RuntimeVersionFile>$(RuntimeDeployDir)\SourceHash-Runtime-$(ThisSourceHash).txt</RuntimeVersionFile>
     </PropertyGroup>
-    <WriteLinesToFile File="$(RuntimeVersionFile)" Lines="$(RcaRuntimeSourceHash)" Overwrite="true" />
+    <WriteLinesToFile File="$(RuntimeVersionFile)" Lines="$(ThisSourceHash)" Overwrite="true" />
     <Message Text="Runtime group deployed to $(RuntimeDeployDir)" Importance="High" />
   </Target>
 
