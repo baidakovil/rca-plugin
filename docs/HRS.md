@@ -6,10 +6,10 @@ This document describes the Revit Chat Assistant (RCA) Hot-Reload System archite
 
 ## Objectives
 
-- **Hot-reload Runtime** without restarting Revit, preserving UI state and user context.
-- **Rebuild/Reload Loader** safely via Revit restart orchestrated by the HRS.
-- **Track versions** of Loader and Runtime assemblies using source-code hashes embedded at build time.
-- **Notify** users interactively when new builds are available, giving them control over when to apply updates.
+- Hot-reload Runtime without restarting Revit, preserving UI state and user context.
+- Rebuild/Reload Loader safely via Revit restart orchestrated by the HRS.
+- Track versions of Loader and Runtime assemblies using source-code hashes embedded at build time.
+- Notify users interactively when new builds are available, giving them control over when to apply updates.
 
 ---
 
@@ -17,18 +17,16 @@ This document describes the Revit Chat Assistant (RCA) Hot-Reload System archite
 
 The HRS consists of:
 
-1. **Build-time tools** (SourceHashGenerator, AttributeInjector) that embed version metadata into assemblies.
-2. **MSBuild integration** that deploys to timestamped folders and sends notification signals.
-3. **Named Pipe protocol** for MSBuild-to-Revit communication.
-4. **AssemblyStatusManager** that tracks loaded versions and detects updates.
-5. **Interactive user dialogs** that prompt for reload/restart actions.
-6. **RuntimeManager** that performs collectible assembly loading for hot-reload.
+1. Build-time hash generator and MSBuild targets that compute two group hashes once per build and embed them into assemblies.
+2. MSBuild integration that deploys to timestamped folders and sends a lightweight notification.
+3. Named Pipe protocol for MSBuild-to-Revit communication.
+4. AssemblyStatusManager that tracks installed (Loader), discovered (Runtime), and loaded (Runtime) versions using `SourceHash` assembly metadata.
+5. Interactive dialogs for reload/restart actions.
+6. RuntimeManager that performs collectible assembly loading for hot-reload of UI and services.
 
 ---
 
-## Build signal flow (simplified architecture)
-
-### New simplified flow (current implementation)
+## Build signal flow (current implementation)
 
 ```
 MSBuild Build                    Revit Addin
@@ -38,248 +36,80 @@ MSBuild Build                    Revit Addin
     |-- Send BUILD_COMPLETED -->     |
     |                                |
                                      |-- Find latest folder
-                                     |-- Read hashes from DLLs
+                                     |-- Read SourceHash from DLLs on disk
                                      |-- Compare with loaded
                                      |-- Show user dialog
-                                     |     - Reload Runtime?
-                                     |     - Restart Revit?
-                                     |     - Ignore?
+                                     |     - Reload Runtime
+                                     |     - Restart Revit (if Loader outdated)
+                                     |     - Ignore
 ```
 
-**Benefits:**
-- ✅ No complex payload in pipe message
-- ✅ No path escaping or JSON complexity
-- ✅ Single source of truth (addin finds latest folder)
-- ✅ Better UX (interactive dialog, user controls timing)
-- ✅ More reliable (simpler protocol)
+Benefits:
+- No complex payloads; addin is the source of truth for discovery
+- Stable detection (metadata read from DLLs on disk)
+- Clear user control and safe restart path for Loader updates
 
 ---
 
-## Named Pipe protocol
+## Build-time integration
 
-### Connection
+- `Directory.Build.targets` orchestrates hash computation and metadata injection:
+  - Computes runtime and loader hashes once per build (mutex + TEMP lock)
+  - Overwrites `build/artifacts/hashes/runtime.txt` and `build/artifacts/hashes/loader.txt`
+  - Emits `Rca.AssemblyMetadata.g.cs` with `[assembly: AssemblyMetadata("SourceHash", ...)]` and `[assembly: AssemblyMetadata("DeployFolder", ...)]`
+  - Copies Runtime/Loader DLLs into `%LOCALAPPDATA%/RCA/Runtime/<timestamp>` and writes marker files for traceability
 
-- **Pipe name:** `RCA_PIPE`
-- **Direction:** InOut (bidirectional)
-- **Format:** JSON lines (one command per line, one response per line)
-- **Lifecycle:** Each connection handles exactly one command, then disconnects
+---
 
-### Commands
+## Change detection at runtime
 
-All commands are JSON objects with `Command` and `Payload` fields:
+- Loader updates: compare installed addin hash vs latest loader group hash discovered in `%LOCALAPPDATA%/RCA/Runtime/<timestamp>`
+- Runtime updates: compare discovered runtime group hash vs loaded runtime hash
+- Events: `only loader outdated`, `only runtime outdated`, `both loader and runtime outdated`, `no changes`
 
-```json
-{
-  "Command": "BUILD_COMPLETED",
-  "Payload": ""
-}
-```
+---
 
-#### BUILD_COMPLETED
+## Restart flow (Loader updates)
 
-**Purpose:** Notify addin that MSBuild has deployed a new build.
-
-**Payload:** Empty string (optional and ignored)
-
-**Behavior:**
-1. Addin finds latest folder in `%LOCALAPPDATA%\RCA\Runtime`
-2. Reads `SourceHash` metadata from `Rca.Loader.dll` and `Rca.Runtime.dll`
-3. Compares with currently loaded assemblies
-4. Shows interactive dialog to user via ExternalEvent
-5. User chooses: Reload Runtime, Restart Revit, or Ignore
-
-**Response:**
-```json
-{
-  "Status": "OK",
-  "Message": "User prompted for reload action"
-}
-```
-
-#### RELOAD_RUNTIME
-
-**Purpose:** Reload runtime assembly (legacy command, kept for backward compatibility)
-
-**Payload:** Optional folder path (if empty, finds latest automatically)
-
-**Behavior:** Same as BUILD_COMPLETED but without user dialog - performs automatic reload
-
-#### STATUS
-
-**Purpose:** Query current runtime status
-
-**Payload:** Empty
-
-**Response:**
-```json
-{
-  "Status": "LOADED",
-  "Message": "C:\\Users\\...\\Runtime\\20250115-143022\\Rca.Runtime.dll"
-}
-```
-
-#### RUN_TESTS
-
-**Purpose:** Execute tests in Revit context (used by test adapter)
-
-**Payload:** JSON test execution payload
-
-#### TEST_INIT
-
-**Purpose:** Initialize test execution environment
-
-**Payload:** Optional
-
-### Validation rules summary
-
-- Command names are validated against the known set in `PipeCommands`.
-- `BUILD_COMPLETED`, `STATUS`, `TEST_INIT` accept empty payloads.
-- `RELOAD`, `RELOAD_RUNTIME` accept optional payloads.
-- `RUN_TESTS` requires valid test payload.
-- Invalid payloads receive an `InvalidPayload` response.
-
-### Behavioral notes
-
-- The server treats each incoming connection as a single request/response exchange and then closes the connection.
-- MSBuild should send `BUILD_COMPLETED` after successful deployment.
-- The addin decides autonomously what changed by reading hashes from disk.
-- User gets full control via interactive dialog - no automatic interruptions.
-
-### Examples
-
-**Build notification request:**
-```json
-{ "Command": "BUILD_COMPLETED", "Payload": "" }
-```
-
-**Response:**
-```json
-{ "Status": "OK", "Message": "User prompted for reload action" }
-```
-
-**Status request:**
-```json
-{ "Command": "STATUS", "Payload": null }
-```
-
-**Response:**
-```json
-{ "Status": "LOADED", "Message": "C:\\Users\\dev\\AppData\\Local\\RCA\\Runtime\\20251012-123456\\Rca.Runtime.dll" }
-```
-
-### Where to change/extend
-
-- Add or change commands in `CommandValidationService` and `PipeCommands` constant list.
-- Implement handling logic in `RuntimeCommandHandler`.
-- Adjust wire-level behavior in `PipeServerService`.
-- Update interactive dialog in `ShowReloadDialogHandler`.
+- The addin launches a PowerShell script to perform a graceful restart and copy updated assemblies into the Addins folder.
+- In current DEBUG configuration the script path is resolved as an absolute path: `C:\Users\baidakov\rca-plugin\build\Scripts\RestartRevitGraceful.ps1`.
+- Parameters passed:
+  - `-SourcePath` — latest deploy folder
+  - `-TargetPath` — `%APPDATA%/Autodesk/Revit/Addins/2026/Rca`
+  - `-RevitExecutable` — full path to `Revit.exe`
+  - Optional: `-FilePath` to open a Revit project after restart
 
 ---
 
 ## Dockable Panel UI Hot-Reload
 
-The system supports hot-reloading of the dockable panel UI without restarting Revit. This is achieved through a proxy pattern that separates the persistent Loader context from the collectible Runtime context.
-
-Key components:
-- `SharedServiceRegistry` - Static cross-context service registry
-- `DockablePanelHost` - Persistent placeholder in Loader
-- `RuntimePanelFactory` - Factory registered by Runtime
-- `IRuntimePanelFactory` - Contract interface for cross-context UI creation
-- `IRuntimePanelHost` - Contract interface for content injection
-
-UI reload flow:
-1. Loader registers `DockablePanelHost` with Revit on startup
-2. Runtime loads and registers `RuntimePanelFactory` in `SharedServiceRegistry`
-3. `RuntimeManager.CreateRuntimeDockableContent()` resolves factory
-4. Factory creates `RcaDockablePanel` with resolved dependencies
-5. UI is injected into `DockablePanelHost` via `SetContent()`
-6. Pane is shown after successful content injection
-7. On Runtime unload, panel content is cleared
-
-See `docs/HRS-UI-Hotreload-Architecture.md` for detailed architecture documentation.
+- UI XAML is loaded deterministically from an embedded XAML manifest resource to avoid ALC/pack URI complications.
+- `Rca.UI.RcaDockablePanel.xaml` is parsed at runtime via `XamlReader.Parse` after removing `x:Class`.
+- Runtime loads into a collectible context and injects content into the persistent `DockablePanelHost`.
 
 ---
 
-## User Experience Flow
+## Named Pipe protocol
 
-### Runtime-only update
-
-When MSBuild notifies about a build and only Runtime changed:
-
-1. **Dialog appears:**
-   ```
-   New Build Available
-   
-   New version detected
-   • Runtime assembly updated
-   
-   [Reload Runtime Now]
-     Apply changes without restarting Revit
-   
-   [Ignore for Now]
-     Continue with current version
-   ```
-
-2. **User chooses action:**
-   - Reload → Runtime reloads, UI updates, work continues
-   - Ignore → Dialog closes, can reload later via button
-
-### Loader + Runtime update
-
-When Loader components also changed:
-
-1. **Dialog appears:**
-   ```
-   New Build Available
-   
-   New version detected
-   • Loader components updated
-   • Runtime assembly updated
-   
-   [Restart Revit Now]
-     Required to apply Loader updates
-   
-   [Just Reload Runtime]
-     Partial update - Loader changes will be ignored
-   
-   [Ignore for Now]
-     Continue with current version
-   ```
-
-2. **User chooses action:**
-   - Restart Revit → PowerShell script manages graceful restart
-   - Just Reload Runtime → Runtime reloads (Loader stays old)
-   - Ignore → Can apply updates later
-
----
-
-## Developer / CI suggestions
-
-- CI should run `dotnet build` for `Rca.Runtime` and `Rca.Loader` (Release) to produce timestamped deploy folders and hashes.
-- Tests or CI checks can fail if the expected `source-hash.*.txt` files are missing.
-- MSBuild sends simple `BUILD_COMPLETED` signal - no complex payload needed.
-- Addin autonomously determines what changed by reading metadata from DLLs.
+- Pipe name: `RCA_PIPE`, JSON line protocol
+- Commands: `BUILD_COMPLETED`, `RELOAD_RUNTIME`, `STATUS`, `RUN_TESTS`, `TEST_INIT`
+- `BUILD_COMPLETED` triggers discovery and user dialog via `ExternalEvent`
 
 ---
 
 ## How to test/verify locally
 
-1. Build Runtime: `dotnet build src/Rca.Runtime -c Debug`
-2. Confirm new folder created in `%LOCALAPPDATA%\RCA\Runtime\<timestamp>`
-3. Start Revit with RCA loaded
-4. Watch for dialog prompt after build completes
-5. Check Build Output window for "Build notification response: ..."
-6. Test "Reload Runtime" button manually if notification didn't appear
+1. Build solution: `dotnet build --no-incremental`
+2. Confirm two hash artifacts updated in `build/artifacts/hashes`
+3. Start Revit with RCA
+4. Build again; observe `BUILD_COMPLETED` handling and dialog
+5. For Loader updates choose Restart; the PowerShell script will close Revit, copy assemblies, and start Revit again
 
 ---
 
-## Quick links (files you will likely inspect)
+## Where to change/extend
 
-- MSBuild notification: `src/Rca.Runtime/Rca.Runtime.csproj` (NotifyBuildCompleted target)
-- Pipe protocol: `src/Rca.Loader/Services/PipeServerService.cs`
-- Command handling: `src/Rca.Loader/Infrastructure/RuntimeCommandHandler.cs`
-- User dialog: `src/Rca.Loader/Infrastructure/ShowReloadDialogHandler.cs`
-- Version tracking: `src/Rca.Loader/AssemblyManagement/AssemblyStatusManager.cs`
-- Runtime reload: `src/Rca.Loader/Services/RuntimeManager.cs`
-
-This document intentionally avoids speculation and focuses on the current code. If you change the build or deployment flow, update this document accordingly.
+- Hash roots and orchestration: `Directory.Build.targets`
+- Detection logic: `AssemblyStatusManager`
+- Restart behavior: `RestartManager`
+- UI hot-reload: `Rca.UI.Views.RcaDockablePanel`
