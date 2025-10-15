@@ -10,6 +10,7 @@ using Rca.Loader.Infrastructure;
 using Rca.Contracts.Infrastructure;
 using Rca.Loader.Logging;
 using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
 
 namespace Rca.Loader.Services
 {
@@ -57,6 +58,7 @@ namespace Rca.Loader.Services
 
             try
             {
+                _log.LogTrace("Resolving IRuntimePanelFactory from SharedServiceRegistry");
                 // Resolve factory from SharedServiceRegistry (lives in non-collectible Loader context)
                 var factory = SharedServiceRegistry.Resolve<IRuntimePanelFactory>();
                 if (factory == null)
@@ -100,19 +102,37 @@ namespace Rca.Loader.Services
             try
             {
                 if (string.IsNullOrWhiteSpace(folderPath)) { error = "Folder path missing"; _log.LogWarning("{Msg} opId={Op}", error, opId); return false; }
+
+                // Validate atomicity of runtime group before loading
+                if (!ValidateRuntimeGroup(folderPath, out var reason))
+                {
+                    error = reason ?? "Runtime group validation failed";
+                    _log.LogWarning("Runtime validation failed: {Reason} opId={Op}", error, opId);
+                    return false;
+                }
+
                 var runtimeDll = Path.Combine(folderPath, LoaderConstants.RuntimeFileName);
                 if (!File.Exists(runtimeDll)) { error = $"Runtime dll not found: {runtimeDll}"; _log.LogWarning("{Msg} opId={Op}", error, opId); return false; }
 
+                _log.LogTrace("Unloading prior runtime if any opId={Op}", opId);
                 UnloadRuntime();
+
+                // Preload shared contract assemblies into Default context to avoid collectible duplication issues
+                PreloadSharedContracts(folderPath);
+
                 currentContext = new RuntimeLoadContext();
                 currentContext.SetRuntimePath(runtimeDll);
+                _log.LogDebug("Context created and path set path={Path} opId={Op}", runtimeDll, opId);
+
                 PreloadIronPythonAssemblies(folderPath);
 
-                // Load and initialize the runtime
+                _log.LogTrace("Loading runtime entry assembly opId={Op}", opId);
                 var assembly = currentContext.LoadFromAssemblyPath(runtimeDll);
+                _log.LogTrace("Finding RuntimeEntry type opId={Op}", opId);
                 var runtimeType = FindRuntimeEntryType(assembly);
                 if (runtimeType == null) { error = "RuntimeEntry class not found"; _log.LogWarning("{Msg} opId={Op}", error, opId); return false; }
 
+                _log.LogTrace("Creating RuntimeEntry instance opId={Op}", opId);
                 var instance = Activator.CreateInstance(runtimeType);
                 if (instance == null) { error = "Failed to create runtime instance"; _log.LogWarning("{Msg} opId={Op}", error, opId); return false; }
 
@@ -120,6 +140,7 @@ namespace Rca.Loader.Services
                 if (initMethod == null) { error = "Initialize method not found on RuntimeEntry"; _log.LogWarning("{Msg} opId={Op}", error, opId); return false; }
 
                 currentContext.SetRuntimeInstance(instance);
+                _log.LogTrace("Invoking Initialize on RuntimeEntry opId={Op}", opId);
                 initMethod.Invoke(instance, null);
                 currentRuntimeInstance = instance;
                 error = null;
@@ -134,7 +155,102 @@ namespace Rca.Loader.Services
             }
         }
 
-        private Type? FindRuntimeEntryType(Assembly assembly) => assembly.GetTypes().FirstOrDefault(t => t.Name == "RuntimeEntry" && !t.IsAbstract);
+        private void PreloadSharedContracts(string folder)
+        {
+            try
+            {
+                // Rca.Contracts is shared between Loader and Runtime; prefer single copy in Default context
+                var shared = new[] { "Rca.Contracts.dll" };
+                foreach (var dll in shared)
+                {
+                    var name = Path.GetFileNameWithoutExtension(dll);
+                    var already = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => !a.IsDynamic && string.Equals(a.GetName().Name, name, StringComparison.OrdinalIgnoreCase));
+                    if (already != null)
+                    {
+                        _log.LogTrace("Shared contract already loaded name={Name}", name);
+                        continue;
+                    }
+                    var path = Path.Combine(folder, dll);
+                    if (!File.Exists(path)) { _log.LogDebug("Shared contract not found in runtime folder dll={Dll}", dll); continue; }
+                    try
+                    {
+                        AssemblyLoadContext.Default.LoadFromAssemblyPath(path);
+                        _log.LogDebug("Preloaded shared contract into Default ALC dll={Dll}", dll);
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.LogDebug(ex, "Failed to preload shared contract dll={Dll}", dll);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.LogDebug(ex, "Error during PreloadSharedContracts");
+            }
+        }
+
+        private bool ValidateRuntimeGroup(string folderPath, out string? reason)
+        {
+            reason = null;
+            try
+            {
+                var hashes = new List<string>();
+                foreach (var dll in LoaderConstants.RuntimeAssemblies)
+                {
+                    var path = Path.Combine(folderPath, dll);
+                    if (!File.Exists(path))
+                    {
+                        reason = $"Missing runtime assembly: {dll}";
+                        _log.LogWarning("{Reason}", reason);
+                        return false;
+                    }
+                    var hash = AttributeMetadataLoader.TryGetFromFile(path, BuildConstants.SourceHashMetadataKey);
+                    _log.LogTrace("Read SourceHash from {Dll}: {Hash}", dll, hash);
+                    if (string.IsNullOrEmpty(hash) || hash == AttributeMetadataLoader.MissingMarker)
+                    {
+                        reason = $"Missing or empty SourceHash in {dll}";
+                        _log.LogWarning("{Reason}", reason);
+                        return false;
+                    }
+                    hashes.Add(hash);
+                }
+                var shortHashes = hashes.Select(h => (h ?? string.Empty).Trim()).Select(h => h.Length > 8 ? h[..8] : h).ToList();
+                var allEqual = shortHashes.Distinct(StringComparer.OrdinalIgnoreCase).Count() == 1;
+                if (!allEqual)
+                {
+                    reason = $"Runtime group hash mismatch: {string.Join(", ", shortHashes)}";
+                    _log.LogWarning("{Reason}", reason);
+                    return false;
+                }
+                _log.LogDebug("Runtime group validation passed hash={Hash}", shortHashes.First());
+                return true;
+            }
+            catch (Exception ex)
+            {
+                reason = ex.Message;
+                _log.LogError(ex, "Error validating runtime group");
+                return false;
+            }
+        }
+
+        private Type? FindRuntimeEntryType(Assembly assembly)
+        {
+            try
+            {
+                _log.LogTrace("Scanning types for RuntimeEntry in {Asm}", assembly.FullName);
+                return assembly.GetTypes().FirstOrDefault(t => t.Name == "RuntimeEntry" && !t.IsAbstract);
+            }
+            catch (ReflectionTypeLoadException rtle)
+            {
+                _log.LogDebug(rtle, "ReflectionTypeLoadException while finding RuntimeEntry");
+                return rtle.Types?.FirstOrDefault(t => t != null && t.Name == "RuntimeEntry" && !t.IsAbstract);
+            }
+            catch (Exception ex)
+            {
+                _log.LogDebug(ex, "Error while finding RuntimeEntry type");
+                return null;
+            }
+        }
 
         /// <summary>
         /// Pre-loads IronPython assemblies in the default context to avoid collectible assembly issues.
@@ -146,7 +262,7 @@ namespace Rca.Loader.Services
             foreach (var assemblyFile in pythonAssemblies)
             {
                 var assemblyPath = Path.Combine(runtimeFolder, assemblyFile);
-                if (!File.Exists(assemblyPath)) continue;
+                if (!File.Exists(assemblyPath)) { _log.LogTrace("Python assembly not found {Asm}", assemblyFile); continue; }
                 try
                 {
                     var assemblyName = Path.GetFileNameWithoutExtension(assemblyFile);
@@ -155,6 +271,10 @@ namespace Rca.Loader.Services
                     {
                         AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath);
                         _log.LogDebug("Preloaded python assembly {Asm}", assemblyFile);
+                    }
+                    else
+                    {
+                        _log.LogTrace("Python assembly already loaded {Asm}", assemblyFile);
                     }
                 }
                 catch (Exception ex)
@@ -169,7 +289,7 @@ namespace Rca.Loader.Services
         /// </summary>
         public void UnloadRuntime()
         {
-            if (currentContext == null) return;
+            if (currentContext == null) { _log.LogTrace("UnloadRuntime skipped - no context"); return; }
             var opId = Guid.NewGuid().ToString("N");
             _log.LogInformation("UnloadRuntime start opId={Op} path={Path}", opId, currentContext.RuntimePath);
             try
@@ -181,6 +301,7 @@ namespace Rca.Loader.Services
                         var rtType = currentContext.RuntimeInstance.GetType();
                         var shutdown = rtType.GetMethod("Shutdown");
                         shutdown?.Invoke(currentContext.RuntimeInstance, null);
+                        _log.LogTrace("Shutdown invoked on runtime instance opId={Op}", opId);
                     }
                 }
                 catch (Exception exShutdown)
@@ -194,10 +315,11 @@ namespace Rca.Loader.Services
                 {
                     var host = LoaderApp.Instance?.PanelHost;
                     host?.SetContent(null);
+                    _log.LogTrace("Panel host content cleared opId={Op}", opId);
                 }
                 catch (Exception exPanel)
                 {
-                    _log.LogDebug(exPanel, "Failed clearing panel host content opId={Op}", opId);
+                    _log.LogDebug(exPanel, "Failed clearing panel host content opId={Op}");
                 }
 
                 currentContext.Unload();
@@ -227,6 +349,7 @@ namespace Rca.Loader.Services
                 return false;
             }
             var latest = Directory.GetDirectories(LoaderConstants.RuntimeDeployRoot).OrderByDescending(d => d).FirstOrDefault();
+            _log.LogDebug("ReloadLatest selected dir={Dir}", latest);
             if (latest == null)
             {
                 error = "No runtime versions found";

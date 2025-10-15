@@ -1,10 +1,9 @@
-extern alias LoaderMerged;
 using System;
 using Microsoft.Extensions.Logging;
 using Rca.Core.Services;
 using Rca.Contracts;
 using Rca.Runtime.Logging;
-using LoaderMerged::Rca.Loader.Contracts;
+using Rca.Loader.Contracts;
 using Rca.Runtime.UI;
 
 namespace Rca.Runtime

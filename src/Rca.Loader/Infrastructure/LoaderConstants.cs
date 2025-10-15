@@ -38,15 +38,37 @@ namespace Rca.Loader.Infrastructure
                 "Autodesk", "Revit", "Addins", "2026");
                 
         /// <summary>
-        /// The directory for the Rca addin where the merged Loader assembly is deployed.
+        /// The directory for the Rca addin where the Loader assembly is deployed.
         /// </summary>
         public static readonly string RcaAddinDir =
             Path.Combine(RevitAddinDir, "Rca");
             
         /// <summary>
-        /// The full path to the deployed merged Loader assembly.
+        /// The full path to the deployed Loader assembly.
         /// </summary>
         public static readonly string LoaderAssemblyPath =
             Path.Combine(RcaAddinDir, LoaderFileName);
+
+        /// <summary>
+        /// Unified manifest of assemblies that compose the Loader group.
+        /// </summary>
+        public static readonly string[] LoaderAssemblies =
+        {
+            "Rca.Loader.dll",
+            "Rca.Loader.Contracts.dll",
+            "Rca.Logging.Contracts.dll"
+        };
+
+        /// <summary>
+        /// Unified manifest of assemblies that compose the Runtime group.
+        /// </summary>
+        public static readonly string[] RuntimeAssemblies =
+        {
+            "Rca.Runtime.dll",
+            "Rca.Core.dll",
+            "Rca.Network.dll",
+            "Rca.UI.dll",
+            "Rca.Contracts.dll"
+        };
     }
 }

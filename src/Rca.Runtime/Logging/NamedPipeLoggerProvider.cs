@@ -1,4 +1,3 @@
-extern alias LoaderMerged;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
@@ -7,7 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using Microsoft.Extensions.Logging;
-using LoaderMerged::Rca.Logging.Contracts;
+using Rca.Logging.Contracts;
 
 namespace Rca.Runtime.Logging;
 
@@ -63,7 +62,7 @@ internal sealed class PipeLogTransport : IDisposable
     private int _state; // 0=disconnected,1=connected
     private long _sequenceId;
 
-    // backoff
+    // backofff
     private int _backoffIndex;
     private DateTime _nextAttempt = DateTime.MinValue;
     private static readonly int[] BackoffMsBase = new[] { 50, 200, 500, 1000, 2000, 5000 };

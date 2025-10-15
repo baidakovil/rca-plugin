@@ -7,7 +7,7 @@ namespace Rca.Loader.Infrastructure
     /// Constants for assembly loading and runtime management.
     /// NOTE: Assemblies listed in NonCollectibleAssemblies are always loaded (or reused) from the default context.
     /// This avoids loading multiple copies across the collectible RuntimeLoadContext which would otherwise
-    /// break type identity (e.g. logging contracts shared between Loader and Runtime) or leak memory.
+    /// break type identity or leak memory.
     /// </summary>
     public static class AssemblyLoadConstants
     {
@@ -32,6 +32,7 @@ namespace Rca.Loader.Infrastructure
         {
             "Rca.Loader.Contracts",
             "Rca.Logging.Contracts", // shared logging DTOs (avoid duplicate load + FileLoadException)
+            "Rca.Contracts", // shared contracts used by Loader and Runtime
             "IronPython",
             "IronPython.Modules",
             "IronPython.StdLib",

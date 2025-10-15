@@ -1,14 +1,14 @@
 using System;
-using System.IO;
-using System.Threading;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
-using Autodesk.Revit.UI;
-using Rca.Loader.AssemblyManagement;
-using Rca.Loader.Infrastructure;
-using Rca.Loader.Configuration;
-using Rca.Loader.Logging;
+using System.Threading;
 using Microsoft.Extensions.Logging;
+using Autodesk.Revit.UI;
+using Rca.Loader.Infrastructure;
+using Rca.Loader.Logging;
+using Rca.Loader.AssemblyManagement;
+using Rca.Loader.Configuration;
 
 namespace Rca.Loader.Restart
 {
@@ -25,20 +25,11 @@ namespace Rca.Loader.Restart
             Path.GetDirectoryName(typeof(RestartManager).Assembly.Location) ?? string.Empty,
             "..", "..", "..", "build", "Scripts", ScriptFilename);
 
-        // LoaderSourceHashFile removed: validation uses AssemblyMetadata 'SourceHash' only.
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RestartManager"/> class.
-        /// </summary>
-        /// <param name="statusManager">The assembly status manager.</param>
         public RestartManager(AssemblyStatusManager statusManager)
         {
             _statusManager = statusManager ?? throw new ArgumentNullException(nameof(statusManager));
         }
 
-        /// <summary>
-        /// Shows a dialog with restart options and countdown.
-        /// </summary>
         public bool ShowRestartDialog(int countdownSeconds = 10)
         {
             try
@@ -63,7 +54,7 @@ namespace Rca.Loader.Restart
                 {
                     try
                     {
-                        var remaining = Interlocked.Decrement(ref countdown);
+                        var remaining = System.Threading.Interlocked.Decrement(ref countdown);
                         if (remaining >= 0)
                         {
                             taskDialog.MainContent = $"Revit needs to restart to load the updated assembly. The restart will begin in {remaining} seconds.\n\n" +
@@ -93,9 +84,6 @@ namespace Rca.Loader.Restart
             }
         }
 
-        /// <summary>
-        /// Executes the PowerShell restart script.
-        /// </summary>
         public bool ExecuteRestartScript(out string error)
         {
             try
@@ -117,10 +105,8 @@ namespace Rca.Loader.Restart
                 }
 
 #if DEBUG
-                // In DEBUG builds, get script path from settings
-                var settings = SettingsService.LoadSettings();
-                var configuredPath = settings.Debug?.RestartScriptPath ?? string.Empty;
-                
+                // In DEBUG builds, allow using a configured path from future settings; fallback empty if not available
+                string configuredPath = string.Empty; // placeholder until SettingsService is introduced for new settings
                 if (!string.IsNullOrWhiteSpace(configuredPath))
                 {
                     var expandedPath = PathExpander.ExpandPath(configuredPath);
@@ -139,10 +125,15 @@ namespace Rca.Loader.Restart
                     }
                 }
                 
-                error = $"Restart script not found at configured path: {configuredPath}";
+                // Fallback to solution script
+                if (File.Exists(ScriptPath))
+                {
+                    ExecuteScript(ScriptPath, sourcePath, targetPath, out error);
+                    return string.IsNullOrEmpty(error);
+                }
+                error = $"Restart script not found at default path: {ScriptPath}";
                 return false;
 #else
-                // In RELEASE builds, restart functionality is not available
                 error = "Restart functionality is only available in DEBUG builds";
                 Log.LogInformation("Restart skipped - not available in RELEASE builds");
                 return false;
@@ -171,14 +162,8 @@ namespace Rca.Loader.Restart
                 }
 
 #if DEBUG
-                // Get project file path from settings if configured
-                var settings = SettingsService.LoadSettings();
-                var projectFilePath = settings.Debug?.RevitProjectFilePath;
-                
-                // Build PowerShell arguments
+                string? projectFilePath = null; // until settings are reintroduced
                 var arguments = $"-ExecutionPolicy Bypass -File \"{scriptPath}\" -SourcePath \"{sourcePath}\" -TargetPath \"{targetPath}\" -RevitExecutable \"{revitExecutable}\"";
-                
-                // Add file path parameter if configured
                 if (!string.IsNullOrWhiteSpace(projectFilePath))
                 {
                     var expandedFilePath = PathExpander.ExpandPath(projectFilePath);
@@ -191,7 +176,7 @@ namespace Rca.Loader.Restart
 
                 var startInfo = new ProcessStartInfo
                 {
-                    FileName = PowerShellPath,
+                    FileName = "powershell.exe",
                     Arguments = arguments,
                     UseShellExecute = false,
                     CreateNoWindow = true,
@@ -218,30 +203,16 @@ namespace Rca.Loader.Restart
         }
 
         /// <summary>
-        /// Validates that the loader assembly was copied successfully by comparing embedded source hashes
-        /// (AssemblyMetadata SourceHash) only.
+        /// Validates that all Loader and Runtime assemblies were copied successfully by comparing embedded source hashes.
+        /// Every DLL in a group must share the same SourceHash value.
         /// </summary>
         public bool ValidateAssemblyCopy(string sourcePath, string targetPath)
         {
             try
             {
-                var loaderFileName = LoaderConstants.LoaderFileName;
-                var loaderSourcePath = Path.Combine(sourcePath, loaderFileName);
-                var loaderTargetPath = Path.Combine(targetPath, loaderFileName);
-                if (!File.Exists(loaderTargetPath)) { Log.LogWarning("ValidateAssemblyCopy target missing path={Path}", loaderTargetPath); return false; }
-
-                var srcMetaHash = AttributeMetadataLoader.TryGetFromFile(loaderSourcePath, "SourceHash");
-                var tgtMetaHash = AttributeMetadataLoader.TryGetFromFile(loaderTargetPath, "SourceHash");
-                if (string.IsNullOrEmpty(srcMetaHash) || srcMetaHash == AttributeMetadataLoader.MissingMarker || string.IsNullOrEmpty(tgtMetaHash) || tgtMetaHash == AttributeMetadataLoader.MissingMarker)
-                {
-                    Log.LogWarning("ValidateAssemblyCopy missing metadata source={Src} target={Tgt}", srcMetaHash, tgtMetaHash);
-                    return false;
-                }
-                var srcShort = GetShortHash(srcMetaHash);
-                var tgtShort = GetShortHash(tgtMetaHash);
-                bool match = string.Equals(srcShort, tgtShort, StringComparison.OrdinalIgnoreCase);
-                if (!match) Log.LogWarning("ValidateAssemblyCopy mismatch src={Src} tgt={Tgt}", srcShort, tgtShort);
-                return match;
+                bool loaderOk = ValidateGroup(sourcePath, targetPath, LoaderConstants.LoaderAssemblies);
+                bool runtimeOk = ValidateGroup(sourcePath, targetPath, LoaderConstants.RuntimeAssemblies);
+                return loaderOk && runtimeOk;
             }
             catch (Exception ex)
             {
@@ -255,6 +226,43 @@ namespace Rca.Loader.Restart
             if (string.IsNullOrEmpty(hash)) return string.Empty;
             var cleaned = hash.Trim();
             return cleaned.Length > 6 ? cleaned.Substring(0, 6) : cleaned;
+        }
+
+        private bool ValidateGroup(string sourcePath, string targetPath, string[] files)
+        {
+            string srcHash = string.Empty;
+            foreach (var file in files)
+            {
+                var src = Path.Combine(sourcePath, file);
+                var tgt = Path.Combine(targetPath, file);
+                if (!File.Exists(tgt)) { Log.LogWarning("ValidateAssemblyCopy target missing path={Path}", tgt); return false; }
+
+                var srcMetaHash = AttributeMetadataLoader.TryGetFromFile(src, BuildConstants.SourceHashMetadataKey);
+                var tgtMetaHash = AttributeMetadataLoader.TryGetFromFile(tgt, BuildConstants.SourceHashMetadataKey);
+                if (string.IsNullOrEmpty(srcMetaHash) || srcMetaHash == AttributeMetadataLoader.MissingMarker || string.IsNullOrEmpty(tgtMetaHash) || tgtMetaHash == AttributeMetadataLoader.MissingMarker)
+                {
+                    Log.LogWarning("ValidateAssemblyCopy missing metadata source={Src} target={Tgt}", srcMetaHash, tgtMetaHash);
+                    return false;
+                }
+
+                if (string.IsNullOrEmpty(srcHash))
+                {
+                    srcHash = srcMetaHash;
+                }
+                else if (!string.Equals(GetShortHash(srcHash), GetShortHash(srcMetaHash), StringComparison.OrdinalIgnoreCase))
+                {
+                    Log.LogWarning("ValidateAssemblyCopy group mismatch src={Src} file={File}", GetShortHash(srcHash), file);
+                    return false;
+                }
+
+                bool match = string.Equals(GetShortHash(srcMetaHash), GetShortHash(tgtMetaHash), StringComparison.OrdinalIgnoreCase);
+                if (!match)
+                {
+                    Log.LogWarning("ValidateAssemblyCopy file mismatch file={File} src={Src} tgt={Tgt}", file, GetShortHash(srcMetaHash), GetShortHash(tgtMetaHash));
+                    return false;
+                }
+            }
+            return true;
         }
     }
 }

@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
+using Microsoft.Extensions.Logging;
+using Rca.Loader.Logging;
 
 namespace Rca.Loader.Infrastructure
 {
@@ -16,6 +18,7 @@ namespace Rca.Loader.Infrastructure
         private string? runtimePath;
         private object? runtimeInstance;
         private bool disposed = false;
+        private static readonly ILogger Log = LoaderLog.GetLogger<RuntimeLoadContext>();
         
         /// <summary>
         /// Gets the path to the runtime assembly.
@@ -34,8 +37,8 @@ namespace Rca.Loader.Infrastructure
         public void SetRuntimePath(string path)
         {
             runtimePath = path;
+            Log.LogDebug("RuntimeLoadContext.SetRuntimePath path={Path}", path);
             
-            // Update the assembly loader with the new base directory
             var baseDirectory = !string.IsNullOrEmpty(path) ? Path.GetDirectoryName(path) : null;
             assemblyLoader = new AssemblyLoadService(this, baseDirectory);
         }
@@ -44,7 +47,11 @@ namespace Rca.Loader.Infrastructure
         /// Sets the runtime instance.
         /// </summary>
         /// <param name="instance">The runtime instance to set.</param>
-        public void SetRuntimeInstance(object instance) => runtimeInstance = instance;
+        public void SetRuntimeInstance(object instance)
+        {
+            runtimeInstance = instance;
+            Log.LogTrace("Runtime instance set type={Type}", instance?.GetType().FullName);
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RuntimeLoadContext"/> class.
@@ -54,6 +61,7 @@ namespace Rca.Loader.Infrastructure
             assemblyLoader = new AssemblyLoadService(this);
             Resolving += OnResolving;
             AssemblyLoadContext.Default.Resolving += OnDefaultContextResolving;
+            Log.LogDebug("RuntimeLoadContext created Collectible=true");
         }
         
         private Assembly? OnDefaultContextResolving(AssemblyLoadContext context, AssemblyName assemblyName)
@@ -62,9 +70,9 @@ namespace Rca.Loader.Infrastructure
             if (assemblyNameValue == null || assemblyLoader == null)
                 return null;
 
-            // Handle Python dependencies that need to be loaded in default context
             if (AssemblyLoadConstants.PythonAssemblies.Contains(assemblyNameValue, StringComparer.OrdinalIgnoreCase))
             {
+                Log.LogTrace("Default resolving python dep name={Name}", assemblyNameValue);
                 return assemblyLoader.TryLoad(AssemblyLoadStrategy.RuntimeToDefault, assemblyNameValue);
             }
             
@@ -77,26 +85,25 @@ namespace Rca.Loader.Infrastructure
             if (string.IsNullOrEmpty(assemblyNameOnly) || assemblyLoader == null)
                 return null;
             
-            // Load these assemblies in default context to avoid collectible assembly issues
             if (AssemblyLoadConstants.NonCollectibleAssemblies.Contains(assemblyNameOnly, StringComparer.OrdinalIgnoreCase))
             {
+                Log.LogTrace("Resolving NonCollectible name={Name}", assemblyNameOnly);
                 return assemblyLoader.TryLoad(AssemblyLoadStrategy.DefaultContext, assemblyNameOnly) ?? 
                        assemblyLoader.TryLoad(AssemblyLoadStrategy.CurrentContext, assemblyNameOnly);
             }
             
-            // For contracts assembly, prefer existing one from default context
             if (string.Equals(assemblyNameOnly, AssemblyLoadConstants.LoaderContractsAssembly, StringComparison.OrdinalIgnoreCase))
             {
+                Log.LogTrace("Resolving prefers existing default for contracts name={Name}", assemblyNameOnly);
                 var existingAssembly = assemblyLoader.FindExistingInDefaultContext(assemblyNameOnly);
                 if (existingAssembly != null)
                     return existingAssembly;
             }
             
-            // Load other assemblies in current context
+            Log.LogTrace("Resolving in current context name={Name}", assemblyNameOnly);
             return assemblyLoader.TryLoad(AssemblyLoadStrategy.CurrentContext, assemblyNameOnly);
         }
 
-        /// <inheritdoc/>
         protected override Assembly? Load(AssemblyName assemblyName) => null;
         
         /// <summary>
@@ -104,6 +111,7 @@ namespace Rca.Loader.Infrastructure
         /// </summary>
         public new void Unload()
         {
+            Log.LogDebug("RuntimeLoadContext.Unload called path={Path}", runtimePath);
             if (!disposed)
             {
                 AssemblyLoadContext.Default.Resolving -= OnDefaultContextResolving;

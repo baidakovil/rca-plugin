@@ -24,7 +24,7 @@
     <!-- Revit addins directory where .addin file is deployed -->
     <RcaRevitAddinsDir Condition="'$(RcaRevitAddinsDir)' == ''">$(APPDATA)\Autodesk\Revit\Addins\$(RcaRevitVersion)</RcaRevitAddinsDir>
     
-    <!-- RCA-specific subdirectory in Revit addins folder (contains Rca.Loader.dll) -->
+    <!-- RCA-specific subdirectory in Revit addins folder (contains Loader assemblies) -->
     <RcaAddinDir Condition="'$(RcaAddinDir)' == ''">$(RcaRevitAddinsDir)\Rca</RcaAddinDir>
     
     <!-- Root directory for all runtime deployments (timestamped folders created here) -->
@@ -96,55 +96,62 @@
   </Target>
 
   <!-- 
-    Copy merged Loader DLL to Revit addins directory during initial setup ONLY
+    Copy Loader DLL to Revit addins directory during initial setup ONLY
     This target only runs if:
     - IsLoaderProject=true (only for Rca.Loader project)
     - Rca.Loader.dll does NOT already exist in the target directory
-    
-    Why initial setup only?
-    During hot-reload development, the Loader assembly in Revit addins dir should NOT be
-    automatically updated by the build (requires Revit restart). Updates are handled by
-    the explicit restart workflow via RestartManager.
-    
-    CRITICAL: Must depend on InjectLoaderAttributes to ensure we copy the DLL AFTER
-    AttributeInjector has modified it, not before.
-    
-    CRITICAL: Must copy from $(TargetPath) not $(OutputPath), because $(TargetPath) is
-    the file modified by AttributeInjector, while $(OutputPath) may contain stale cached version.
+    Updates are handled later by an explicit restart workflow.
   -->
-  <Target Name="InitialSetupCopyToRevitAddins" AfterTargets="DeployLoaderToTemp" DependsOnTargets="InjectLoaderAttributes">
-    <!-- Dynamic check for whether to copy - evaluated at target execution time -->
+  <Target Name="InitialSetupCopyToRevitAddins" AfterTargets="Build">
     <PropertyGroup>
       <ShouldCopyToAddin>false</ShouldCopyToAddin>
       <ShouldCopyToAddin Condition="'$(IsLoaderProject)' == 'true' AND !Exists('$(RcaAddinDir)\Rca.Loader.dll')">true</ShouldCopyToAddin>
     </PropertyGroup>
     
-    <!-- Diagnostic message showing evaluation results -->
     <Message Text="InitialSetup check: IsLoaderProject=$(IsLoaderProject), AddinExists=$([System.IO.File]::Exists('$(RcaAddinDir)\Rca.Loader.dll')), WillCopy=$(ShouldCopyToAddin)" 
              Importance="High" />
     
-    <!-- Create Rca subdirectory if it doesn't exist and we're going to copy -->
     <MakeDir Directories="$(RcaAddinDir)" Condition="'$(ShouldCopyToAddin)' == 'true' AND !Exists('$(RcaAddinDir)')" />
     
-    <!-- 
-      Copy the merged Loader DLL to the Revit addins directory.
-      CRITICAL: Use $(TargetPath) as source, not $(OutputPath)Rca.Loader.dll
-      $(TargetPath) is the file modified by AttributeInjector with correct metadata
-    -->
     <Copy
       SourceFiles="$(TargetPath)"
       DestinationFolder="$(RcaAddinDir)"
       SkipUnchangedFiles="false"
       Condition="'$(ShouldCopyToAddin)' == 'true'" />
       
-    <!-- Success message when copy performed -->
     <Message Text="Performed initial setup - copied Loader assembly from $(TargetPath) to $(RcaAddinDir)" 
              Importance="High"
              Condition="'$(ShouldCopyToAddin)' == 'true'" />
     
-    <!-- Informational message when copy skipped -->
     <Message Text="Skipped initial setup - Loader already exists in $(RcaAddinDir)" 
              Importance="High"
              Condition="'$(ShouldCopyToAddin)' == 'false' AND '$(IsLoaderProject)' == 'true'" />
+  </Target>
+
+  <!-- Initial setup: copy Loader group DLLs to addin dir if missing -->
+  <Target Name="InitialSetupCopyToRevitAddins" AfterTargets="Build">
+    <PropertyGroup>
+      <IsLoader>$(IsLoaderProject)</IsLoader>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(IsLoader)' == 'true'">
+      <LoaderGroupDll Include="$(TargetDir)Rca.Loader.dll" />
+      <LoaderGroupDll Include="$(TargetDir)Rca.Loader.Contracts.dll" />
+      <LoaderGroupDll Include="$(TargetDir)Rca.Logging.Contracts.dll" />
+      <!-- Filter to only missing in addin dir -->
+      <LoaderGroupDllToCopy Include="@(LoaderGroupDll)" Condition="!Exists('$(RcaAddinDir)\%(Filename)%(Extension)')" />
+    </ItemGroup>
+
+    <Message Condition="'$(IsLoader)' == 'true'" Text="Initial setup: checking Loader group DLLs in $(RcaAddinDir)" Importance="High" />
+
+    <Copy SourceFiles="@(LoaderGroupDllToCopy)"
+          DestinationFiles="@(LoaderGroupDllToCopy->'$(RcaAddinDir)\%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true"
+          Condition="'$(IsLoader)' == 'true' and '@(LoaderGroupDllToCopy)' != ''"
+          OverwriteReadOnlyFiles="false">
+      <Output TaskParameter="CopiedFiles" ItemName="CopiedLoaderFiles" />
+    </Copy>
+
+    <Message Condition="'@(CopiedLoaderFiles)' != ''" Text="Initial setup: copied files: @(CopiedLoaderFiles->'%(Filename)%(Extension)', ', ')" Importance="High" />
+    <Message Condition="'@(LoaderGroupDllToCopy)' == '' and '$(IsLoader)' == 'true'" Text="Initial setup: all Loader group DLLs already present in $(RcaAddinDir) - nothing to copy" Importance="High" />
   </Target>
 </Project>

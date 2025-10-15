@@ -1,0 +1,144 @@
+<Project>
+  <!-- Using SourceHashGenerator tool to compute group-level source hashes and inject assembly metadata uniformly. -->
+
+  <PropertyGroup>
+    <!-- Paths to SourceHashGenerator tool -->
+    <SourceHashProject>$(SolutionDir)src\Tools\SourceHashGenerator\SourceHashGenerator.csproj</SourceHashProject>
+    <SourceHashExe>$(SolutionDir)src\Tools\SourceHashGenerator\bin\$(Configuration)\net8.0\SourceHashGenerator.exe</SourceHashExe>
+  </PropertyGroup>
+
+  <!-- Compute Loader and Runtime group hashes once per build per project context. Safe and deterministic as tool sorts inputs. -->
+  <Target Name="BuildSourceHashGenerator" BeforeTargets="ComputeRcaGroupHashes">
+    <PropertyGroup>
+      <SourceHashProjectModTime>$([System.IO.File]::GetLastWriteTime('$(SourceHashProject)').Ticks)</SourceHashProjectModTime>
+      <SourceHashExeModTime Condition="Exists('$(SourceHashExe)')">$([System.IO.File]::GetLastWriteTime('$(SourceHashExe)').Ticks)</SourceHashExeModTime>
+      <SourceHashExeModTime Condition="!Exists('$(SourceHashExe)')">0</SourceHashExeModTime>
+    </PropertyGroup>
+    <MSBuild Projects="$(SourceHashProject)" Targets="Build" Properties="Configuration=$(Configuration)" Condition="'$(SourceHashProjectModTime)' &gt; '$(SourceHashExeModTime)'" />
+  </Target>
+
+  <!-- Compute hashes BEFORE GenerateAssemblyInfo so they can be embedded as attributes -->
+  <Target Name="ComputeRcaGroupHashes" BeforeTargets="GenerateAssemblyInfo" DependsOnTargets="BuildSourceHashGenerator">
+    <PropertyGroup>
+      <!-- Loader group projects: Rca.Loader, Rca.Loader.Contracts, Rca.Logging.Contracts -->
+      <RcaLoaderRoots>$(SolutionDir)src\Rca.Loader;$(SolutionDir)src\Rca.Loader.Contracts;$(SolutionDir)src\Rca.Logging.Contracts</RcaLoaderRoots>
+      <!-- Runtime group projects: Rca.Core, Rca.Runtime, Rca.Network, Rca.UI, Rca.Contracts -->
+      <RcaRuntimeRoots>$(SolutionDir)src\Rca.Core;$(SolutionDir)src\Rca.Runtime;$(SolutionDir)src\Rca.Network;$(SolutionDir)src\Rca.UI;$(SolutionDir)src\Rca.Contracts</RcaRuntimeRoots>
+      <LoaderHashIntermediateFile>$(IntermediateOutputPath)source-hash-loader.txt</LoaderHashIntermediateFile>
+      <RuntimeHashIntermediateFile>$(IntermediateOutputPath)source-hash-runtime.txt</RuntimeHashIntermediateFile>
+    </PropertyGroup>
+
+    <!-- Compute Loader hash -->
+    <Exec Command="&quot;$(SourceHashExe)&quot; --roots &quot;$(RcaLoaderRoots)&quot; --out &quot;$(LoaderHashIntermediateFile)&quot;" />
+    <ReadLinesFromFile File="$(LoaderHashIntermediateFile)">
+      <Output TaskParameter="Lines" ItemName="LoaderSourceHashLines" />
+    </ReadLinesFromFile>
+    <PropertyGroup>
+      <RcaLoaderSourceHash>%(LoaderSourceHashLines.Identity)</RcaLoaderSourceHash>
+    </PropertyGroup>
+
+    <!-- Compute Runtime hash -->
+    <Exec Command="&quot;$(SourceHashExe)&quot; --roots &quot;$(RcaRuntimeRoots)&quot; --out &quot;$(RuntimeHashIntermediateFile)&quot;" />
+    <ReadLinesFromFile File="$(RuntimeHashIntermediateFile)">
+      <Output TaskParameter="Lines" ItemName="RuntimeSourceHashLines" />
+    </ReadLinesFromFile>
+    <PropertyGroup>
+      <RcaRuntimeSourceHash>%(RuntimeSourceHashLines.Identity)</RcaRuntimeSourceHash>
+    </PropertyGroup>
+
+    <Message Text="RCA Hashes: Loader=$(RcaLoaderSourceHash) Runtime=$(RcaRuntimeSourceHash)" Importance="High" />
+  </Target>
+
+  <!-- Classify project into group by name; minimal duplication here -->
+  <PropertyGroup>
+    <IsLoaderGroupProject>false</IsLoaderGroupProject>
+    <IsRuntimeGroupProject>false</IsRuntimeGroupProject>
+    <IsLoaderGroupProject Condition="'$(MSBuildProjectName)' == 'Rca.Loader' or '$(MSBuildProjectName)' == 'Rca.Loader.Contracts' or '$(MSBuildProjectName)' == 'Rca.Logging.Contracts'">true</IsLoaderGroupProject>
+    <IsRuntimeGroupProject Condition="'$(MSBuildProjectName)' == 'Rca.Core' or '$(MSBuildProjectName)' == 'Rca.Runtime' or '$(MSBuildProjectName)' == 'Rca.Network' or '$(MSBuildProjectName)' == 'Rca.UI' or '$(MSBuildProjectName)' == 'Rca.Contracts'">true</IsRuntimeGroupProject>
+  </PropertyGroup>
+
+  <!-- Add attributes just before GenerateAssemblyInfo so values are available and used by Roslyn -->
+  <Target Name="AddAssemblyMetadataAttributes" BeforeTargets="GenerateAssemblyInfo" DependsOnTargets="ComputeRcaGroupHashes">
+    <ItemGroup Condition="'$(IsLoaderGroupProject)' == 'true'">
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>SourceHash</_Parameter1>
+        <_Parameter2>$(RcaLoaderSourceHash)</_Parameter2>
+      </AssemblyAttribute>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>DeployFolder</_Parameter1>
+        <_Parameter2>$(RcaHotReloadTimestamp)</_Parameter2>
+      </AssemblyAttribute>
+    </ItemGroup>
+    <ItemGroup Condition="'$(IsRuntimeGroupProject)' == 'true'">
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>SourceHash</_Parameter1>
+        <_Parameter2>$(RcaRuntimeSourceHash)</_Parameter2>
+      </AssemblyAttribute>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>DeployFolder</_Parameter1>
+        <_Parameter2>$(RcaHotReloadTimestamp)</_Parameter2>
+      </AssemblyAttribute>
+    </ItemGroup>
+  </Target>
+
+  <!-- Deployment: copy group assemblies to timestamped hot-reload directory -->
+  <Target Name="DeployLoaderGroup" AfterTargets="Build" Condition="'$(MSBuildProjectName)' == 'Rca.Loader'">
+    <PropertyGroup>
+      <RuntimeDeployDir>$(RcaRuntimeDeployRoot)\$(RcaHotReloadTimestamp)</RuntimeDeployDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(RuntimeDeployDir)" />
+    <ItemGroup>
+      <LoaderDeployFiles Include="$(TargetDir)Rca.Loader.dll" />
+      <LoaderDeployFiles Include="$(TargetDir)Rca.Loader.Contracts.dll" />
+      <LoaderDeployFiles Include="$(TargetDir)Rca.Logging.Contracts.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(LoaderDeployFiles)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" />
+    <PropertyGroup>
+      <LoaderVersionFile>$(RuntimeDeployDir)\SourceHash-Loader-$(RcaLoaderSourceHash).txt</LoaderVersionFile>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(LoaderVersionFile)" Lines="$(RcaLoaderSourceHash)" Overwrite="true" />
+    <Message Text="Loader group deployed to $(RuntimeDeployDir)" Importance="High" />
+  </Target>
+
+  <Target Name="DeployRuntimeGroup" AfterTargets="Build" Condition="'$(MSBuildProjectName)' == 'Rca.Runtime'">
+    <PropertyGroup>
+      <RuntimeDeployDir>$(RcaRuntimeDeployRoot)\$(RcaHotReloadTimestamp)</RuntimeDeployDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(RuntimeDeployDir)" />
+    <ItemGroup>
+      <RuntimeDeployFiles Include="$(TargetDir)Rca.Runtime.dll" />
+      <RuntimeDeployFiles Include="$(TargetDir)Rca.Core.dll" />
+      <RuntimeDeployFiles Include="$(TargetDir)Rca.Network.dll" />
+      <RuntimeDeployFiles Include="$(TargetDir)Rca.UI.dll" />
+      <RuntimeDeployFiles Include="$(TargetDir)Rca.Contracts.dll" />
+      <!-- IronPython runtime -->
+      <RuntimeDeployFiles Include="$(TargetDir)IronPython*.dll" />
+      <RuntimeDeployFiles Include="$(TargetDir)Microsoft.Scripting.dll" />
+      <RuntimeDeployFiles Include="$(TargetDir)Microsoft.Dynamic.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(RuntimeDeployFiles)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" />
+    <ItemGroup>
+      <LibFiles Include="$(TargetDir)Lib\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(LibFiles)" DestinationFiles="@(LibFiles-&gt;'$(RuntimeDeployDir)\Lib\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="@(LibFiles)!=''" />
+    <PropertyGroup>
+      <RuntimeVersionFile>$(RuntimeDeployDir)\SourceHash-Runtime-$(RcaRuntimeSourceHash).txt</RuntimeVersionFile>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(RuntimeVersionFile)" Lines="$(RcaRuntimeSourceHash)" Overwrite="true" />
+    <Message Text="Runtime group deployed to $(RuntimeDeployDir)" Importance="High" />
+  </Target>
+
+  <!-- Notify Addin that a new build is available (runtime triggers notification) -->
+  <PropertyGroup>
+    <HotReloadNotify Condition="'$(HotReloadNotify)' == ''">true</HotReloadNotify>
+  </PropertyGroup>
+
+  <Target Name="NotifyBuildCompleted" AfterTargets="DeployRuntimeGroup" Condition="'$(MSBuildProjectName)' == 'Rca.Runtime' and '$(HotReloadNotify)' == 'true'">
+    <PropertyGroup>
+      <PipeName>RCA_PIPE</PipeName>
+      <PsNotifyCmd>powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "try { $p = New-Object System.IO.Pipes.NamedPipeClientStream('.', '$(PipeName)', [System.IO.Pipes.PipeDirection]::InOut); $p.Connect(3000); $sw = New-Object System.IO.StreamWriter($p); $sw.AutoFlush = $true; $sr = New-Object System.IO.StreamReader($p); $msg = '{\"Command\":\"BUILD_COMPLETED\",\"Payload\":\"\"}'; $sw.WriteLine($msg); $resp = $sr.ReadLine(); Write-Host 'Build notification response:' $resp; $p.Close() } catch { Write-Warning ('Build notification failed: ' + $_.Exception.Message) }"</PsNotifyCmd>
+    </PropertyGroup>
+    <Message Text="Notifying Revit addin about completed build" Importance="High" />
+    <Exec Command="$(PsNotifyCmd)" IgnoreExitCode="true" />
+  </Target>
+</Project>
