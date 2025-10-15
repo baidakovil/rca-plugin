@@ -24,7 +24,7 @@ namespace Rca.Loader.AssemblyManagement
         public LoadedAssembliesInfo CurrentInfo { get; } = new LoadedAssembliesInfo();
 
         /// <summary>
-        /// Initializes status at Loader startup. Reads metadata only from disk.
+        /// Initializes status at Loader startup. Reads metadata only from disk
         /// </summary>
         public void InitializeOnStartup()
         {
@@ -203,7 +203,7 @@ namespace Rca.Loader.AssemblyManagement
         }
 
         /// <summary>
-        /// Processes signal from MSBuild that a new build is available. No path is required; we resolve latest folder.
+        /// Processes signal from MSBuild that a new build is available. Resolves latest folder and compares both groups.
         /// </summary>
         public void ProcessMsBuildSignal(string tempDllPath)
         {
@@ -213,7 +213,7 @@ namespace Rca.Loader.AssemblyManagement
                 _log.LogDebug("ProcessMsBuildSignal tempDllPath={Temp} resolved={Resolved}", tempDllPath, latest);
                 if (string.IsNullOrEmpty(latest)) return;
 
-                // Read runtime group hash from disk
+                // Runtime discovered from latest
                 var (rok, rHash, rReason) = TryReadRuntimeGroupHash(latest);
                 if (rok)
                 {
@@ -227,42 +227,36 @@ namespace Rca.Loader.AssemblyManagement
                     _log.LogWarning("Runtime group invalid in {Dir}: {Reason}", latest, rReason);
                 }
 
-                string? oldLoaderHashSnapshot = CurrentInfo.LoaderComponents.Hash;
-                // Read loader metadata from deployed loader (addin dir)
+                // Loader installed (addin dir)
+                var oldLoaderHashSnapshot = CurrentInfo.LoaderComponents.Hash;
                 if (File.Exists(LoaderConstants.LoaderAssemblyPath))
                 {
-                    var lHash = AttributeMetadataLoader.TryGetFromFile(LoaderConstants.LoaderAssemblyPath, BuildConstants.SourceHashMetadataKey);
-                    var lDeploy = AttributeMetadataLoader.TryGetFromFile(LoaderConstants.LoaderAssemblyPath, BuildConstants.DeployFolderMetadataKey);
-                    if (!string.IsNullOrEmpty(lHash) && lHash != AttributeMetadataLoader.MissingMarker)
+                    var lHashInstalled = AttributeMetadataLoader.TryGetFromFile(LoaderConstants.LoaderAssemblyPath, BuildConstants.SourceHashMetadataKey);
+                    var lDeployInstalled = AttributeMetadataLoader.TryGetFromFile(LoaderConstants.LoaderAssemblyPath, BuildConstants.DeployFolderMetadataKey);
+                    if (!string.IsNullOrEmpty(lHashInstalled) && lHashInstalled != AttributeMetadataLoader.MissingMarker)
                     {
-                        CurrentInfo.LoaderComponents.Hash = lHash;
-                        if (!string.IsNullOrEmpty(lDeploy) && lDeploy != AttributeMetadataLoader.MissingMarker)
-                            CurrentInfo.LoaderComponents.Path = lDeploy;
-                        _log.LogDebug("Loader info updated: hash={Old}->{New} deploy={Deploy}", oldLoaderHashSnapshot, lHash, lDeploy);
+                        CurrentInfo.LoaderComponents.Hash = lHashInstalled;
+                        if (!string.IsNullOrEmpty(lDeployInstalled) && lDeployInstalled != AttributeMetadataLoader.MissingMarker)
+                            CurrentInfo.LoaderComponents.Path = lDeployInstalled;
+                        _log.LogDebug("Loader installed info: hash={Hash} deploy={Deploy}", lHashInstalled, lDeployInstalled);
                     }
                 }
 
-                // Fallback if loader hash still missing
-                if (CurrentInfo.LoaderComponents.Hash == AttributeMetadataLoader.MissingMarker)
+                // Loader latest (from latest folder)
+                var (lokLatest, lHashLatest, lReasonLatest) = TryReadLoaderGroupHash(latest);
+                if (lokLatest)
                 {
-                    var (lok, lhash, lreason) = TryReadLoaderGroupHash(latest);
-                    if (lok)
-                    {
-                        var old = oldLoaderHashSnapshot;
-                        CurrentInfo.LoaderComponents.Hash = lhash;
-                        var stamp = Path.GetFileName(latest);
-                        if (string.IsNullOrEmpty(CurrentInfo.LoaderComponents.Path) || CurrentInfo.LoaderComponents.Path == AttributeMetadataLoader.MissingMarker)
-                            CurrentInfo.LoaderComponents.Path = stamp ?? AttributeMetadataLoader.MissingMarker;
-                        _log.LogDebug("Loader fallback update from latest deploy hash={Old}->{New} stamp={Stamp}", old, lhash, stamp);
-                    }
-                    else
-                    {
-                        _log.LogDebug("Loader fallback update failed: {Reason}", lreason);
-                    }
+                    _log.LogDebug("Discovered loader build in latest folder hash={Hash} dir={Dir}", lHashLatest, latest);
+                }
+                else
+                {
+                    _log.LogDebug("No valid loader build discovered in latest folder: {Reason}", lReasonLatest);
                 }
 
-                bool loaderChanged = !string.Equals(oldLoaderHashSnapshot, CurrentInfo.LoaderComponents.Hash, StringComparison.OrdinalIgnoreCase);
-                bool runtimeChanged = !string.IsNullOrEmpty(CurrentInfo.LoadedRuntimeAssembly.Hash) && !string.Equals(CurrentInfo.RuntimeAssembly.Hash, CurrentInfo.LoadedRuntimeAssembly.Hash, StringComparison.OrdinalIgnoreCase);
+                // Determine changes: loaderChanged compares latest vs installed; runtimeChanged compares discovered vs loaded
+                bool loaderChanged = lokLatest && !string.Equals(lHashLatest, CurrentInfo.LoaderComponents.Hash, StringComparison.OrdinalIgnoreCase);
+                bool runtimeChanged = !string.IsNullOrEmpty(CurrentInfo.LoadedRuntimeAssembly.Hash) &&
+                                      !string.Equals(CurrentInfo.RuntimeAssembly.Hash, CurrentInfo.LoadedRuntimeAssembly.Hash, StringComparison.OrdinalIgnoreCase);
                 var ev = DetermineEventType(loaderChanged, runtimeChanged);
 
                 var oldSignal = $"{CurrentInfo.LastMSBuildSignal.Time} - {CurrentInfo.LastMSBuildSignal.Event}";
@@ -282,9 +276,16 @@ namespace Rca.Loader.AssemblyManagement
         {
             try
             {
+                // Compare installed loader (addin dir) vs latest discovered loader in runtime deploy root
                 if (!File.Exists(LoaderConstants.LoaderAssemblyPath)) return false;
-                var loaderHash = AttributeMetadataLoader.TryGetFromFile(LoaderConstants.LoaderAssemblyPath, BuildConstants.SourceHashMetadataKey);
-                return !string.IsNullOrEmpty(loaderHash) && loaderHash != CurrentInfo.LoaderComponents.Hash;
+                var installedHash = AttributeMetadataLoader.TryGetFromFile(LoaderConstants.LoaderAssemblyPath, BuildConstants.SourceHashMetadataKey);
+                var latestDir = GetLatestTempDllFolder();
+                if (string.IsNullOrEmpty(latestDir)) return false;
+                var (lok, latestHash, _) = TryReadLoaderGroupHash(latestDir);
+                if (!lok || string.IsNullOrEmpty(installedHash) || installedHash == AttributeMetadataLoader.MissingMarker) return false;
+                var result = !string.Equals(installedHash, latestHash, StringComparison.OrdinalIgnoreCase);
+                _log.LogDebug("IsLoaderOutdated installed={Installed} latest={Latest} result={Result}", installedHash, latestHash, result);
+                return result;
             }
             catch (Exception ex)
             {
