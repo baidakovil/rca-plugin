@@ -89,4 +89,35 @@
     <!-- Remove the dummy file - we don't actually need it at runtime -->
     <Delete Files="$(OutputPath)Rca.Loader.Contracts.dll" />
   </Target>
+
+  <!-- AfterBuild: copy integration test artifacts to latest runtime folder root -->
+  <Target Name="CopyIntegrationTestsToRuntime" AfterTargets="Build">
+    <PropertyGroup>
+      <LatestFile>$(IntermediateOutputPath)latest_runtime.txt</LatestFile>
+    </PropertyGroup>
+
+    <!-- Resolve latest runtime folder via PowerShell (compatible with .NET SDK MSBuild) -->
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;$root = [System.IO.Path]::Combine([Environment]::GetFolderPath('LocalApplicationData'),'RCA','Runtime'); if (!(Test-Path $root)) { '' } else { (Get-ChildItem -Directory -Path $root | Sort-Object Name -Descending | Select-Object -First 1).FullName }&quot; &gt; &quot;$(LatestFile)&quot;" />
+
+    <ReadLinesFromFile File="$(LatestFile)">
+      <Output TaskParameter="Lines" ItemName="_LatestRuntimeFolderLines" />
+    </ReadLinesFromFile>
+
+    <PropertyGroup>
+      <LatestRuntimeFolder>@(_LatestRuntimeFolderLines->'%(Identity)')</LatestRuntimeFolder>
+    </PropertyGroup>
+
+    <Error Condition="'$(LatestRuntimeFolder)' == ''" Text="No runtime folder found under %25LOCALAPPDATA%25\RCA\Runtime. Build the Runtime first." />
+
+    <ItemGroup>
+      <_TestArtifacts Include="$(TargetDir)Rca.Integration.Revit.Tests.*" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(_TestArtifacts)"
+          DestinationFolder="$(LatestRuntimeFolder)"
+          SkipUnchangedFiles="false"
+          OverwriteReadOnlyFiles="true" />
+
+    <Message Text="Copied @(_TestArtifacts-&gt;'%(Filename)%(Extension)') to $(LatestRuntimeFolder)" Importance="High" />
+  </Target>
 </Project>

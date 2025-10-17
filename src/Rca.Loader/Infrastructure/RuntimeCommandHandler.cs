@@ -100,6 +100,9 @@ namespace Rca.Loader.Infrastructure
             Log.LogInformation("Handling RELOAD command payload={Payload}", cmd.Payload);
             try
             {
+                // Always force-unload any active test ALC for explicit RELOAD and let runtime reload fresh
+                RevitTestExecutor.ForceUnloadActiveTestLoadContext();
+
                 var result = runtimeManager.ReloadRuntime(cmd.Payload, out var errorMessage);
                 if (result && !string.IsNullOrEmpty(cmd.Payload))
                 {
@@ -125,7 +128,10 @@ namespace Rca.Loader.Infrastructure
             Log.LogInformation("Handling RELOAD_RUNTIME command (auto-detect latest) payloadIgnoredLen={Len}", cmd.Payload?.Length ?? 0);
             try
             {
-                // For new flow, determine latest folder automatically
+                // Always force-unload any active test ALC to clear stuck test references
+                RevitTestExecutor.ForceUnloadActiveTestLoadContext();
+
+                // Determine latest folder automatically
                 var latest = assemblyStatusManager?.GetLatestTempDllFolder() ?? string.Empty;
                 if (string.IsNullOrEmpty(latest))
                     return PipeResponseFactory.Error("No runtime deploy folders found");
