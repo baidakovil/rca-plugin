@@ -110,7 +110,10 @@
     <Error Condition="'$(LatestRuntimeFolder)' == ''" Text="No runtime folder found under %25LOCALAPPDATA%25\RCA\Runtime. Build the Runtime first." />
 
     <ItemGroup>
+      <!-- Core test assembly and sidecars -->
       <_TestArtifacts Include="$(TargetDir)Rca.Integration.Revit.Tests.*" />
+      <!-- NUnit framework dependency required at runtime for attribute resolution -->
+      <_TestArtifacts Include="$(TargetDir)nunit.framework*.dll" />
     </ItemGroup>
 
     <Copy SourceFiles="@(_TestArtifacts)"

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.IO;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Logging;
@@ -47,10 +48,11 @@ public class RevitTestExecutor : ITestExecutor
                 return;
             }
             
-            // Group tests by source assembly
-            var testsBySource = tests.GroupBy(test => test.Source);
+            // Group tests by runtime assembly path if available, otherwise by source
+            var testsByGroup = tests.GroupBy(test => 
+                test.GetPropertyValue(AdapterProperties.RuntimeAssemblyPath, defaultValue: test.Source));
             
-            foreach (var sourceGroup in testsBySource)
+            foreach (var group in testsByGroup)
             {
                 if (cancelled)
                 {
@@ -59,20 +61,18 @@ public class RevitTestExecutor : ITestExecutor
                 
                 try
                 {
-                    // Execute all tests from this source through the pipe
-                    var sourcePath = sourceGroup.Key;
-                    var sourceTests = sourceGroup.ToList();
+                    var assemblyPath = group.Key; // Prefer runtime path
+                    var sourceTests = group.ToList();
                     
                     frameworkHandle.SendMessage(TestMessageLevel.Informational, 
-                        $"RCA Test Adapter: Executing {sourceTests.Count} tests from {sourcePath}");
+                        $"RCA Test Adapter: Executing {sourceTests.Count} tests from {assemblyPath}");
                     
                     var pipeClient = new RevitPipeClient();
-                    var results = pipeClient.ExecuteTests(sourcePath, sourceTests, defaultTimeout);
+                    var results = pipeClient.ExecuteTests(assemblyPath, sourceTests, defaultTimeout);
                     
                     // Process results
                     foreach (var result in results)
                     {
-                        // Convert the TestResult to a TestResult object and report it
                         var testCase = sourceTests.FirstOrDefault(t => 
                             t.FullyQualifiedName == result.FullyQualifiedName);
                         
@@ -89,7 +89,6 @@ public class RevitTestExecutor : ITestExecutor
                                 EndTime = DateTimeOffset.FromUnixTimeMilliseconds(result.EndTimeUnixMs),
                             };
                             
-                            // Add any extra properties or messages from the result
                             foreach (var message in result.Messages)
                             {
                                 frameworkHandle.SendMessage(ConvertMessageLevel(message.Level), message.Text);
@@ -112,7 +111,6 @@ public class RevitTestExecutor : ITestExecutor
         }
         finally
         {
-            // No resources to clean up with this approach
         }
     }
     
@@ -128,7 +126,6 @@ public class RevitTestExecutor : ITestExecutor
         
         try
         {
-            // Discover tests in the sources, then run them
             var discoveredTests = new List<TestCase>();
             
             foreach (var source in sources)
@@ -136,6 +133,17 @@ public class RevitTestExecutor : ITestExecutor
                 try
                 {
                     var tests = NUnitTestDiscoverer.FindTestsInAssembly(source);
+                    // Annotate source-discovered tests with runtime path if this source is the runtime test assembly
+                    foreach (var t in tests)
+                    {
+                        if (string.Equals(Path.GetFileName(t.Source), "Rca.Integration.Revit.Tests.dll", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var runtimeRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RCA", "Runtime");
+                            var latest = new DirectoryInfo(runtimeRoot).GetDirectories().OrderByDescending(d => d.Name, StringComparer.OrdinalIgnoreCase).FirstOrDefault()?.FullName ?? string.Empty;
+                            var runtimeTestDll = string.IsNullOrEmpty(latest) ? t.Source : Path.Combine(latest, "Rca.Integration.Revit.Tests.dll");
+                            t.SetPropertyValue(AdapterProperties.RuntimeAssemblyPath, runtimeTestDll);
+                        }
+                    }
                     discoveredTests.AddRange(tests);
                 }
                 catch (Exception ex)

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
+using System.IO;
 using Autodesk.Revit.UI;
 
 namespace Rca.Loader.Testing
@@ -278,15 +279,18 @@ namespace Rca.Loader.Testing
 
         /// <summary>
         /// Collectible test AssemblyLoadContext with path-based dependency resolution.
+        /// Tries resolver first (deps.json), then falls back to probing in the test assembly directory.
         /// </summary>
         private sealed class TestLoadContext : AssemblyLoadContext
         {
             private readonly AssemblyDependencyResolver resolver;
+            private readonly string baseDir;
 
             public TestLoadContext(string assemblyPath) : base(isCollectible: true)
             {
                 if (string.IsNullOrEmpty(assemblyPath)) throw new ArgumentNullException(nameof(assemblyPath));
                 resolver = new AssemblyDependencyResolver(assemblyPath);
+                baseDir = Path.GetDirectoryName(assemblyPath)!;
             }
 
             protected override Assembly? Load(AssemblyName assemblyName)
@@ -297,7 +301,14 @@ namespace Rca.Loader.Testing
                     return LoadFromAssemblyPath(path);
                 }
 
-                // Fallback: allow default context (e.g., RevitAPI) when not resolved from runtime folder
+                // Fallback: probe next to the test assembly for dependencies like nunit.framework.dll
+                var candidate = Path.Combine(baseDir, assemblyName.Name + ".dll");
+                if (File.Exists(candidate))
+                {
+                    return LoadFromAssemblyPath(candidate);
+                }
+
+                // Fallback to default context for shared/runtime-provided assemblies (e.g., RevitAPI)
                 return null;
             }
 
@@ -307,6 +318,12 @@ namespace Rca.Loader.Testing
                 if (!string.IsNullOrEmpty(path))
                 {
                     return LoadUnmanagedDllFromPath(path);
+                }
+                // Optional: probe next to the assembly
+                var candidate = Path.Combine(baseDir, unmanagedDllName + ".dll");
+                if (File.Exists(candidate))
+                {
+                    return LoadUnmanagedDllFromPath(candidate);
                 }
                 return IntPtr.Zero;
             }
