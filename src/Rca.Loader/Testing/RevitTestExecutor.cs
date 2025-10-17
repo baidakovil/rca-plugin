@@ -5,6 +5,8 @@ using System.Reflection;
 using System.Runtime.Loader;
 using System.IO;
 using Autodesk.Revit.UI;
+using Microsoft.Extensions.Logging;
+using Rca.Loader.Logging;
 
 namespace Rca.Loader.Testing
 {
@@ -15,6 +17,8 @@ namespace Rca.Loader.Testing
     /// </summary>
     public class RevitTestExecutor
     {
+        private static readonly ILogger Log = LoaderLog.GetLogger<RevitTestExecutor>();
+
         private readonly UIApplication uiapp;
 
         // Weak reference to the last active test ALC for forced unload on ReloadRuntime
@@ -39,6 +43,7 @@ namespace Rca.Loader.Testing
             {
                 if (activeTestAlc != null && activeTestAlc.TryGetTarget(out var ctx))
                 {
+                    Log.LogInformation("Forcing unload of active TestLoadContext");
                     ctx.Unload();
                     // Promote finalization of collectible assemblies
                     GC.Collect();
@@ -46,9 +51,9 @@ namespace Rca.Loader.Testing
                     GC.Collect();
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Best-effort cleanup; failures are non-fatal
+                Log.LogWarning(ex, "Error while force-unloading TestLoadContext (ignored)");
             }
             finally
             {
@@ -67,6 +72,8 @@ namespace Rca.Loader.Testing
             if (testRequests == null)
                 throw new ArgumentNullException(nameof(testRequests));
 
+            Log.LogInformation("Starting test execution count={Count} assembly={Assembly}", testRequests.Count, assemblyPath);
+
             var results = new List<TestResult>();
             TestLoadContext? testAlc = null;
 
@@ -79,6 +86,7 @@ namespace Rca.Loader.Testing
                 using (testAlc.EnterContextualReflection())
                 {
                     var assembly = testAlc.LoadFromAssemblyPath(assemblyPath);
+                    Log.LogDebug("Loaded test assembly {Name} from {Path}", assembly.GetName().Name, assemblyPath);
 
                     foreach (var testRequest in testRequests)
                     {
@@ -89,10 +97,12 @@ namespace Rca.Loader.Testing
             }
             catch (TargetInvocationException ex) when (ex.InnerException != null)
             {
+                Log.LogError(ex.InnerException, "Test invocation error");
                 results.Add(CreateErrorResult("Test.Invoke", "Test Execution Error", ex.InnerException));
             }
             catch (Exception ex)
             {
+                Log.LogError(ex, "Test execution error during assembly load");
                 results.Add(CreateErrorResult("Assembly.Load", "Assembly Load Error", ex));
             }
             finally
@@ -100,7 +110,15 @@ namespace Rca.Loader.Testing
                 // Unload the test ALC to release file locks
                 if (testAlc != null)
                 {
-                    try { testAlc.Unload(); } catch { }
+                    try
+                    {
+                        Log.LogInformation("Unloading TestLoadContext after test run");
+                        testAlc.Unload();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.LogWarning(ex, "Error while unloading TestLoadContext (ignored)");
+                    }
                     // Promote collection of collectible assemblies
                     GC.Collect();
                     GC.WaitForPendingFinalizers();
@@ -109,6 +127,7 @@ namespace Rca.Loader.Testing
                 activeTestAlc = null;
             }
 
+            Log.LogInformation("Completed test execution count={Count}", results.Count);
             return results;
         }
 
@@ -126,6 +145,7 @@ namespace Rca.Loader.Testing
 
             try
             {
+                Log.LogDebug("Preparing to execute test {FQN}", testRequest.FullyQualifiedName);
                 var (testClassType, testMethod) = ParseAndGetTestMethod(assembly, testRequest.FullyQualifiedName);
                 var testInstance = CreateTestInstance(testClassType);
 
@@ -135,13 +155,16 @@ namespace Rca.Loader.Testing
                 testMethod.Invoke(testInstance, null);
 
                 result.Outcome = "Passed";
+                Log.LogDebug("Test passed {FQN}", testRequest.FullyQualifiedName);
             }
             catch (TargetInvocationException ex) when (ex.InnerException != null)
             {
+                Log.LogWarning(ex.InnerException, "Test failed (inner) {FQN}", testRequest.FullyQualifiedName);
                 SetTestFailure(result, ex.InnerException);
             }
             catch (Exception ex)
             {
+                Log.LogWarning(ex, "Test failed {FQN}", testRequest.FullyQualifiedName);
                 SetTestFailure(result, ex);
             }
 
@@ -190,6 +213,7 @@ namespace Rca.Loader.Testing
 
             foreach (var setup in setupMethods)
             {
+                Log.LogTrace("Invoking [SetUp] {Method} on {Type}", setup.Name, testClassType.FullName);
                 setup.Invoke(testInstance, null);
             }
         }
@@ -230,20 +254,10 @@ namespace Rca.Loader.Testing
         /// </summary>
         public class TestRequest
         {
-            /// <summary>
-            /// Gets or sets the fully qualified name of the test.
-            /// </summary>
             public string FullyQualifiedName { get; set; } = string.Empty;
-
-            /// <summary>
-            /// Gets or sets the display name of the test.
-            /// </summary>
             public string DisplayName { get; set; } = string.Empty;
         }
 
-        /// <summary>
-        /// Test result sent back through the pipe.
-        /// </summary>
         public class TestResult
         {
             public string FullyQualifiedName { get; set; } = string.Empty;
@@ -257,18 +271,12 @@ namespace Rca.Loader.Testing
             public List<TestMessage> Messages { get; set; } = new();
         }
 
-        /// <summary>
-        /// Message from test execution.
-        /// </summary>
         public class TestMessage
         {
             public string Level { get; set; } = "Informational";
             public string Text { get; set; } = string.Empty;
         }
 
-        /// <summary>
-        /// Payload for test execution.
-        /// </summary>
         public class TestExecutionPayload
         {
             public string AssemblyPath { get; set; } = string.Empty;
@@ -279,9 +287,11 @@ namespace Rca.Loader.Testing
 
         /// <summary>
         /// Collectible test AssemblyLoadContext with path-based dependency resolution.
-        /// Tries resolver first (deps.json), then returns already-loaded RCA assemblies from Runtime ALC,
-        /// then falls back to probing in the test assembly directory, and finally to default context.
-        /// This prevents loading duplicate copies of Rca.* across contexts.
+        /// Resolution order:
+        /// - For Rca.* assemblies: always reuse an already loaded assembly (Runtime ALC) to avoid duplicates;
+        ///   only if none is loaded, let default context handle it.
+        /// - For other assemblies: try resolver (deps.json), then probe next to the test assembly, then default context.
+        /// Logs each resolution decision.
         /// </summary>
         private sealed class TestLoadContext : AssemblyLoadContext
         {
@@ -293,52 +303,86 @@ namespace Rca.Loader.Testing
                 if (string.IsNullOrEmpty(assemblyPath)) throw new ArgumentNullException(nameof(assemblyPath));
                 resolver = new AssemblyDependencyResolver(assemblyPath);
                 baseDir = Path.GetDirectoryName(assemblyPath)!;
+                Log.LogDebug("Created TestLoadContext for {Path}", assemblyPath);
             }
 
             protected override Assembly? Load(AssemblyName assemblyName)
             {
-                // 1) Use resolver (deps.json) if path available
-                var path = resolver.ResolveAssemblyToPath(assemblyName);
-                if (!string.IsNullOrEmpty(path))
+                try
                 {
-                    return LoadFromAssemblyPath(path);
-                }
-
-                // 2) If this is an RCA assembly, try to reuse an already loaded one (from Runtime ALC)
-                if (!string.IsNullOrEmpty(assemblyName.Name) && assemblyName.Name.StartsWith("Rca.", StringComparison.OrdinalIgnoreCase))
-                {
-                    var loaded = AppDomain.CurrentDomain.GetAssemblies()
-                        .FirstOrDefault(a => string.Equals(a.GetName().Name, assemblyName.Name, StringComparison.OrdinalIgnoreCase));
-                    if (loaded != null)
+                    // 0) Prefer reusing Runtime-loaded RCA assemblies regardless of local files
+                    if (!string.IsNullOrEmpty(assemblyName.Name) && assemblyName.Name.StartsWith("Rca.", StringComparison.OrdinalIgnoreCase))
                     {
-                        return loaded; // bind to the existing Runtime ALC assembly
+                        var loaded = AppDomain.CurrentDomain.GetAssemblies()
+                            .FirstOrDefault(a => string.Equals(a.GetName().Name, assemblyName.Name, StringComparison.OrdinalIgnoreCase));
+                        if (loaded != null)
+                        {
+                            Log.LogDebug("Reusing loaded RCA assembly {Name} from runtime context (Location={Location})", assemblyName.Name, SafeLocation(loaded));
+                            return loaded;
+                        }
+                        Log.LogWarning("RCA assembly requested but not found in runtime: {Name}. Delegating to default context.", assemblyName.Name);
+                        return null;
                     }
-                }
 
-                // 3) Probe next to the test assembly for dependencies like nunit.framework.dll
-                var candidate = Path.Combine(baseDir, assemblyName.Name + ".dll");
-                if (File.Exists(candidate))
+                    // 1) Use resolver (deps.json) for non-RCA dependencies
+                    var path = resolver.ResolveAssemblyToPath(assemblyName);
+                    if (!string.IsNullOrEmpty(path))
+                    {
+                        Log.LogDebug("Resolved dependency via deps.json {Name} -> {Path}", assemblyName.Name, path);
+                        return LoadFromAssemblyPath(path);
+                    }
+
+                    // 2) Probe next to the test assembly for dependencies like nunit.framework / FluentAssertions
+                    var candidate = Path.Combine(baseDir, assemblyName.Name + ".dll");
+                    if (File.Exists(candidate))
+                    {
+                        Log.LogDebug("Resolved dependency from test folder {Name} -> {Path}", assemblyName.Name, candidate);
+                        return LoadFromAssemblyPath(candidate);
+                    }
+
+                    // 3) Fallback to default context for shared/runtime-provided assemblies (e.g., RevitAPI)
+                    Log.LogTrace("Delegating dependency to default context {Name}", assemblyName.Name);
+                    return null;
+                }
+                catch (Exception ex)
                 {
-                    return LoadFromAssemblyPath(candidate);
+                    Log.LogWarning(ex, "Error resolving assembly {Name} in TestLoadContext", assemblyName.Name);
+                    return null;
                 }
-
-                // 4) Fallback to default context for shared/runtime-provided assemblies (e.g., RevitAPI)
-                return null;
             }
 
             protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
             {
-                var path = resolver.ResolveUnmanagedDllToPath(unmanagedDllName);
-                if (!string.IsNullOrEmpty(path))
+                try
                 {
-                    return LoadUnmanagedDllFromPath(path);
+                    var path = resolver.ResolveUnmanagedDllToPath(unmanagedDllName);
+                    if (!string.IsNullOrEmpty(path))
+                    {
+                        Log.LogDebug("Resolved native via deps.json {Name} -> {Path}", unmanagedDllName, path);
+                        return LoadUnmanagedDllFromPath(path);
+                    }
+
+                    var candidate = Path.Combine(baseDir, unmanagedDllName + ".dll");
+                    if (File.Exists(candidate))
+                    {
+                        Log.LogDebug("Resolved native from test folder {Name} -> {Path}", unmanagedDllName, candidate);
+                        return LoadUnmanagedDllFromPath(candidate);
+                    }
+
+                    Log.LogTrace("Delegating native to default context {Name}", unmanagedDllName);
+                    return IntPtr.Zero;
                 }
-                var candidate = Path.Combine(baseDir, unmanagedDllName + ".dll");
-                if (File.Exists(candidate))
+                catch (Exception ex)
                 {
-                    return LoadUnmanagedDllFromPath(candidate);
+                    Log.LogWarning(ex, "Error resolving native library {Name} in TestLoadContext", unmanagedDllName);
+                    return IntPtr.Zero;
                 }
-                return IntPtr.Zero;
+            }
+
+            private static string SafeLocation(Assembly asm)
+            {
+                try { return asm.IsDynamic ? "<dynamic>" : (string.IsNullOrEmpty(asm.Location) ? "<unknown>" : asm.Location); }
+                catch { return "<unavailable>"; }
             }
         }
     }
