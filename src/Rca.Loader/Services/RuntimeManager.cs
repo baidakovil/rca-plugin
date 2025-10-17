@@ -350,7 +350,7 @@ namespace Rca.Loader.Services
                 }
                 catch (Exception exPanel)
                 {
-                    _log.LogDebug(exPanel, "Failed clearing panel host content opId={Op}");
+                    _log.LogDebug(exPanel, "Failed clearing panel host content opId={Op}", opId);
                 }
 
                 currentContext.Unload();
