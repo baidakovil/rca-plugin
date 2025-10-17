@@ -114,6 +114,8 @@
       <_TestArtifacts Include="$(TargetDir)Rca.Integration.Revit.Tests.*" />
       <!-- NUnit framework dependency required at runtime for attribute resolution -->
       <_TestArtifacts Include="$(TargetDir)nunit.framework*.dll" />
+      <!-- FluentAssertions for assertions in tests -->
+      <_TestArtifacts Include="$(TargetDir)FluentAssertions*.dll" />
     </ItemGroup>
 
     <Copy SourceFiles="@(_TestArtifacts)"
