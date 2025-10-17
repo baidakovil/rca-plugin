@@ -41,7 +41,7 @@ namespace Rca.Integration.Revit.Tests
         [Test, Category("Revit")]
         public void ExecuteSync_SimpleCode_ReturnsOutput()
         {
-            // Arrange
+            // Arrange.
             var code = "print('Hello from Python in Revit')";
 
             // Act

@@ -53,45 +53,44 @@ public class RevitTestDiscoverer : ITestDiscoverer
                 return;
             }
 
-            var runtimeRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RCA", "Runtime");
-            var latestFolder = GetLatestFolder(runtimeRoot);
-
+            var testRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RCA", "Test");
+            var latestFolder = GetLatestFolder(testRoot);
             if (string.IsNullOrEmpty(latestFolder) || !Directory.Exists(latestFolder))
             {
-                logger.SendMessage(TestMessageLevel.Informational, $"RCA Test Adapter: No runtime folder found under {runtimeRoot}");
+                logger.SendMessage(TestMessageLevel.Informational, $"RCA Test Adapter: No test deploy folder found under {testRoot}");
                 logger.SendMessage(TestMessageLevel.Informational, "RCA Test Adapter: Test discovery completed (0 tests)");
                 return;
             }
 
-            logger.SendMessage(TestMessageLevel.Informational, $"RCA Test Adapter: Latest runtime folder: {latestFolder}");
+            logger.SendMessage(TestMessageLevel.Informational, $"RCA Test Adapter: Latest test folder: {latestFolder}");
 
-            var runtimeTestAssembly = Path.Combine(latestFolder, "Rca.Integration.Revit.Tests.dll");
-            if (!File.Exists(runtimeTestAssembly))
+            var testAssembly = Path.Combine(latestFolder, "Rca.Integration.Revit.Tests.dll");
+            if (!File.Exists(testAssembly))
             {
-                logger.SendMessage(TestMessageLevel.Informational, $"RCA Test Adapter: Test assembly not found: {runtimeTestAssembly}");
+                logger.SendMessage(TestMessageLevel.Informational, $"RCA Test Adapter: Test assembly not found: {testAssembly}");
                 logger.SendMessage(TestMessageLevel.Informational, "RCA Test Adapter: Test discovery completed (0 tests)");
                 return;
             }
 
             try
             {
-                var testCases = NUnitTestDiscoverer.FindTestsInAssembly(runtimeTestAssembly);
+                var testCases = NUnitTestDiscoverer.FindTestsInAssembly(testAssembly);
                 foreach (var testCase in testCases)
                 {
                     // Source must be one of the 'sources' provided by VSTest, otherwise tests may be dropped.
                     testCase.Source = hostSource;
                     // Pass the real runtime DLL path via a custom property for the executor
-                    testCase.SetPropertyValue(AdapterProperties.RuntimeAssemblyPath, runtimeTestAssembly);
+                    testCase.SetPropertyValue(AdapterProperties.RuntimeAssemblyPath, testAssembly);
                     // Optional marker to differentiate in Test Explorer if needed
                     testCase.Traits.Add(new Trait("Adapter", "RCA"));
 
                     discoverySink.SendTestCase(testCase);
                 }
-                logger.SendMessage(TestMessageLevel.Informational, $"RCA Test Adapter: Discovered {testCases.Count} tests in {runtimeTestAssembly}");
+                logger.SendMessage(TestMessageLevel.Informational, $"RCA Test Adapter: Discovered {testCases.Count} tests in {testAssembly}");
             }
             catch (Exception ex)
             {
-                logger.SendMessage(TestMessageLevel.Error, $"RCA Test Adapter: Error discovering tests in {runtimeTestAssembly}: {ex.Message}");
+                logger.SendMessage(TestMessageLevel.Error, $"RCA Test Adapter: Error discovering tests in {testAssembly}: {ex.Message}");
             }
         }
         catch (Exception ex)
@@ -102,12 +101,12 @@ public class RevitTestDiscoverer : ITestDiscoverer
         logger.SendMessage(TestMessageLevel.Informational, "RCA Test Adapter: Test discovery completed");
     }
 
-    private static string GetLatestFolder(string runtimeRoot)
+    private static string GetLatestFolder(string root)
     {
         try
         {
-            if (!Directory.Exists(runtimeRoot)) return string.Empty;
-            var di = new DirectoryInfo(runtimeRoot);
+            if (!Directory.Exists(root)) return string.Empty;
+            var di = new DirectoryInfo(root);
             var latest = di.GetDirectories().OrderByDescending(d => d.Name, StringComparer.OrdinalIgnoreCase).FirstOrDefault();
             return latest?.FullName ?? string.Empty;
         }

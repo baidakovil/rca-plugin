@@ -138,10 +138,10 @@ public class RevitTestExecutor : ITestExecutor
                     {
                         if (string.Equals(Path.GetFileName(t.Source), "Rca.Integration.Revit.Tests.dll", StringComparison.OrdinalIgnoreCase))
                         {
-                            var runtimeRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RCA", "Runtime");
-                            var latest = new DirectoryInfo(runtimeRoot).GetDirectories().OrderByDescending(d => d.Name, StringComparer.OrdinalIgnoreCase).FirstOrDefault()?.FullName ?? string.Empty;
-                            var runtimeTestDll = string.IsNullOrEmpty(latest) ? t.Source : Path.Combine(latest, "Rca.Integration.Revit.Tests.dll");
-                            t.SetPropertyValue(AdapterProperties.RuntimeAssemblyPath, runtimeTestDll);
+                            var testRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RCA", "Test");
+                            var latest = new DirectoryInfo(testRoot).GetDirectories().OrderByDescending(d => d.Name, StringComparer.OrdinalIgnoreCase).FirstOrDefault()?.FullName ?? string.Empty;
+                            var testDll = string.IsNullOrEmpty(latest) ? t.Source : Path.Combine(latest, "Rca.Integration.Revit.Tests.dll");
+                            t.SetPropertyValue(AdapterProperties.RuntimeAssemblyPath, testDll);
                         }
                     }
                     discoveredTests.AddRange(tests);

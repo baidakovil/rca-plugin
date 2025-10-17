@@ -29,7 +29,14 @@ namespace Rca.Loader.Infrastructure
         /// </summary>
         public static readonly string RuntimeDeployRoot = 
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RCA", "Runtime");
-            
+
+        /// <summary>
+        /// The root directory where integration test builds are deployed.
+        /// A timestamped subfolder (yyyyMMdd_HHmmss) is created per test build to avoid file locks.
+        /// </summary>
+        public static readonly string TestDeployRoot =
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RCA", "Test");
+        
         /// <summary>
         /// The base directory where Revit loads addins from.
         /// </summary>

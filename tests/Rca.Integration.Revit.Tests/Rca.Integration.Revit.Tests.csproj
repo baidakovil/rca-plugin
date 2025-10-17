@@ -5,7 +5,6 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <PlatformTarget>x64</PlatformTarget>
-    <!-- Indicate that we're using merged assemblies -->
     <UseMergedLoader>true</UseMergedLoader>
   </PropertyGroup>
   
@@ -90,24 +89,15 @@
     <Delete Files="$(OutputPath)Rca.Loader.Contracts.dll" />
   </Target>
 
-  <!-- AfterBuild: copy integration test artifacts to latest runtime folder root -->
-  <Target Name="CopyIntegrationTestsToRuntime" AfterTargets="Build">
+  <!-- AfterBuild: copy integration tests to a new timestamped Test deploy folder under %LOCALAPPDATA%\RCA\Test -->
+  <Target Name="CopyIntegrationTestsToTestDeploy" AfterTargets="Build">
     <PropertyGroup>
-      <LatestFile>$(IntermediateOutputPath)latest_runtime.txt</LatestFile>
+      <Timestamp>$([System.DateTime]::Now.ToString("yyyyMMdd_HHmmss"))</Timestamp>
+      <TestDeployRoot>$([System.Environment]::GetFolderPath(SpecialFolder.LocalApplicationData))\RCA\Test</TestDeployRoot>
+      <TestDeployFolder>$(TestDeployRoot)\$(Timestamp)</TestDeployFolder>
     </PropertyGroup>
 
-    <!-- Resolve latest runtime folder via PowerShell (compatible with .NET SDK MSBuild) -->
-    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;$root = [System.IO.Path]::Combine([Environment]::GetFolderPath('LocalApplicationData'),'RCA','Runtime'); if (!(Test-Path $root)) { '' } else { (Get-ChildItem -Directory -Path $root | Sort-Object Name -Descending | Select-Object -First 1).FullName }&quot; &gt; &quot;$(LatestFile)&quot;" />
-
-    <ReadLinesFromFile File="$(LatestFile)">
-      <Output TaskParameter="Lines" ItemName="_LatestRuntimeFolderLines" />
-    </ReadLinesFromFile>
-
-    <PropertyGroup>
-      <LatestRuntimeFolder>@(_LatestRuntimeFolderLines->'%(Identity)')</LatestRuntimeFolder>
-    </PropertyGroup>
-
-    <Error Condition="'$(LatestRuntimeFolder)' == ''" Text="No runtime folder found under %25LOCALAPPDATA%25\RCA\Runtime. Build the Runtime first." />
+    <MakeDir Directories="$(TestDeployFolder)" />
 
     <ItemGroup>
       <!-- Core test assembly and sidecars -->
@@ -119,10 +109,13 @@
     </ItemGroup>
 
     <Copy SourceFiles="@(_TestArtifacts)"
-          DestinationFolder="$(LatestRuntimeFolder)"
+          DestinationFolder="$(TestDeployFolder)"
           SkipUnchangedFiles="false"
           OverwriteReadOnlyFiles="true" />
 
-    <Message Text="Copied @(_TestArtifacts-&gt;'%(Filename)%(Extension)') to $(LatestRuntimeFolder)" Importance="High" />
+    <Message Text="Copied test artifacts to $(TestDeployFolder)" Importance="High" />
+
+    <!-- Write latest path to a file for the adapter to pick up if needed -->
+    <WriteLinesToFile File="$(IntermediateOutputPath)latest_testdeploy.txt" Lines="$(TestDeployFolder)" Overwrite="true" />
   </Target>
 </Project>
