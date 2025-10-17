@@ -279,7 +279,9 @@ namespace Rca.Loader.Testing
 
         /// <summary>
         /// Collectible test AssemblyLoadContext with path-based dependency resolution.
-        /// Tries resolver first (deps.json), then falls back to probing in the test assembly directory.
+        /// Tries resolver first (deps.json), then returns already-loaded RCA assemblies from Runtime ALC,
+        /// then falls back to probing in the test assembly directory, and finally to default context.
+        /// This prevents loading duplicate copies of Rca.* across contexts.
         /// </summary>
         private sealed class TestLoadContext : AssemblyLoadContext
         {
@@ -295,20 +297,32 @@ namespace Rca.Loader.Testing
 
             protected override Assembly? Load(AssemblyName assemblyName)
             {
+                // 1) Use resolver (deps.json) if path available
                 var path = resolver.ResolveAssemblyToPath(assemblyName);
                 if (!string.IsNullOrEmpty(path))
                 {
                     return LoadFromAssemblyPath(path);
                 }
 
-                // Fallback: probe next to the test assembly for dependencies like nunit.framework.dll
+                // 2) If this is an RCA assembly, try to reuse an already loaded one (from Runtime ALC)
+                if (!string.IsNullOrEmpty(assemblyName.Name) && assemblyName.Name.StartsWith("Rca.", StringComparison.OrdinalIgnoreCase))
+                {
+                    var loaded = AppDomain.CurrentDomain.GetAssemblies()
+                        .FirstOrDefault(a => string.Equals(a.GetName().Name, assemblyName.Name, StringComparison.OrdinalIgnoreCase));
+                    if (loaded != null)
+                    {
+                        return loaded; // bind to the existing Runtime ALC assembly
+                    }
+                }
+
+                // 3) Probe next to the test assembly for dependencies like nunit.framework.dll
                 var candidate = Path.Combine(baseDir, assemblyName.Name + ".dll");
                 if (File.Exists(candidate))
                 {
                     return LoadFromAssemblyPath(candidate);
                 }
 
-                // Fallback to default context for shared/runtime-provided assemblies (e.g., RevitAPI)
+                // 4) Fallback to default context for shared/runtime-provided assemblies (e.g., RevitAPI)
                 return null;
             }
 
@@ -319,7 +333,6 @@ namespace Rca.Loader.Testing
                 {
                     return LoadUnmanagedDllFromPath(path);
                 }
-                // Optional: probe next to the assembly
                 var candidate = Path.Combine(baseDir, unmanagedDllName + ".dll");
                 if (File.Exists(candidate))
                 {
