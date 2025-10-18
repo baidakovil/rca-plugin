@@ -1,0 +1,32 @@
+Summary
+  Generated on: 10/18/2025 - 4:05:35 PM
+  Coverage date: 10/18/2025 - 4:05:33 PM
+  Parser: Cobertura
+  Assemblies: 2
+  Classes: 10
+  Files: 11
+  Line coverage: 13.0%
+  Covered lines: 37
+  Uncovered lines: 246
+  Coverable lines: 283
+  Total lines: 792
+  Branch coverage: 5.7% (4 of 70)
+  Covered branches: 4
+  Total branches: 70
+  Method coverage: 18.1% (10 of 55)
+  Covered methods: 10
+  Total methods: 55
+
+Rca.Contracts                                      0.0%
+  Rca.Contracts.Configuration.RcaConfiguration     0.0%
+  Rca.Contracts.Configuration.RcaConstants         0.0%
+  Rca.Contracts.Infrastructure.ServiceContainer    0.0%
+
+Rca.UI                                            14.2%
+  Rca.UI.Logging.UiLog                             0.0%
+  Rca.UI.Services.DefaultServices                  0.0%
+  Rca.UI.Services.ServiceResolver                  0.0%
+  Rca.UI.ViewModels.RcaDockablePanelViewModel     76.3%
+  Rca.UI.ViewModels.RelayCommand                  61.5%
+  Rca.UI.Views.RcaDockablePanel                    0.0%
+  Rca.UI.Views.RcaDockablePanelProvider            0.0%

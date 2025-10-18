@@ -1,0 +1,1211 @@
+{
+  "Rca.Contracts.dll": {
+    "C:\\Users\\baidakov\\rca-plugin\\src\\Rca.Contracts\\ServiceContainer.cs": {
+      "Rca.Contracts.Infrastructure.ServiceContainer": {
+        "Rca.Contracts.Infrastructure.ServiceContainer Rca.Contracts.Infrastructure.ServiceContainer::get_Instance()": {
+          "Lines": {
+            "17": 0
+          },
+          "Branches": [
+            {
+              "Line": 17,
+              "Offset": 6,
+              "EndOffset": 8,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 0
+            },
+            {
+              "Line": 17,
+              "Offset": 6,
+              "EndOffset": 20,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 0
+            }
+          ]
+        },
+        "System.Void Rca.Contracts.Infrastructure.ServiceContainer::Register(TInterface)": {
+          "Lines": {
+            "25": 0,
+            "26": 0,
+            "27": 0,
+            "29": 0,
+            "30": 0
+          },
+          "Branches": [
+            {
+              "Line": 26,
+              "Offset": 12,
+              "EndOffset": 14,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 0
+            },
+            {
+              "Line": 26,
+              "Offset": 12,
+              "EndOffset": 25,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 0
+            }
+          ]
+        },
+        "TInterface Rca.Contracts.Infrastructure.ServiceContainer::Resolve()": {
+          "Lines": {
+            "38": 0,
+            "39": 0,
+            "40": 0,
+            "41": 0,
+            "43": 0,
+            "44": 0
+          },
+          "Branches": [
+            {
+              "Line": 39,
+              "Offset": 26,
+              "EndOffset": 28,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 0
+            },
+            {
+              "Line": 39,
+              "Offset": 26,
+              "EndOffset": 38,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 0
+            }
+          ]
+        },
+        "System.Boolean Rca.Contracts.Infrastructure.ServiceContainer::IsRegistered()": {
+          "Lines": {
+            "52": 0,
+            "53": 0,
+            "54": 0
+          },
+          "Branches": []
+        },
+        "System.Void Rca.Contracts.Infrastructure.ServiceContainer::.ctor()": {
+          "Lines": {
+            "11": 0
+          },
+          "Branches": []
+        }
+      }
+    },
+    "C:\\Users\\baidakov\\rca-plugin\\src\\Rca.Contracts\\Configuration\\RcaConfiguration.cs": {
+      "Rca.Contracts.Configuration.RcaConfiguration": {
+        "System.Void Rca.Contracts.Configuration.RcaConfiguration::.cctor()": {
+          "Lines": {
+            "24": 0,
+            "25": 0,
+            "26": 0,
+            "27": 0
+          },
+          "Branches": []
+        }
+      }
+    },
+    "C:\\Users\\baidakov\\rca-plugin\\src\\Rca.Contracts\\Configuration\\RcaConstants.cs": {
+      "Rca.Contracts.Configuration.RcaConstants": {
+        "System.Void Rca.Contracts.Configuration.RcaConstants::.cctor()": {
+          "Lines": {
+            "17": 0,
+            "18": 0,
+            "19": 0,
+            "20": 0
+          },
+          "Branches": []
+        }
+      }
+    }
+  },
+  "Rca.UI.dll": {
+    "C:\\Users\\baidakov\\rca-plugin\\src\\Rca.UI\\Services\\DefaultServices.cs": {
+      "Rca.UI.Services.DefaultServices": {
+        "Rca.Contracts.IPythonExecutionService Rca.UI.Services.DefaultServices::CreatePythonExecutionService()": {
+          "Lines": {
+            "15": 0
+          },
+          "Branches": []
+        },
+        "Rca.Contracts.IRevitContext Rca.UI.Services.DefaultServices::CreateRevitContext()": {
+          "Lines": {
+            "16": 0
+          },
+          "Branches": []
+        }
+      },
+      "Rca.UI.Services.DefaultServices/NullPythonExecutionService": {
+        "System.Threading.Tasks.Task`1<System.String> Rca.UI.Services.DefaultServices/NullPythonExecutionService::ExecuteAsync(System.String)": {
+          "Lines": {
+            "20": 0
+          },
+          "Branches": []
+        },
+        "System.String Rca.UI.Services.DefaultServices/NullPythonExecutionService::ExecuteSync(System.String)": {
+          "Lines": {
+            "21": 0
+          },
+          "Branches": []
+        },
+        "System.Void Rca.UI.Services.DefaultServices/NullPythonExecutionService::SetRevitContext(System.Object)": {
+          "Lines": {
+            "22": 0
+          },
+          "Branches": []
+        }
+      },
+      "Rca.UI.Services.DefaultServices/NullRevitContext": {
+        "System.Object Rca.UI.Services.DefaultServices/NullRevitContext::get_CurrentUIApplication()": {
+          "Lines": {
+            "27": 0
+          },
+          "Branches": []
+        }
+      }
+    },
+    "C:\\Users\\baidakov\\rca-plugin\\src\\Rca.UI\\Services\\ServiceResolver.cs": {
+      "Rca.UI.Services.ServiceResolver": {
+        "T Rca.UI.Services.ServiceResolver::ResolveOrDefault()": {
+          "Lines": {
+            "32": 0,
+            "34": 0,
+            "35": 0,
+            "36": 0,
+            "37": 0,
+            "40": 0,
+            "41": 0,
+            "43": 0,
+            "44": 0,
+            "45": 0,
+            "46": 0,
+            "48": 0
+          },
+          "Branches": [
+            {
+              "Line": 35,
+              "Offset": 15,
+              "EndOffset": 17,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 0
+            },
+            {
+              "Line": 35,
+              "Offset": 15,
+              "EndOffset": 32,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 0
+            }
+          ]
+        },
+        "T Rca.UI.Services.ServiceResolver::CreateDefaultService()": {
+          "Lines": {
+            "56": 0,
+            "57": 0,
+            "58": 0,
+            "59": 0,
+            "60": 0,
+            "61": 0,
+            "62": 0,
+            "63": 0
+          },
+          "Branches": [
+            {
+              "Line": 59,
+              "Offset": 34,
+              "EndOffset": 38,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 0
+            },
+            {
+              "Line": 59,
+              "Offset": 34,
+              "EndOffset": 56,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 0
+            },
+            {
+              "Line": 60,
+              "Offset": 74,
+              "EndOffset": 78,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 0
+            },
+            {
+              "Line": 60,
+              "Offset": 74,
+              "EndOffset": 96,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 0
+            }
+          ]
+        },
+        "System.Void Rca.UI.Services.ServiceResolver::LogServiceNotRegistered()": {
+          "Lines": {
+            "70": 0,
+            "71": 0,
+            "72": 0
+          },
+          "Branches": []
+        },
+        "System.Void Rca.UI.Services.ServiceResolver::LogServiceResolutionError(System.Exception)": {
+          "Lines": {
+            "80": 0,
+            "81": 0,
+            "82": 0
+          },
+          "Branches": []
+        },
+        "System.Void Rca.UI.Services.ServiceResolver::.ctor(Rca.Contracts.Infrastructure.ServiceContainer)": {
+          "Lines": {
+            "21": 0,
+            "22": 0,
+            "23": 0,
+            "24": 0
+          },
+          "Branches": [
+            {
+              "Line": 23,
+              "Offset": 11,
+              "EndOffset": 13,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 0
+            },
+            {
+              "Line": 23,
+              "Offset": 11,
+              "EndOffset": 25,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 0
+            }
+          ]
+        },
+        "System.Void Rca.UI.Services.ServiceResolver::.cctor()": {
+          "Lines": {
+            "14": 0
+          },
+          "Branches": []
+        }
+      }
+    },
+    "C:\\Users\\baidakov\\rca-plugin\\src\\Rca.UI\\RcaDockablePanelViewModel.cs": {
+      "Rca.UI.ViewModels.RcaDockablePanelViewModel": {
+        "System.Windows.Input.ICommand Rca.UI.ViewModels.RcaDockablePanelViewModel::get_ClickCommand()": {
+          "Lines": {
+            "26": 0
+          },
+          "Branches": []
+        },
+        "System.Windows.Input.ICommand Rca.UI.ViewModels.RcaDockablePanelViewModel::get_ExecutePythonCommand()": {
+          "Lines": {
+            "30": 1
+          },
+          "Branches": []
+        },
+        "System.String Rca.UI.ViewModels.RcaDockablePanelViewModel::get_InputText()": {
+          "Lines": {
+            "37": 2
+          },
+          "Branches": []
+        },
+        "System.Void Rca.UI.ViewModels.RcaDockablePanelViewModel::set_InputText(System.String)": {
+          "Lines": {
+            "38": 10
+          },
+          "Branches": []
+        },
+        "System.String Rca.UI.ViewModels.RcaDockablePanelViewModel::get_OutputText()": {
+          "Lines": {
+            "46": 1
+          },
+          "Branches": []
+        },
+        "System.Void Rca.UI.ViewModels.RcaDockablePanelViewModel::set_OutputText(System.String)": {
+          "Lines": {
+            "47": 8
+          },
+          "Branches": []
+        },
+        "System.Void Rca.UI.ViewModels.RcaDockablePanelViewModel::OnHelloClicked(System.Object)": {
+          "Lines": {
+            "91": 0,
+            "92": 0,
+            "93": 0
+          },
+          "Branches": []
+        },
+        "System.Void Rca.UI.ViewModels.RcaDockablePanelViewModel::OnPropertyChanged(System.String)": {
+          "Lines": {
+            "97": 4,
+            "98": 4,
+            "99": 4
+          },
+          "Branches": [
+            {
+              "Line": 98,
+              "Offset": 8,
+              "EndOffset": 10,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 4
+            },
+            {
+              "Line": 98,
+              "Offset": 8,
+              "EndOffset": 13,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 0
+            }
+          ]
+        },
+        "System.Boolean Rca.UI.ViewModels.RcaDockablePanelViewModel::<.ctor>b__16_1(System.Object)": {
+          "Lines": {
+            "60": 2
+          },
+          "Branches": []
+        },
+        "System.String Rca.UI.ViewModels.RcaDockablePanelViewModel::<OnExecutePython>b__17_0()": {
+          "Lines": {
+            "75": 2
+          },
+          "Branches": []
+        },
+        "System.Void Rca.UI.ViewModels.RcaDockablePanelViewModel::.ctor(System.Func`1<System.Object>,Rca.Contracts.IPythonExecutionService)": {
+          "Lines": {
+            "17": 1,
+            "18": 1,
+            "53": 1,
+            "54": 1,
+            "55": 1,
+            "56": 1,
+            "57": 1,
+            "58": 1,
+            "59": 1,
+            "61": 1
+          },
+          "Branches": []
+        }
+      },
+      "Rca.UI.ViewModels.RcaDockablePanelViewModel/<OnExecutePython>d__17": {
+        "System.Void Rca.UI.ViewModels.RcaDockablePanelViewModel/<OnExecutePython>d__17::MoveNext()": {
+          "Lines": {
+            "64": 1,
+            "65": 1,
+            "68": 1,
+            "69": 1,
+            "70": 1,
+            "71": 0,
+            "76": 1,
+            "77": 1,
+            "78": 1,
+            "79": 0,
+            "80": 0,
+            "81": 0,
+            "82": 0,
+            "83": 1
+          },
+          "Branches": [
+            {
+              "Line": 69,
+              "Offset": 57,
+              "EndOffset": 59,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 0
+            },
+            {
+              "Line": 69,
+              "Offset": 57,
+              "EndOffset": 63,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 1
+            },
+            {
+              "Line": 70,
+              "Offset": 84,
+              "EndOffset": 86,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 0
+            },
+            {
+              "Line": 70,
+              "Offset": 84,
+              "EndOffset": 109,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 1
+            }
+          ]
+        }
+      },
+      "Rca.UI.ViewModels.RelayCommand": {
+        "System.Boolean Rca.UI.ViewModels.RelayCommand::CanExecute(System.Object)": {
+          "Lines": {
+            "127": 0,
+            "128": 0,
+            "129": 0
+          },
+          "Branches": [
+            {
+              "Line": 128,
+              "Offset": 7,
+              "EndOffset": 9,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 0
+            },
+            {
+              "Line": 128,
+              "Offset": 7,
+              "EndOffset": 23,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 0
+            }
+          ]
+        },
+        "System.Void Rca.UI.ViewModels.RelayCommand::Execute(System.Object)": {
+          "Lines": {
+            "136": 1,
+            "137": 1,
+            "138": 1
+          },
+          "Branches": []
+        },
+        "System.Void Rca.UI.ViewModels.RelayCommand::add_CanExecuteChanged(System.EventHandler)": {
+          "Lines": {
+            "145": 0
+          },
+          "Branches": []
+        },
+        "System.Void Rca.UI.ViewModels.RelayCommand::remove_CanExecuteChanged(System.EventHandler)": {
+          "Lines": {
+            "146": 0
+          },
+          "Branches": []
+        },
+        "System.Void Rca.UI.ViewModels.RelayCommand::.ctor(System.Action`1<System.Object>,System.Func`2<System.Object,System.Boolean>)": {
+          "Lines": {
+            "115": 2,
+            "116": 2,
+            "117": 2,
+            "118": 2,
+            "119": 2
+          },
+          "Branches": [
+            {
+              "Line": 117,
+              "Offset": 11,
+              "EndOffset": 13,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 0
+            },
+            {
+              "Line": 117,
+              "Offset": 11,
+              "EndOffset": 25,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 2
+            }
+          ]
+        }
+      }
+    },
+    "C:\\Users\\baidakov\\rca-plugin\\src\\Rca.UI\\RcaDockablePanel.xaml.cs": {
+      "Rca.UI.Views.RcaDockablePanel": {
+        "System.Void Rca.UI.Views.RcaDockablePanel::LoadXamlFromResource()": {
+          "Lines": {
+            "55": 0,
+            "56": 0,
+            "57": 0,
+            "58": 0,
+            "59": 0,
+            "60": 0,
+            "62": 0,
+            "63": 0,
+            "64": 0,
+            "65": 0,
+            "66": 0,
+            "67": 0,
+            "69": 0,
+            "70": 0,
+            "71": 0
+          },
+          "Branches": [
+            {
+              "Line": 57,
+              "Offset": 25,
+              "EndOffset": 27,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 0
+            },
+            {
+              "Line": 57,
+              "Offset": 25,
+              "EndOffset": 39,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 0
+            }
+          ]
+        },
+        "System.String Rca.UI.Views.RcaDockablePanel::StripXClass(System.String)": {
+          "Lines": {
+            "74": 0,
+            "75": 0,
+            "77": 0,
+            "78": 0,
+            "79": 0,
+            "80": 0,
+            "81": 0,
+            "82": 0,
+            "83": 0,
+            "84": 0,
+            "85": 0
+          },
+          "Branches": [
+            {
+              "Line": 75,
+              "Offset": 11,
+              "EndOffset": 13,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 0
+            },
+            {
+              "Line": 75,
+              "Offset": 11,
+              "EndOffset": 18,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 0
+            },
+            {
+              "Line": 78,
+              "Offset": 39,
+              "EndOffset": 41,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 0
+            },
+            {
+              "Line": 78,
+              "Offset": 39,
+              "EndOffset": 46,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 0
+            },
+            {
+              "Line": 81,
+              "Offset": 77,
+              "EndOffset": 79,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 0
+            },
+            {
+              "Line": 81,
+              "Offset": 77,
+              "EndOffset": 84,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 0
+            },
+            {
+              "Line": 83,
+              "Offset": 122,
+              "EndOffset": 90,
+              "Path": 1,
+              "Ordinal": 9,
+              "Hits": 0
+            },
+            {
+              "Line": 83,
+              "Offset": 101,
+              "EndOffset": 103,
+              "Path": 0,
+              "Ordinal": 6,
+              "Hits": 0
+            },
+            {
+              "Line": 83,
+              "Offset": 101,
+              "EndOffset": 117,
+              "Path": 1,
+              "Ordinal": 7,
+              "Hits": 0
+            },
+            {
+              "Line": 83,
+              "Offset": 122,
+              "EndOffset": 124,
+              "Path": 0,
+              "Ordinal": 8,
+              "Hits": 0
+            }
+          ]
+        },
+        "System.Void Rca.UI.Views.RcaDockablePanel::ApplyLoadedContent(System.Object)": {
+          "Lines": {
+            "88": 0,
+            "89": 0,
+            "90": 0,
+            "91": 0,
+            "92": 0,
+            "93": 0,
+            "94": 0,
+            "95": 0,
+            "96": 0,
+            "98": 0,
+            "99": 0,
+            "100": 0,
+            "101": 0
+          },
+          "Branches": [
+            {
+              "Line": 89,
+              "Offset": 14,
+              "EndOffset": 16,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 0
+            },
+            {
+              "Line": 89,
+              "Offset": 14,
+              "EndOffset": 28,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 0
+            },
+            {
+              "Line": 93,
+              "Offset": 41,
+              "EndOffset": 43,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 0
+            },
+            {
+              "Line": 93,
+              "Offset": 41,
+              "EndOffset": 60,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 0
+            }
+          ]
+        },
+        "System.Void Rca.UI.Views.RcaDockablePanel::.ctor(System.Func`1<Autodesk.Revit.UI.UIApplication>,Rca.Contracts.IPythonExecutionService)": {
+          "Lines": {
+            "25": 0,
+            "26": 0,
+            "28": 0,
+            "29": 0,
+            "31": 0,
+            "32": 0,
+            "34": 0,
+            "35": 0,
+            "36": 0,
+            "37": 0,
+            "38": 0,
+            "39": 0,
+            "40": 0,
+            "41": 0,
+            "42": 0,
+            "43": 0,
+            "44": 0,
+            "45": 0,
+            "46": 0,
+            "47": 0,
+            "48": 0,
+            "49": 0
+          },
+          "Branches": [
+            {
+              "Line": 31,
+              "Offset": 22,
+              "EndOffset": 24,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 0
+            },
+            {
+              "Line": 31,
+              "Offset": 22,
+              "EndOffset": 31,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 0
+            },
+            {
+              "Line": 35,
+              "Offset": 70,
+              "EndOffset": 72,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 0
+            },
+            {
+              "Line": 35,
+              "Offset": 70,
+              "EndOffset": 76,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 0
+            }
+          ]
+        },
+        "System.Void Rca.UI.Views.RcaDockablePanel::.cctor()": {
+          "Lines": {
+            "22": 0
+          },
+          "Branches": []
+        }
+      },
+      "Rca.UI.Views.RcaDockablePanel/NullPythonExecutionService": {
+        "System.Threading.Tasks.Task`1<System.String> Rca.UI.Views.RcaDockablePanel/NullPythonExecutionService::ExecuteAsync(System.String)": {
+          "Lines": {
+            "105": 0
+          },
+          "Branches": []
+        },
+        "System.String Rca.UI.Views.RcaDockablePanel/NullPythonExecutionService::ExecuteSync(System.String)": {
+          "Lines": {
+            "106": 0
+          },
+          "Branches": []
+        },
+        "System.Void Rca.UI.Views.RcaDockablePanel/NullPythonExecutionService::SetRevitContext(System.Object)": {
+          "Lines": {
+            "107": 0
+          },
+          "Branches": []
+        }
+      }
+    },
+    "C:\\Users\\baidakov\\rca-plugin\\src\\Rca.UI\\obj\\Debug\\net8.0-windows\\RcaDockablePanel.g.cs": {
+      "Rca.UI.Views.RcaDockablePanel": {
+        "System.Void Rca.UI.Views.RcaDockablePanel::InitializeComponent()": {
+          "Lines": {
+            "50": 0,
+            "51": 0,
+            "52": 0,
+            "54": 0,
+            "55": 0
+          },
+          "Branches": [
+            {
+              "Line": 51,
+              "Offset": 9,
+              "EndOffset": 11,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 0
+            },
+            {
+              "Line": 51,
+              "Offset": 9,
+              "EndOffset": 14,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 0
+            }
+          ]
+        }
+      }
+    },
+    "C:\\Users\\baidakov\\rca-plugin\\src\\Rca.UI\\RcaDockablePanel.xaml": {
+      "Rca.UI.Views.RcaDockablePanel": {
+        "System.Void Rca.UI.Views.RcaDockablePanel::InitializeComponent()": {
+          "Lines": {
+            "1": 0
+          },
+          "Branches": []
+        }
+      }
+    },
+    "C:\\Users\\baidakov\\rca-plugin\\src\\Rca.UI\\RcaDockablePanelProvider.cs": {
+      "Rca.UI.Views.RcaDockablePanelProvider": {
+        "System.Void Rca.UI.Views.RcaDockablePanelProvider::SetupDockablePane(Autodesk.Revit.UI.DockablePaneProviderData)": {
+          "Lines": {
+            "24": 0,
+            "25": 0,
+            "26": 0,
+            "28": 0,
+            "29": 0,
+            "30": 0,
+            "31": 0,
+            "32": 0,
+            "33": 0,
+            "34": 0
+          },
+          "Branches": [
+            {
+              "Line": 25,
+              "Offset": 7,
+              "EndOffset": 9,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 0
+            },
+            {
+              "Line": 25,
+              "Offset": 7,
+              "EndOffset": 20,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 0
+            }
+          ]
+        },
+        "System.Void Rca.UI.Views.RcaDockablePanelProvider::.ctor(System.Func`1<Autodesk.Revit.UI.UIApplication>,Rca.Contracts.IPythonExecutionService)": {
+          "Lines": {
+            "15": 0,
+            "16": 0,
+            "17": 0,
+            "18": 0,
+            "19": 0,
+            "20": 0,
+            "21": 0
+          },
+          "Branches": []
+        }
+      }
+    },
+    "C:\\Users\\baidakov\\rca-plugin\\src\\Rca.UI\\Logging\\UiLog.cs": {
+      "Rca.UI.Logging.UiLog": {
+        "Microsoft.Extensions.Logging.ILogger Rca.UI.Logging.UiLog::GetLogger()": {
+          "Lines": {
+            "43": 0
+          },
+          "Branches": [
+            {
+              "Line": 43,
+              "Offset": 16,
+              "EndOffset": 18,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 0
+            },
+            {
+              "Line": 43,
+              "Offset": 16,
+              "EndOffset": 34,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 0
+            }
+          ]
+        },
+        "Microsoft.Extensions.Logging.ILogger Rca.UI.Logging.UiLog::GetLogger(System.String)": {
+          "Lines": {
+            "44": 0
+          },
+          "Branches": []
+        },
+        "System.Void Rca.UI.Logging.UiLog::EnsureConnected()": {
+          "Lines": {
+            "47": 0,
+            "48": 0,
+            "49": 0,
+            "50": 0,
+            "51": 0,
+            "52": 0,
+            "54": 0,
+            "55": 0,
+            "56": 0,
+            "57": 0,
+            "58": 0,
+            "59": 0,
+            "60": 0,
+            "61": 0,
+            "62": 0,
+            "63": 0,
+            "64": 0,
+            "65": 0,
+            "66": 0,
+            "67": 0,
+            "68": 0,
+            "69": 0,
+            "70": 0
+          },
+          "Branches": [
+            {
+              "Line": 48,
+              "Offset": 9,
+              "EndOffset": 11,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 0
+            },
+            {
+              "Line": 48,
+              "Offset": 9,
+              "EndOffset": 21,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 0
+            },
+            {
+              "Line": 48,
+              "Offset": 24,
+              "EndOffset": 31,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 0
+            },
+            {
+              "Line": 49,
+              "Offset": 48,
+              "EndOffset": 55,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 0
+            },
+            {
+              "Line": 52,
+              "Offset": 81,
+              "EndOffset": 83,
+              "Path": 0,
+              "Ordinal": 6,
+              "Hits": 0
+            },
+            {
+              "Line": 52,
+              "Offset": 81,
+              "EndOffset": 93,
+              "Path": 1,
+              "Ordinal": 7,
+              "Hits": 0
+            },
+            {
+              "Line": 52,
+              "Offset": 98,
+              "EndOffset": 100,
+              "Path": 0,
+              "Ordinal": 8,
+              "Hits": 0
+            },
+            {
+              "Line": 52,
+              "Offset": 98,
+              "EndOffset": 105,
+              "Path": 1,
+              "Ordinal": 9,
+              "Hits": 0
+            },
+            {
+              "Line": 48,
+              "Offset": 24,
+              "EndOffset": 320,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 0
+            },
+            {
+              "Line": 49,
+              "Offset": 48,
+              "EndOffset": 320,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 0
+            }
+          ]
+        },
+        "System.Void Rca.UI.Logging.UiLog::.cctor()": {
+          "Lines": {
+            "23": 0,
+            "24": 0,
+            "25": 0,
+            "26": 0,
+            "27": 0,
+            "28": 0,
+            "29": 0,
+            "31": 0,
+            "32": 0,
+            "33": 0,
+            "36": 0,
+            "37": 0,
+            "39": 0
+          },
+          "Branches": []
+        }
+      },
+      "Rca.UI.Logging.UiLog/UiPipeLogger": {
+        "System.IDisposable Rca.UI.Logging.UiLog/UiPipeLogger::BeginScope(TState)": {
+          "Lines": {
+            "76": 0
+          },
+          "Branches": []
+        },
+        "System.Boolean Rca.UI.Logging.UiLog/UiPipeLogger::IsEnabled(Microsoft.Extensions.Logging.LogLevel)": {
+          "Lines": {
+            "77": 0
+          },
+          "Branches": []
+        },
+        "System.Void Rca.UI.Logging.UiLog/UiPipeLogger::Log(Microsoft.Extensions.Logging.LogLevel,Microsoft.Extensions.Logging.EventId,TState,System.Exception,System.Func`3<TState,System.Exception,System.String>)": {
+          "Lines": {
+            "79": 0,
+            "80": 0,
+            "82": 0,
+            "83": 0,
+            "87": 0,
+            "88": 0,
+            "89": 0,
+            "90": 0,
+            "91": 0,
+            "92": 0,
+            "93": 0,
+            "94": 0,
+            "95": 0,
+            "96": 0,
+            "97": 0,
+            "98": 0,
+            "99": 0,
+            "100": 0,
+            "101": 0,
+            "103": 0,
+            "104": 0,
+            "105": 0,
+            "107": 0,
+            "108": 0,
+            "109": 0,
+            "110": 0,
+            "112": 0,
+            "113": 0,
+            "115": 0,
+            "116": 0,
+            "117": 0,
+            "118": 0,
+            "121": 0,
+            "122": 0,
+            "123": 0,
+            "124": 0,
+            "125": 0,
+            "126": 0,
+            "127": 0,
+            "128": 0,
+            "129": 0
+          },
+          "Branches": [
+            {
+              "Line": 80,
+              "Offset": 13,
+              "EndOffset": 20,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 0
+            },
+            {
+              "Line": 87,
+              "Offset": 73,
+              "EndOffset": 75,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 0
+            },
+            {
+              "Line": 87,
+              "Offset": 73,
+              "EndOffset": 78,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 0
+            },
+            {
+              "Line": 104,
+              "Offset": 128,
+              "EndOffset": 130,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 0
+            },
+            {
+              "Line": 104,
+              "Offset": 128,
+              "EndOffset": 140,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 0
+            },
+            {
+              "Line": 104,
+              "Offset": 145,
+              "EndOffset": 147,
+              "Path": 0,
+              "Ordinal": 6,
+              "Hits": 0
+            },
+            {
+              "Line": 115,
+              "Offset": 189,
+              "EndOffset": 191,
+              "Path": 0,
+              "Ordinal": 8,
+              "Hits": 0
+            },
+            {
+              "Line": 115,
+              "Offset": 189,
+              "EndOffset": 194,
+              "Path": 1,
+              "Ordinal": 9,
+              "Hits": 0
+            },
+            {
+              "Line": 104,
+              "Offset": 145,
+              "EndOffset": 220,
+              "Path": 1,
+              "Ordinal": 7,
+              "Hits": 0
+            },
+            {
+              "Line": 80,
+              "Offset": 13,
+              "EndOffset": 448,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 0
+            }
+          ]
+        },
+        "System.Void Rca.UI.Logging.UiLog/UiPipeLogger::.ctor(System.String)": {
+          "Lines": {
+            "75": 0
+          },
+          "Branches": []
+        }
+      },
+      "Rca.UI.Logging.UiLog/NullScope": {
+        "System.Void Rca.UI.Logging.UiLog/NullScope::Dispose()": {
+          "Lines": {
+            "132": 0
+          },
+          "Branches": []
+        }
+      }
+    }
+  }
+}
