@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CoverageReport scope="Rca.Loader.AssemblyManagement.LoadedAssembliesInfo">
+  <Summary>
+    <Class>Rca.Loader.AssemblyManagement.LoadedAssembliesInfo</Class>
+    <Assembly>Rca.Loader</Assembly>
+    <Files>
+      <File>C:\Users\baidakov\rca-plugin\src\Rca.Loader\AssemblyManagement\LoadedAssembliesInfo.cs</File>
+    </Files>
+    <Coveredlines>0</Coveredlines>
+    <Uncoveredlines>4</Uncoveredlines>
+    <Coverablelines>4</Coverablelines>
+    <Totallines>44</Totallines>
+    <Linecoverage>0</Linecoverage>
+    <Coveredbranches>0</Coveredbranches>
+    <Totalbranches>0</Totalbranches>
+    <Coveredmethods>0</Coveredmethods>
+    <Totalmethods>4</Totalmethods>
+    <Methodcoverage>0</Methodcoverage>
+  </Summary>
+  <Metrics>
+    <Element name="get_LoaderComponents">
+      <CrapScore>2</CrapScore>
+      <Cyclomaticcomplexity>1</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>100</Branchcoverage>
+    </Element>
+    <Element name="get_RuntimeAssembly">
+      <CrapScore>2</CrapScore>
+      <Cyclomaticcomplexity>1</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>100</Branchcoverage>
+    </Element>
+    <Element name="get_LoadedRuntimeAssembly">
+      <CrapScore>2</CrapScore>
+      <Cyclomaticcomplexity>1</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>100</Branchcoverage>
+    </Element>
+    <Element name="get_LastMSBuildSignal">
+      <CrapScore>2</CrapScore>
+      <Cyclomaticcomplexity>1</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>100</Branchcoverage>
+    </Element>
+  </Metrics>
+  <Files>
+    <File name="C:\Users\baidakov\rca-plugin\src\Rca.Loader\AssemblyManagement\LoadedAssembliesInfo.cs">
+      <LineAnalysis line="1" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using System;" />
+      <LineAnalysis line="2" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="3" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="namespace Rca.Loader.AssemblyManagement" />
+      <LineAnalysis line="4" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="{" />
+      <LineAnalysis line="5" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    /// &lt;summary&gt;" />
+      <LineAnalysis line="6" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    /// Contains information about all assemblies tracked by the hot-reload system." />
+      <LineAnalysis line="7" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    /// &lt;/summary&gt;" />
+      <LineAnalysis line="8" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    /// &lt;remarks&gt;" />
+      <LineAnalysis line="9" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    /// This class serves as the data model for the LoadedAssemblies.json file" />
+      <LineAnalysis line="10" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    /// that persists assembly state between Revit sessions." />
+      <LineAnalysis line="11" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    /// Loader and Contracts are treated as a single unit since they" />
+      <LineAnalysis line="12" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    /// are always deployed and updated together" />
+      <LineAnalysis line="13" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    /// &lt;/remarks&gt;" />
+      <LineAnalysis line="14" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    public class LoadedAssembliesInfo" />
+      <LineAnalysis line="15" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    {" />
+      <LineAnalysis line="16" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;summary&gt;" />
+      <LineAnalysis line="17" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Gets or sets information about the loader components (Rca.Loader.dll and Rca.Loader.Contracts.dll)." />
+      <LineAnalysis line="18" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/summary&gt;" />
+      <LineAnalysis line="19" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;remarks&gt;" />
+      <LineAnalysis line="20" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Loader and Contracts are treated as a single component since they are always deployed together." />
+      <LineAnalysis line="21" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// The path represents the directory containing both assemblies." />
+      <LineAnalysis line="22" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// The hash is a combined hash of both assemblies." />
+      <LineAnalysis line="23" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/remarks&gt;" />
+      <LineAnalysis line="24" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        public AssemblyInfo LoaderComponents { get; set; } = new AssemblyInfo();" />
+      <LineAnalysis line="25" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="26" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;summary&gt;" />
+      <LineAnalysis line="27" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Gets or sets information about the Rca.Runtime.dll assembly." />
+      <LineAnalysis line="28" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// This represents the DISCOVERED version (what's on disk), not necessarily what's loaded." />
+      <LineAnalysis line="29" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/summary&gt;" />
+      <LineAnalysis line="30" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        public AssemblyInfo RuntimeAssembly { get; set; } = new AssemblyInfo();" />
+      <LineAnalysis line="31" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="32" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;summary&gt;" />
+      <LineAnalysis line="33" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Gets or sets information about the ACTUALLY LOADED runtime assembly." />
+      <LineAnalysis line="34" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// This is updated only after successful ReloadRuntime operation." />
+      <LineAnalysis line="35" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Used to compare with RuntimeAssembly to determine if reload is needed." />
+      <LineAnalysis line="36" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/summary&gt;" />
+      <LineAnalysis line="37" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        public AssemblyInfo LoadedRuntimeAssembly { get; set; } = new AssemblyInfo();" />
+      <LineAnalysis line="38" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="39" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;summary&gt;" />
+      <LineAnalysis line="40" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Gets or sets information about the last MSBuild signal received." />
+      <LineAnalysis line="41" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/summary&gt;" />
+      <LineAnalysis line="42" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        public SignalInfo LastMSBuildSignal { get; set; } = new SignalInfo();" />
+      <LineAnalysis line="43" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    }" />
+      <LineAnalysis line="44" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="}" />
+    </File>
+  </Files>
+</CoverageReport>

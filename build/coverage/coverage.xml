@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CoverageReport scope="Summary">
+  <Summary>
+    <Generatedon>10/18/2025 - 4:18:09 PM</Generatedon>
+    <Parser>MultiReport (4x Cobertura)</Parser>
+    <Assemblies>7</Assemblies>
+    <Classes>53</Classes>
+    <Files>46</Files>
+    <Coveredlines>150</Coveredlines>
+    <Uncoveredlines>2793</Uncoveredlines>
+    <Coverablelines>2943</Coverablelines>
+    <Totallines>5948</Totallines>
+    <Linecoverage>5</Linecoverage>
+    <Coveredbranches>43</Coveredbranches>
+    <Totalbranches>984</Totalbranches>
+    <Branchcoverage>4.3</Branchcoverage>
+    <Coveredmethods>19</Coveredmethods>
+    <Totalmethods>334</Totalmethods>
+    <Methodcoverage>5.6</Methodcoverage>
+  </Summary>
+  <Coverage>
+    <Assembly name="Rca.Contracts" classes="3" coverage="50" coveredlines="12" coverablelines="24" totallines="122" branchcoverage="83.3" coveredbranches="5" totalbranches="6" coveredmethods="4" totalmethods="7" methodcoverage="57.1">
+      <Class name="Rca.Contracts.Configuration.RcaConfiguration" coverage="0" coveredlines="0" coverablelines="4" totallines="44" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="1" methodcoverage="0" />
+      <Class name="Rca.Contracts.Configuration.RcaConstants" coverage="0" coveredlines="0" coverablelines="4" totallines="22" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="1" methodcoverage="0" />
+      <Class name="Rca.Contracts.Infrastructure.ServiceContainer" coverage="75" coveredlines="12" coverablelines="16" totallines="56" branchcoverage="83.3" coveredbranches="5" totalbranches="6" coveredmethods="4" totalmethods="5" methodcoverage="80" />
+    </Assembly>
+    <Assembly name="Rca.Core" classes="4" coverage="0" coveredlines="0" coverablelines="96" totallines="275" branchcoverage="0" coveredbranches="0" totalbranches="42" coveredmethods="0" totalmethods="23" methodcoverage="0">
+      <Class name="Rca.Core.RevitContext" coverage="0" coveredlines="0" coverablelines="3" totallines="39" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="3" methodcoverage="0" />
+      <Class name="Rca.Core.RevitContextServiceImpl" coverage="0" coveredlines="0" coverablelines="2" totallines="39" branchcoverage="0" coveredbranches="0" totalbranches="2" coveredmethods="0" totalmethods="2" methodcoverage="0" />
+      <Class name="Rca.Core.Services.PythonExecutionService" coverage="0" coveredlines="0" coverablelines="82" totallines="165" branchcoverage="0" coveredbranches="0" totalbranches="34" coveredmethods="0" totalmethods="15" methodcoverage="0" />
+      <Class name="Rca.Core.Services.RevitNotificationService" coverage="0" coveredlines="0" coverablelines="9" totallines="32" branchcoverage="0" coveredbranches="0" totalbranches="6" coveredmethods="0" totalmethods="3" methodcoverage="0" />
+    </Assembly>
+    <Assembly name="Rca.Loader" classes="36" coverage="3.9" coveredlines="100" coverablelines="2519" totallines="6004" branchcoverage="3.9" coveredbranches="34" totalbranches="868" coveredmethods="4" totalmethods="235" methodcoverage="1.7">
+      <Class name="Rca.Loader.AssemblyManagement.AssemblyInfo" coverage="0" coveredlines="0" coverablelines="2" totallines="24" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="2" methodcoverage="0" />
+      <Class name="Rca.Loader.AssemblyManagement.AssemblyStatusManager" coverage="0" coveredlines="0" coverablelines="261" totallines="367" branchcoverage="0" coveredbranches="0" totalbranches="134" coveredmethods="0" totalmethods="12" methodcoverage="0" />
+      <Class name="Rca.Loader.AssemblyManagement.LoadedAssembliesInfo" coverage="0" coveredlines="0" coverablelines="4" totallines="44" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="4" methodcoverage="0" />
+      <Class name="Rca.Loader.AssemblyManagement.SignalInfo" coverage="0" coveredlines="0" coverablelines="2" totallines="30" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="2" methodcoverage="0" />
+      <Class name="Rca.Loader.Commands.ReloadRuntimeCommand" coverage="0" coveredlines="0" coverablelines="127" totallines="211" branchcoverage="0" coveredbranches="0" totalbranches="58" coveredmethods="0" totalmethods="3" methodcoverage="0" />
+      <Class name="Rca.Loader.Commands.ShowDockablePanelCommand" coverage="0" coveredlines="0" coverablelines="36" totallines="79" branchcoverage="0" coveredbranches="0" totalbranches="6" coveredmethods="0" totalmethods="2" methodcoverage="0" />
+      <Class name="Rca.Loader.Configuration.DebugSettings" coverage="0" coveredlines="0" coverablelines="4" totallines="57" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="4" methodcoverage="0" />
+      <Class name="Rca.Loader.Configuration.PathExpander" coverage="0" coveredlines="0" coverablelines="6" totallines="28" branchcoverage="0" coveredbranches="0" totalbranches="2" coveredmethods="0" totalmethods="1" methodcoverage="0" />
+      <Class name="Rca.Loader.Configuration.Settings" coverage="0" coveredlines="0" coverablelines="2" totallines="57" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="2" methodcoverage="0" />
+      <Class name="Rca.Loader.Configuration.SettingsService" coverage="0" coveredlines="0" coverablelines="60" totallines="119" branchcoverage="0" coveredbranches="0" totalbranches="6" coveredmethods="0" totalmethods="4" methodcoverage="0" />
+      <Class name="Rca.Loader.Infrastructure.AssemblyLoadConstants" coverage="0" coveredlines="0" coverablelines="24" totallines="57" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="1" methodcoverage="0" />
+      <Class name="Rca.Loader.Infrastructure.AssemblyLoadService" coverage="0" coveredlines="0" coverablelines="62" totallines="151" branchcoverage="0" coveredbranches="0" totalbranches="26" coveredmethods="0" totalmethods="6" methodcoverage="0" />
+      <Class name="Rca.Loader.Infrastructure.AttributeMetadataLoader" coverage="72.8" coveredlines="75" coverablelines="103" totallines="191" branchcoverage="62.9" coveredbranches="34" totalbranches="54" coveredmethods="3" totalmethods="4" methodcoverage="75" />
+      <Class name="Rca.Loader.Infrastructure.CommandValidationService" coverage="0" coveredlines="0" coverablelines="79" totallines="189" branchcoverage="0" coveredbranches="0" totalbranches="28" coveredmethods="0" totalmethods="12" methodcoverage="0" />
+      <Class name="Rca.Loader.Infrastructure.LoaderConstants" coverage="100" coveredlines="25" coverablelines="25" totallines="81" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="1" totalmethods="1" methodcoverage="100" />
+      <Class name="Rca.Loader.Infrastructure.PipeResponseFactory" coverage="0" coveredlines="0" coverablelines="34" totallines="112" branchcoverage="0" coveredbranches="0" totalbranches="4" coveredmethods="0" totalmethods="6" methodcoverage="0" />
+      <Class name="Rca.Loader.Infrastructure.RuntimeCommandHandler" coverage="0" coveredlines="0" coverablelines="224" totallines="428" branchcoverage="0" coveredbranches="0" totalbranches="98" coveredmethods="0" totalmethods="27" methodcoverage="0" />
+      <Class name="Rca.Loader.Infrastructure.RuntimeLoadContext" coverage="0" coveredlines="0" coverablelines="60" totallines="123" branchcoverage="0" coveredbranches="0" totalbranches="28" coveredmethods="0" totalmethods="10" methodcoverage="0" />
+      <Class name="Rca.Loader.Infrastructure.TriggerCommandHandler" coverage="0" coveredlines="0" coverablelines="24" totallines="73" branchcoverage="0" coveredbranches="0" totalbranches="4" coveredmethods="0" totalmethods="4" methodcoverage="0" />
+      <Class name="Rca.Loader.LoaderApp" coverage="0" coveredlines="0" coverablelines="203" totallines="383" branchcoverage="0" coveredbranches="0" totalbranches="58" coveredmethods="0" totalmethods="16" methodcoverage="0" />
+      <Class name="Rca.Loader.Logging.DebugSink" coverage="0" coveredlines="0" coverablelines="7" totallines="201" branchcoverage="0" coveredbranches="0" totalbranches="2" coveredmethods="0" totalmethods="2" methodcoverage="0" />
+      <Class name="Rca.Loader.Logging.EnrichedLogEntry" coverage="0" coveredlines="0" coverablelines="5" totallines="201" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="5" methodcoverage="0" />
+      <Class name="Rca.Loader.Logging.FileLogSink" coverage="0" coveredlines="0" coverablelines="23" totallines="201" branchcoverage="0" coveredbranches="0" totalbranches="2" coveredmethods="0" totalmethods="5" methodcoverage="0" />
+      <Class name="Rca.Loader.Logging.LoaderLog" coverage="0" coveredlines="0" coverablelines="21" totallines="201" branchcoverage="0" coveredbranches="0" totalbranches="12" coveredmethods="0" totalmethods="9" methodcoverage="0" />
+      <Class name="Rca.Loader.Logging.LoggingPipeServerService" coverage="0" coveredlines="0" coverablelines="68" totallines="201" branchcoverage="0" coveredbranches="0" totalbranches="34" coveredmethods="0" totalmethods="5" methodcoverage="0" />
+      <Class name="Rca.Loader.Restart.RestartManager" coverage="0" coveredlines="0" coverablelines="166" totallines="248" branchcoverage="0" coveredbranches="0" totalbranches="48" coveredmethods="0" totalmethods="8" methodcoverage="0" />
+      <Class name="Rca.Loader.Services.PipeCommand" coverage="0" coveredlines="0" coverablelines="1" totallines="215" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="1" methodcoverage="0" />
+      <Class name="Rca.Loader.Services.PipeResponse" coverage="0" coveredlines="0" coverablelines="3" totallines="215" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="3" methodcoverage="0" />
+      <Class name="Rca.Loader.Services.PipeServerService" coverage="0" coveredlines="0" coverablelines="117" totallines="215" branchcoverage="0" coveredbranches="0" totalbranches="42" coveredmethods="0" totalmethods="7" methodcoverage="0" />
+      <Class name="Rca.Loader.Services.RibbonService" coverage="0" coveredlines="0" coverablelines="100" totallines="187" branchcoverage="0" coveredbranches="0" totalbranches="22" coveredmethods="0" totalmethods="5" methodcoverage="0" />
+      <Class name="Rca.Loader.Services.RuntimeManager" coverage="0" coveredlines="0" coverablelines="256" totallines="393" branchcoverage="0" coveredbranches="0" totalbranches="82" coveredmethods="0" totalmethods="15" methodcoverage="0" />
+      <Class name="Rca.Loader.Testing.RevitTestExecutor" coverage="0" coveredlines="0" coverablelines="234" totallines="389" branchcoverage="0" coveredbranches="0" totalbranches="48" coveredmethods="0" totalmethods="29" methodcoverage="0" />
+      <Class name="Rca.Loader.Testing.UIApplicationTests" coverage="0" coveredlines="0" coverablelines="3" totallines="24" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="1" methodcoverage="0" />
+      <Class name="Rca.Loader.UI.DockablePanelHost" coverage="0" coveredlines="0" coverablelines="67" totallines="118" branchcoverage="0" coveredbranches="0" totalbranches="8" coveredmethods="0" totalmethods="6" methodcoverage="0" />
+      <Class name="Rca.Loader.UI.DockablePanelProvider" coverage="0" coveredlines="0" coverablelines="13" totallines="35" branchcoverage="0" coveredbranches="0" totalbranches="4" coveredmethods="0" totalmethods="2" methodcoverage="0" />
+      <Class name="Rca.Loader.UI.RibbonStatusDisplay" coverage="0" coveredlines="0" coverablelines="93" totallines="156" branchcoverage="0" coveredbranches="0" totalbranches="58" coveredmethods="0" totalmethods="9" methodcoverage="0" />
+    </Assembly>
+    <Assembly name="Rca.Loader.Contracts" classes="1" coverage="0" coveredlines="0" coverablelines="29" totallines="76" branchcoverage="0" coveredbranches="0" totalbranches="4" coveredmethods="0" totalmethods="5" methodcoverage="0">
+      <Class name="Rca.Loader.Contracts.SharedServiceRegistry" coverage="0" coveredlines="0" coverablelines="29" totallines="76" branchcoverage="0" coveredbranches="0" totalbranches="4" coveredmethods="0" totalmethods="5" methodcoverage="0" />
+    </Assembly>
+    <Assembly name="Rca.Logging.Contracts" classes="1" coverage="0" coveredlines="0" coverablelines="15" totallines="117" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="15" methodcoverage="0">
+      <Class name="Rca.Logging.Contracts.LogEntryDto" coverage="0" coveredlines="0" coverablelines="15" totallines="117" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="15" methodcoverage="0" />
+    </Assembly>
+    <Assembly name="Rca.Network" classes="1" coverage="100" coveredlines="1" coverablelines="1" totallines="14" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="1" totalmethods="1" methodcoverage="100">
+      <Class name="Rca.Network.NetworkPlaceholder" coverage="100" coveredlines="1" coverablelines="1" totallines="14" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="1" totalmethods="1" methodcoverage="100" />
+    </Assembly>
+    <Assembly name="Rca.UI" classes="7" coverage="14.2" coveredlines="37" coverablelines="259" totallines="819" branchcoverage="6.2" coveredbranches="4" totalbranches="64" coveredmethods="10" totalmethods="48" methodcoverage="20.8">
+      <Class name="Rca.UI.Logging.UiLog" coverage="0" coveredlines="0" coverablelines="83" totallines="134" branchcoverage="0" coveredbranches="0" totalbranches="22" coveredmethods="0" totalmethods="9" methodcoverage="0" />
+      <Class name="Rca.UI.Services.DefaultServices" coverage="0" coveredlines="0" coverablelines="6" totallines="30" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="6" methodcoverage="0" />
+      <Class name="Rca.UI.Services.ServiceResolver" coverage="0" coveredlines="0" coverablelines="31" totallines="84" branchcoverage="0" coveredbranches="0" totalbranches="8" coveredmethods="0" totalmethods="6" methodcoverage="0" />
+      <Class name="Rca.UI.ViewModels.RcaDockablePanelViewModel" coverage="76.3" coveredlines="29" coverablelines="38" totallines="149" branchcoverage="50" coveredbranches="3" totalbranches="6" coveredmethods="8" totalmethods="10" methodcoverage="80" />
+      <Class name="Rca.UI.ViewModels.RelayCommand" coverage="61.5" coveredlines="8" coverablelines="13" totallines="149" branchcoverage="25" coveredbranches="1" totalbranches="4" coveredmethods="2" totalmethods="5" methodcoverage="40" />
+      <Class name="Rca.UI.Views.RcaDockablePanel" coverage="0" coveredlines="0" coverablelines="71" totallines="237" branchcoverage="0" coveredbranches="0" totalbranches="22" coveredmethods="0" totalmethods="10" methodcoverage="0" />
+      <Class name="Rca.UI.Views.RcaDockablePanelProvider" coverage="0" coveredlines="0" coverablelines="17" totallines="36" branchcoverage="0" coveredbranches="0" totalbranches="2" coveredmethods="0" totalmethods="2" methodcoverage="0" />
+    </Assembly>
+  </Coverage>
+</CoverageReport>

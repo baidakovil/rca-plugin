@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CoverageReport scope="Rca.Loader.Infrastructure.AssemblyLoadService">
+  <Summary>
+    <Class>Rca.Loader.Infrastructure.AssemblyLoadService</Class>
+    <Assembly>Rca.Loader</Assembly>
+    <Files>
+      <File>C:\Users\baidakov\rca-plugin\src\Rca.Loader\Infrastructure\AssemblyLoadService.cs</File>
+    </Files>
+    <Coveredlines>0</Coveredlines>
+    <Uncoveredlines>62</Uncoveredlines>
+    <Coverablelines>62</Coverablelines>
+    <Totallines>151</Totallines>
+    <Linecoverage>0</Linecoverage>
+    <Coveredbranches>0</Coveredbranches>
+    <Totalbranches>26</Totalbranches>
+    <Branchcoverage>0</Branchcoverage>
+    <Coveredmethods>0</Coveredmethods>
+    <Totalmethods>6</Totalmethods>
+    <Methodcoverage>0</Methodcoverage>
+  </Summary>
+  <Metrics>
+    <Element name="ctor">
+      <CrapScore>6</CrapScore>
+      <Cyclomaticcomplexity>2</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>0</Branchcoverage>
+    </Element>
+    <Element name="TryLoad">
+      <CrapScore>42</CrapScore>
+      <Cyclomaticcomplexity>6</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>0</Branchcoverage>
+    </Element>
+    <Element name="FindExistingInDefaultContext">
+      <CrapScore>20</CrapScore>
+      <Cyclomaticcomplexity>4</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>0</Branchcoverage>
+    </Element>
+    <Element name="LoadInDefaultContext">
+      <CrapScore>42</CrapScore>
+      <Cyclomaticcomplexity>6</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>0</Branchcoverage>
+    </Element>
+    <Element name="LoadInCurrentContext">
+      <CrapScore>20</CrapScore>
+      <Cyclomaticcomplexity>4</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>0</Branchcoverage>
+    </Element>
+    <Element name="LoadFromRuntimeToDefault">
+      <CrapScore>20</CrapScore>
+      <Cyclomaticcomplexity>4</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>0</Branchcoverage>
+    </Element>
+  </Metrics>
+  <Files>
+    <File name="C:\Users\baidakov\rca-plugin\src\Rca.Loader\Infrastructure\AssemblyLoadService.cs">
+      <LineAnalysis line="1" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="#nullable enable" />
+      <LineAnalysis line="2" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using System;" />
+      <LineAnalysis line="3" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using System.IO;" />
+      <LineAnalysis line="4" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using System.Linq;" />
+      <LineAnalysis line="5" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using System.Reflection;" />
+      <LineAnalysis line="6" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using System.Runtime.Loader;" />
+      <LineAnalysis line="7" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="8" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="namespace Rca.Loader.Infrastructure" />
+      <LineAnalysis line="9" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="{" />
+      <LineAnalysis line="10" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    /// &lt;summary&gt;" />
+      <LineAnalysis line="11" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    /// Strategies for loading assemblies in different contexts." />
+      <LineAnalysis line="12" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    /// &lt;/summary&gt;" />
+      <LineAnalysis line="13" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    public enum AssemblyLoadStrategy" />
+      <LineAnalysis line="14" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    {" />
+      <LineAnalysis line="15" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;summary&gt;" />
+      <LineAnalysis line="16" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Load assembly in the default application domain context." />
+      <LineAnalysis line="17" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/summary&gt;" />
+      <LineAnalysis line="18" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        DefaultContext," />
+      <LineAnalysis line="19" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="20" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;summary&gt;" />
+      <LineAnalysis line="21" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Load assembly in the current custom load context." />
+      <LineAnalysis line="22" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/summary&gt;" />
+      <LineAnalysis line="23" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        CurrentContext," />
+      <LineAnalysis line="24" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="25" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;summary&gt;" />
+      <LineAnalysis line="26" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Load assembly from the runtime directory into default context." />
+      <LineAnalysis line="27" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/summary&gt;" />
+      <LineAnalysis line="28" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        RuntimeToDefault" />
+      <LineAnalysis line="29" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    }" />
+      <LineAnalysis line="30" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="31" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    /// &lt;summary&gt;" />
+      <LineAnalysis line="32" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    /// Service for loading assemblies with different strategies and proper error handling." />
+      <LineAnalysis line="33" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    /// &lt;/summary&gt;" />
+      <LineAnalysis line="34" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    public class AssemblyLoadService" />
+      <LineAnalysis line="35" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    {" />
+      <LineAnalysis line="36" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private readonly AssemblyLoadContext currentContext;" />
+      <LineAnalysis line="37" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private readonly string? runtimeBaseDirectory;" />
+      <LineAnalysis line="38" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="39" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;summary&gt;" />
+      <LineAnalysis line="40" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Initializes a new instance of the &lt;see cref=&quot;AssemblyLoadService&quot;/&gt; class." />
+      <LineAnalysis line="41" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/summary&gt;" />
+      <LineAnalysis line="42" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;param name=&quot;currentContext&quot;&gt;The current assembly load context.&lt;/param&gt;" />
+      <LineAnalysis line="43" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;param name=&quot;runtimeBaseDirectory&quot;&gt;The base directory for runtime assemblies.&lt;/param&gt;" />
+      <LineAnalysis line="44" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        public AssemblyLoadService(AssemblyLoadContext currentContext, string? runtimeBaseDirectory = null)" />
+      <LineAnalysis line="45" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        {" />
+      <LineAnalysis line="46" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="            this.currentContext = currentContext ?? throw new ArgumentNullException(nameof(currentContext));" />
+      <LineAnalysis line="47" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            this.runtimeBaseDirectory = runtimeBaseDirectory;" />
+      <LineAnalysis line="48" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        }" />
+      <LineAnalysis line="49" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="50" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;summary&gt;" />
+      <LineAnalysis line="51" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Attempts to load an assembly using the specified strategy." />
+      <LineAnalysis line="52" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/summary&gt;" />
+      <LineAnalysis line="53" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;param name=&quot;strategy&quot;&gt;The loading strategy to use.&lt;/param&gt;" />
+      <LineAnalysis line="54" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;param name=&quot;assemblyName&quot;&gt;The name of the assembly to load.&lt;/param&gt;" />
+      <LineAnalysis line="55" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;returns&gt;The loaded assembly, or null if loading fails.&lt;/returns&gt;" />
+      <LineAnalysis line="56" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        public Assembly? TryLoad(AssemblyLoadStrategy strategy, string assemblyName)" />
+      <LineAnalysis line="57" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        {" />
+      <LineAnalysis line="58" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="            if (string.IsNullOrWhiteSpace(assemblyName))" />
+      <LineAnalysis line="59" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return null;" />
+      <LineAnalysis line="60" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="61" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="4" content="            return strategy switch" />
+      <LineAnalysis line="62" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="63" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                AssemblyLoadStrategy.DefaultContext =&gt; LoadInDefaultContext(assemblyName)," />
+      <LineAnalysis line="64" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                AssemblyLoadStrategy.CurrentContext =&gt; LoadInCurrentContext(assemblyName)," />
+      <LineAnalysis line="65" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                AssemblyLoadStrategy.RuntimeToDefault =&gt; LoadFromRuntimeToDefault(assemblyName)," />
+      <LineAnalysis line="66" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                _ =&gt; throw new ArgumentOutOfRangeException(nameof(strategy), strategy, &quot;Unknown assembly load strategy&quot;)" />
+      <LineAnalysis line="67" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            };" />
+      <LineAnalysis line="68" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        }" />
+      <LineAnalysis line="69" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="70" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;summary&gt;" />
+      <LineAnalysis line="71" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Checks if an assembly is already loaded in the default context." />
+      <LineAnalysis line="72" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/summary&gt;" />
+      <LineAnalysis line="73" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;param name=&quot;assemblyName&quot;&gt;The name of the assembly to check.&lt;/param&gt;" />
+      <LineAnalysis line="74" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;returns&gt;The existing assembly if found, otherwise null.&lt;/returns&gt;" />
+      <LineAnalysis line="75" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        public Assembly? FindExistingInDefaultContext(string assemblyName)" />
+      <LineAnalysis line="76" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        {" />
+      <LineAnalysis line="77" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="            if (string.IsNullOrWhiteSpace(assemblyName))" />
+      <LineAnalysis line="78" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return null;" />
+      <LineAnalysis line="79" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="80" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            return AppDomain.CurrentDomain.GetAssemblies()" />
+      <LineAnalysis line="81" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                .FirstOrDefault(assembly =&gt; !assembly.IsDynamic &amp;&amp;" />
+      <LineAnalysis line="82" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    string.Equals(assembly.GetName().Name, assemblyName, StringComparison.OrdinalIgnoreCase));" />
+      <LineAnalysis line="83" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        }" />
+      <LineAnalysis line="84" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="85" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private Assembly? LoadInDefaultContext(string assemblyName)" />
+      <LineAnalysis line="86" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        {" />
+      <LineAnalysis line="87" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            // Check if already loaded first" />
+      <LineAnalysis line="88" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            var existingAssembly = FindExistingInDefaultContext(assemblyName);" />
+      <LineAnalysis line="89" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="            if (existingAssembly != null)" />
+      <LineAnalysis line="90" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return existingAssembly;" />
+      <LineAnalysis line="91" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="92" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            // Try to load from runtime directory" />
+      <LineAnalysis line="93" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="            if (string.IsNullOrEmpty(runtimeBaseDirectory))" />
+      <LineAnalysis line="94" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return null;" />
+      <LineAnalysis line="95" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="96" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            var assemblyPath = Path.Combine(runtimeBaseDirectory, assemblyName + AssemblyLoadConstants.DllExtension);" />
+      <LineAnalysis line="97" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="            if (!File.Exists(assemblyPath))" />
+      <LineAnalysis line="98" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return null;" />
+      <LineAnalysis line="99" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="100" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            try" />
+      <LineAnalysis line="101" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="102" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath);" />
+      <LineAnalysis line="103" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="104" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            catch" />
+      <LineAnalysis line="105" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="106" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // Swallow exceptions and return null for failed loads" />
+      <LineAnalysis line="107" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return null;" />
+      <LineAnalysis line="108" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="109" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        }" />
+      <LineAnalysis line="110" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="111" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private Assembly? LoadInCurrentContext(string assemblyName)" />
+      <LineAnalysis line="112" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        {" />
+      <LineAnalysis line="113" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="            if (string.IsNullOrEmpty(runtimeBaseDirectory))" />
+      <LineAnalysis line="114" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return null;" />
+      <LineAnalysis line="115" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="116" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            var assemblyPath = Path.Combine(runtimeBaseDirectory, assemblyName + AssemblyLoadConstants.DllExtension);" />
+      <LineAnalysis line="117" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="            if (!File.Exists(assemblyPath))" />
+      <LineAnalysis line="118" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return null;" />
+      <LineAnalysis line="119" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="120" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            try" />
+      <LineAnalysis line="121" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="122" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return currentContext.LoadFromAssemblyPath(assemblyPath);" />
+      <LineAnalysis line="123" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="124" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            catch" />
+      <LineAnalysis line="125" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="126" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // Swallow exceptions and return null for failed loads" />
+      <LineAnalysis line="127" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return null;" />
+      <LineAnalysis line="128" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="129" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        }" />
+      <LineAnalysis line="130" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="131" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private Assembly? LoadFromRuntimeToDefault(string assemblyName)" />
+      <LineAnalysis line="132" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        {" />
+      <LineAnalysis line="133" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="            if (string.IsNullOrEmpty(runtimeBaseDirectory))" />
+      <LineAnalysis line="134" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return null;" />
+      <LineAnalysis line="135" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="136" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            var assemblyPath = Path.Combine(runtimeBaseDirectory, assemblyName + AssemblyLoadConstants.DllExtension);" />
+      <LineAnalysis line="137" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="            if (!File.Exists(assemblyPath))" />
+      <LineAnalysis line="138" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return null;" />
+      <LineAnalysis line="139" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="140" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            try" />
+      <LineAnalysis line="141" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="142" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath);" />
+      <LineAnalysis line="143" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="144" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            catch" />
+      <LineAnalysis line="145" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="146" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // Swallow exceptions and return null for failed loads" />
+      <LineAnalysis line="147" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return null;" />
+      <LineAnalysis line="148" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="149" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        }" />
+      <LineAnalysis line="150" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    }" />
+      <LineAnalysis line="151" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="}" />
+    </File>
+  </Files>
+</CoverageReport>

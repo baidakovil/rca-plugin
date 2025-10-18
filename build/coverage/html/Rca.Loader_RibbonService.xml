@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CoverageReport scope="Rca.Loader.Services.RibbonService">
+  <Summary>
+    <Class>Rca.Loader.Services.RibbonService</Class>
+    <Assembly>Rca.Loader</Assembly>
+    <Files>
+      <File>C:\Users\baidakov\rca-plugin\src\Rca.Loader\Services\RibbonService.cs</File>
+    </Files>
+    <Coveredlines>0</Coveredlines>
+    <Uncoveredlines>100</Uncoveredlines>
+    <Coverablelines>100</Coverablelines>
+    <Totallines>187</Totallines>
+    <Linecoverage>0</Linecoverage>
+    <Coveredbranches>0</Coveredbranches>
+    <Totalbranches>22</Totalbranches>
+    <Branchcoverage>0</Branchcoverage>
+    <Coveredmethods>0</Coveredmethods>
+    <Totalmethods>5</Totalmethods>
+    <Methodcoverage>0</Methodcoverage>
+  </Summary>
+  <Metrics>
+    <Element name="cctor">
+      <CrapScore>2</CrapScore>
+      <Cyclomaticcomplexity>1</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>100</Branchcoverage>
+    </Element>
+    <Element name="get_StatusDisplay">
+      <CrapScore>2</CrapScore>
+      <Cyclomaticcomplexity>1</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>100</Branchcoverage>
+    </Element>
+    <Element name="BuildRibbon">
+      <CrapScore>272</CrapScore>
+      <Cyclomaticcomplexity>16</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>0</Branchcoverage>
+    </Element>
+    <Element name="AssignEmbeddedIcons">
+      <CrapScore>20</CrapScore>
+      <Cyclomaticcomplexity>4</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>0</Branchcoverage>
+    </Element>
+    <Element name="GetEmbeddedImageBitmapFrame">
+      <CrapScore>6</CrapScore>
+      <Cyclomaticcomplexity>2</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>0</Branchcoverage>
+    </Element>
+  </Metrics>
+  <Files>
+    <File name="C:\Users\baidakov\rca-plugin\src\Rca.Loader\Services\RibbonService.cs">
+      <LineAnalysis line="1" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using System;" />
+      <LineAnalysis line="2" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using System.Reflection;" />
+      <LineAnalysis line="3" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using System.Windows.Media.Imaging;" />
+      <LineAnalysis line="4" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using System.Windows.Media;" />
+      <LineAnalysis line="5" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using Autodesk.Revit.UI;" />
+      <LineAnalysis line="6" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using Rca.Loader.Commands;" />
+      <LineAnalysis line="7" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using Rca.Loader.Contracts;" />
+      <LineAnalysis line="8" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using Rca.Loader.Logging;" />
+      <LineAnalysis line="9" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using Microsoft.Extensions.Logging;" />
+      <LineAnalysis line="10" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="#if DEBUG" />
+      <LineAnalysis line="11" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using Rca.Loader.UI;" />
+      <LineAnalysis line="12" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="#endif" />
+      <LineAnalysis line="13" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="14" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="namespace Rca.Loader.Services" />
+      <LineAnalysis line="15" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="{" />
+      <LineAnalysis line="16" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    /// &lt;summary&gt;" />
+      <LineAnalysis line="17" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    /// Handles creation and configuration of Revit ribbon UI components." />
+      <LineAnalysis line="18" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    /// Creates &quot;Intelligence Tools&quot; panel (always visible) and &quot;RCA Debug&quot; panel (DEBUG only)." />
+      <LineAnalysis line="19" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    /// &lt;/summary&gt;" />
+      <LineAnalysis line="20" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    public class RibbonService : IRibbonService" />
+      <LineAnalysis line="21" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    {" />
+      <LineAnalysis line="22" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private const string IntelligenceToolsPanelName = &quot;Intelligence Tools&quot;;" />
+      <LineAnalysis line="23" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private const string DebugPanelName = &quot;RCA Debug&quot;;" />
+      <LineAnalysis line="24" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        private static readonly ILogger Log = LoaderLog.GetLogger&lt;RibbonService&gt;();" />
+      <LineAnalysis line="25" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="26" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="#if DEBUG" />
+      <LineAnalysis line="27" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;summary&gt;" />
+      <LineAnalysis line="28" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Gets the status display for the ribbon." />
+      <LineAnalysis line="29" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/summary&gt;" />
+      <LineAnalysis line="30" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        public RibbonStatusDisplay? StatusDisplay { get; private set; }" />
+      <LineAnalysis line="31" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="#endif" />
+      <LineAnalysis line="32" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="33" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;summary&gt;" />
+      <LineAnalysis line="34" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Builds the RCA ribbon controls in Revit's standard Add-Ins tab." />
+      <LineAnalysis line="35" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Creates &quot;Intelligence Tools&quot; panel (always) and &quot;RCA Debug&quot; panel (DEBUG only)." />
+      <LineAnalysis line="36" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/summary&gt;" />
+      <LineAnalysis line="37" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;param name=&quot;application&quot;&gt;The Revit UI controlled application.&lt;/param&gt;" />
+      <LineAnalysis line="38" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        public void BuildRibbon(object application)" />
+      <LineAnalysis line="39" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        {" />
+      <LineAnalysis line="40" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="            if (application is not UIControlledApplication uiApp)" />
+      <LineAnalysis line="41" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                throw new ArgumentException(&quot;Application must be a UIControlledApplication&quot;, nameof(application));" />
+      <LineAnalysis line="42" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="43" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            // Create &quot;Intelligence Tools&quot; panel - always visible in both DEBUG and RELEASE" />
+      <LineAnalysis line="44" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            try" />
+      <LineAnalysis line="45" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="46" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                var intelligencePanel = uiApp.CreateRibbonPanel(Tab.AddIns, IntelligenceToolsPanelName);" />
+      <LineAnalysis line="47" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogInformation(&quot;Intelligence Tools panel created in Add-Ins tab&quot;);" />
+      <LineAnalysis line="48" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="49" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // Button: Revit Chat Assistant - opens the dockable panel" />
+      <LineAnalysis line="50" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                var showPanelBtn = new PushButtonData(" />
+      <LineAnalysis line="51" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    &quot;RCA_ShowPanel&quot;," />
+      <LineAnalysis line="52" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    &quot;Revit Chat\nAssistant&quot;," />
+      <LineAnalysis line="53" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    Assembly.GetExecutingAssembly().Location," />
+      <LineAnalysis line="54" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    typeof(ShowDockablePanelCommand).FullName);" />
+      <LineAnalysis line="55" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                var showPanelPush = intelligencePanel.AddItem(showPanelBtn) as PushButton;" />
+      <LineAnalysis line="56" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                AssignEmbeddedIcons(showPanelPush," />
+      <LineAnalysis line="57" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    iconFileName: &quot;OpenAssistant16.png&quot;," />
+      <LineAnalysis line="58" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    tooltip: &quot;Open Revit Chat Assistant panel&quot;);" />
+      <LineAnalysis line="59" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogInformation(&quot;Revit Chat Assistant button added to Intelligence Tools panel&quot;);" />
+      <LineAnalysis line="60" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="61" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            catch (Exception ex)" />
+      <LineAnalysis line="62" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="63" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogError(ex, &quot;Failed to create Intelligence Tools panel&quot;);" />
+      <LineAnalysis line="64" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="65" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="66" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="#if DEBUG" />
+      <LineAnalysis line="67" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            // Create &quot;RCA Debug&quot; panel - only in DEBUG builds" />
+      <LineAnalysis line="68" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            try" />
+      <LineAnalysis line="69" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="70" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                var debugPanel = uiApp.CreateRibbonPanel(Tab.AddIns, DebugPanelName);" />
+      <LineAnalysis line="71" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogInformation(&quot;RCA Debug panel created in Add-Ins tab&quot;);" />
+      <LineAnalysis line="72" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="73" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // Button: Reload Runtime (latest)" />
+      <LineAnalysis line="74" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                var reloadBtn = new PushButtonData(" />
+      <LineAnalysis line="75" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    &quot;RCA_ReloadRuntime&quot;," />
+      <LineAnalysis line="76" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    &quot;Reload\nRuntime&quot;," />
+      <LineAnalysis line="77" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    Assembly.GetExecutingAssembly().Location," />
+      <LineAnalysis line="78" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    typeof(ReloadRuntimeCommand).FullName);" />
+      <LineAnalysis line="79" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                var reloadPush = debugPanel.AddItem(reloadBtn) as PushButton;" />
+      <LineAnalysis line="80" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                AssignEmbeddedIcons(reloadPush," />
+      <LineAnalysis line="81" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    iconFileName: &quot;ReloadRuntime16.png&quot;," />
+      <LineAnalysis line="82" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    tooltip: &quot;Reload the latest deployed runtime.&quot;);" />
+      <LineAnalysis line="83" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogDebug(&quot;Reload runtime button added to RCA Debug panel&quot;);" />
+      <LineAnalysis line="84" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="85" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // Add separator for visual grouping" />
+      <LineAnalysis line="86" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                debugPanel.AddSeparator();" />
+      <LineAnalysis line="87" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="88" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // Create three stacked status TextBoxes" />
+      <LineAnalysis line="89" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                TextBoxData tb1 = new TextBoxData(&quot;RCA_StatusLine1&quot;)" />
+      <LineAnalysis line="90" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                {" />
+      <LineAnalysis line="91" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    Name = &quot;Assembly Status&quot;," />
+      <LineAnalysis line="92" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    ToolTip = &quot;Shows status of loaded assemblies&quot;" />
+      <LineAnalysis line="93" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                };" />
+      <LineAnalysis line="94" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                TextBoxData tb2 = new TextBoxData(&quot;RCA_StatusLine2&quot;)" />
+      <LineAnalysis line="95" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                {" />
+      <LineAnalysis line="96" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    Name = &quot;Runtime Status&quot;," />
+      <LineAnalysis line="97" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    ToolTip = &quot;Shows runtime assembly information&quot;" />
+      <LineAnalysis line="98" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                };" />
+      <LineAnalysis line="99" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                TextBoxData tb3 = new TextBoxData(&quot;RCA_StatusLine3&quot;)" />
+      <LineAnalysis line="100" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                {" />
+      <LineAnalysis line="101" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    Name = &quot;Signal Status&quot;," />
+      <LineAnalysis line="102" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    ToolTip = &quot;Shows MSBuild signal information&quot;" />
+      <LineAnalysis line="103" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                };" />
+      <LineAnalysis line="104" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="105" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // Add them as stacked items" />
+      <LineAnalysis line="106" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                var items = debugPanel.AddStackedItems(tb1, tb2, tb3);" />
+      <LineAnalysis line="107" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="108" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                if (items == null)" />
+      <LineAnalysis line="109" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                {" />
+      <LineAnalysis line="110" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    Log.LogWarning(&quot;AddStackedItems returned null for debug textboxes&quot;);" />
+      <LineAnalysis line="111" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    return;" />
+      <LineAnalysis line="112" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                }" />
+      <LineAnalysis line="113" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="114" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // The returned list maps to the created controls in the same order" />
+      <LineAnalysis line="115" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                TextBox? line1 = items.Count &gt; 0 ? items[0] as TextBox : null;" />
+      <LineAnalysis line="116" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                TextBox? line2 = items.Count &gt; 1 ? items[1] as TextBox : null;" />
+      <LineAnalysis line="117" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                TextBox? line3 = items.Count &gt; 2 ? items[2] as TextBox : null;" />
+      <LineAnalysis line="118" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="119" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="6" content="                if (line1 == null || line2 == null || line3 == null)" />
+      <LineAnalysis line="120" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                {" />
+      <LineAnalysis line="121" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    Log.LogWarning(&quot;One or more ribbon textboxes are null line1={L1} line2={L2} line3={L3}&quot;," />
+      <LineAnalysis line="122" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                        line1 != null, line2 != null, line3 != null);" />
+      <LineAnalysis line="123" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    return;" />
+      <LineAnalysis line="124" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                }" />
+      <LineAnalysis line="125" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="126" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                StatusDisplay = new RibbonStatusDisplay();" />
+      <LineAnalysis line="127" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                StatusDisplay.Initialize(line1, line2, line3);" />
+      <LineAnalysis line="128" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogInformation(&quot;Debug status display initialized in RCA Debug panel&quot;);" />
+      <LineAnalysis line="129" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="130" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            catch (Exception ex)" />
+      <LineAnalysis line="131" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="132" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogWarning(ex, &quot;Failed to create RCA Debug panel&quot;);" />
+      <LineAnalysis line="133" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="134" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="#else" />
+      <LineAnalysis line="135" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            Log.LogInformation(&quot;RELEASE build - only Intelligence Tools panel created&quot;);" />
+      <LineAnalysis line="136" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="#endif" />
+      <LineAnalysis line="137" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        }" />
+      <LineAnalysis line="138" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="139" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;summary&gt;" />
+      <LineAnalysis line="140" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Assigns a 16x16 icon to both Image and LargeImage of a Revit button." />
+      <LineAnalysis line="141" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/summary&gt;" />
+      <LineAnalysis line="142" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;param name=&quot;button&quot;&gt;The button to assign icons to.&lt;/param&gt;" />
+      <LineAnalysis line="143" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;param name=&quot;iconFileName&quot;&gt;The 16x16 icon filename.&lt;/param&gt;" />
+      <LineAnalysis line="144" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;param name=&quot;tooltip&quot;&gt;Optional tooltip text.&lt;/param&gt;" />
+      <LineAnalysis line="145" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private static void AssignEmbeddedIcons(PushButton? button, string iconFileName, string? tooltip = null)" />
+      <LineAnalysis line="146" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        {" />
+      <LineAnalysis line="147" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="            if (button == null) return;" />
+      <LineAnalysis line="148" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="149" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            try" />
+      <LineAnalysis line="150" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="151" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                var asm = Assembly.GetExecutingAssembly();" />
+      <LineAnalysis line="152" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                var icon = GetEmbeddedImageBitmapFrame(asm, $&quot;Rca.Loader.Resources.{iconFileName}&quot;);" />
+      <LineAnalysis line="153" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                button.Image = icon;" />
+      <LineAnalysis line="154" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                button.LargeImage = icon;" />
+      <LineAnalysis line="155" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                if (!string.IsNullOrWhiteSpace(tooltip))" />
+      <LineAnalysis line="156" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                {" />
+      <LineAnalysis line="157" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    button.ToolTip = tooltip;" />
+      <LineAnalysis line="158" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                }" />
+      <LineAnalysis line="159" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="160" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            catch" />
+      <LineAnalysis line="161" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="162" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // Ignore icon load issues to avoid blocking add-in load." />
+      <LineAnalysis line="163" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="164" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        }" />
+      <LineAnalysis line="165" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="166" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;summary&gt;" />
+      <LineAnalysis line="167" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Loads a bitmap image from embedded resources using BitmapFrame.Create." />
+      <LineAnalysis line="168" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/summary&gt;" />
+      <LineAnalysis line="169" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;param name=&quot;assembly&quot;&gt;The assembly containing the embedded resources.&lt;/param&gt;" />
+      <LineAnalysis line="170" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;param name=&quot;imageName&quot;&gt;The resource name of the embedded image.&lt;/param&gt;" />
+      <LineAnalysis line="171" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;returns&gt;A bitmap image, or null if not found.&lt;/returns&gt;" />
+      <LineAnalysis line="172" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private static ImageSource? GetEmbeddedImageBitmapFrame(Assembly assembly, string imageName)" />
+      <LineAnalysis line="173" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        {" />
+      <LineAnalysis line="174" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            try" />
+      <LineAnalysis line="175" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="176" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                var stream = assembly.GetManifestResourceStream(imageName);" />
+      <LineAnalysis line="177" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                if (stream == null) return null;" />
+      <LineAnalysis line="178" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                var imageFrame = BitmapFrame.Create(stream);" />
+      <LineAnalysis line="179" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return imageFrame;" />
+      <LineAnalysis line="180" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="181" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            catch" />
+      <LineAnalysis line="182" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="183" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return null;" />
+      <LineAnalysis line="184" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="185" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        }" />
+      <LineAnalysis line="186" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    }" />
+      <LineAnalysis line="187" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="}" />
+    </File>
+  </Files>
+</CoverageReport>

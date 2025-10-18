@@ -1,0 +1,617 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CoverageReport scope="Rca.Loader.Infrastructure.RuntimeCommandHandler">
+  <Summary>
+    <Class>Rca.Loader.Infrastructure.RuntimeCommandHandler</Class>
+    <Assembly>Rca.Loader</Assembly>
+    <Files>
+      <File>C:\Users\baidakov\rca-plugin\src\Rca.Loader\Infrastructure\RuntimeCommandHandler.cs</File>
+    </Files>
+    <Coveredlines>0</Coveredlines>
+    <Uncoveredlines>224</Uncoveredlines>
+    <Coverablelines>224</Coverablelines>
+    <Totallines>428</Totallines>
+    <Linecoverage>0</Linecoverage>
+    <Coveredbranches>0</Coveredbranches>
+    <Totalbranches>98</Totalbranches>
+    <Branchcoverage>0</Branchcoverage>
+    <Coveredmethods>0</Coveredmethods>
+    <Totalmethods>27</Totalmethods>
+    <Methodcoverage>0</Methodcoverage>
+  </Summary>
+  <Metrics>
+    <Element name="cctor">
+      <CrapScore>2</CrapScore>
+      <Cyclomaticcomplexity>1</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>100</Branchcoverage>
+    </Element>
+    <Element name="ctor">
+      <CrapScore>72</CrapScore>
+      <Cyclomaticcomplexity>8</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>0</Branchcoverage>
+    </Element>
+    <Element name="HandlePipeCommandAsync">
+      <CrapScore>110</CrapScore>
+      <Cyclomaticcomplexity>10</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>0</Branchcoverage>
+    </Element>
+    <Element name="HandleSyncCommand">
+      <CrapScore>72</CrapScore>
+      <Cyclomaticcomplexity>8</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>0</Branchcoverage>
+    </Element>
+    <Element name="HandleReloadCommand">
+      <CrapScore>210</CrapScore>
+      <Cyclomaticcomplexity>14</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>0</Branchcoverage>
+    </Element>
+    <Element name="HandleReloadRuntimeCommand">
+      <CrapScore>1056</CrapScore>
+      <Cyclomaticcomplexity>32</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>0</Branchcoverage>
+    </Element>
+    <Element name="TryInjectRuntimeUI">
+      <CrapScore>42</CrapScore>
+      <Cyclomaticcomplexity>6</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>0</Branchcoverage>
+    </Element>
+    <Element name="HandleStatusCommand">
+      <CrapScore>20</CrapScore>
+      <Cyclomaticcomplexity>4</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>0</Branchcoverage>
+    </Element>
+    <Element name="HandleBuildCompletedCommand">
+      <CrapScore>110</CrapScore>
+      <Cyclomaticcomplexity>10</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>0</Branchcoverage>
+    </Element>
+    <Element name="TriggerReloadRuntimeCommand">
+      <CrapScore>2</CrapScore>
+      <Cyclomaticcomplexity>1</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>100</Branchcoverage>
+    </Element>
+    <Element name="HandleTestInitCommandAsync">
+      <CrapScore>2</CrapScore>
+      <Cyclomaticcomplexity>1</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>100</Branchcoverage>
+    </Element>
+    <Element name="HandleRunTestsCommandAsync">
+      <CrapScore>42</CrapScore>
+      <Cyclomaticcomplexity>6</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>0</Branchcoverage>
+    </Element>
+    <Element name="get_AssemblyPath">
+      <CrapScore>2</CrapScore>
+      <Cyclomaticcomplexity>1</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>100</Branchcoverage>
+    </Element>
+    <Element name="get_Tests">
+      <CrapScore>2</CrapScore>
+      <Cyclomaticcomplexity>1</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>100</Branchcoverage>
+    </Element>
+    <Element name="get_FullyQualifiedName">
+      <CrapScore>2</CrapScore>
+      <Cyclomaticcomplexity>1</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>100</Branchcoverage>
+    </Element>
+    <Element name="get_DisplayName">
+      <CrapScore>2</CrapScore>
+      <Cyclomaticcomplexity>1</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>100</Branchcoverage>
+    </Element>
+    <Element name="get_FullyQualifiedName">
+      <CrapScore>2</CrapScore>
+      <Cyclomaticcomplexity>1</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>100</Branchcoverage>
+    </Element>
+    <Element name="get_DisplayName">
+      <CrapScore>2</CrapScore>
+      <Cyclomaticcomplexity>1</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>100</Branchcoverage>
+    </Element>
+    <Element name="get_Outcome">
+      <CrapScore>2</CrapScore>
+      <Cyclomaticcomplexity>1</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>100</Branchcoverage>
+    </Element>
+    <Element name="get_ErrorMessage">
+      <CrapScore>2</CrapScore>
+      <Cyclomaticcomplexity>1</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>100</Branchcoverage>
+    </Element>
+    <Element name="get_ErrorStackTrace">
+      <CrapScore>2</CrapScore>
+      <Cyclomaticcomplexity>1</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>100</Branchcoverage>
+    </Element>
+    <Element name="get_DurationInMilliseconds">
+      <CrapScore>2</CrapScore>
+      <Cyclomaticcomplexity>1</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>100</Branchcoverage>
+    </Element>
+    <Element name="get_StartTimeUnixMs">
+      <CrapScore>2</CrapScore>
+      <Cyclomaticcomplexity>1</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>100</Branchcoverage>
+    </Element>
+    <Element name="get_EndTimeUnixMs">
+      <CrapScore>2</CrapScore>
+      <Cyclomaticcomplexity>1</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>100</Branchcoverage>
+    </Element>
+    <Element name="get_Messages">
+      <CrapScore>2</CrapScore>
+      <Cyclomaticcomplexity>1</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>100</Branchcoverage>
+    </Element>
+    <Element name="get_Level">
+      <CrapScore>2</CrapScore>
+      <Cyclomaticcomplexity>1</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>100</Branchcoverage>
+    </Element>
+    <Element name="get_Text">
+      <CrapScore>2</CrapScore>
+      <Cyclomaticcomplexity>1</Cyclomaticcomplexity>
+      <Linecoverage>0</Linecoverage>
+      <Branchcoverage>100</Branchcoverage>
+    </Element>
+  </Metrics>
+  <Files>
+    <File name="C:\Users\baidakov\rca-plugin\src\Rca.Loader\Infrastructure\RuntimeCommandHandler.cs">
+      <LineAnalysis line="1" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using System;" />
+      <LineAnalysis line="2" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using System.Text.Json;" />
+      <LineAnalysis line="3" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using System.Threading.Tasks;" />
+      <LineAnalysis line="4" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using System.Collections.Generic;" />
+      <LineAnalysis line="5" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using System.Linq;" />
+      <LineAnalysis line="6" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using Autodesk.Revit.UI;" />
+      <LineAnalysis line="7" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using Rca.Loader.Testing;" />
+      <LineAnalysis line="8" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using Rca.Loader.Contracts;" />
+      <LineAnalysis line="9" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using Rca.Loader.Services;" />
+      <LineAnalysis line="10" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using Rca.Loader.Infrastructure;" />
+      <LineAnalysis line="11" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using Rca.Loader.AssemblyManagement;" />
+      <LineAnalysis line="12" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using Rca.Loader.Logging;" />
+      <LineAnalysis line="13" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="using Microsoft.Extensions.Logging;" />
+      <LineAnalysis line="14" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="15" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="namespace Rca.Loader.Infrastructure" />
+      <LineAnalysis line="16" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="{" />
+      <LineAnalysis line="17" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    /// &lt;summary&gt;" />
+      <LineAnalysis line="18" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    /// Service for handling pipe commands that interact with the runtime." />
+      <LineAnalysis line="19" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    /// &lt;/summary&gt;" />
+      <LineAnalysis line="20" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    public class RuntimeCommandHandler" />
+      <LineAnalysis line="21" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    {" />
+      <LineAnalysis line="22" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        private static readonly ILogger Log = LoaderLog.GetLogger&lt;RuntimeCommandHandler&gt;();" />
+      <LineAnalysis line="23" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="24" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private readonly IRuntimeManager runtimeManager;" />
+      <LineAnalysis line="25" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private readonly UIApplication uiapp;" />
+      <LineAnalysis line="26" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private readonly CommandValidationService validationService;" />
+      <LineAnalysis line="27" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private readonly AssemblyStatusManager? assemblyStatusManager;" />
+      <LineAnalysis line="28" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="29" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;summary&gt;" />
+      <LineAnalysis line="30" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Initializes a new instance of the &lt;see cref=&quot;RuntimeCommandHandler&quot;/&gt; class." />
+      <LineAnalysis line="31" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/summary&gt;" />
+      <LineAnalysis line="32" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;param name=&quot;runtimeManager&quot;&gt;The runtime manager.&lt;/param&gt;" />
+      <LineAnalysis line="33" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;param name=&quot;uiapp&quot;&gt;The Revit UI application.&lt;/param&gt;" />
+      <LineAnalysis line="34" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        public RuntimeCommandHandler(IRuntimeManager runtimeManager, UIApplication uiapp)" />
+      <LineAnalysis line="35" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        {" />
+      <LineAnalysis line="36" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="            this.runtimeManager = runtimeManager ?? throw new ArgumentNullException(nameof(runtimeManager));" />
+      <LineAnalysis line="37" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="            this.uiapp = uiapp ?? throw new ArgumentNullException(nameof(uiapp));" />
+      <LineAnalysis line="38" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            validationService = new CommandValidationService();" />
+      <LineAnalysis line="39" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="            assemblyStatusManager = LoaderApp.Instance?.AssemblyStatusManager;" />
+      <LineAnalysis line="40" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="41" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="            if (assemblyStatusManager == null)" />
+      <LineAnalysis line="42" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="43" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogWarning(&quot;AssemblyStatusManager not available in RuntimeCommandHandler (hot-reload not fully initialized?)&quot;);" />
+      <LineAnalysis line="44" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="45" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        }" />
+      <LineAnalysis line="46" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="47" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;summary&gt;" />
+      <LineAnalysis line="48" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Handles a pipe command asynchronously." />
+      <LineAnalysis line="49" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/summary&gt;" />
+      <LineAnalysis line="50" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;param name=&quot;cmd&quot;&gt;The command to handle.&lt;/param&gt;" />
+      <LineAnalysis line="51" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;returns&gt;A response to the command.&lt;/returns&gt;" />
+      <LineAnalysis line="52" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        public async Task&lt;PipeResponse&gt; HandlePipeCommandAsync(PipeCommand cmd)" />
+      <LineAnalysis line="53" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        {" />
+      <LineAnalysis line="54" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="            if (cmd == null) throw new ArgumentNullException(nameof(cmd));" />
+      <LineAnalysis line="55" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="            Log.LogDebug(&quot;Received pipe command {Command} payloadLen={Len}&quot;, cmd.Command, cmd.Payload?.Length ?? 0);" />
+      <LineAnalysis line="56" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="57" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            try" />
+      <LineAnalysis line="58" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="59" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // Validate command first" />
+      <LineAnalysis line="60" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                if (!validationService.ValidateCommand(cmd, out var validationError))" />
+      <LineAnalysis line="61" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                {" />
+      <LineAnalysis line="62" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    Log.LogWarning(&quot;Command validation failed {Command} error={Error}&quot;, cmd.Command, validationError);" />
+      <LineAnalysis line="63" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    return PipeResponseFactory.InvalidPayload(validationError);" />
+      <LineAnalysis line="64" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                }" />
+      <LineAnalysis line="65" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="66" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="4" content="                return cmd.Command.ToUpperInvariant() switch" />
+      <LineAnalysis line="67" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                {" />
+      <LineAnalysis line="68" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    PipeCommands.RunTests =&gt; await HandleRunTestsCommandAsync(cmd).ConfigureAwait(false)," />
+      <LineAnalysis line="69" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    PipeCommands.TestInit =&gt; await HandleTestInitCommandAsync().ConfigureAwait(false)," />
+      <LineAnalysis line="70" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    _ =&gt; HandleSyncCommand(cmd)" />
+      <LineAnalysis line="71" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                };" />
+      <LineAnalysis line="72" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="73" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            catch (Exception ex)" />
+      <LineAnalysis line="74" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="75" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogError(ex, &quot;Error handling command {Command}&quot;, cmd.Command);" />
+      <LineAnalysis line="76" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return PipeResponseFactory.Error($&quot;Error handling command: {ex.Message}&quot;);" />
+      <LineAnalysis line="77" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="78" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        }" />
+      <LineAnalysis line="79" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="80" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;summary&gt;" />
+      <LineAnalysis line="81" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Handles synchronous pipe commands." />
+      <LineAnalysis line="82" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/summary&gt;" />
+      <LineAnalysis line="83" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;param name=&quot;cmd&quot;&gt;The command to handle.&lt;/param&gt;" />
+      <LineAnalysis line="84" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;returns&gt;A response to the command.&lt;/returns&gt;" />
+      <LineAnalysis line="85" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private PipeResponse HandleSyncCommand(PipeCommand cmd)" />
+      <LineAnalysis line="86" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        {" />
+      <LineAnalysis line="87" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            Log.LogTrace(&quot;Handling synchronous command {Command}&quot;, cmd.Command);" />
+      <LineAnalysis line="88" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="8" content="            return cmd.Command.ToUpperInvariant() switch" />
+      <LineAnalysis line="89" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="90" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                PipeCommands.Reload =&gt; HandleReloadCommand(cmd)," />
+      <LineAnalysis line="91" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                PipeCommands.ReloadRuntime =&gt; HandleReloadRuntimeCommand(cmd)," />
+      <LineAnalysis line="92" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                PipeCommands.BuildCompleted =&gt; HandleBuildCompletedCommand()," />
+      <LineAnalysis line="93" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                PipeCommands.Status =&gt; HandleStatusCommand()," />
+      <LineAnalysis line="94" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                _ =&gt; PipeResponseFactory.UnknownCommand(cmd.Command)" />
+      <LineAnalysis line="95" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            };" />
+      <LineAnalysis line="96" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        }" />
+      <LineAnalysis line="97" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="98" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private PipeResponse HandleReloadCommand(PipeCommand cmd)" />
+      <LineAnalysis line="99" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        {" />
+      <LineAnalysis line="100" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            Log.LogInformation(&quot;Handling RELOAD command payload={Payload}&quot;, cmd.Payload);" />
+      <LineAnalysis line="101" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            try" />
+      <LineAnalysis line="102" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="103" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // Always force-unload any active test ALC for explicit RELOAD and let runtime reload fresh" />
+      <LineAnalysis line="104" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                RevitTestExecutor.ForceUnloadActiveTestLoadContext();" />
+      <LineAnalysis line="105" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="106" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                var result = runtimeManager.ReloadRuntime(cmd.Payload, out var errorMessage);" />
+      <LineAnalysis line="107" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="4" content="                if (result &amp;&amp; !string.IsNullOrEmpty(cmd.Payload))" />
+      <LineAnalysis line="108" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                {" />
+      <LineAnalysis line="109" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                    assemblyStatusManager?.ProcessMsBuildSignal(cmd.Payload);" />
+      <LineAnalysis line="110" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                    try { LoaderApp.Instance?.UpdateStatusDisplay(); } catch { }" />
+      <LineAnalysis line="111" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="112" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                    // Inject runtime UI into dockable panel host" />
+      <LineAnalysis line="113" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    TryInjectRuntimeUI();" />
+      <LineAnalysis line="114" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="115" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    Log.LogInformation(&quot;Runtime reloaded via explicit folder payload path={Path}&quot;, cmd.Payload);" />
+      <LineAnalysis line="116" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                }" />
+      <LineAnalysis line="117" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="6" content="                return result ? PipeResponseFactory.Success(errorMessage ?? string.Empty) : PipeResponseFactory.Error(errorMessage ?? &quot;Unknown reload error&quot;);" />
+      <LineAnalysis line="118" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="119" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            catch (Exception ex)" />
+      <LineAnalysis line="120" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="121" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogError(ex, &quot;Error in HandleReloadCommand payload={Payload}&quot;, cmd.Payload);" />
+      <LineAnalysis line="122" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return PipeResponseFactory.Error($&quot;Error reloading: {ex.Message}&quot;);" />
+      <LineAnalysis line="123" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="124" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        }" />
+      <LineAnalysis line="125" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="126" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private PipeResponse HandleReloadRuntimeCommand(PipeCommand cmd)" />
+      <LineAnalysis line="127" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        {" />
+      <LineAnalysis line="128" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="            Log.LogInformation(&quot;Handling RELOAD_RUNTIME command (auto-detect latest) payloadIgnoredLen={Len}&quot;, cmd.Payload?.Length ?? 0);" />
+      <LineAnalysis line="129" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            try" />
+      <LineAnalysis line="130" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="131" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // Always force-unload any active test ALC to clear stuck test references" />
+      <LineAnalysis line="132" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                RevitTestExecutor.ForceUnloadActiveTestLoadContext();" />
+      <LineAnalysis line="133" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="134" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // Determine latest folder automatically" />
+      <LineAnalysis line="135" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="4" content="                var latest = assemblyStatusManager?.GetLatestTempDllFolder() ?? string.Empty;" />
+      <LineAnalysis line="136" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                if (string.IsNullOrEmpty(latest))" />
+      <LineAnalysis line="137" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    return PipeResponseFactory.Error(&quot;No runtime deploy folders found&quot;);" />
+      <LineAnalysis line="138" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="139" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // Update status manager from latest folder" />
+      <LineAnalysis line="140" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                assemblyStatusManager?.ProcessMsBuildSignal(latest);" />
+      <LineAnalysis line="141" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // Refresh UI after processing MSBuild signal" />
+      <LineAnalysis line="142" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                try { LoaderApp.Instance?.UpdateStatusDisplay(); } catch { }" />
+      <LineAnalysis line="143" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="144" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                bool loaderOutdated = assemblyStatusManager?.IsLoaderOutdated() ?? false;" />
+      <LineAnalysis line="145" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                bool runtimeOutdated = assemblyStatusManager?.IsRuntimeOutdated() ?? false;" />
+      <LineAnalysis line="146" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogDebug(&quot;ReloadRuntime state loaderOutdated={LoaderOutdated} runtimeOutdated={RuntimeOutdated}&quot;, loaderOutdated, runtimeOutdated);" />
+      <LineAnalysis line="147" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="148" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="4" content="                if (loaderOutdated &amp;&amp; !runtimeOutdated)" />
+      <LineAnalysis line="149" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    return PipeResponseFactory.Success(&quot;LOADER_RESTART_REQUIRED&quot;);" />
+      <LineAnalysis line="150" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="4" content="                if (!loaderOutdated &amp;&amp; !runtimeOutdated)" />
+      <LineAnalysis line="151" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    return PipeResponseFactory.Success(&quot;NO_ACTION_NEEDED&quot;);" />
+      <LineAnalysis line="152" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="153" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // Otherwise attempt runtime reload from latest" />
+      <LineAnalysis line="154" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                var result = runtimeManager.ReloadRuntime(latest, out var errorMessage);" />
+      <LineAnalysis line="155" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                if (result)" />
+      <LineAnalysis line="156" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                {" />
+      <LineAnalysis line="157" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                    // Update runtime hash if reload was successful" />
+      <LineAnalysis line="158" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                    assemblyStatusManager?.UpdateHashesAfterReload(runtimeManager.CurrentRuntimePath);" />
+      <LineAnalysis line="159" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                    // Refresh UI to show updated hash/path" />
+      <LineAnalysis line="160" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                    try { LoaderApp.Instance?.UpdateStatusDisplay(); } catch { }" />
+      <LineAnalysis line="161" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="162" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                    // Inject runtime UI into dockable panel host" />
+      <LineAnalysis line="163" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    TryInjectRuntimeUI();" />
+      <LineAnalysis line="164" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="165" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    Log.LogInformation(&quot;ReloadRuntime completed (latest={Latest})&quot;, latest);" />
+      <LineAnalysis line="166" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    return PipeResponseFactory.Success(&quot;ReloadRuntime completed successfully&quot;);" />
+      <LineAnalysis line="167" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                }" />
+      <LineAnalysis line="168" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogWarning(&quot;ReloadRuntime failed latest={Latest} error={Error}&quot;, latest, errorMessage);" />
+      <LineAnalysis line="169" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                return PipeResponseFactory.Error(errorMessage ?? &quot;Unknown reload error&quot;);" />
+      <LineAnalysis line="170" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="171" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            catch (Exception ex)" />
+      <LineAnalysis line="172" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="173" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogError(ex, &quot;Error in HandleReloadRuntimeCommand&quot;);" />
+      <LineAnalysis line="174" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return PipeResponseFactory.Error($&quot;Error in ReloadRuntime: {ex.Message}&quot;);" />
+      <LineAnalysis line="175" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="176" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        }" />
+      <LineAnalysis line="177" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="178" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;summary&gt;" />
+      <LineAnalysis line="179" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Attempts to inject runtime UI into the dockable panel host after successful runtime load." />
+      <LineAnalysis line="180" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/summary&gt;" />
+      <LineAnalysis line="181" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private void TryInjectRuntimeUI()" />
+      <LineAnalysis line="182" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        {" />
+      <LineAnalysis line="183" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            try" />
+      <LineAnalysis line="184" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="185" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                var host = LoaderApp.Instance?.PanelHost;" />
+      <LineAnalysis line="186" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                if (host == null)" />
+      <LineAnalysis line="187" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                {" />
+      <LineAnalysis line="188" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    Log.LogWarning(&quot;PanelHost unavailable for UI injection&quot;);" />
+      <LineAnalysis line="189" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    return;" />
+      <LineAnalysis line="190" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                }" />
+      <LineAnalysis line="191" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="192" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                var content = runtimeManager.CreateRuntimeDockableContent(out var error);" />
+      <LineAnalysis line="193" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                if (content != null)" />
+      <LineAnalysis line="194" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                {" />
+      <LineAnalysis line="195" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    host.SetContent(content);" />
+      <LineAnalysis line="196" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    Log.LogInformation(&quot;Runtime UI injected successfully&quot;);" />
+      <LineAnalysis line="197" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                }" />
+      <LineAnalysis line="198" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                else" />
+      <LineAnalysis line="199" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                {" />
+      <LineAnalysis line="200" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    Log.LogWarning(&quot;Failed to create runtime UI: {Error}&quot;, error);" />
+      <LineAnalysis line="201" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                }" />
+      <LineAnalysis line="202" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="203" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            catch (Exception ex)" />
+      <LineAnalysis line="204" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="205" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogError(ex, &quot;Error injecting runtime UI&quot;);" />
+      <LineAnalysis line="206" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="207" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        }" />
+      <LineAnalysis line="208" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="209" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private PipeResponse HandleStatusCommand()" />
+      <LineAnalysis line="210" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        {" />
+      <LineAnalysis line="211" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            Log.LogTrace(&quot;Handling STATUS command&quot;);" />
+      <LineAnalysis line="212" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            try" />
+      <LineAnalysis line="213" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="214" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                var isRuntimeLoaded = runtimeManager.IsRuntimeLoaded;" />
+      <LineAnalysis line="215" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                var path = isRuntimeLoaded ? runtimeManager.CurrentRuntimePath : string.Empty;" />
+      <LineAnalysis line="216" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogDebug(&quot;Status runtimeLoaded={Loaded} path={Path}&quot;, isRuntimeLoaded, path);" />
+      <LineAnalysis line="217" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                return isRuntimeLoaded ? PipeResponseFactory.Loaded(path) : PipeResponseFactory.Empty();" />
+      <LineAnalysis line="218" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="219" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            catch (Exception ex)" />
+      <LineAnalysis line="220" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="221" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogError(ex, &quot;Error in HandleStatusCommand&quot;);" />
+      <LineAnalysis line="222" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return PipeResponseFactory.Error($&quot;Error getting status: {ex.Message}&quot;);" />
+      <LineAnalysis line="223" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="224" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        }" />
+      <LineAnalysis line="225" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="226" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;summary&gt;" />
+      <LineAnalysis line="227" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Handles BUILD_COMPLETED command from MSBuild." />
+      <LineAnalysis line="228" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        ///" />
+      <LineAnalysis line="229" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// This command is sent after a successful build to notify the running addin" />
+      <LineAnalysis line="230" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// that new assemblies are available. The handler:" />
+      <LineAnalysis line="231" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// 1. Finds the latest deploy folder automatically" />
+      <LineAnalysis line="232" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// 2. Reads hashes from DLLs to detect what changed" />
+      <LineAnalysis line="233" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// 3. Updates UI status display" />
+      <LineAnalysis line="234" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// 4. Triggers ReloadRuntimeCommand to show dialog to user" />
+      <LineAnalysis line="235" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        ///" />
+      <LineAnalysis line="236" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Why trigger ReloadRuntimeCommand instead of showing dialog directly:" />
+      <LineAnalysis line="237" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// - Reuses existing, well-tested dialog logic" />
+      <LineAnalysis line="238" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// - Avoids code duplication" />
+      <LineAnalysis line="239" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// - Ensures consistent UX across manual and automatic triggers" />
+      <LineAnalysis line="240" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/summary&gt;" />
+      <LineAnalysis line="241" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;returns&gt;Success response indicating command was processed.&lt;/returns&gt;" />
+      <LineAnalysis line="242" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private PipeResponse HandleBuildCompletedCommand()" />
+      <LineAnalysis line="243" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        {" />
+      <LineAnalysis line="244" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            Log.LogInformation(&quot;Handling BUILD_COMPLETED notification from MSBuild&quot;);" />
+      <LineAnalysis line="245" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="246" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            try" />
+      <LineAnalysis line="247" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="248" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // 1. Find the latest deploy folder" />
+      <LineAnalysis line="249" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="4" content="                var latest = assemblyStatusManager?.GetLatestTempDllFolder() ?? string.Empty;" />
+      <LineAnalysis line="250" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                if (string.IsNullOrEmpty(latest))" />
+      <LineAnalysis line="251" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                {" />
+      <LineAnalysis line="252" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    Log.LogWarning(&quot;No deploy folders found after build notification&quot;);" />
+      <LineAnalysis line="253" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    return PipeResponseFactory.Success(&quot;NO_DEPLOY_FOUND&quot;);" />
+      <LineAnalysis line="254" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                }" />
+      <LineAnalysis line="255" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="256" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogDebug(&quot;Latest deploy folder: {Folder}&quot;, latest);" />
+      <LineAnalysis line="257" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="258" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // 2. Process the build signal - updates CurrentInfo with new hashes" />
+      <LineAnalysis line="259" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                assemblyStatusManager?.ProcessMsBuildSignal(latest);" />
+      <LineAnalysis line="260" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="261" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // 3. Update UI status display" />
+      <LineAnalysis line="262" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                try { LoaderApp.Instance?.UpdateStatusDisplay(); } catch { }" />
+      <LineAnalysis line="263" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="264" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // 4. Trigger ReloadRuntimeCommand via ExternalEvent" />
+      <LineAnalysis line="265" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                //    This reuses existing dialog logic from ReloadRuntimeCommand" />
+      <LineAnalysis line="266" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                //    which already handles Loader outdated, Runtime outdated scenarios" />
+      <LineAnalysis line="267" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                TriggerReloadRuntimeCommand();" />
+      <LineAnalysis line="268" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="269" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogInformation(&quot;BUILD_COMPLETED processed, ReloadRuntimeCommand triggered&quot;);" />
+      <LineAnalysis line="270" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return PipeResponseFactory.Success(&quot;ReloadRuntimeCommand triggered&quot;);" />
+      <LineAnalysis line="271" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="272" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            catch (Exception ex)" />
+      <LineAnalysis line="273" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="274" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogError(ex, &quot;Error handling BUILD_COMPLETED&quot;);" />
+      <LineAnalysis line="275" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return PipeResponseFactory.Error($&quot;Error processing build notification: {ex.Message}&quot;);" />
+      <LineAnalysis line="276" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="277" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        }" />
+      <LineAnalysis line="278" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="279" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;summary&gt;" />
+      <LineAnalysis line="280" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Triggers ReloadRuntimeCommand via ExternalEvent on UI thread." />
+      <LineAnalysis line="281" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        ///" />
+      <LineAnalysis line="282" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Why this approach:" />
+      <LineAnalysis line="283" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// - BUILD_COMPLETED arrives on background thread (named pipe)" />
+      <LineAnalysis line="284" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// - ReloadRuntimeCommand contains all dialog logic we need" />
+      <LineAnalysis line="285" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// - ExternalEvent is Revit API's mechanism for executing commands programmatically" />
+      <LineAnalysis line="286" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// - Avoids code duplication of dialog logic" />
+      <LineAnalysis line="287" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/summary&gt;" />
+      <LineAnalysis line="288" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private void TriggerReloadRuntimeCommand()" />
+      <LineAnalysis line="289" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        {" />
+      <LineAnalysis line="290" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            try" />
+      <LineAnalysis line="291" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="292" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogDebug(&quot;Creating ExternalEvent to trigger ReloadRuntimeCommand&quot;);" />
+      <LineAnalysis line="293" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="294" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // Create a simple handler that invokes ReloadRuntimeCommand" />
+      <LineAnalysis line="295" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                var handler = new TriggerCommandHandler(&quot;ReloadRuntimeCommand&quot;);" />
+      <LineAnalysis line="296" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                var externalEvent = ExternalEvent.Create(handler);" />
+      <LineAnalysis line="297" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                externalEvent.Raise();" />
+      <LineAnalysis line="298" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="299" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogDebug(&quot;ExternalEvent raised successfully&quot;);" />
+      <LineAnalysis line="300" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="301" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            catch (Exception ex)" />
+      <LineAnalysis line="302" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="303" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogError(ex, &quot;Error raising ExternalEvent for ReloadRuntimeCommand&quot;);" />
+      <LineAnalysis line="304" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="305" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        }" />
+      <LineAnalysis line="306" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="307" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private Task&lt;PipeResponse&gt; HandleTestInitCommandAsync()" />
+      <LineAnalysis line="308" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        {" />
+      <LineAnalysis line="309" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            Log.LogInformation(&quot;Handling TEST_INIT command&quot;);" />
+      <LineAnalysis line="310" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            return Task.FromResult(PipeResponseFactory.Success(&quot;Test execution ready&quot;));" />
+      <LineAnalysis line="311" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        }" />
+      <LineAnalysis line="312" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="313" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private async Task&lt;PipeResponse&gt; HandleRunTestsCommandAsync(PipeCommand cmd)" />
+      <LineAnalysis line="314" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        {" />
+      <LineAnalysis line="315" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="            Log.LogInformation(&quot;Handling RUN_TESTS command payloadLen={Len}&quot;, cmd.Payload?.Length ?? 0);" />
+      <LineAnalysis line="316" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="            if (string.IsNullOrEmpty(cmd.Payload))" />
+      <LineAnalysis line="317" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="318" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogWarning(&quot;RUN_TESTS empty payload&quot;);" />
+      <LineAnalysis line="319" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return PipeResponseFactory.InvalidPayload(&quot;Empty test payload&quot;);" />
+      <LineAnalysis line="320" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="321" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            try" />
+      <LineAnalysis line="322" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="323" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // Deserialize the test execution payload from the test adapter" />
+      <LineAnalysis line="324" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                var payload = JsonSerializer.Deserialize&lt;TestAdapterPayload&gt;(cmd.Payload);" />
+      <LineAnalysis line="325" visits="0" coverage="NotCovered" coveredbranches="0" totalbranches="2" content="                if (payload == null)" />
+      <LineAnalysis line="326" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                {" />
+      <LineAnalysis line="327" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    Log.LogWarning(&quot;RUN_TESTS invalid payload format&quot;);" />
+      <LineAnalysis line="328" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    return PipeResponseFactory.InvalidPayload(&quot;Invalid test payload format&quot;);" />
+      <LineAnalysis line="329" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                }" />
+      <LineAnalysis line="330" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="331" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogDebug(&quot;Executing {Count} tests from assembly {Assembly}&quot;, payload.Tests.Count, payload.AssemblyPath);" />
+      <LineAnalysis line="332" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // Convert test adapter types to RevitTestExecutor types" />
+      <LineAnalysis line="333" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                var executorRequests = payload.Tests.Select(test =&gt; new RevitTestExecutor.TestRequest" />
+      <LineAnalysis line="334" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                {" />
+      <LineAnalysis line="335" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    FullyQualifiedName = test.FullyQualifiedName," />
+      <LineAnalysis line="336" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    DisplayName = test.DisplayName" />
+      <LineAnalysis line="337" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                }).ToList();" />
+      <LineAnalysis line="338" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="339" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // Create a test executor" />
+      <LineAnalysis line="340" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                var testExecutor = new RevitTestExecutor(uiapp);" />
+      <LineAnalysis line="341" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="342" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // Execute the tests - this could be CPU intensive for large test suites," />
+      <LineAnalysis line="343" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // so run it on a background thread to avoid blocking the UI" />
+      <LineAnalysis line="344" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                var results = await Task.Run(() =&gt; testExecutor.ExecuteTests(payload.AssemblyPath, executorRequests)).ConfigureAwait(false);" />
+      <LineAnalysis line="345" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="346" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // Convert results back to test adapter format" />
+      <LineAnalysis line="347" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                var adapterResults = results.Select(result =&gt; new TestAdapterResult" />
+      <LineAnalysis line="348" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                {" />
+      <LineAnalysis line="349" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    FullyQualifiedName = result.FullyQualifiedName," />
+      <LineAnalysis line="350" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    DisplayName = result.DisplayName," />
+      <LineAnalysis line="351" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    Outcome = result.Outcome," />
+      <LineAnalysis line="352" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    ErrorMessage = result.ErrorMessage," />
+      <LineAnalysis line="353" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    ErrorStackTrace = result.ErrorStackTrace," />
+      <LineAnalysis line="354" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    DurationInMilliseconds = result.DurationInMilliseconds," />
+      <LineAnalysis line="355" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    StartTimeUnixMs = result.StartTimeUnixMs," />
+      <LineAnalysis line="356" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    EndTimeUnixMs = result.EndTimeUnixMs," />
+      <LineAnalysis line="357" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    Messages = result.Messages.Select(msg =&gt; new TestAdapterMessage" />
+      <LineAnalysis line="358" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    {" />
+      <LineAnalysis line="359" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                        Level = msg.Level," />
+      <LineAnalysis line="360" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                        Text = msg.Text" />
+      <LineAnalysis line="361" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                    }).ToList()" />
+      <LineAnalysis line="362" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                }).ToList();" />
+      <LineAnalysis line="363" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="364" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="                // Serialize the results" />
+      <LineAnalysis line="365" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                var resultsJson = JsonSerializer.Serialize(adapterResults);" />
+      <LineAnalysis line="366" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogInformation(&quot;Test execution completed results={Count}&quot;, adapterResults.Count);" />
+      <LineAnalysis line="367" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return PipeResponseFactory.Success(resultsJson);" />
+      <LineAnalysis line="368" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="369" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            catch (JsonException ex)" />
+      <LineAnalysis line="370" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="371" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogError(ex, &quot;RUN_TESTS JSON serialization error&quot;);" />
+      <LineAnalysis line="372" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return PipeResponseFactory.Error($&quot;JSON serialization error: {ex.Message}&quot;);" />
+      <LineAnalysis line="373" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="374" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            catch (Exception ex)" />
+      <LineAnalysis line="375" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            {" />
+      <LineAnalysis line="376" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                Log.LogError(ex, &quot;RUN_TESTS execution error&quot;);" />
+      <LineAnalysis line="377" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="                return PipeResponseFactory.Error($&quot;Test execution error: {ex.Message}&quot;);" />
+      <LineAnalysis line="378" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="            }" />
+      <LineAnalysis line="379" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="        }" />
+      <LineAnalysis line="380" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="381" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        #region Test Adapter Data Transfer Objects" />
+      <LineAnalysis line="382" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="383" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;summary&gt;" />
+      <LineAnalysis line="384" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Test execution payload from the test adapter." />
+      <LineAnalysis line="385" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/summary&gt;" />
+      <LineAnalysis line="386" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private class TestAdapterPayload" />
+      <LineAnalysis line="387" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        {" />
+      <LineAnalysis line="388" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            public string AssemblyPath { get; set; } = string.Empty;" />
+      <LineAnalysis line="389" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            public List&lt;TestAdapterRequest&gt; Tests { get; set; } = new();" />
+      <LineAnalysis line="390" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        }" />
+      <LineAnalysis line="391" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="392" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;summary&gt;" />
+      <LineAnalysis line="393" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Test request from the test adapter." />
+      <LineAnalysis line="394" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/summary&gt;" />
+      <LineAnalysis line="395" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private class TestAdapterRequest" />
+      <LineAnalysis line="396" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        {" />
+      <LineAnalysis line="397" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            public string FullyQualifiedName { get; set; } = string.Empty;" />
+      <LineAnalysis line="398" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            public string DisplayName { get; set; } = string.Empty;" />
+      <LineAnalysis line="399" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        }" />
+      <LineAnalysis line="400" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="401" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;summary&gt;" />
+      <LineAnalysis line="402" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Test result for the test adapter." />
+      <LineAnalysis line="403" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/summary&gt;" />
+      <LineAnalysis line="404" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private class TestAdapterResult" />
+      <LineAnalysis line="405" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        {" />
+      <LineAnalysis line="406" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            public string FullyQualifiedName { get; set; } = string.Empty;" />
+      <LineAnalysis line="407" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            public string DisplayName { get; set; } = string.Empty;" />
+      <LineAnalysis line="408" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            public string Outcome { get; set; } = string.Empty;" />
+      <LineAnalysis line="409" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            public string ErrorMessage { get; set; } = string.Empty;" />
+      <LineAnalysis line="410" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            public string ErrorStackTrace { get; set; } = string.Empty;" />
+      <LineAnalysis line="411" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            public double DurationInMilliseconds { get; set; }" />
+      <LineAnalysis line="412" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            public long StartTimeUnixMs { get; set; }" />
+      <LineAnalysis line="413" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            public long EndTimeUnixMs { get; set; }" />
+      <LineAnalysis line="414" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            public List&lt;TestAdapterMessage&gt; Messages { get; set; } = new();" />
+      <LineAnalysis line="415" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        }" />
+      <LineAnalysis line="416" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="417" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;summary&gt;" />
+      <LineAnalysis line="418" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// Test message for the test adapter." />
+      <LineAnalysis line="419" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        /// &lt;/summary&gt;" />
+      <LineAnalysis line="420" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        private class TestAdapterMessage" />
+      <LineAnalysis line="421" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        {" />
+      <LineAnalysis line="422" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            public string Level { get; set; } = &quot;Informational&quot;;" />
+      <LineAnalysis line="423" visits="0" coverage="NotCovered" coveredbranches="" totalbranches="" content="            public string Text { get; set; } = string.Empty;" />
+      <LineAnalysis line="424" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        }" />
+      <LineAnalysis line="425" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="" />
+      <LineAnalysis line="426" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="        #endregion" />
+      <LineAnalysis line="427" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="    }" />
+      <LineAnalysis line="428" visits="-1" coverage="NotCoverable" coveredbranches="" totalbranches="" content="}" />
+    </File>
+  </Files>
+</CoverageReport>

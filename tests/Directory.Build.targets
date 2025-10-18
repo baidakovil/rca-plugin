@@ -1,37 +1,50 @@
 <Project>
-  <!-- Generate per-project and aggregated HTML coverage report for unit test projects -->
-  <Target Name="GenerateCoverageHtml" AfterTargets="GenerateCoverageResult" Condition="'$(MSBuildProjectName)' != 'Rca.Integration.Revit.Tests' and '$(CollectCoverage)' == 'true'">
-    <PropertyGroup>
-      <CoverageOutDir>$(SolutionDir)build\coverage\$(MSBuildProjectName)</CoverageOutDir>
-      <CoberturaReport>$(CoverageOutDir)\coverage.cobertura.xml</CoberturaReport>
-      <HtmlReportDir>$(CoverageOutDir)\html</HtmlReportDir>
-    </PropertyGroup>
-
-    <!-- Ensure dotnet-reportgenerator-globaltool is available -->
-    <Message Text="Ensuring reportgenerator tool is installed" Importance="Low" />
-    <Exec Command="dotnet tool restore" />
-
-    <!-- Convert cobertura to HTML for the current project -->
-    <MakeDir Directories="$(HtmlReportDir)" />
-    <Exec Command="dotnet tool run reportgenerator -reports:$(CoberturaReport) -targetdir:$(HtmlReportDir) -reporttypes:HtmlInline_AzurePipelines;TextSummary" />
-
-    <Message Text="Coverage HTML generated at $(HtmlReportDir)" Importance="High" />
-  </Target>
-
+  <!-- Generate aggregated HTML coverage report for unit test projects only (no per-project HTML) -->
   <Target Name="GenerateAggregateCoverageHtml" AfterTargets="GenerateCoverageResult" Condition="'$(CollectCoverage)' == 'true'">
     <PropertyGroup>
       <AggregateReportsGlob>$(SolutionDir)build\coverage\**\coverage.cobertura.xml</AggregateReportsGlob>
-      <AggregateOutDir>$(SolutionDir)build\coverage\summary\html</AggregateOutDir>
+      <!-- Put aggregated HTML under build/coverage/html as requested -->
+      <AggregateOutDir>$(SolutionDir)build\coverage\html</AggregateOutDir>
+      <AggregateRootDir>$(SolutionDir)build\coverage</AggregateRootDir>
     </PropertyGroup>
 
     <ItemGroup>
       <_CoverageReports Include="$(AggregateReportsGlob)" />
     </ItemGroup>
 
-    <!-- Only run aggregation if we have at least one report -->
     <Message Text="Found @( _CoverageReports->Count() ) coverage report(s) for aggregation" Importance="Low" />
+
+    <!-- Only run aggregation if we have at least one report -->
     <MakeDir Directories="$(AggregateOutDir)" Condition="@( _CoverageReports ) != ''" />
-    <Exec Condition="@( _CoverageReports ) != ''" Command="dotnet tool run reportgenerator -reports:@( _CoverageReports, ';' ) -targetdir:$(AggregateOutDir) -reporttypes:HtmlInline_AzurePipelines;TextSummary" />
+
+    <!-- Ensure reportgenerator tool is installed once -->
+    <Exec Command="dotnet tool restore" Condition="@( _CoverageReports ) != ''" />
+
+    <!-- Run ReportGenerator once to produce HTML (single index.html), Cobertura, Xml and JSON summary -->
+    <Exec Condition="@( _CoverageReports ) != ''" Command="dotnet tool run reportgenerator -reports:@( _CoverageReports, ';' ) -targetdir:$(AggregateOutDir) -reporttypes:Html;Cobertura;Xml;JsonSummary;TextSummary" />
+
     <Message Condition="@( _CoverageReports ) != ''" Text="Aggregate coverage HTML generated at $(AggregateOutDir)" Importance="High" />
+
+    <!-- Normalize index file: keep only 'index.html' (remove index.htm and case variants) -->
+    <Delete Files="$(AggregateOutDir)\index.htm;$(AggregateOutDir)\Index.htm;$(AggregateOutDir)\Index.html" Condition="Exists('$(AggregateOutDir)\index.html')" />
+    <Move SourceFiles="$(AggregateOutDir)\index.htm" DestinationFiles="$(AggregateOutDir)\index.html" Condition="Exists('$(AggregateOutDir)\index.htm') and !Exists('$(AggregateOutDir)\index.html')" />
+
+    <!-- Copy generated JSON and XML summary files to build/coverage root as coverage.json and coverage.xml -->
+    <ItemGroup>
+      <_GeneratedJson Include="$(AggregateOutDir)\*.json" Condition="Exists('$(AggregateOutDir)')" />
+      <_GeneratedXml Include="$(AggregateOutDir)\*.xml" Condition="Exists('$(AggregateOutDir)')" />
+    </ItemGroup>
+
+    <!-- Prefer JsonSummary output if present; otherwise take first json -->
+    <PropertyGroup>
+      <_SummaryJson>%( _GeneratedJson.Identity )</_SummaryJson>
+      <_SummaryXml>%( _GeneratedXml.Identity )</_SummaryXml>
+    </PropertyGroup>
+
+    <Copy SourceFiles="$([System.String]::Copy('$(_SummaryJson)'))" DestinationFiles="$(AggregateRootDir)\coverage.json" SkipUnchangedFiles="true" Condition="$(_SummaryJson) != ''" />
+    <Copy SourceFiles="$([System.String]::Copy('$(_SummaryXml)'))" DestinationFiles="$(AggregateRootDir)\coverage.xml" SkipUnchangedFiles="true" Condition="$(_SummaryXml) != ''" />
+
+    <Message Condition="$(_SummaryJson) != ''" Text="Copied summary JSON to $(AggregateRootDir)\coverage.json" Importance="Low" />
+    <Message Condition="$(_SummaryXml) != ''" Text="Copied summary XML to $(AggregateRootDir)\coverage.xml" Importance="Low" />
   </Target>
 </Project>

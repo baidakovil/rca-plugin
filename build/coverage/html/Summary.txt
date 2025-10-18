@@ -1,0 +1,85 @@
+Summary
+  Generated on: 10/18/2025 - 4:18:09 PM
+  Coverage date: 10/18/2025 - 4:17:56 PM - 10/18/2025 - 4:18:08 PM
+  Parser: MultiReport (4x Cobertura)
+  Assemblies: 7
+  Classes: 53
+  Files: 46
+  Line coverage: 5.0%
+  Covered lines: 150
+  Uncovered lines: 2793
+  Coverable lines: 2943
+  Total lines: 5948
+  Branch coverage: 4.3% (43 of 984)
+  Covered branches: 43
+  Total branches: 984
+  Method coverage: 5.6% (19 of 334)
+  Covered methods: 19
+  Total methods: 334
+
+Rca.Contracts                                           50.0%
+  Rca.Contracts.Configuration.RcaConfiguration           0.0%
+  Rca.Contracts.Configuration.RcaConstants               0.0%
+  Rca.Contracts.Infrastructure.ServiceContainer         75.0%
+
+Rca.Core                                                 0.0%
+  Rca.Core.RevitContext                                  0.0%
+  Rca.Core.RevitContextServiceImpl                       0.0%
+  Rca.Core.Services.PythonExecutionService               0.0%
+  Rca.Core.Services.RevitNotificationService             0.0%
+
+Rca.Loader                                               3.9%
+  Rca.Loader.AssemblyManagement.AssemblyInfo             0.0%
+  Rca.Loader.AssemblyManagement.AssemblyStatusManager    0.0%
+  Rca.Loader.AssemblyManagement.LoadedAssembliesInfo     0.0%
+  Rca.Loader.AssemblyManagement.SignalInfo               0.0%
+  Rca.Loader.Commands.ReloadRuntimeCommand               0.0%
+  Rca.Loader.Commands.ShowDockablePanelCommand           0.0%
+  Rca.Loader.Configuration.DebugSettings                 0.0%
+  Rca.Loader.Configuration.PathExpander                  0.0%
+  Rca.Loader.Configuration.Settings                      0.0%
+  Rca.Loader.Configuration.SettingsService               0.0%
+  Rca.Loader.Infrastructure.AssemblyLoadConstants        0.0%
+  Rca.Loader.Infrastructure.AssemblyLoadService          0.0%
+  Rca.Loader.Infrastructure.AttributeMetadataLoader     72.8%
+  Rca.Loader.Infrastructure.CommandValidationService     0.0%
+  Rca.Loader.Infrastructure.LoaderConstants            100.0%
+  Rca.Loader.Infrastructure.PipeResponseFactory          0.0%
+  Rca.Loader.Infrastructure.RuntimeCommandHandler        0.0%
+  Rca.Loader.Infrastructure.RuntimeLoadContext           0.0%
+  Rca.Loader.Infrastructure.TriggerCommandHandler        0.0%
+  Rca.Loader.LoaderApp                                   0.0%
+  Rca.Loader.Logging.DebugSink                           0.0%
+  Rca.Loader.Logging.EnrichedLogEntry                    0.0%
+  Rca.Loader.Logging.FileLogSink                         0.0%
+  Rca.Loader.Logging.LoaderLog                           0.0%
+  Rca.Loader.Logging.LoggingPipeServerService            0.0%
+  Rca.Loader.Restart.RestartManager                      0.0%
+  Rca.Loader.Services.PipeCommand                        0.0%
+  Rca.Loader.Services.PipeResponse                       0.0%
+  Rca.Loader.Services.PipeServerService                  0.0%
+  Rca.Loader.Services.RibbonService                      0.0%
+  Rca.Loader.Services.RuntimeManager                     0.0%
+  Rca.Loader.Testing.RevitTestExecutor                   0.0%
+  Rca.Loader.Testing.UIApplicationTests                  0.0%
+  Rca.Loader.UI.DockablePanelHost                        0.0%
+  Rca.Loader.UI.DockablePanelProvider                    0.0%
+  Rca.Loader.UI.RibbonStatusDisplay                      0.0%
+
+Rca.Loader.Contracts                                     0.0%
+  Rca.Loader.Contracts.SharedServiceRegistry             0.0%
+
+Rca.Logging.Contracts                                    0.0%
+  Rca.Logging.Contracts.LogEntryDto                      0.0%
+
+Rca.Network                                            100.0%
+  Rca.Network.NetworkPlaceholder                       100.0%
+
+Rca.UI                                                  14.2%
+  Rca.UI.Logging.UiLog                                   0.0%
+  Rca.UI.Services.DefaultServices                        0.0%
+  Rca.UI.Services.ServiceResolver                        0.0%
+  Rca.UI.ViewModels.RcaDockablePanelViewModel           76.3%
+  Rca.UI.ViewModels.RelayCommand                        61.5%
+  Rca.UI.Views.RcaDockablePanel                          0.0%
+  Rca.UI.Views.RcaDockablePanelProvider                  0.0%

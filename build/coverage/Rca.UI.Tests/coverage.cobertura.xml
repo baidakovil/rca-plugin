@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<coverage line-rate="0.1307" branch-rate="0.0571" version="1.9" timestamp="1760792733" lines-covered="37" lines-valid="283" branches-covered="4" branches-valid="70">
+<coverage line-rate="0.1307" branch-rate="0.0571" version="1.9" timestamp="1760793478" lines-covered="37" lines-valid="283" branches-covered="4" branches-valid="70">
   <sources>
     <source>C:\Users\baidakov\rca-plugin\src\</source>
   </sources>
