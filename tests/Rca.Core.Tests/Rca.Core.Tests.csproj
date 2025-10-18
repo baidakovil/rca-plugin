@@ -10,6 +10,7 @@
     <ProjectReference Include="../../src/Rca.Core/Rca.Core.csproj" />
     <ProjectReference Include="../../src/Rca.Contracts/Rca.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Rca.Loader\Rca.Loader.csproj" />
+    <ProjectReference Include="..\..\src\Rca.Runtime\Rca.Runtime.csproj" />
   </ItemGroup>
   <!-- Use Update to avoid duplicate PackageReference items if defined in imported props/targets -->
   <ItemGroup>
