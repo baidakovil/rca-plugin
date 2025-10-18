@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <RunConfiguration>
+    <!-- Load only our custom adapter from the built output folder; disable VSIX adapters (e.g., NUnit VSIX) -->
+    <UseVsixExtensions>false</UseVsixExtensions>
+    <!-- Path is relative to this .runsettings file (tests/RunSettings/...). It points to the folder that contains Rca.TestAdapter.dll -->
+    <TestAdaptersPaths>..\src\Rca.TestAdapter\bin\Debug\net8.0</TestAdaptersPaths>
+  </RunConfiguration>
+</RunSettings>
