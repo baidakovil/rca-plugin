@@ -17,7 +17,8 @@ namespace Rca.UI.ViewModels
         private string inputText = string.Empty;
         private string outputText = string.Empty;
         private readonly IPythonExecutionService pythonService;
-        private readonly Func<UIApplication?> uiappProvider;
+        // NOTE: Use object to avoid hard runtime dependency on RevitAPIUI in unit tests
+        private readonly Func<object?> revitContextProvider;
 
         /// <summary>
         /// Command to show hello world dialog.
@@ -34,7 +35,7 @@ namespace Rca.UI.ViewModels
         public string InputText
         {
             get => inputText;
-            set { inputText = value; OnPropertyChanged(); }
+            set { inputText = value; OnPropertyChanged(); CommandManager.InvalidateRequerySuggested(); }
         }
 
         /// <summary>
@@ -50,10 +51,10 @@ namespace Rca.UI.ViewModels
         /// Initializes a new instance of the RcaDockablePanelViewModel class.
         /// </summary>
         public RcaDockablePanelViewModel(
-            Func<UIApplication?> uiappProvider,
+            Func<object?> revitContextProvider,
             IPythonExecutionService pythonService)
         {
-            this.uiappProvider = uiappProvider;
+            this.revitContextProvider = revitContextProvider;
             this.pythonService = pythonService;
             ClickCommand = new RelayCommand(OnHelloClicked);
             ExecutePythonCommand = new RelayCommand(async _ => await OnExecutePython(), _ => !string.IsNullOrWhiteSpace(InputText));
@@ -65,9 +66,9 @@ namespace Rca.UI.ViewModels
             
             try
             {
-                var uiapp = uiappProvider?.Invoke();
-                if (uiapp != null)
-                    pythonService.SetRevitContext(uiapp);
+                var context = revitContextProvider?.Invoke();
+                if (context != null)
+                    pythonService.SetRevitContext(context);
                 
                 // Use ExecuteSync in Task.Run for dockable panels since they already run in Revit context
                 // ExecuteAsync would try to create ExternalEvent which is not allowed in dockable panel context

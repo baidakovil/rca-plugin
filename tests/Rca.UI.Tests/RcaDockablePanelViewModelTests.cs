@@ -5,7 +5,6 @@ using Rca.UI.ViewModels;
 using Rca.Contracts;
 using System;
 using System.Threading.Tasks;
-using Autodesk.Revit.UI;
 
 namespace Rca.UI.Tests
 {
@@ -17,26 +16,28 @@ namespace Rca.UI.Tests
         {
             // Arrange
             var python = Substitute.For<IPythonExecutionService>();
-            python.ExecuteSync(Arg.Any<string>()).Returns("ok"); // Changed to ExecuteSync
-            
-            // Explicitly define a function that returns null UIApplication
-            Func<UIApplication?> nullUiAppProvider = () => null;
-            
+            const string script = "some code";
+            const string result = "ok";
+            python.ExecuteSync(script).Returns(result);
+
+            // Revit context provider returns null to avoid Revit dependency in unit tests
+            Func<object?> nullContextProvider = () => null;
+
             var vm = new RcaDockablePanelViewModel(
-                nullUiAppProvider,
+                nullContextProvider,
                 python);
-            
-            vm.InputText = "print('hi')";
+
+            vm.InputText = script;
 
             // Act
             ((RelayCommand)vm.ExecutePythonCommand).Execute(null);
-            
+
             // Wait a bit for the async operation to complete
             await Task.Delay(100);
 
             // Assert
-            python.Received(1).ExecuteSync(Arg.Is<string>(s => s.Contains("print"))); // Changed to ExecuteSync
-            vm.OutputText.Should().Contain("ok");
+            python.Received(1).ExecuteSync(script);
+            vm.OutputText.Should().Be(result);
             vm.InputText.Should().BeEmpty();
         }
     }
