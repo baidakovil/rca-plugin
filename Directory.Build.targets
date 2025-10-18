@@ -3,35 +3,40 @@
     <!-- Ensure SolutionDir is available even when building individual projects -->
     <SolutionDir Condition="'$(SolutionDir)' == ''">$(MSBuildThisFileDirectory)</SolutionDir>
 
+    <!-- Tools and roots -->
     <SourceHashProject>$(SolutionDir)src\Tools\SourceHashGenerator\SourceHashGenerator.csproj</SourceHashProject>
     <SourceHashExe>$(SolutionDir)src\Tools\SourceHashGenerator\bin\$(Configuration)\net8.0\SourceHashGenerator.exe</SourceHashExe>
 
     <RcaLoaderRoots>$(SolutionDir)src\Rca.Loader;$(SolutionDir)src\Rca.Loader.Contracts;$(SolutionDir)src\Rca.Logging.Contracts</RcaLoaderRoots>
     <RcaRuntimeRoots>$(SolutionDir)src\Rca.Core;$(SolutionDir)src\Rca.Runtime;$(SolutionDir)src\Rca.Network;$(SolutionDir)src\Rca.UI;$(SolutionDir)src\Rca.Contracts</RcaRuntimeRoots>
 
+    <!-- Artifacts -->
     <RcaArtifactsDir>$(SolutionDir)build\artifacts\hashes</RcaArtifactsDir>
     <RcaLoaderHashFile>$(RcaArtifactsDir)\loader.txt</RcaLoaderHashFile>
     <RcaRuntimeHashFile>$(RcaArtifactsDir)\runtime.txt</RcaRuntimeHashFile>
     <RcaTimestampFile>$(RcaArtifactsDir)\timestamp.txt</RcaTimestampFile>
+
+    <!-- Sticky timestamp config -->
+    <RcaStickyStampSeconds Condition="'$(RcaStickyStampSeconds)' == ''">60</RcaStickyStampSeconds>
+    <!-- Set to true/1 to force a fresh timestamp, ignoring stickiness -->
+    <RcaForceNewStamp Condition="'$(RcaForceNewStamp)' == ''">false</RcaForceNewStamp>
   </PropertyGroup>
 
-  <!-- REAL builds only: single timestamp per build invocation. First project writes fresh stamp; others reuse if file age <= 5s. No cleanup. -->
-  <Target Name="EnsureRcaTimestamp" Condition="'$(DesignTimeBuild)' != 'true' and '$(RcaHotReloadTimestamp)' == ''" BeforeTargets="Build">
+  <!-- Ensure a single shared timestamp per real build with sticky TTL and force override. -->
+  <Target Name="EnsureRcaTimestamp" Condition="'$(DesignTimeBuild)' != 'true'" BeforeTargets="Build">
     <MakeDir Directories="$(RcaArtifactsDir)" />
-    <PropertyGroup>
-      <PsEnsure>&quot;$m = New-Object System.Threading.Mutex($false, 'Global\RCA_BuildStamp'); try { $null = $m.WaitOne(); $f = [System.IO.Path]::GetFullPath('&quot;$(RcaTimestampFile)&quot;'); $write = $true; if (Test-Path $f) { try { $age = (Get-Date) - (Get-Item $f).LastWriteTime; if ($age.TotalSeconds -le 5) { $write = $false } } catch { $write = $true } }; if ($write) { $stamp = [DateTime]::Now.ToString('yyyyMMdd_HHmmss'); Set-Content -LiteralPath $f -Value $stamp -NoNewline -Force } } finally { try { $m.ReleaseMutex() | Out-Null } catch {} }&quot;</PsEnsure>
-    </PropertyGroup>
-    <Exec Command='powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command $(PsEnsure)' />
+    <Exec Command='powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(SolutionDir)build\Scripts\EnsureRcaStamp.ps1&quot; -TargetPath &quot;$(RcaTimestampFile)&quot; -TtlSec &quot;$(RcaStickyStampSeconds)&quot; -ForceStr &quot;$(RcaForceNewStamp)&quot;' />
+
     <ReadLinesFromFile File="$(RcaTimestampFile)">
       <Output TaskParameter="Lines" ItemName="_StampLines" />
     </ReadLinesFromFile>
     <PropertyGroup>
       <RcaHotReloadTimestamp>@(_StampLines)</RcaHotReloadTimestamp>
     </PropertyGroup>
-    <Message Text="EnsureRcaTimestamp: $(RcaHotReloadTimestamp)" Importance="Low" />
+    <Message Text="EnsureRcaTimestamp: $(RcaHotReloadTimestamp) (TTL=$(RcaStickyStampSeconds)s, Force=$(RcaForceNewStamp))" Importance="Low" />
   </Target>
 
-  <!-- Build SourceHashGenerator only when needed (REAL builds only) -->
+  <!-- Build SourceHashGenerator only when needed (real builds only) -->
   <Target Name="BuildSourceHashGenerator" BeforeTargets="GenerateHash" Condition="'$(DesignTimeBuild)' != 'true'">
     <PropertyGroup>
       <SourceHashProjectModTime>$([System.IO.File]::GetLastWriteTime('$(SourceHashProject)').Ticks)</SourceHashProjectModTime>
@@ -41,7 +46,7 @@
     <MSBuild Projects="$(SourceHashProject)" Targets="Build" Properties="Configuration=$(Configuration)" Condition="'$(SourceHashProjectModTime)' &gt; '$(SourceHashExeModTime)' or !Exists('$(SourceHashExe)')" />
   </Target>
 
-  <!-- Compute hashes (REAL builds only). -->
+  <!-- Compute hashes (real builds only). Safe if invoked multiple times. -->
   <Target Name="GenerateHash" BeforeTargets="CoreCompile" DependsOnTargets="EnsureRcaTimestamp;BuildSourceHashGenerator" Condition="'$(DesignTimeBuild)' != 'true'">
     <Message Text="GenerateHash: compute loader/runtime hashes" Importance="Low" />
     <MakeDir Directories="$(RcaArtifactsDir)" />
@@ -51,6 +56,7 @@
     <Error Condition="!Exists('$(RcaRuntimeHashFile)')" Text="GenerateHash failed: $(RcaRuntimeHashFile) not created" />
   </Target>
 
+  <!-- Project grouping flags -->
   <PropertyGroup>
     <IsLoaderGroupProject>false</IsLoaderGroupProject>
     <IsRuntimeGroupProject>false</IsRuntimeGroupProject>
@@ -58,7 +64,7 @@
     <IsRuntimeGroupProject Condition="'$(MSBuildProjectName)' == 'Rca.Core' or '$(MSBuildProjectName)' == 'Rca.Runtime' or '$(MSBuildProjectName)' == 'Rca.Network' or '$(MSBuildProjectName)' == 'Rca.UI' or '$(MSBuildProjectName)' == 'Rca.Contracts'">true</IsRuntimeGroupProject>
   </PropertyGroup>
 
-  <!-- Emit assembly metadata (REAL builds only) -->
+  <!-- Emit assembly metadata (real builds only) -->
   <Target Name="EmitAssemblyMetadataSource" Condition="('$(DesignTimeBuild)' != 'true') and ('$(IsLoaderGroupProject)' == 'true' or '$(IsRuntimeGroupProject)' == 'true')" BeforeTargets="CoreCompile" DependsOnTargets="GenerateHash">
     <PropertyGroup>
       <MetadataSource>$(IntermediateOutputPath)Rca.AssemblyMetadata.g.cs</MetadataSource>
@@ -87,7 +93,6 @@
       <_MetadataLines Include="namespace Rca.Generated { internal static class __RcaAssemblyMetadataAnchor { } }" />
     </ItemGroup>
 
-    <MakeDir Directories="$(IntermediateOutputPath)" />
     <WriteLinesToFile File="$(MetadataSource)" Lines="@(_MetadataLines)" Overwrite="true" />
 
     <ItemGroup>
@@ -95,7 +100,7 @@
     </ItemGroup>
   </Target>
 
-  <!-- Deploy groups (REAL builds only) -->
+  <!-- Deploy groups (real builds only) -->
   <Target Name="DeployLoaderGroup" AfterTargets="Build" DependsOnTargets="EnsureRcaTimestamp" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.Loader'">
     <PropertyGroup>
       <RuntimeDeployDir>$(RcaRuntimeDeployRoot)\$(RcaHotReloadTimestamp)</RuntimeDeployDir>
@@ -141,10 +146,10 @@
     <Message Text="Runtime group deployed to $(RuntimeDeployDir)" Importance="High" />
   </Target>
 
+  <!-- Optional: build notification -->
   <PropertyGroup>
     <HotReloadNotify Condition="'$(HotReloadNotify)' == ''">true</HotReloadNotify>
   </PropertyGroup>
-
   <Target Name="NotifyBuildCompleted" AfterTargets="DeployRuntimeGroup" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.Runtime' and '$(HotReloadNotify)' == 'true'">
     <PropertyGroup>
       <PipeName>RCA_PIPE</PipeName>
