@@ -1,9 +1,0 @@
-<Project>
-  <!-- Targets that run before the solution build -->
-  <Target Name="DisableIntegrationTests" BeforeTargets="Build">
-    <ItemGroup>
-      <ProjectReference Remove="tests\Rca.Integration.Revit.Tests\Rca.Integration.Revit.Tests.csproj" />
-    </ItemGroup>
-    <Message Text="Excluded Rca.Integration.Revit.Tests from build" Importance="High" />
-  </Target>
-</Project>

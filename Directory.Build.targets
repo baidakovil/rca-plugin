@@ -1,18 +1,38 @@
 <Project>
   <PropertyGroup>
+    <!-- Ensure SolutionDir is available even when building individual projects -->
+    <SolutionDir Condition="'$(SolutionDir)' == ''">$(MSBuildThisFileDirectory)</SolutionDir>
+
     <SourceHashProject>$(SolutionDir)src\Tools\SourceHashGenerator\SourceHashGenerator.csproj</SourceHashProject>
     <SourceHashExe>$(SolutionDir)src\Tools\SourceHashGenerator\bin\$(Configuration)\net8.0\SourceHashGenerator.exe</SourceHashExe>
 
     <RcaLoaderRoots>$(SolutionDir)src\Rca.Loader;$(SolutionDir)src\Rca.Loader.Contracts;$(SolutionDir)src\Rca.Logging.Contracts</RcaLoaderRoots>
     <RcaRuntimeRoots>$(SolutionDir)src\Rca.Core;$(SolutionDir)src\Rca.Runtime;$(SolutionDir)src\Rca.Network;$(SolutionDir)src\Rca.UI;$(SolutionDir)src\Rca.Contracts</RcaRuntimeRoots>
 
-    <!-- Only two artifacts kept here, overwritten each build -->
     <RcaArtifactsDir>$(SolutionDir)build\artifacts\hashes</RcaArtifactsDir>
     <RcaLoaderHashFile>$(RcaArtifactsDir)\loader.txt</RcaLoaderHashFile>
     <RcaRuntimeHashFile>$(RcaArtifactsDir)\runtime.txt</RcaRuntimeHashFile>
+    <RcaTimestampFile>$(RcaArtifactsDir)\timestamp.txt</RcaTimestampFile>
   </PropertyGroup>
 
-  <Target Name="BuildSourceHashGenerator" BeforeTargets="GenerateHash">
+  <!-- REAL builds only: single timestamp per build invocation. First project writes fresh stamp; others reuse if file age <= 5s. No cleanup. -->
+  <Target Name="EnsureRcaTimestamp" Condition="'$(DesignTimeBuild)' != 'true' and '$(RcaHotReloadTimestamp)' == ''" BeforeTargets="Build">
+    <MakeDir Directories="$(RcaArtifactsDir)" />
+    <PropertyGroup>
+      <PsEnsure>&quot;$m = New-Object System.Threading.Mutex($false, 'Global\RCA_BuildStamp'); try { $null = $m.WaitOne(); $f = [System.IO.Path]::GetFullPath('&quot;$(RcaTimestampFile)&quot;'); $write = $true; if (Test-Path $f) { try { $age = (Get-Date) - (Get-Item $f).LastWriteTime; if ($age.TotalSeconds -le 5) { $write = $false } } catch { $write = $true } }; if ($write) { $stamp = [DateTime]::Now.ToString('yyyyMMdd_HHmmss'); Set-Content -LiteralPath $f -Value $stamp -NoNewline -Force } } finally { try { $m.ReleaseMutex() | Out-Null } catch {} }&quot;</PsEnsure>
+    </PropertyGroup>
+    <Exec Command='powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command $(PsEnsure)' />
+    <ReadLinesFromFile File="$(RcaTimestampFile)">
+      <Output TaskParameter="Lines" ItemName="_StampLines" />
+    </ReadLinesFromFile>
+    <PropertyGroup>
+      <RcaHotReloadTimestamp>@(_StampLines)</RcaHotReloadTimestamp>
+    </PropertyGroup>
+    <Message Text="EnsureRcaTimestamp: $(RcaHotReloadTimestamp)" Importance="Low" />
+  </Target>
+
+  <!-- Build SourceHashGenerator only when needed (REAL builds only) -->
+  <Target Name="BuildSourceHashGenerator" BeforeTargets="GenerateHash" Condition="'$(DesignTimeBuild)' != 'true'">
     <PropertyGroup>
       <SourceHashProjectModTime>$([System.IO.File]::GetLastWriteTime('$(SourceHashProject)').Ticks)</SourceHashProjectModTime>
       <SourceHashExeModTime Condition="Exists('$(SourceHashExe)')">$([System.IO.File]::GetLastWriteTime('$(SourceHashExe)').Ticks)</SourceHashExeModTime>
@@ -21,18 +41,12 @@
     <MSBuild Projects="$(SourceHashProject)" Targets="Build" Properties="Configuration=$(Configuration)" Condition="'$(SourceHashProjectModTime)' &gt; '$(SourceHashExeModTime)' or !Exists('$(SourceHashExe)')" />
   </Target>
 
-  <!-- Compute hashes once per build using a TEMP lock keyed by RcaHotReloadTimestamp. No extra files in artifacts dir. -->
-  <Target Name="GenerateHash" BeforeTargets="CoreCompile" DependsOnTargets="BuildSourceHashGenerator">
-    <Message Text="GenerateHash: ensure hashes exist for this build" Importance="Low" />
-
+  <!-- Compute hashes (REAL builds only). -->
+  <Target Name="GenerateHash" BeforeTargets="CoreCompile" DependsOnTargets="EnsureRcaTimestamp;BuildSourceHashGenerator" Condition="'$(DesignTimeBuild)' != 'true'">
+    <Message Text="GenerateHash: compute loader/runtime hashes" Importance="Low" />
     <MakeDir Directories="$(RcaArtifactsDir)" />
-
-    <PropertyGroup>
-      <PsCmd>&quot;$m = New-Object System.Threading.Mutex($false, 'Global\RCA_GenerateHash'); try { $null = $m.WaitOne(); $stamp = '$(RcaHotReloadTimestamp)'; if ([string]::IsNullOrWhiteSpace($stamp)) { $stamp = [DateTime]::UtcNow.ToString('yyyyMMdd_HHmmss') }; $lock = Join-Path $env:TEMP ('RCA_GenerateHash_' + $stamp + '.lock'); if (Test-Path $lock) { exit 0 } else { New-Item -ItemType File -Path $lock -Force | Out-Null }; &amp; '&quot;$(SourceHashExe)&quot;' --roots '&quot;$(RcaLoaderRoots)&quot;' --out '&quot;$(RcaLoaderHashFile)&quot;'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; &amp; '&quot;$(SourceHashExe)&quot;' --roots '&quot;$(RcaRuntimeRoots)&quot;' --out '&quot;$(RcaRuntimeHashFile)&quot;'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } } finally { try { $m.ReleaseMutex() | Out-Null } catch {} }&quot;</PsCmd>
-    </PropertyGroup>
-
-    <Exec Command='powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command $(PsCmd)' />
-
+    <Exec Command='&quot;$(SourceHashExe)&quot; --roots &quot;$(RcaLoaderRoots)&quot; --out &quot;$(RcaLoaderHashFile)&quot;' />
+    <Exec Command='&quot;$(SourceHashExe)&quot; --roots &quot;$(RcaRuntimeRoots)&quot; --out &quot;$(RcaRuntimeHashFile)&quot;' />
     <Error Condition="!Exists('$(RcaLoaderHashFile)')" Text="GenerateHash failed: $(RcaLoaderHashFile) not created" />
     <Error Condition="!Exists('$(RcaRuntimeHashFile)')" Text="GenerateHash failed: $(RcaRuntimeHashFile) not created" />
   </Target>
@@ -44,7 +58,8 @@
     <IsRuntimeGroupProject Condition="'$(MSBuildProjectName)' == 'Rca.Core' or '$(MSBuildProjectName)' == 'Rca.Runtime' or '$(MSBuildProjectName)' == 'Rca.Network' or '$(MSBuildProjectName)' == 'Rca.UI' or '$(MSBuildProjectName)' == 'Rca.Contracts'">true</IsRuntimeGroupProject>
   </PropertyGroup>
 
-  <Target Name="EmitAssemblyMetadataSource" Condition="'$(IsLoaderGroupProject)' == 'true' or '$(IsRuntimeGroupProject)' == 'true'" BeforeTargets="CoreCompile" DependsOnTargets="GenerateHash">
+  <!-- Emit assembly metadata (REAL builds only) -->
+  <Target Name="EmitAssemblyMetadataSource" Condition="('$(DesignTimeBuild)' != 'true') and ('$(IsLoaderGroupProject)' == 'true' or '$(IsRuntimeGroupProject)' == 'true')" BeforeTargets="CoreCompile" DependsOnTargets="GenerateHash">
     <PropertyGroup>
       <MetadataSource>$(IntermediateOutputPath)Rca.AssemblyMetadata.g.cs</MetadataSource>
     </PropertyGroup>
@@ -80,7 +95,8 @@
     </ItemGroup>
   </Target>
 
-  <Target Name="DeployLoaderGroup" AfterTargets="Build" Condition="'$(MSBuildProjectName)' == 'Rca.Loader'">
+  <!-- Deploy groups (REAL builds only) -->
+  <Target Name="DeployLoaderGroup" AfterTargets="Build" DependsOnTargets="EnsureRcaTimestamp" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.Loader'">
     <PropertyGroup>
       <RuntimeDeployDir>$(RcaRuntimeDeployRoot)\$(RcaHotReloadTimestamp)</RuntimeDeployDir>
     </PropertyGroup>
@@ -98,7 +114,7 @@
     <Message Text="Loader group deployed to $(RuntimeDeployDir)" Importance="High" />
   </Target>
 
-  <Target Name="DeployRuntimeGroup" AfterTargets="Build" Condition="'$(MSBuildProjectName)' == 'Rca.Runtime'">
+  <Target Name="DeployRuntimeGroup" AfterTargets="Build" DependsOnTargets="EnsureRcaTimestamp" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.Runtime'">
     <PropertyGroup>
       <RuntimeDeployDir>$(RcaRuntimeDeployRoot)\$(RcaHotReloadTimestamp)</RuntimeDeployDir>
     </PropertyGroup>
@@ -129,7 +145,7 @@
     <HotReloadNotify Condition="'$(HotReloadNotify)' == ''">true</HotReloadNotify>
   </PropertyGroup>
 
-  <Target Name="NotifyBuildCompleted" AfterTargets="DeployRuntimeGroup" Condition="'$(MSBuildProjectName)' == 'Rca.Runtime' and '$(HotReloadNotify)' == 'true'">
+  <Target Name="NotifyBuildCompleted" AfterTargets="DeployRuntimeGroup" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.Runtime' and '$(HotReloadNotify)' == 'true'">
     <PropertyGroup>
       <PipeName>RCA_PIPE</PipeName>
       <PsNotifyCmd>powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "try { $p = New-Object System.IO.Pipes.NamedPipeClientStream('.', '$(PipeName)', [System.IO.Pipes.PipeDirection]::InOut); $p.Connect(3000); $sw = New-Object System.IO.StreamWriter($p); $sw.AutoFlush = $true; $sr = New-Object System.IO.StreamReader($p); $msg = '{\"Command\":\"BUILD_COMPLETED\",\"Payload\":\"\"}'; $sw.WriteLine($msg); $resp = $sr.ReadLine(); Write-Host 'Build notification response:' $resp; $p.Close() } catch { Write-Warning ('Build notification failed: ' + $_.Exception.Message) }"</PsNotifyCmd>

@@ -27,3 +27,5 @@
 /src/Rca.Loader/source-hash-loader.txt
 /build/artifacts/hashes/loader.txt
 /build/artifacts/hashes/runtime.txt
+/build/artifacts/hashes/timestamp.txt
+/build/artifacts/hashes/timestamp.count

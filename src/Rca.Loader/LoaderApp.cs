@@ -14,7 +14,7 @@ namespace Rca.Loader
 {
     /// <summary>
     /// Main entry point for the RCA Loader Revit add-in.
-    /// Automatically initializes pipe server when UIApplication becomes available.
+    /// Automatically initializes pipe server when UIApplication becomes available!
     /// Optionally auto-loads runtime based on settings.
     /// </summary>
     public class LoaderApp : IExternalApplication
