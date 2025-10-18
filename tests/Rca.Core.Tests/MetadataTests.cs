@@ -26,7 +26,7 @@ namespace Rca.Core.Tests
 
             var hash = AttributeMetadataLoader.TryGetFromFile(runtimePath, BuildConstants.SourceHashMetadataKey);
 
-            TestContext.WriteLine($"Runtime Hash: {hash}");
+            // TestContext.WriteLine($"Runtime Hash: {hash}");
             Assert.That(string.IsNullOrEmpty(hash) || hash == AttributeMetadataLoader.MissingMarker, Is.False, "SourceHash should be present in runtime assembly");
         }
 
@@ -44,7 +44,7 @@ namespace Rca.Core.Tests
                 var hash = AttributeMetadataLoader.TryGetFromFile(path, BuildConstants.SourceHashMetadataKey);
                 var deploy = AttributeMetadataLoader.TryGetFromFile(path, BuildConstants.DeployFolderMetadataKey);
 
-                TestContext.WriteLine($"{dll} Hash: {hash} Deploy: {deploy}");
+                // TestContext.WriteLine($"{dll} Hash: {hash} Deploy: {deploy}");
                 Assert.That(string.IsNullOrEmpty(hash) || hash == AttributeMetadataLoader.MissingMarker, Is.False, $"SourceHash missing in {dll}");
                 Assert.That(string.IsNullOrEmpty(deploy) || deploy == AttributeMetadataLoader.MissingMarker, Is.False, $"DeployFolder missing in {dll}");
             }
