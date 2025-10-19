@@ -1,9 +1,6 @@
 ---
-globs: ["**/*.cs", "**/*.csproj", "**/*.targets", , "**/*.props", "**/*.json"]
-description: 'Design Pattern Review and Refactoring Guide'
-alwaysApply: true
+alwaysApply: false
 ---
-
 # .NET/C# Design Pattern Review and Refactoring Guide
 
 You're a senior expert software engineer with extensive experience in maintaining Revit add-in projects over a long time, ensuring clean code, best practices, and AI-friendly code structure.

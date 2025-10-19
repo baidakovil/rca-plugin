@@ -1,9 +1,7 @@
 ---
-globs: ["**/*.cs"]
 description: 'Best practices for C# async programming in Revit add-in context'
-alwaysApply: true
+alwaysApply: false
 ---
-
 # C# Async Programming Best Practices for Revit Add-ins
 
 Your goal is to help me follow best practices for asynchronous programming in C# within Revit add-in context, considering the unique threading requirements of the Revit API.
