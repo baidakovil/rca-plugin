@@ -1,13 +1,14 @@
 ---
-mode: 'agent'
-tools: ['changes', 'codebase', 'editFiles', 'problems']
-description: 'Ensure that C# types are documented with XML comments and follow best practices for documentation in AI-maintained Revit add-in projects.'
+globs: ["**/*.cs"]
+description: 'C# code documentation rules'
+alwaysApply: true
 ---
 
 # C# Documentation Best Practices for AI-Maintained Projects
 
 ## Core Documentation Requirements
 
+- **Doc language** is always English 
 - **All public members** must be documented with XML comments
 - **Internal members** should be documented if they are complex or not self-explanatory
 - **Private methods** with complex logic should have explanatory comments
@@ -56,22 +57,6 @@ description: 'Ensure that C# types are documented with XML comments and follow b
 
 ## Examples
 
-### Service Class Documentation
-```csharp
-/// <summary>
-/// Service for executing Python code using IronPython3 with access to Revit API objects.
-/// This service uses ExternalEvent to ensure thread-safe execution of Revit API calls.
-/// </summary>
-/// <remarks>
-/// The service is designed to be thread-safe and can be called from modeless UI contexts.
-/// All Python execution is marshaled to the Revit UI thread via ExternalEvent to comply
-/// with Revit API threading requirements. The service captures both print() output and
-/// return values from executed Python code.
-/// </remarks>
-public class PythonExecutionService : IPythonExecutionService
-```
-
-### Async Method Documentation
 ```csharp
 /// <summary>
 /// Executes Python code asynchronously via Revit ExternalEvent to ensure thread safety.
@@ -124,4 +109,4 @@ engine.Runtime.IO.SetOutput(outputStream, StdoutEncoding);
 - Keep examples current with actual usage patterns
 - Ensure referenced types in `<see cref>` remain valid
 - Review documentation during code reviews for accuracy and completeness
-- Use consistent terminology throughout the project documentation
+- Use consistent terminology throughout the project documentation, change when see unconsistency

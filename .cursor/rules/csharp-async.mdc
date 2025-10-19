@@ -1,7 +1,7 @@
 ---
-mode: 'agent'
-tools: ['changes', 'codebase', 'editFiles', 'problems']
-description: 'Get best practices for C# async programming in Revit add-in context'
+globs: ["**/*.cs"]
+description: 'Best practices for C# async programming in Revit add-in context'
+alwaysApply: true
 ---
 
 # C# Async Programming Best Practices for Revit Add-ins
@@ -35,7 +35,7 @@ Your goal is to help me follow best practices for asynchronous programming in C#
 - Use try/catch blocks around await expressions
 - Avoid swallowing exceptions in async methods
 - Use `ConfigureAwait(false)` in non-UI library code to prevent deadlocks
-- In Revit context, be aware that `ConfigureAwait(false)` may cause thread switching issues with Revit API
+- In Revit context, avoid `ConfigureAwait(false)` when the continuation needs to access Revit API objects
 - Propagate exceptions with `Task.FromException()` instead of throwing in async Task returning methods
 - Log exceptions appropriately using the project's logging service
 
@@ -65,7 +65,7 @@ public async Task<string> ExecuteAsync(string code)
         tcs.TrySetException(ex);
     }
     
-    return await tcs.Task.ConfigureAwait(false);
+    return await tcs.Task;
 }
 ```
 
@@ -75,7 +75,7 @@ public async Task<string> ExecuteAsync(string code)
 - Avoid mixing blocking and async code (leads to deadlocks)
 - Don't create async void methods (except for event handlers)
 - Always await Task-returning methods
-- Be careful with `ConfigureAwait(false)` in Revit context - may need UI thread for API calls
+- Avoid `ConfigureAwait(false)` in Revit context when accessing Revit API objects
 - Don't forget to handle exceptions in fire-and-forget scenarios
 
 ## Implementation Patterns

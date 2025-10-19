@@ -1,7 +1,7 @@
 ---
-mode: 'agent'
-tools: ['changes', 'codebase', 'editFiles', 'problems', 'search']
-description: 'Get best practices for NUnit unit testing, including data-driven tests for Revit add-in projects'
+globs: ["**/*.cs", "**/*.csproj"]
+description: 'Best practices for NUnit unit testing'
+alwaysApply: true
 ---
 
 # NUnit Best Practices for Revit Add-ins
@@ -20,7 +20,7 @@ Your goal is to help me write effective unit tests with NUnit for a Revit add-in
   - `NSubstitute` version `5.1.0`
 - Create test classes that match the classes being tested (e.g., `PythonExecutionServiceTests` for `PythonExecutionService`)
 - Use .NET SDK test commands: `dotnet test` for running tests
-- Consider custom test adapters for Named Pipe test execution within Revit API context
+- Consider that tests in the project [Rca.Integration.Revit.Tests](./../../Rca.Integration.Revit.Tests) are not unit tests. These tests uses custom test adapters Rca.TestAdapter for Named Pipe test execution within Revit API context
 
 ## Test Structure
 
@@ -90,7 +90,6 @@ Your goal is to help me write effective unit tests with NUnit for a Revit add-in
 - Group tests by feature or component using nested classes or separate files
 - Use categories with `[Category("Unit")]`, `[Category("Integration")]`, `[Category("Revit")]`
 - Use `[Order]` to control test execution order when necessary (avoid when possible)
-- Use `[Author("DeveloperName")]` to indicate ownership
 - Use `[Description]` to provide additional test information
 - Consider `[Explicit]` for tests that shouldn't run automatically (e.g., slow integration tests)
 - Use `[Ignore("Reason")]` to temporarily skip tests with clear reasoning
