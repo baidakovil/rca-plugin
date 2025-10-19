@@ -11,7 +11,29 @@ namespace Rca.Integration.Revit.Tests
 {
     /// <summary>
     /// Integration tests for PythonExecutionService with Revit API context.
-    /// Tests verify Python code execution with access to Revit objects.
+    /// 
+    /// BUSINESS VALUE:
+    /// - Validates IronPython engine executes code in Revit context
+    /// - Ensures Python code has access to Revit API objects (doc, uiapp)
+    /// - Tests synchronous Python execution for scripting
+    /// - Critical for AI assistant: must execute user Python commands safely
+    /// 
+    /// NOT TESTED (future work):
+    /// - Async execution (ExecuteAsync) - inconclusive due to ExternalEvent limitation
+    /// - Python syntax errors and exception handling
+    /// - Python code modifying Revit model (transactions)
+    /// - Python imports and module system
+    /// - Timeout handling for long-running Python scripts
+    /// - Python output capture (stdout/stderr separation)
+    /// - Python code accessing external libraries
+    /// 
+    /// WEAK POINTS:
+    /// - ExecuteSync_EmptyCode_ReturnsEmpty: Trivial test, more for coverage than value
+    /// - ExecuteSync_RevitApiCode_AccessesRevitContext: Assumes doc.Title exists - brittle for empty documents
+    /// - ExecuteAsync test is marked inconclusive - doesn't test real async behavior
+    /// - Tests use magic strings ("Hello from Python") instead of constants
+    /// - No tests for error cases (invalid Python syntax, runtime exceptions)
+    /// - Tests don't verify Python scope isolation between executions
     /// </summary>
     [TestFixture]
     public class PythonExecutionServiceIntegrationTests : UIApplicationTestsBase
@@ -28,6 +50,9 @@ namespace Rca.Integration.Revit.Tests
             }
         }
 
+        /// <summary>
+        /// Tests empty code execution. Trivial test - more for coverage than value.
+        /// </summary>
         [Test, Category("Revit")]
         public void ExecuteSync_EmptyCode_ReturnsEmpty()
         {
@@ -38,6 +63,9 @@ namespace Rca.Integration.Revit.Tests
             result.Should().BeEmpty();
         }
 
+        /// <summary>
+        /// Validates basic Python execution and output capture. Uses magic string.
+        /// </summary>
         [Test, Category("Revit")]
         public void ExecuteSync_SimpleCode_ReturnsOutput()
         {
@@ -52,6 +80,9 @@ namespace Rca.Integration.Revit.Tests
             result.Should().NotContain("Error");
         }
 
+        /// <summary>
+        /// Tests Python access to Revit API objects. Brittle - assumes doc.Title exists.
+        /// </summary>
         [Test, Category("Revit")]
         public void ExecuteSync_RevitApiCode_AccessesRevitContext()
         {
@@ -66,6 +97,9 @@ namespace Rca.Integration.Revit.Tests
             result.Should().NotContain("Error");
         }
 
+        /// <summary>
+        /// Tests async Python execution. Always inconclusive due to ExternalEvent limitation - weak test.
+        /// </summary>
         [Test, Category("Revit")]
         public async Task ExecuteAsync_SimpleCode_ReturnsOutput()
         {

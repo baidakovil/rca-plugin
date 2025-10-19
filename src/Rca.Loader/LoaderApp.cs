@@ -48,8 +48,9 @@ namespace Rca.Loader
 
         /// <summary>
         /// Gets the singleton instance of the loader application.
+        /// Exposed for integration testing.
         /// </summary>
-        internal static LoaderApp? Instance { get; private set; }
+        public static LoaderApp? Instance { get; private set; }
 
         /// <summary>
         /// Gets the Revit UI application.

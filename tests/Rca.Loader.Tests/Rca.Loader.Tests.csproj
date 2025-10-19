@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <PlatformTarget>x64</PlatformTarget>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Rca.Loader\Rca.Loader.csproj" />
+    <ProjectReference Include="..\..\src\Rca.Loader.Contracts\Rca.Loader.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Rca.Contracts\Rca.Contracts.csproj" />
+  </ItemGroup>
+
+  <!-- Test packages are inherited from Directory.Build.props -->
+</Project>
+
