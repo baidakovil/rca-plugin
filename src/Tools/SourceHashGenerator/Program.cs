@@ -13,7 +13,7 @@ internal class Program
     {
         var optRoots = new Option<string>("--roots", description: "Root directories to scan for source files (separated by ';' or ',').") { IsRequired = false };
         var optRoot = new Option<string>("--root", description: "Single root directory to scan for source files") { IsRequired = false };
-        var optOut = new Option<string>("--out", description: "Output file path for the hash (default: source-hash.txt in first root)") { IsRequired = false };
+        var optOut = new Option<string>("--out", description: "Output file path for the hash") { IsRequired = false };
         var optExt = new Option<string>("--ext", () => ".cs,.csproj,.props,.targets,.xaml,.resx,.json,.tt", "Comma-separated list of extensions to include");
 
         // New options for group/timestamp/deploydir and timeout

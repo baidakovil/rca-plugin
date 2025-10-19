@@ -32,3 +32,5 @@
 
 # Coverage reports
 /build/coverage/
+src/Rca.Loader/source-hash.txt
+src/Rca.Core/source-hash.txt
