@@ -1,7 +1,8 @@
 using Rca.Contracts;
 using Rca.Contracts.Infrastructure;
 using System;
-using System.Diagnostics;
+using Microsoft.Extensions.Logging;
+using Rca.UI.Logging;
 
 namespace Rca.UI.Services
 {
@@ -10,6 +11,7 @@ namespace Rca.UI.Services
     /// </summary>
     public class ServiceResolver
     {
+        private static readonly ILogger Log = UiLog.GetLogger<ServiceResolver>();
         private readonly ServiceContainer container;
 
         /// <summary>
@@ -25,8 +27,8 @@ namespace Rca.UI.Services
         /// Resolves a service from the container or returns a default implementation.
         /// </summary>
         /// <typeparam name="T">The service interface type.</typeparam>
-        /// <returns>The resolved service or a default implementation.</returns>
-        public T ResolveOrDefault<T>() where T : class
+        /// <returns>The resolved service or a default implementation, which may be null.</returns>
+        public T? ResolveOrDefault<T>() where T : class
         {
             try
             {
@@ -50,12 +52,11 @@ namespace Rca.UI.Services
         /// </summary>
         /// <typeparam name="T">The service interface type.</typeparam>
         /// <returns>A default implementation or null if no default is available.</returns>
-        private static T CreateDefaultService<T>() where T : class
+        private static T? CreateDefaultService<T>() where T : class
         {
             return typeof(T) switch
             {
                 var t when t == typeof(IPythonExecutionService) => DefaultServices.CreatePythonExecutionService() as T,
-                var t when t == typeof(IDebugLogService) => DefaultServices.CreateDebugLogService() as T,
                 var t when t == typeof(IRevitContext) => DefaultServices.CreateRevitContext() as T,
                 _ => null
             };
@@ -67,7 +68,7 @@ namespace Rca.UI.Services
         /// <typeparam name="T">The service type.</typeparam>
         private static void LogServiceNotRegistered<T>()
         {
-            Debug.WriteLine($"Service {typeof(T).Name} not registered. Using default implementation.");
+            Log.LogWarning("Service {Service} not registered - using default", typeof(T).Name);
         }
 
         /// <summary>
@@ -77,7 +78,7 @@ namespace Rca.UI.Services
         /// <param name="ex">The exception that occurred.</param>
         private static void LogServiceResolutionError<T>(Exception ex)
         {
-            Debug.WriteLine($"Error resolving service {typeof(T).Name}: {ex.Message}");
+            Log.LogError(ex, "Error resolving service {Service}", typeof(T).Name);
         }
     }
 }

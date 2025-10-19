@@ -5,16 +5,43 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <PlatformTarget>x64</PlatformTarget>
+    <UseMergedLoader>true</UseMergedLoader>
   </PropertyGroup>
+  
   <ItemGroup>
     <!-- Replace ricaun.RevitTest.TestAdapter with our custom adapter -->
     <ProjectReference Include="..\..\src\Rca.TestAdapter\Rca.TestAdapter.csproj" />
   </ItemGroup>
+  
   <ItemGroup>
     <ProjectReference Include="../../src/Rca.Core/Rca.Core.csproj" />
     <ProjectReference Include="../../src/Rca.Contracts/Rca.Contracts.csproj" />
-    <ProjectReference Include="../../src/Rca.Loader/Rca.Loader.csproj" />
   </ItemGroup>
+  
+  <!-- 
+    Reference to merged Rca.Loader.dll (built by Loader project).
+    
+    Why not ProjectReference?
+    - Loader is merged with ILRepack and reference assemblies in obj/ are deleted
+    - Using Reference with HintPath to unified output directory
+    
+    ReferenceOutputAssembly=false ProjectReference enforces build order only.
+  -->
+  <ItemGroup>
+    <Reference Include="Rca.Loader">
+      <HintPath>..\..\bin\$(Configuration)\$(TargetFramework)\Rca.Loader.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+  </ItemGroup>
+  
+  <!-- Ensure Loader builds before this test project -->
+  <ItemGroup>
+    <ProjectReference Include="../../src/Rca.Loader/Rca.Loader.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
+    </ProjectReference>
+  </ItemGroup>
+
   <ItemGroup>
     <Reference Include="RevitAPI">
       <HintPath>..\..\libs\Revit\2026\RevitAPI.dll</HintPath>
@@ -25,4 +52,70 @@
       <Private>False</Private>
     </Reference>
   </ItemGroup>
+
+  <!-- Override the target that determines which files to copy -->
+  <Target Name="GetCopyToOutputDirectoryItems" 
+          DependsOnTargets="$(GetCopyToOutputDirectoryItemsDependsOn)" 
+          Returns="@(AllItemsFullPathWithTargetPath)">
+    
+    <!-- Get the standard set of items -->
+    <CallTarget Targets="_GetCopyToOutputDirectoryItemsFromTransitiveProjectReferences">
+      <Output TaskParameter="TargetOutputs" ItemName="_CopyToOutputDirectoryItemsFromTransitiveProjectReferences"/>
+    </CallTarget>
+    
+    <!-- Filter out the Contracts DLL -->
+    <ItemGroup>
+      <_FilteredCopyItems Include="@(_CopyToOutputDirectoryItemsFromTransitiveProjectReferences)" 
+                         Condition="'%(Filename)%(Extension)' != 'Rca.Loader.Contracts.dll'"/>
+      
+      <!-- Add all the other item categories -->
+      <AllItemsFullPathWithTargetPath Include="@(_FilteredCopyItems)"/>
+      <AllItemsFullPathWithTargetPath Include="@(ContentWithTargetPath)"/>
+      <AllItemsFullPathWithTargetPath Include="@(_NoneWithTargetPath)"/>
+      <AllItemsFullPathWithTargetPath Include="@(_SourceItemsToCopyToOutputDirectory)"/>
+      <AllItemsFullPathWithTargetPath Include="@(_CompileItemsToCopyToOutputDirectory)"/>
+      <AllItemsFullPathWithTargetPath Include="@(_EmbeddedResourceToCopyToOutputDirectory)"/>
+      <AllItemsFullPathWithTargetPath Include="@(_LocalizedResourcesToCopyToOutputDirectory)"/>
+      <AllItemsFullPathWithTargetPath Include="@(CopyToOutputDirectoryAlways)"/>
+      <AllItemsFullPathWithTargetPath Include="@(CopyToOutputDirectory)"/>
+    </ItemGroup>
+    
+    <Message Text="Filtered out Rca.Loader.Contracts.dll from copy items" Importance="High" />
+  </Target>
+  
+  <!-- This target runs after Build to cleanup any dummy files -->
+  <Target Name="CleanupDummyFiles" AfterTargets="Build">
+    <!-- Remove the dummy file - we don't actually need it at runtime -->
+    <Delete Files="$(OutputPath)Rca.Loader.Contracts.dll" />
+  </Target>
+
+  <!-- AfterBuild: copy integration tests to a new timestamped Test deploy folder under %LOCALAPPDATA%\RCA\Test -->
+  <Target Name="CopyIntegrationTestsToTestDeploy" AfterTargets="Build">
+    <PropertyGroup>
+      <Timestamp>$([System.DateTime]::Now.ToString("yyyyMMdd_HHmmss"))</Timestamp>
+      <TestDeployRoot>$([System.Environment]::GetFolderPath(SpecialFolder.LocalApplicationData))\RCA\Test</TestDeployRoot>
+      <TestDeployFolder>$(TestDeployRoot)\$(Timestamp)</TestDeployFolder>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(TestDeployFolder)" />
+
+    <ItemGroup>
+      <!-- Core test assembly and sidecars -->
+      <_TestArtifacts Include="$(TargetDir)Rca.Integration.Revit.Tests.*" />
+      <!-- NUnit framework dependency required at runtime for attribute resolution -->
+      <_TestArtifacts Include="$(TargetDir)nunit.framework*.dll" />
+      <!-- FluentAssertions for assertions in tests -->
+      <_TestArtifacts Include="$(TargetDir)FluentAssertions*.dll" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(_TestArtifacts)"
+          DestinationFolder="$(TestDeployFolder)"
+          SkipUnchangedFiles="false"
+          OverwriteReadOnlyFiles="true" />
+
+    <Message Text="Copied test artifacts to $(TestDeployFolder)" Importance="High" />
+
+    <!-- Write latest path to a file for the adapter to pick up if needed -->
+    <WriteLinesToFile File="$(IntermediateOutputPath)latest_testdeploy.txt" Lines="$(TestDeployFolder)" Overwrite="true" />
+  </Target>
 </Project>

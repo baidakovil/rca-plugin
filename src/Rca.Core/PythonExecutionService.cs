@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 using Autodesk.Revit.UI;
 using IronPython.Hosting;
 using Microsoft.Scripting.Hosting;
@@ -13,6 +13,7 @@ namespace Rca.Core.Services
 {
     /// <summary>
     /// Service for executing Python code using IronPython3 and providing access to Revit API objects.
+    /// Legacy debug log integration removed; caller must log externally via new logging system.
     /// </summary>
     public class PythonExecutionService : IPythonExecutionService
     {
@@ -20,14 +21,7 @@ namespace Rca.Core.Services
         private readonly ScriptScope scope;
         private UIApplication? uiapp;
 
-        // Markers and configuration
-        private const string StartMarker = "--- [PYTHON EXECUTION START] ---";
-        private const string EndMarker = "--- [PYTHON EXECUTION END] ---";
-        private const string ErrorStartMarker = "--- [PYTHON ERROR OUTPUT START] ---";
-        private const string ErrorEndMarker = "--- [PYTHON ERROR OUTPUT END] ---";
-        private static readonly Encoding StdoutEncoding = Encoding.Unicode; // keep read/write consistent
-
-        // ExternalEvent plumbing to marshal execution to Revit UI context (lazy initialization)
+        private static readonly Encoding StdoutEncoding = Encoding.Unicode;
         private ExecutePythonExternalEventHandler? externalEventHandler;
         private ExternalEvent? externalEvent;
 
@@ -38,11 +32,8 @@ namespace Rca.Core.Services
         {
             engine = Python.CreateEngine();
             scope = engine.CreateScope();
-            engine.Runtime.LoadAssembly(typeof(Autodesk.Revit.DB.Document).Assembly); // RevitAPI.dll
-            engine.Runtime.LoadAssembly(typeof(Autodesk.Revit.UI.UIDocument).Assembly); // RevitAPIUI.dll
-
-            // Don't create ExternalEvent here - it will be created lazily when needed
-            // This allows the service to be instantiated in test contexts
+            engine.Runtime.LoadAssembly(typeof(Document).Assembly);
+            engine.Runtime.LoadAssembly(typeof(UIDocument).Assembly);
         }
 
         /// <summary>
@@ -50,14 +41,7 @@ namespace Rca.Core.Services
         /// </summary>
         public void SetRevitContext(object context)
         {
-            if (context is UIApplication uiapp)
-            {
-                this.uiapp = uiapp;
-            }
-            else
-            {
-                throw new ArgumentException("Context must be a UIApplication instance", nameof(context));
-            }
+            if (context is UIApplication uiapp) this.uiapp = uiapp; else throw new ArgumentException("Context must be a UIApplication instance", nameof(context));
         }
 
         /// <summary>
@@ -68,18 +52,8 @@ namespace Rca.Core.Services
         {
             if (externalEvent == null || externalEventHandler == null)
             {
-                try
-                {
-                    // Initialize ExternalEvent handler for safe Revit API access from modeless UI
-                    externalEventHandler = new ExecutePythonExternalEventHandler(this);
-                    externalEvent = ExternalEvent.Create(externalEventHandler);
-                }
-                catch (Autodesk.Revit.Exceptions.InvalidOperationException ex)
-                {
-                    throw new InvalidOperationException(
-                        "Cannot create ExternalEvent outside of Revit API context. " +
-                        "This service can only execute Python code when called from within Revit.", ex);
-                }
+                externalEventHandler = new ExecutePythonExternalEventHandler(this);
+                externalEvent = ExternalEvent.Create(externalEventHandler);
             }
         }
 
@@ -88,17 +62,11 @@ namespace Rca.Core.Services
         /// </summary>
         private void InjectRevitContext()
         {
-            if (uiapp == null)
-                throw new InvalidOperationException("Revit context not set. Call SetRevitContext() first.");
-
-            var activeUIDoc = uiapp.ActiveUIDocument;
-            if (activeUIDoc == null)
-                throw new InvalidOperationException("No active document in Revit.");
-
+            if (uiapp == null) throw new InvalidOperationException("Revit context not set. Call SetRevitContext() first.");
+            var activeUIDoc = uiapp.ActiveUIDocument ?? throw new InvalidOperationException("No active document in Revit.");
             AppDomain.CurrentDomain.SetData("uiapp", uiapp);
             AppDomain.CurrentDomain.SetData("uidoc", activeUIDoc);
             AppDomain.CurrentDomain.SetData("doc", activeUIDoc.Document);
-
             scope.SetVariable("uiapp", uiapp);
             scope.SetVariable("uidoc", activeUIDoc);
             scope.SetVariable("doc", activeUIDoc.Document);
@@ -112,23 +80,10 @@ namespace Rca.Core.Services
         public async Task<string> ExecuteAsync(string code)
         {
             if (string.IsNullOrWhiteSpace(code)) return string.Empty;
-
-            // Ensure ExternalEvent is initialized
             EnsureExternalEventInitialized();
-
             var tcs = new TaskCompletionSource<string>();
             externalEventHandler!.Prepare(code, tcs);
-
-            try
-            {
-                externalEvent!.Raise();
-            }
-            catch (Exception ex)
-            {
-                // If we cannot raise ExternalEvent, format and log the error consistently
-                return FormatErrorAndLog(ex.Message);
-            }
-
+            try { externalEvent!.Raise(); } catch (Exception ex) { return FormatError(ex.Message); }
             return await tcs.Task.ConfigureAwait(false);
         }
 
@@ -140,23 +95,14 @@ namespace Rca.Core.Services
         public string ExecuteSync(string code)
         {
             if (string.IsNullOrWhiteSpace(code)) return string.Empty;
-
             try
             {
-                if (uiapp != null)
-                {
-                    InjectRevitContext();
-                }
-
+                if (uiapp != null) InjectRevitContext();
                 var (printOutput, result) = ExecuteWithCapturedStdout(code);
                 var output = ComposeOutput(printOutput, result);
-
-                return FormatSuccessAndLog(output);
+                return FormatSuccess(output);
             }
-            catch (Exception ex)
-            {
-                return FormatErrorAndLog(ex.Message);
-            }
+            catch (Exception ex) { return FormatError(ex.Message); }
         }
 
         // Helper: executes code and captures print() output without touching Python scope (synchronous, runs on Revit UI thread)
@@ -164,18 +110,12 @@ namespace Rca.Core.Services
         {
             using var outputStream = new MemoryStream();
             engine.Runtime.IO.SetOutput(outputStream, StdoutEncoding);
-
             var source = engine.CreateScriptSourceFromString(code);
             var result = source.Execute(scope);
-
             outputStream.Position = 0;
             using var reader = new StreamReader(outputStream, StdoutEncoding, detectEncodingFromByteOrderMarks: true, leaveOpen: false);
             var printOutput = reader.ReadToEnd();
-
-            // Sanitize any NULs that some renderers display as spaces
-            if (!string.IsNullOrEmpty(printOutput) && printOutput.IndexOf('\0') >= 0)
-                printOutput = printOutput.Replace("\0", string.Empty);
-
+            if (!string.IsNullOrEmpty(printOutput) && printOutput.IndexOf('\0') >= 0) printOutput = printOutput.Replace("\0", string.Empty);
             return (printOutput, result);
         }
 
@@ -183,46 +123,18 @@ namespace Rca.Core.Services
         private static string ComposeOutput(string printOutput, object result)
         {
             var sb = new StringBuilder();
-            if (!string.IsNullOrWhiteSpace(printOutput))
-            {
-                sb.Append(printOutput.TrimEnd());
-            }
-
+            if (!string.IsNullOrWhiteSpace(printOutput)) sb.Append(printOutput.TrimEnd());
             if (result != null)
             {
                 if (sb.Length > 0) sb.AppendLine();
                 sb.Append($"Return value: {result}");
             }
-
             return sb.Length == 0 ? "(no output)" : sb.ToString();
         }
 
         // Centralized formatting + logging helpers keep execution logic clean
-        private static string FormatSuccessAndLog(string output)
-        {
-            DebugLogService.StaticLogPythonOutput(StartMarker);
-            DebugLogService.StaticLogPythonOutput($"Output: {output}");
-            DebugLogService.StaticLogPythonOutput(EndMarker);
-
-            var sb = new StringBuilder();
-            sb.AppendLine(StartMarker);
-            sb.AppendLine($"Output: {output}");
-            sb.AppendLine(EndMarker);
-            return sb.ToString();
-        }
-
-        private static string FormatErrorAndLog(string errorMessage)
-        {
-            DebugLogService.StaticLogError(ErrorStartMarker);
-            DebugLogService.StaticLogError($"Python Error: {errorMessage}");
-            DebugLogService.StaticLogError(ErrorEndMarker);
-
-            var sb = new StringBuilder();
-            sb.AppendLine(ErrorStartMarker);
-            sb.AppendLine($"Python Error: {errorMessage}");
-            sb.AppendLine(ErrorEndMarker);
-            return sb.ToString();
-        }
+        private static string FormatSuccess(string output) => output;
+        private static string FormatError(string errorMessage) => $"Python Error: {errorMessage}";
 
         /// <summary>
         /// ExternalEvent handler to run Python code on Revit UI context.
@@ -232,48 +144,22 @@ namespace Rca.Core.Services
             private readonly PythonExecutionService service;
             private string? pendingCode;
             private TaskCompletionSource<string>? pendingTcs;
-
-            public ExecutePythonExternalEventHandler(PythonExecutionService service)
-            {
-                this.service = service;
-            }
-
-            public void Prepare(string code, TaskCompletionSource<string> tcs)
-            {
-                pendingCode = code;
-                pendingTcs = tcs;
-            }
-
+            public ExecutePythonExternalEventHandler(PythonExecutionService service) => this.service = service;
+            public void Prepare(string code, TaskCompletionSource<string> tcs) { pendingCode = code; pendingTcs = tcs; }
             public void Execute(UIApplication app)
             {
                 try
                 {
-                    // Ensure we use the UIApplication provided by Revit at execution time
                     service.uiapp = app ?? service.uiapp;
-
                     service.InjectRevitContext();
-
                     var (printOutput, result) = service.ExecuteWithCapturedStdout(pendingCode!);
                     var output = ComposeOutput(printOutput, result);
-
-                    pendingTcs?.TrySetResult(FormatSuccessAndLog(output));
+                    pendingTcs?.TrySetResult(PythonExecutionService.FormatSuccess(output));
                 }
-                catch (Exception ex)
-                {
-                    pendingTcs?.TrySetResult(FormatErrorAndLog(ex.Message));
-                }
-                finally
-                {
-                    // clear state
-                    pendingCode = null;
-                    pendingTcs = null;
-                }
+                catch (Exception ex) { pendingTcs?.TrySetResult(PythonExecutionService.FormatError(ex.Message)); }
+                finally { pendingCode = null; pendingTcs = null; }
             }
-
-            public string GetName()
-            {
-                return "RCA Plugin - Execute Python";
-            }
+            public string GetName() => "RCA Plugin - Execute Python";
         }
     }
 }

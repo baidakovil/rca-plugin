@@ -1,4 +1,4 @@
-﻿#IDE folders
+#IDE folders
 *.idea/
 *.vs/
 *.vscode/
@@ -21,3 +21,16 @@
 *.user
 /src/Rca.TestAdapter/nupkg/Rca.TestAdapter.1.0.0.nupkg
 /src/Rca.TestAdapter/nupkg/Rca.TestAdapter.1.0.0.snupkg
+/src/Rca.Loader/source-hash.loader.txt
+/buildlog.txt
+/src/Rca.Runtime/source-hash.runtime.txt
+/src/Rca.Loader/source-hash-loader.txt
+/build/artifacts/hashes/loader.txt
+/build/artifacts/hashes/runtime.txt
+/build/artifacts/hashes/timestamp.txt
+/build/artifacts/hashes/timestamp.count
+
+# Coverage reports
+/build/coverage/
+src/Rca.Loader/source-hash.txt
+src/Rca.Core/source-hash.txt

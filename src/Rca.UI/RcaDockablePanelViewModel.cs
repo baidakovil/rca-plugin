@@ -5,18 +5,20 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using Rca.UI.Views;
 
 namespace Rca.UI.ViewModels
 {
     /// <summary>
     /// ViewModel for the RcaDockablePanel. Handles Python code execution and UI commands.
+    /// Debug log window removed.
     /// </summary>
     public class RcaDockablePanelViewModel : INotifyPropertyChanged
     {
-        private string inputText;
-        private string outputText;
+        private string inputText = string.Empty;
+        private string outputText = string.Empty;
         private readonly IPythonExecutionService pythonService;
+        // NOTE: Use object to avoid hard runtime dependency on RevitAPIUI in unit tests
+        private readonly Func<object?> revitContextProvider;
 
         /// <summary>
         /// Command to show hello world dialog.
@@ -26,10 +28,6 @@ namespace Rca.UI.ViewModels
         /// Command to execute Python code.
         /// </summary>
         public ICommand ExecutePythonCommand { get; }
-        /// <summary>
-        /// Command to show debug information.
-        /// </summary>
-        public ICommand ShowDebugInfoCommand { get; }
 
         /// <summary>
         /// The Python code input by the user.
@@ -37,7 +35,7 @@ namespace Rca.UI.ViewModels
         public string InputText
         {
             get => inputText;
-            set { inputText = value; OnPropertyChanged(); }
+            set { inputText = value; OnPropertyChanged(); CommandManager.InvalidateRequerySuggested(); }
         }
 
         /// <summary>
@@ -52,21 +50,14 @@ namespace Rca.UI.ViewModels
         /// <summary>
         /// Initializes a new instance of the RcaDockablePanelViewModel class.
         /// </summary>
-        private readonly Func<UIApplication> uiappProvider;
-        private readonly Func<DebugInfoWindow> debugInfoWindowFactory;
-
         public RcaDockablePanelViewModel(
-            Func<UIApplication> uiappProvider, 
-            IPythonExecutionService pythonService,
-            Func<DebugInfoWindow> debugInfoWindowFactory
-            )
+            Func<object?> revitContextProvider,
+            IPythonExecutionService pythonService)
         {
-            this.uiappProvider = uiappProvider;
+            this.revitContextProvider = revitContextProvider;
             this.pythonService = pythonService;
-            this.debugInfoWindowFactory = debugInfoWindowFactory;
             ClickCommand = new RelayCommand(OnHelloClicked);
             ExecutePythonCommand = new RelayCommand(async _ => await OnExecutePython(), _ => !string.IsNullOrWhiteSpace(InputText));
-            ShowDebugInfoCommand = new RelayCommand(_ => OnShowDebugInfo());
         }
 
         private async Task OnExecutePython()
@@ -75,9 +66,9 @@ namespace Rca.UI.ViewModels
             
             try
             {
-                var uiapp = uiappProvider?.Invoke();
-                if (uiapp != null)
-                    pythonService.SetRevitContext(uiapp);
+                var context = revitContextProvider?.Invoke();
+                if (context != null)
+                    pythonService.SetRevitContext(context);
                 
                 // Use ExecuteSync in Task.Run for dockable panels since they already run in Revit context
                 // ExecuteAsync would try to create ExternalEvent which is not allowed in dockable panel context
@@ -101,17 +92,8 @@ namespace Rca.UI.ViewModels
             TaskDialog.Show("RCA Plugin", "Hello, World from RCA Chat Assistant!");
         }
 
-        /// <summary>
-        /// Opens the debug information window.
-        /// /// </summary>
-        private void OnShowDebugInfo()
-        {
-            var win = debugInfoWindowFactory();
-            win.Show();
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-        private void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
@@ -123,14 +105,14 @@ namespace Rca.UI.ViewModels
     public class RelayCommand : ICommand
     {
         private readonly Action<object> execute;
-        private readonly Func<object, bool> canExecute;
+        private readonly Func<object, bool>? canExecute;
 
         /// <summary>
         /// Initializes a new instance of the RelayCommand class.
         /// </summary>
         /// <param name="execute">The action to execute</param>
         /// <param name="canExecute">The function to determine if command can execute</param>
-        public RelayCommand(Action<object> execute, Func<object, bool> canExecute = null)
+        public RelayCommand(Action<object> execute, Func<object, bool>? canExecute = null)
         {
             this.execute = execute ?? throw new ArgumentNullException(nameof(execute));
             this.canExecute = canExecute;
@@ -141,24 +123,24 @@ namespace Rca.UI.ViewModels
         /// </summary>
         /// <param name="parameter">Command parameter</param>
         /// <returns>True if command can execute, otherwise false</returns>
-        public bool CanExecute(object parameter)
+        public bool CanExecute(object? parameter)
         {
-            return canExecute == null || canExecute(parameter);
+            return canExecute == null || canExecute(parameter!);
         }
 
         /// <summary>
         /// Executes the command.
         /// </summary>
         /// <param name="parameter">Command parameter</param>
-        public void Execute(object parameter)
+        public void Execute(object? parameter)
         {
-            execute(parameter);
+            execute(parameter!);
         }
 
         /// <summary>
         /// Occurs when changes occur that affect whether or not the command should execute.
         /// </summary>
-        public event EventHandler CanExecuteChanged
+        public event EventHandler? CanExecuteChanged
         {
             add { System.Windows.Input.CommandManager.RequerySuggested += value; }
             remove { System.Windows.Input.CommandManager.RequerySuggested -= value; }

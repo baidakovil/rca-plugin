@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Text.Json;
+using System.Collections.Generic;
 using Rca.Loader.Services;
 using Rca.Loader.Testing;
 
@@ -37,6 +38,8 @@ namespace Rca.Loader.Infrastructure
                 PipeCommands.Status => ValidateStatusCommand(command, out validationError),
                 PipeCommands.RunTests => ValidateRunTestsCommand(command, out validationError),
                 PipeCommands.TestInit => ValidateTestInitCommand(command, out validationError),
+                PipeCommands.ReloadRuntime => ValidateReloadRuntimeCommand(command, out validationError),
+                PipeCommands.BuildCompleted => ValidateBuildCompletedCommand(command, out validationError),
                 _ => CreateUnknownCommandError(command.Command, out validationError)
             };
         }
@@ -70,7 +73,8 @@ namespace Rca.Loader.Infrastructure
 
             try
             {
-                var payload = JsonSerializer.Deserialize<RevitTestExecutor.TestExecutionPayload>(command.Payload);
+                // Validate against test adapter payload format
+                var payload = JsonSerializer.Deserialize<TestAdapterPayload>(command.Payload);
                 if (payload == null)
                 {
                     validationError = "Invalid test execution payload format";
@@ -105,11 +109,43 @@ namespace Rca.Loader.Infrastructure
             validationError = string.Empty;
             return true;
         }
+        
+        private static bool ValidateReloadRuntimeCommand(PipeCommand command, out string validationError)
+        {
+            // New flow: payload is optional and ignored; accept empty payload
+            validationError = string.Empty;
+            return true;
+        }
+
+        private static bool ValidateBuildCompletedCommand(PipeCommand command, out string validationError)
+        {
+            // BUILD_COMPLETED doesn't require a payload - MSBuild just sends a signal
+            validationError = string.Empty;
+            return true;
+        }
 
         private static bool CreateUnknownCommandError(string commandName, out string validationError)
         {
             validationError = $"Unknown command: {commandName}";
             return false;
+        }
+        
+        /// <summary>
+        /// Test execution payload from the test adapter (for validation only).
+        /// </summary>
+        private class TestAdapterPayload
+        {
+            public string AssemblyPath { get; set; } = string.Empty;
+            public List<TestAdapterRequest> Tests { get; set; } = new();
+        }
+        
+        /// <summary>
+        /// Test request from the test adapter (for validation only).
+        /// </summary>
+        private class TestAdapterRequest
+        {
+            public string FullyQualifiedName { get; set; } = string.Empty;
+            public string DisplayName { get; set; } = string.Empty;
         }
     }
 
@@ -137,5 +173,17 @@ namespace Rca.Loader.Infrastructure
         /// Command to initialize the test execution environment.
         /// </summary>
         public const string TestInit = "TEST_INIT";
+        
+        /// <summary>
+        /// Command to reload the runtime and update assembly status.
+        /// </summary>
+        public const string ReloadRuntime = "RELOAD_RUNTIME";
+        
+        /// <summary>
+        /// Command sent by MSBuild to notify that a new build is available.
+        /// Addin should check for updates and prompt user if needed.
+        /// Payload is optional and ignored - addin finds latest folder automatically.
+        /// </summary>
+        public const string BuildCompleted = "BUILD_COMPLETED";
     }
 }

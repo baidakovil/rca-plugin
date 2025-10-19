@@ -1,0 +1,20 @@
+flowchart TD
+  A["Start: dotnet build"] --> B1["Load Directory.Build.targets"]
+  B1 --> B2["Set SolutionDir<br/>- Ensures $(SolutionDir) is always available<br/>Condition: If '$(SolutionDir)' == '' then set to $(MSBuildThisFileDirectory)"]
+  B2 --> B3["Define Tool Paths<br/>- SourceHashProject: Path to SourceHashGenerator.csproj<br/>- SourceHashExe: Path to built SourceHashGenerator.exe"]
+  B3 --> B4["Define Loader/Runtime Roots<br/>- RcaLoaderRoots: List of Loader-related project paths<br/>- RcaRuntimeRoots: List of Runtime-related project paths"]
+  B4 --> B5["Set Artifact Paths<br/>- RcaArtifactsDir: Output dir for build artifacts<br/>- RcaLoaderHashFile: Loader hash output file<br/>- RcaRuntimeHashFile: Runtime hash output file<br/>- RcaTimestampFile: Timestamp file"]
+  B5 --> B6["Sticky Timestamp Config<br/>- RcaStickyStampSeconds: TTL for timestamp (default 60s)<br/>- RcaForceNewStamp: Force new timestamp (default false)"]
+  B6 --> B7["Project Group Flags<br/>- IsLoaderGroupProject: true if project is Loader/Contracts/Logging<br/>- IsRuntimeGroupProject: true if project is Core/Runtime/Network/UI/Contracts"]
+  B7 --> C["Check SolutionDir and Properties"]
+  C --> D["EnsureRcaTimestamp (powershell script)"]
+  D --> E["Build SourceHashGenerator if needed"]
+  E --> F["GenerateHash (compute loader/runtime hashes)"]
+  F --> G["EmitAssemblyMetadataSource (add metadata to assemblies)"]
+  G --> H{"Project Type?"}
+  H -- Loader --> I["DeployLoaderGroup (copy Loader DLLs)"]
+  H -- Runtime --> J["DeployRuntimeGroup (copy Runtime DLLs and Lib)"]
+  J --> K["NotifyBuildCompleted (named pipe to Revit addin)"]
+  I --> L["Build Complete"]
+  K --> L
+  H -- Other --> L

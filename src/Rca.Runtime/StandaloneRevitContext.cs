@@ -1,135 +1,91 @@
 using System;
-using System.Diagnostics;
 using System.Reflection;
 using System.IO;
 using Rca.Contracts;
 using Rca.Contracts.Infrastructure;
+using Microsoft.Extensions.Logging;
+using Rca.Runtime.Logging;
 
 namespace Rca.Runtime
 {
     /// <summary>
-    /// A standalone implementation of IRevitContext for use when running outside of Revit.
-    /// Also ensures required assemblies are loaded correctly.
+    /// Standalone implementation of IRevitContext used when executing outside Revit.
+    /// Ensures only shared contracts are preloaded into the Default ALC to avoid type identity issues,
+    /// and keeps UI/runtime assemblies loadable into the collectible RuntimeLoadContext for hot reload.
     /// </summary>
     public class StandaloneRevitContext : IRevitContext
     {
+        private readonly ILogger _log;
+
         /// <summary>
         /// Initializes a new instance of the StandaloneRevitContext class and ensures
-        /// all required assemblies are loaded.
+        /// required shared assemblies are loaded.
         /// </summary>
         public StandaloneRevitContext()
         {
-            // Ensure all required assemblies are loaded
-            EnsureAssembliesLoaded();
-            
-            Debug.WriteLine("StandaloneRevitContext initialized successfully");
+            var provider = new NamedPipeLoggerProvider("RCA_LOG_PIPE", Guid.NewGuid().ToString("N"));
+            _log = provider.CreateLogger(nameof(StandaloneRevitContext));
+            EnsureSharedContractsLoaded();
+            _log.LogInformation("StandaloneRevitContext initialized");
         }
-        
+
         /// <summary>
-        /// Ensures all required assemblies for the standalone mode are loaded.
+        /// Preloads only shared contracts in Default ALC.
+        /// Do not preload Rca.UI, Rca.Core, Rca.Network, etc., so they can be reloaded inside the collectible context.
         /// </summary>
-        private void EnsureAssembliesLoaded()
+        private void EnsureSharedContractsLoaded()
         {
             try
             {
-                // Get the directory where the current runtime assembly is located
                 string? runtimeDir = Path.GetDirectoryName(GetType().Assembly.Location);
-                
                 if (runtimeDir == null)
                 {
-                    Debug.WriteLine("Could not determine runtime directory");
+                    _log.LogWarning("Runtime directory not determined");
                     return;
                 }
-                
-                // List of assemblies we need to ensure are loaded
-                string[] requiredAssemblies = new[]
+
+                string[] required = { "Rca.Contracts.dll" };
+
+                foreach (var asmFile in required)
                 {
-                    "Rca.Core.dll",
-                    "Rca.UI.dll",
-                    "Rca.Network.dll",
-                    "Rca.Contracts.dll"
-                };
-                
-                foreach (var assemblyName in requiredAssemblies)
-                {
-                    string assemblyPath = Path.Combine(runtimeDir, assemblyName);
-                    
-                    // Check if the assembly exists
-                    if (File.Exists(assemblyPath))
+                    var path = Path.Combine(runtimeDir, asmFile);
+                    if (!File.Exists(path)) { _log.LogDebug("Shared contract file not found {File}", path); continue; }
+                    try
                     {
-                        try
+                        if (!IsAssemblyLoaded(asmFile))
                         {
-                            // Try to load the assembly if it's not already loaded
-                            if (!IsAssemblyLoaded(assemblyName))
-                            {
-                                Debug.WriteLine($"Loading assembly: {assemblyName}");
-                                Assembly.LoadFrom(assemblyPath);
-                                Debug.WriteLine($"Successfully loaded: {assemblyName}");
-                            }
-                            else
-                            {
-                                Debug.WriteLine($"Assembly already loaded: {assemblyName}");
-                            }
+                            Assembly.LoadFrom(path);
+                            _log.LogDebug("Preloaded shared contract {Asm} into Default ALC", asmFile);
                         }
-                        catch (Exception ex)
+                        else
                         {
-                            Debug.WriteLine($"Error loading assembly {assemblyName}: {ex.Message}");
+                            _log.LogTrace("Shared contract already loaded {Asm}", asmFile);
                         }
                     }
-                    else
+                    catch (Exception exLoad)
                     {
-                        Debug.WriteLine($"Assembly file not found: {assemblyPath}");
+                        _log.LogWarning(exLoad, "Error preloading shared contract {Asm}", asmFile);
                     }
                 }
-                
-                // Register any required services
-                RegisterServices();
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error ensuring assemblies loaded: {ex.Message}");
+                _log.LogError(ex, "Error ensuring shared contracts loaded");
             }
         }
-        
+
         /// <summary>
-        /// Checks if an assembly with the given name is already loaded.
+        /// Checks if an assembly with the given file name is already loaded in the current AppDomain.
         /// </summary>
-        /// <param name="assemblyName">Name of the assembly file to check.</param>
-        /// <returns>True if already loaded, false otherwise.</returns>
-        private bool IsAssemblyLoaded(string assemblyName)
+        private bool IsAssemblyLoaded(string assemblyFile)
         {
-            string nameWithoutExtension = Path.GetFileNameWithoutExtension(assemblyName);
-            
+            string name = Path.GetFileNameWithoutExtension(assemblyFile);
             foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
             {
-                if (!asm.IsDynamic && 
-                    string.Equals(asm.GetName().Name, nameWithoutExtension, StringComparison.OrdinalIgnoreCase))
-                {
+                if (!asm.IsDynamic && string.Equals(asm.GetName().Name, name, StringComparison.OrdinalIgnoreCase))
                     return true;
-                }
             }
-            
             return false;
-        }
-        
-        /// <summary>
-        /// Registers any additional services needed for standalone operation.
-        /// </summary>
-        private void RegisterServices()
-        {
-            try
-            {
-                var container = ServiceContainer.Instance;
-                Debug.WriteLine("Obtained ServiceContainer instance");
-                
-                // Any additional service registrations can go here
-                // Example: if (!container.IsRegistered<ISomeService>())
-                //          container.Register<ISomeService>(new SomeServiceImpl());
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error registering services: {ex.Message}");
-            }
         }
 
         /// <summary>
@@ -140,13 +96,12 @@ namespace Rca.Runtime
         {
             get
             {
-                Debug.WriteLine("StandaloneRevitContext: Accessing CurrentUIApplication (null-placeholder in standalone mode)");
-                return new object(); // Return a placeholder object instead of null
+                _log.LogTrace("Access CurrentUIApplication placeholder");
+                return new object();
             }
             set
             {
-                Debug.WriteLine("StandaloneRevitContext: Setting CurrentUIApplication (ignored in standalone mode)");
-                // Intentionally ignored in standalone mode
+                _log.LogTrace("Attempt to set CurrentUIApplication ignored in standalone context");
             }
         }
     }

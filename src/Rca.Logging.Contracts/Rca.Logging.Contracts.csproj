@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <AssemblyName>Rca.Logging.Contracts</AssemblyName>
+    <RootNamespace>Rca.Logging.Contracts</RootNamespace>
+    <Authors>RCA</Authors>
+    <Company>RCA</Company>
+    <Description>Logging data transfer objects and constants for RCA loader/runtime independent logging channel.</Description>
+    <PackageTags>logging;contracts;rca</PackageTags>
+  </PropertyGroup>
+</Project>

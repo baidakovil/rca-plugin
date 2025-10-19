@@ -1,12 +1,12 @@
 using NUnit.Framework;
 using Autodesk.Revit.ApplicationServices;
 using System;
-using Rca.Loader.Testing;
+using Rca.Integration.Revit.Tests.Infrastructure;
 
 namespace Rca.Integration.Revit.Tests
 {
     [TestFixture]
-    public class RevitEnvironmentTests : UIApplicationTests
+    public class RevitEnvironmentTests : UIApplicationTestsBase
     {
         private const string ExpectedVersion = "2026";
 

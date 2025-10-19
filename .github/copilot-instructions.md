@@ -33,24 +33,38 @@ Follow these guidelines to generate clean, maintainable C# code for AI-first dev
 13. Use `ExternalEvent` pattern for async operations that require Revit API access.
 14. Respect Revit API threading requirements - most API calls must be on the UI thread.
 15. Mock Revit API dependencies in unit tests using interfaces.
+16. Reference RevitAPI.dll and RevitAPIUI.dll with `<Private>False</Private>` in all projects.
+17. For Loader project, ensure ILRepack properly handles RevitAPI references during assembly merging.
 
 ## Project Configuration
 
-16. Target `net8.0-windows` framework for Revit 2026 compatibility.
-17. Enable nullable reference types across ALL projects: set `<Nullable>enable</Nullable>` in every `.csproj` and use correct annotations (`?`, `!`) to fix warnings gradually. Temporary suppressions are allowed only at narrow scope when interacting with external APIs.
-18. All generated code must compile without errors or warnings.
+18. Target `net8.0-windows` framework for Revit 2026 compatibility.
+19. Enable nullable reference types across ALL projects: set `<Nullable>enable</Nullable>` in every `.csproj` and use correct annotations (`?`, `!`) to fix warnings gradually. Temporary suppressions are allowed only at narrow scope when interacting with external APIs.
+20. All generated code must compile without errors or warnings.
+21. Use ILRepack for merging Loader and Contracts assemblies into a single deployment DLL.
+
+## Assembly Merging with ILRepack
+
+22. Use ILRepack to merge Rca.Loader.dll and Rca.Loader.Contracts.dll into a single assembly.
+23. Use custom MSBuild tasks to properly handle RevitAPI dependencies during merge process.
+24. Ensure strict build process that fails if merging doesn't succeed - no fallback to separate assemblies.
+25. Maintain clean API boundaries even within the merged assembly.
+26. Update hot-reloading system to handle single merged assembly instead of separate Loader/Contracts DLLs.
 
 ## Testing and Quality
 
-19. Write unit tests for all non-UI logic in separate test projects following [csharp-nunit.prompt.md](instructions/csharp-nunit.prompt.md).
-20. Use dependency injection for services and providers to enable proper testing.
-21. Follow [csharp-async.prompt.md](instructions/csharp-async.prompt.md) for async code patterns.
+27. Write unit tests for all non-UI logic in separate test projects following [csharp-nunit.prompt.md](instructions/csharp-nunit.prompt.md).
+28. Use dependency injection for services and providers to enable proper testing.
+29. Follow [csharp-async.prompt.md](instructions/csharp-async.prompt.md) for async code patterns.
+30. When task is approved to be done, update documentation in the [docs](docs) folder. Do not create excessive documentation, but ensure all non-trivial logic is explained.
 
 ## Development Workflow
 
-22. Keep XAML markup minimal; define styles and resources externally.
-23. Name boolean parameters or properties with "Is" or "Has" prefixes.
-24. Validate all changes compile successfully before considering the task complete.
+31. Keep XAML markup minimal; define styles and resources externally.
+32. Name boolean parameters or properties with "Is" or "Has" prefixes.
+33. Validate all changes compile successfully before considering the task complete.
+34. When modifying build processes, ensure compatibility with CI/CD pipeline.
+35. Build the project after every significant change to catch issues early. Use 'dotnet build --no-incremental' to ensure a full rebuild.
 
 ## Code Organization Patterns
 
@@ -58,7 +72,7 @@ Follow these guidelines to generate clean, maintainable C# code for AI-first dev
 - **Commands**: Revit command implementations
 - **UI**: User interface components and view models
 - **Models**: Data structures and domain objects
-- **Contracts**: Interfaces and shared abstractions
+- **Contracts**: Interfaces and shared abstractions (internalized in merged assembly)
 - **Tests**: Unit and integration tests
 
 ## Error Handling Standards
@@ -68,6 +82,7 @@ Follow these guidelines to generate clean, maintainable C# code for AI-first dev
 - Log technical details for debugging purposes
 - Handle Revit API exceptions gracefully
 - Use appropriate exception types for different error conditions
+- Handle ILRepack and build process errors with clear diagnostics
 
 ## Performance Considerations
 
@@ -75,5 +90,6 @@ Follow these guidelines to generate clean, maintainable C# code for AI-first dev
 - Minimize Revit API calls in tight loops
 - Consider memory usage when processing large datasets
 - Use appropriate collection types for the use case
+- Keep merged assemblies lean to optimize loading time
 
 This project is designed to be maintained primarily by AI agents, so prioritize clarity, consistency, and comprehensive documentation over brevity.

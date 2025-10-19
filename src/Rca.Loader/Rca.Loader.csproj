@@ -6,30 +6,49 @@
     <AssemblyName>Rca.Loader</AssemblyName>
     <RootNamespace>Rca.Loader</RootNamespace>
     <PlatformTarget>x64</PlatformTarget>
+    
+    <!-- Identify this as the Loader project for special handling in Common.targets -->
+    <IsLoaderProject>true</IsLoaderProject>
+    
+    <!-- Generate .addin file on build -->
+    <GenerateRcaAddinFile>true</GenerateRcaAddinFile>
+    
+    <!-- Suppress Revit API reference warnings (RevitAPI.dll is not copied to output) -->
+    <NoWarn>$(NoWarn);MSB3245;MSB3243</NoWarn>
   </PropertyGroup>
+
+  <!-- Project references for Loader dependencies -->
   <ItemGroup>
     <ProjectReference Include="..\Rca.Loader.Contracts\Rca.Loader.Contracts.csproj" />
+    <ProjectReference Include="..\Rca.Contracts\Rca.Contracts.csproj" />
+    <ProjectReference Include="..\Rca.Logging.Contracts\Rca.Logging.Contracts.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <!-- Explicit references to Revit API DLLs with absolute paths -->
-    <Reference Include="RevitAPI">
-      <HintPath>$(MSBuildProjectDirectory)\..\..\libs\Revit\2026\RevitAPI.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="RevitAPIUI">
-      <HintPath>$(MSBuildProjectDirectory)\..\..\libs\Revit\2026\RevitAPIUI.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-  </ItemGroup>
+  
+  <!-- NuGet package references -->
   <ItemGroup>
     <PackageReference Include="NUnit" Version="4.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+    <PackageReference Include="System.Reflection.MetadataLoadContext" Version="8.0.0" />
   </ItemGroup>
+  
+  <!-- Windows Desktop framework reference for WPF support -->
   <ItemGroup>
     <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
   </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Resources\*.png" />
-  </ItemGroup>
   
+  <!-- Embedded resources (images, icons, etc.) -->
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\\*.png" />
+    <Content Include="Resources\\settings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>settings.json</Link>
+    </Content>
+    <Content Include="Resources\\Rca.addin">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Rca.addin</Link>
+    </Content>
+  </ItemGroup>
+
+  <!-- Import common build configuration (Revit paths, API references, etc.) -->
   <Import Project="..\..\build\Common.targets" />
 </Project>

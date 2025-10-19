@@ -1,17 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
+  <!-- 
+    Common.targets - Shared build configuration for all RCA projects
+    
+    This file provides:
+    - Common property definitions (Revit paths, deploy locations)
+    - Shared Revit API references (RevitAPI.dll, RevitAPIUI.dll)
+    - IronPython content files for projects that need them
+    - Addin file generation for Loader project
+    - Initial Loader deployment to Revit addins directory
+    
+    All projects should import this file to ensure consistent configuration.
+  -->
+
   <!-- Common configuration properties -->
   <PropertyGroup>
+    <!-- Revit version targeted by the plugin (2026) -->
     <RcaRevitVersion Condition="'$(RcaRevitVersion)' == ''">2026</RcaRevitVersion>
+    
+    <!-- Path to Revit API libraries (RevitAPI.dll, RevitAPIUI.dll) -->
     <RcaRevitLibsPath Condition="'$(RcaRevitLibsPath)' == ''">$(SolutionDir)libs\Revit\$(RcaRevitVersion)</RcaRevitLibsPath>
+    
+    <!-- Revit addins directory where .addin file is deployed -->
     <RcaRevitAddinsDir Condition="'$(RcaRevitAddinsDir)' == ''">$(APPDATA)\Autodesk\Revit\Addins\$(RcaRevitVersion)</RcaRevitAddinsDir>
+    
+    <!-- RCA-specific subdirectory in Revit addins folder (contains Loader assemblies) -->
+    <RcaAddinDir Condition="'$(RcaAddinDir)' == ''">$(RcaRevitAddinsDir)\Rca</RcaAddinDir>
+    
+    <!-- Root directory for all runtime deployments (timestamped folders created here) -->
     <RcaRuntimeDeployRoot Condition="'$(RcaRuntimeDeployRoot)' == ''">$(LocalAppData)\RCA\Runtime</RcaRuntimeDeployRoot>
+    
+    <!-- Hot-reload deploy directory with timestamp (set in Directory.Build.props for consistency across projects) -->
+    <RcaHotReloadDeployDir>$(RcaRuntimeDeployRoot)\$(RcaHotReloadTimestamp)</RcaHotReloadDeployDir>
+    
+    <!-- Unified output path for all build artifacts (bin directory at solution root) -->
+    <BaseOutputPath Condition="'$(BaseOutputPath)' == ''">$(SolutionDir)bin\</BaseOutputPath>
   </PropertyGroup>
 
-  <!-- Common Revit API references -->
+  <!-- Common Revit API references for all projects that need Revit API access -->
   <ItemGroup>
     <Reference Include="RevitAPI">
       <HintPath>$(RcaRevitLibsPath)\RevitAPI.dll</HintPath>
+      <!-- Private=False prevents copying to output dir (Revit provides these at runtime) -->
       <Private>False</Private>
     </Reference>
     <Reference Include="RevitAPIUI">
@@ -20,14 +50,20 @@
     </Reference>
   </ItemGroup>
 
-  <!-- Common IronPython content files -->
+  <!-- 
+    Common IronPython content files for projects that execute Python code
+    Projects must set IncludeIronPythonContent=true to include these files
+  -->
   <ItemGroup Condition="'$(IncludeIronPythonContent)' == 'true'">
+    <!-- IronPython runtime DLLs from NuGet packages -->
     <Content Include="$(UserProfile)\.nuget\packages\ironpython\3.4.2\lib\net8.0\*.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <!-- Python standard library (Lib folder) -->
     <Content Include="$(UserProfile)\.nuget\packages\ironpython.stdlib\3.4.2\contentFiles\any\any\Lib\**\*.*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <!-- DynamicLanguageRuntime dependencies -->
     <Content Include="$(UserProfile)\.nuget\packages\dynamiclanguageruntime\1.3.5\lib\net8.0\Microsoft.Scripting.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -36,15 +72,86 @@
     </Content>
   </ItemGroup>
 
-  <!-- Copy RCA Loader DLLs to Revit Addins Directory after build -->
-  <Target Name="CopyRcaLoaderToRevitAddins" AfterTargets="Build">
-    <ItemGroup>
-      <RcaLoaderAssemblies Include="$(OutputPath)Rca.Loader.dll;$(OutputPath)Rca.Loader.Contracts.dll" />
-    </ItemGroup>
+  <!-- 
+    Generate Rca.addin file to Revit addins directory
+    This target only runs for the Loader project (GenerateRcaAddinFile=true)
+    Copies the pre-configured .addin file from Resources to Revit addins directory
+  -->
+  <Target Name="GenerateRcaAddinFile" AfterTargets="Build" Condition="'$(GenerateRcaAddinFile)' == 'true'">
+    <PropertyGroup>
+      <!-- Source addin file from output directory (copied there by Content element) -->
+      <AddinSourceFile>$(TargetDir)Rca.addin</AddinSourceFile>
+      <AddinDestFile>$(RcaRevitAddinsDir)\Rca.addin</AddinDestFile>
+    </PropertyGroup>
+    
+    <!-- Create Rca subdirectory if it doesn't exist -->
+    <MakeDir Directories="$(RcaAddinDir)" Condition="!Exists('$(RcaAddinDir)')" />
+    
+    <!-- Copy the .addin file from Resources (via output dir) to Revit addins directory -->
+    <Copy SourceFiles="$(AddinSourceFile)" 
+          DestinationFiles="$(AddinDestFile)" 
+          SkipUnchangedFiles="true" />
+                      
+    <Message Text="Deployed Rca.addin from $(AddinSourceFile) to $(AddinDestFile)" Importance="high" />
+  </Target>
+
+  <!-- 
+    Copy Loader DLL to Revit addins directory during initial setup ONLY
+    This target only runs if:
+    - IsLoaderProject=true (only for Rca.Loader project)
+    - Rca.Loader.dll does NOT already exist in the target directory
+    Updates are handled later by an explicit restart workflow.
+  -->
+  <Target Name="InitialSetupCopyToRevitAddins" AfterTargets="Build">
+    <PropertyGroup>
+      <ShouldCopyToAddin>false</ShouldCopyToAddin>
+      <ShouldCopyToAddin Condition="'$(IsLoaderProject)' == 'true' AND !Exists('$(RcaAddinDir)\Rca.Loader.dll')">true</ShouldCopyToAddin>
+    </PropertyGroup>
+    
+    <Message Text="InitialSetup check: IsLoaderProject=$(IsLoaderProject), AddinExists=$([System.IO.File]::Exists('$(RcaAddinDir)\Rca.Loader.dll')), WillCopy=$(ShouldCopyToAddin)" 
+             Importance="High" />
+    
+    <MakeDir Directories="$(RcaAddinDir)" Condition="'$(ShouldCopyToAddin)' == 'true' AND !Exists('$(RcaAddinDir)')" />
+    
     <Copy
-      SourceFiles="@(RcaLoaderAssemblies)"
-      DestinationFolder="$(RcaRevitAddinsDir)\Rca.Loader"
-      SkipUnchangedFiles="true"
-      Condition="Exists('$(OutputPath)Rca.Loader.dll') AND Exists('$(OutputPath)Rca.Loader.Contracts.dll')" />
+      SourceFiles="$(TargetPath)"
+      DestinationFolder="$(RcaAddinDir)"
+      SkipUnchangedFiles="false"
+      Condition="'$(ShouldCopyToAddin)' == 'true'" />
+      
+    <Message Text="Performed initial setup - copied Loader assembly from $(TargetPath) to $(RcaAddinDir)" 
+             Importance="High"
+             Condition="'$(ShouldCopyToAddin)' == 'true'" />
+    
+    <Message Text="Skipped initial setup - Loader already exists in $(RcaAddinDir)" 
+             Importance="High"
+             Condition="'$(ShouldCopyToAddin)' == 'false' AND '$(IsLoaderProject)' == 'true'" />
+  </Target>
+
+  <!-- Initial setup: copy Loader group DLLs to addin dir if missing -->
+  <Target Name="InitialSetupCopyToRevitAddins" AfterTargets="Build">
+    <PropertyGroup>
+      <IsLoader>$(IsLoaderProject)</IsLoader>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(IsLoader)' == 'true'">
+      <LoaderGroupDll Include="$(TargetDir)Rca.Loader.dll" />
+      <LoaderGroupDll Include="$(TargetDir)Rca.Loader.Contracts.dll" />
+      <LoaderGroupDll Include="$(TargetDir)Rca.Logging.Contracts.dll" />
+      <!-- Filter to only missing in addin dir -->
+      <LoaderGroupDllToCopy Include="@(LoaderGroupDll)" Condition="!Exists('$(RcaAddinDir)\%(Filename)%(Extension)')" />
+    </ItemGroup>
+
+    <Message Condition="'$(IsLoader)' == 'true'" Text="Initial setup: checking Loader group DLLs in $(RcaAddinDir)" Importance="High" />
+
+    <Copy SourceFiles="@(LoaderGroupDllToCopy)"
+          DestinationFiles="@(LoaderGroupDllToCopy->'$(RcaAddinDir)\%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true"
+          Condition="'$(IsLoader)' == 'true' and '@(LoaderGroupDllToCopy)' != ''"
+          OverwriteReadOnlyFiles="false">
+      <Output TaskParameter="CopiedFiles" ItemName="CopiedLoaderFiles" />
+    </Copy>
+
+    <Message Condition="'@(CopiedLoaderFiles)' != ''" Text="Initial setup: copied files: @(CopiedLoaderFiles->'%(Filename)%(Extension)', ', ')" Importance="High" />
+    <Message Condition="'@(LoaderGroupDllToCopy)' == '' and '$(IsLoader)' == 'true'" Text="Initial setup: all Loader group DLLs already present in $(RcaAddinDir) - nothing to copy" Importance="High" />
   </Target>
 </Project>

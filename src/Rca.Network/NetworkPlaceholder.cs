@@ -7,7 +7,7 @@ namespace Rca.Network
     public static class NetworkPlaceholder
     {
         /// <summary>
-        /// Gets a value indicating that the Network project is ready for implementation.
+        /// Gets a value indicating that the Network project is ready for implementation!
         /// </summary>
         public static bool IsReady => true;
     }

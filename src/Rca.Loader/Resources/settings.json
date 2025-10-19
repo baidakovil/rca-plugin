@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Revit Chat Assistant settings file",
+  
+  // General settings (available in all builds)
+  "autoLoadRuntimeOnStartup": true,
+  
+  // Debug-only settings (only used in DEBUG builds)
+  "debug": {
+    "verboseLogging": true,
+    "autoShowPanelOnLoad": false,
+    "restartScriptPath": "%USERPROFILE%\\rca-plugin\\build\\Scripts\\RestartRevitGraceful.ps1",
+    
+    // Optional: Revit project file to open on restart
+    // Supports environment variables and network paths
+    // Example: "\\\\Mac\\Home\\Documents\\Project1.rvt"
+    "revitProjectFilePath": "\\\\Mac\\Home\\Documents\\Project1.rvt"
+  }
+}
