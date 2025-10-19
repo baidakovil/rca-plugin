@@ -10,7 +10,7 @@ namespace Rca.Integration.Revit.Tests
     {
         private const string ExpectedVersion = "2026";
 
-        [Test]
+        [Test, Category("Revit")]
         public void RevitVersion_MatchesExpected()
         {
             if (Environment.GetEnvironmentVariable("RCA_ENABLE_REVIT_TESTS") != "1")
