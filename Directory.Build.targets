@@ -3,18 +3,19 @@
     <!-- Ensure SolutionDir is available even when building individual projects -->
     <SolutionDir Condition="'$(SolutionDir)' == ''">$(MSBuildThisFileDirectory)</SolutionDir>
 
-    <!-- Tools and roots -->
+    <!-- Generator project and executable -->
     <SourceHashProject>$(SolutionDir)src\Tools\SourceHashGenerator\SourceHashGenerator.csproj</SourceHashProject>
     <SourceHashExe>$(SolutionDir)src\Tools\SourceHashGenerator\bin\$(Configuration)\net8.0\SourceHashGenerator.exe</SourceHashExe>
 
+    <!-- Source roots -->
     <RcaLoaderRoots>$(SolutionDir)src\Rca.Loader;$(SolutionDir)src\Rca.Loader.Contracts;$(SolutionDir)src\Rca.Logging.Contracts</RcaLoaderRoots>
     <RcaRuntimeRoots>$(SolutionDir)src\Rca.Core;$(SolutionDir)src\Rca.Runtime;$(SolutionDir)src\Rca.Network;$(SolutionDir)src\Rca.UI;$(SolutionDir)src\Rca.Contracts</RcaRuntimeRoots>
 
-    <!-- Artifacts -->
-    <RcaArtifactsDir>$(SolutionDir)build\artifacts\hashes</RcaArtifactsDir>
-    <RcaLoaderHashFile>$(RcaArtifactsDir)\loader.txt</RcaLoaderHashFile>
-    <RcaRuntimeHashFile>$(RcaArtifactsDir)\runtime.txt</RcaRuntimeHashFile>
-    <RcaTimestampFile>$(RcaArtifactsDir)\timestamp.txt</RcaTimestampFile>
+    <!-- Default deploy root under LocalApplicationData if not provided -->
+    <RcaRuntimeDeployRoot Condition="'$(RcaRuntimeDeployRoot)' == ''">$(LOCALAPPDATA)\RCA\Runtime</RcaRuntimeDeployRoot>
+
+    <!-- Timestamp file moved to deploy root so hashes live only under deploy timestamp folder -->
+    <RcaTimestampFile>$(RcaRuntimeDeployRoot)\Timestamp.txt</RcaTimestampFile>
 
     <!-- Sticky timestamp config -->
     <RcaStickyStampSeconds Condition="'$(RcaStickyStampSeconds)' == ''">60</RcaStickyStampSeconds>
@@ -22,9 +23,10 @@
     <RcaForceNewStamp Condition="'$(RcaForceNewStamp)' == ''">false</RcaForceNewStamp>
   </PropertyGroup>
 
-  <!-- Ensure a single shared timestamp per real build with sticky TTL and force override. -->
+  <!-- Ensure a single shared timestamp per real build with sticky TTL and force override -->
   <Target Name="EnsureRcaTimestamp" Condition="'$(DesignTimeBuild)' != 'true'" BeforeTargets="Build">
-    <MakeDir Directories="$(RcaArtifactsDir)" />
+    <!-- Create deploy root where timestamp and marker files will be stored -->
+    <MakeDir Directories="$(RcaRuntimeDeployRoot)" />
     <Exec Command='powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(SolutionDir)build\Scripts\EnsureRcaStamp.ps1&quot; -TargetPath &quot;$(RcaTimestampFile)&quot; -TtlSec &quot;$(RcaStickyStampSeconds)&quot; -ForceStr &quot;$(RcaForceNewStamp)&quot;' />
 
     <ReadLinesFromFile File="$(RcaTimestampFile)">
@@ -36,24 +38,37 @@
     <Message Text="EnsureRcaTimestamp: $(RcaHotReloadTimestamp) (TTL=$(RcaStickyStampSeconds)s, Force=$(RcaForceNewStamp))" Importance="Low" />
   </Target>
 
-  <!-- Build SourceHashGenerator only when needed (real builds only) -->
-  <Target Name="BuildSourceHashGenerator" BeforeTargets="GenerateHash" Condition="'$(DesignTimeBuild)' != 'true'">
+  <!-- Ensure SourceHashGenerator -->
+  <Target Name="BuildSourceHashGenerator" BeforeTargets="GenerateHash" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' != 'SourceHashGenerator'">
     <PropertyGroup>
       <SourceHashProjectModTime>$([System.IO.File]::GetLastWriteTime('$(SourceHashProject)').Ticks)</SourceHashProjectModTime>
       <SourceHashExeModTime Condition="Exists('$(SourceHashExe)')">$([System.IO.File]::GetLastWriteTime('$(SourceHashExe)').Ticks)</SourceHashExeModTime>
       <SourceHashExeModTime Condition="!Exists('$(SourceHashExe)')">0</SourceHashExeModTime>
     </PropertyGroup>
+    <!-- Always build SourceHashGenerator to ensure exe is up-to-date with source changes -->
     <MSBuild Projects="$(SourceHashProject)" Targets="Build" Properties="Configuration=$(Configuration)" Condition="'$(SourceHashProjectModTime)' &gt; '$(SourceHashExeModTime)' or !Exists('$(SourceHashExe)')" />
   </Target>
 
-  <!-- Compute hashes (real builds only). Safe if invoked multiple times. -->
-  <Target Name="GenerateHash" BeforeTargets="CoreCompile" DependsOnTargets="EnsureRcaTimestamp;BuildSourceHashGenerator" Condition="'$(DesignTimeBuild)' != 'true'">
-    <Message Text="GenerateHash: compute loader/runtime hashes" Importance="Low" />
-    <MakeDir Directories="$(RcaArtifactsDir)" />
-    <Exec Command='&quot;$(SourceHashExe)&quot; --roots &quot;$(RcaLoaderRoots)&quot; --out &quot;$(RcaLoaderHashFile)&quot;' />
-    <Exec Command='&quot;$(SourceHashExe)&quot; --roots &quot;$(RcaRuntimeRoots)&quot; --out &quot;$(RcaRuntimeHashFile)&quot;' />
-    <Error Condition="!Exists('$(RcaLoaderHashFile)')" Text="GenerateHash failed: $(RcaLoaderHashFile) not created" />
-    <Error Condition="!Exists('$(RcaRuntimeHashFile)')" Text="GenerateHash failed: $(RcaRuntimeHashFile) not created" />
+  <!-- Ensure runtime deploy folder exists before generating hashes -->
+  <Target Name="EnsureRuntimeDeployFolder" Condition="'$(DesignTimeBuild)' != 'true'" BeforeTargets="GenerateHash">
+    <PropertyGroup>
+      <_RuntimeDeployDir>$(RcaRuntimeDeployRoot)\$(RcaHotReloadTimestamp)</_RuntimeDeployDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(_RuntimeDeployDir)" />
+    <Message Text="EnsureRuntimeDeployFolder: created $(_RuntimeDeployDir)" Importance="Low" />
+  </Target>
+
+  <!-- Compute hashes. Generator writes marker files and outputs into deploy/<timestamp> only -->
+  <Target Name="GenerateHash" BeforeTargets="CoreCompile" DependsOnTargets="EnsureRcaTimestamp;EnsureRuntimeDeployFolder;BuildSourceHashGenerator" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' != 'SourceHashGenerator'">
+    <Message Text="GenerateHash: compute loader/runtime hashes (deploy-only)" Importance="Low" />
+
+    <!-- Call generator for Loader group: generator will create marker files SourceHash-Loader-<hash>.txt in deploy timestamp folder -->
+    <Exec Command='&quot;$(SourceHashExe)&quot; --roots &quot;$(RcaLoaderRoots)&quot; --group Loader --timestamp &quot;$(RcaHotReloadTimestamp)&quot; --deployDir &quot;$(RcaRuntimeDeployRoot)&quot; --wait-ms 600000' />
+
+    <!-- Call generator for Runtime group: generator will create marker files SourceHash-Runtime-<hash>.txt in deploy timestamp folder -->
+    <Exec Command='&quot;$(SourceHashExe)&quot; --roots &quot;$(RcaRuntimeRoots)&quot; --group Runtime --timestamp &quot;$(RcaHotReloadTimestamp)&quot; --deployDir &quot;$(RcaRuntimeDeployRoot)&quot; --wait-ms 600000' />
+
+    <!-- Generator creates marker files in $(RcaRuntimeDeployRoot)\$(RcaHotReloadTimestamp); no duplicate out files are produced anymore -->
   </Target>
 
   <!-- Project grouping flags -->
@@ -64,16 +79,22 @@
     <IsRuntimeGroupProject Condition="'$(MSBuildProjectName)' == 'Rca.Core' or '$(MSBuildProjectName)' == 'Rca.Runtime' or '$(MSBuildProjectName)' == 'Rca.Network' or '$(MSBuildProjectName)' == 'Rca.UI' or '$(MSBuildProjectName)' == 'Rca.Contracts'">true</IsRuntimeGroupProject>
   </PropertyGroup>
 
-  <!-- Emit assembly metadata (real builds only) -->
+  <!-- Emit assembly metadata (real builds only) - read hashes from deploy folder only -->
   <Target Name="EmitAssemblyMetadataSource" Condition="('$(DesignTimeBuild)' != 'true') and ('$(IsLoaderGroupProject)' == 'true' or '$(IsRuntimeGroupProject)' == 'true')" BeforeTargets="CoreCompile" DependsOnTargets="GenerateHash">
     <PropertyGroup>
       <MetadataSource>$(IntermediateOutputPath)Rca.AssemblyMetadata.g.cs</MetadataSource>
     </PropertyGroup>
 
-    <ReadLinesFromFile File="$(RcaLoaderHashFile)">
+    <ItemGroup>
+      <_LoaderMarker Include="$(RcaRuntimeDeployRoot)\$(RcaHotReloadTimestamp)\SourceHash-Loader-*.txt" />
+      <_RuntimeMarker Include="$(RcaRuntimeDeployRoot)\$(RcaHotReloadTimestamp)\SourceHash-Runtime-*.txt" />
+    </ItemGroup>
+
+    <ReadLinesFromFile File="@(_LoaderMarker)" Condition="'@(_LoaderMarker)' != ''">
       <Output TaskParameter="Lines" ItemName="_LoaderHashLines" />
     </ReadLinesFromFile>
-    <ReadLinesFromFile File="$(RcaRuntimeHashFile)">
+
+    <ReadLinesFromFile File="@(_RuntimeMarker)" Condition="'@(_RuntimeMarker)' != ''">
       <Output TaskParameter="Lines" ItemName="_RuntimeHashLines" />
     </ReadLinesFromFile>
 
@@ -112,10 +133,9 @@
       <LoaderDeployFiles Include="$(TargetDir)Rca.Logging.Contracts.dll" />
     </ItemGroup>
     <Copy SourceFiles="@(LoaderDeployFiles)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" />
-    <PropertyGroup>
-      <LoaderVersionFile>$(RuntimeDeployDir)\SourceHash-Loader-$(ThisSourceHash).txt</LoaderVersionFile>
-    </PropertyGroup>
-    <WriteLinesToFile File="$(LoaderVersionFile)" Lines="$(ThisSourceHash)" Overwrite="true" />
+
+    <!-- Marker file is created by SourceHashGenerator in deploy folder -->
+
     <Message Text="Loader group deployed to $(RuntimeDeployDir)" Importance="High" />
   </Target>
 
@@ -139,10 +159,9 @@
       <LibFiles Include="$(TargetDir)Lib\**\*.*" />
     </ItemGroup>
     <Copy SourceFiles="@(LibFiles)" DestinationFiles="@(LibFiles-&gt;'$(RuntimeDeployDir)\Lib\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="@(LibFiles)!=''" />
-    <PropertyGroup>
-      <RuntimeVersionFile>$(RuntimeDeployDir)\SourceHash-Runtime-$(ThisSourceHash).txt</RuntimeVersionFile>
-    </PropertyGroup>
-    <WriteLinesToFile File="$(RuntimeVersionFile)" Lines="$(ThisSourceHash)" Overwrite="true" />
+
+    <!-- Marker file is created by SourceHashGenerator in deploy folder -->
+
     <Message Text="Runtime group deployed to $(RuntimeDeployDir)" Importance="High" />
   </Target>
 

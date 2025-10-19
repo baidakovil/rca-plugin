@@ -4,7 +4,7 @@ using System;
 namespace Rca.Loader.Infrastructure
 {
     /// <summary>
-    /// Constants for assembly loading and runtime management.
+    /// Constants for assembly loading and runtime management
     /// NOTE: Assemblies listed in NonCollectibleAssemblies are always loaded (or reused) from the default context.
     /// This avoids loading multiple copies across the collectible RuntimeLoadContext which would otherwise
     /// break type identity or leak memory.

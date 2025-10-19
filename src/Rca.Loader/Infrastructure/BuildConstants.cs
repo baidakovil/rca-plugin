@@ -17,27 +17,5 @@ namespace Rca.Loader.Infrastructure
         /// Used to correlate deployed assemblies with their timestamped deploy directories.
         /// </summary>
         public const string DeployFolderMetadataKey = "DeployFolder";
-
-        /// <summary>
-        /// File name pattern for loader source hash files in deploy directory.
-        /// Format: SourceHash-Loader-{hash}.txt
-        /// </summary>
-        public const string LoaderHashFilePattern = "SourceHash-Loader-*.txt";
-
-        /// <summary>
-        /// File name pattern for runtime source hash files in deploy directory.
-        /// Format: SourceHash-Runtime-{hash}.txt
-        /// </summary>
-        public const string RuntimeHashFilePattern = "SourceHash-Runtime-*.txt";
-
-        /// <summary>
-        /// Intermediate file name for loader source hash during build.
-        /// </summary>
-        public const string LoaderHashIntermediateFile = "source-hash-loader.txt";
-
-        /// <summary>
-        /// Intermediate file name for runtime source hash during build.
-        /// </summary>
-        public const string RuntimeHashIntermediateFile = "source-hash-runtime.txt";
     }
 }
