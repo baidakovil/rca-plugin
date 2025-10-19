@@ -15,8 +15,6 @@ namespace Rca.Integration.Revit.Tests
     /// 
     /// NOT TESTED (future work):
     /// - Revit language/locale settings
-    /// - Revit edition (Architecture, MEP, Structure)
-    /// - Revit licensing status
     /// - Installed Revit add-ins and conflicts
     /// - Revit performance/memory state
     /// - Document open/close state

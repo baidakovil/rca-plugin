@@ -29,16 +29,12 @@
     ReferenceOutputAssembly=false ProjectReference enforces build order only.
   -->
   <ItemGroup>
-    <Reference Include="Rca.Loader">
-      <HintPath>..\..\bin\$(Configuration)\$(TargetFramework)\Rca.Loader.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
   </ItemGroup>
   
   <!-- Ensure Loader builds before this test project -->
   <ItemGroup>
     <ProjectReference Include="../../src/Rca.Loader/Rca.Loader.csproj">
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
       <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
     </ProjectReference>
   </ItemGroup>

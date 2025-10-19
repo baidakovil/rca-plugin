@@ -52,7 +52,8 @@ namespace Rca.Integration.Revit.Tests
             LoaderApp.Instance!.UIApplication.Should().NotBeNull();
             
             // Verify it's the same Revit instance
-            LoaderApp.Instance.UIApplication.Should().BeSameAs(uiapp,
+            // Use NUnit reference-equality assert to avoid FluentAssertions overload ambiguity
+            Assert.That(LoaderApp.Instance!.UIApplication, Is.SameAs(uiapp),
                 "LoaderApp should reference the same UIApplication instance as the test context");
         }
 
