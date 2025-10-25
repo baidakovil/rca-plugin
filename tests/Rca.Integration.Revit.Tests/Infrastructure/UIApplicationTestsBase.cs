@@ -1,4 +1,5 @@
 using Autodesk.Revit.UI;
+using System.IO;
 
 namespace Rca.Integration.Revit.Tests.Infrastructure
 {
@@ -8,6 +9,9 @@ namespace Rca.Integration.Revit.Tests.Infrastructure
     /// </summary>
     public abstract class UIApplicationTestsBase
     {
+        private static bool isInitialized;
+        protected static TestLogger? TestLoggerInstance;
+
         /// <summary>
         /// Gets the Revit UI application instance, set by the test adapter.
         /// </summary>
@@ -20,6 +24,28 @@ namespace Rca.Integration.Revit.Tests.Infrastructure
         public virtual void GlobalSetup(UIApplication uiapp)
         {
             this.uiapp = uiapp;
+
+            // Initialize test logging once per test assembly execution. We do it here instead of
+            // OneTimeSetUp because the Revit test adapter guarantees this hook is invoked.
+            if (!isInitialized)
+            {
+                try
+                {
+                    var dir = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData), "RCA", "Logs");
+                    Directory.CreateDirectory(dir);
+
+                    if (TestLoggerInstance == null) TestLoggerInstance = TestLogger.Start();
+                    TestLoggerInstance.Log("UIApplicationTestsBase.GlobalSetup: logger initialized");
+                }
+                catch
+                {
+                    // Ignore initialization errors to avoid breaking tests
+                }
+                finally
+                {
+                    isInitialized = true;
+                }
+            }
         }
     }
 }
