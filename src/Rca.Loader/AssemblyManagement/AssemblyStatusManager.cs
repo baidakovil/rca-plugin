@@ -17,6 +17,13 @@ namespace Rca.Loader.AssemblyManagement
     /// </summary>
     public class AssemblyStatusManager
     {
+        // Public constants for MSBuild signal event types. Tests should reference
+        // these constants instead of relying on magic strings.
+        public const string EventNoChanges = "no changes";
+        public const string EventOnlyLoaderOutdated = "only loader outdated";
+        public const string EventOnlyRuntimeOutdated = "only runtime outdated";
+        public const string EventBothLoaderAndRuntimeOutdated = "both loader and runtime outdated";
+
         private readonly ILogger _log = LoaderLog.GetLogger<AssemblyStatusManager>();
 
         public AssemblyStatusManager() { }
@@ -276,7 +283,9 @@ namespace Rca.Loader.AssemblyManagement
                 var ev = DetermineEventType(loaderChanged, runtimeChanged);
 
                 var oldSignal = $"{CurrentInfo.LastMSBuildSignal.Time} - {CurrentInfo.LastMSBuildSignal.Event}";
+                // Preserve the short display `Time` for UI while also storing a full ISO timestamp
                 CurrentInfo.LastMSBuildSignal.Time = DateTime.Now.ToString("HH:mm:ss");
+                CurrentInfo.LastMSBuildSignal.Timestamp = DateTime.Now.ToString("o");
                 CurrentInfo.LastMSBuildSignal.Event = ev;
                 _log.LogInformation("MSBuild signal processed prev={Prev} new={NewTime} {Event}", oldSignal, CurrentInfo.LastMSBuildSignal.Time, ev);
 
@@ -374,10 +383,10 @@ namespace Rca.Loader.AssemblyManagement
 
         public string DetermineEventType(bool loaderComponentsChanged, bool runtimeChanged)
         {
-            if (loaderComponentsChanged && runtimeChanged) return "both loader and runtime outdated";
-            if (loaderComponentsChanged) return "only loader outdated";
-            if (runtimeChanged) return "only runtime outdated";
-            return "no changes";
+            if (loaderComponentsChanged && runtimeChanged) return EventBothLoaderAndRuntimeOutdated;
+            if (loaderComponentsChanged) return EventOnlyLoaderOutdated;
+            if (runtimeChanged) return EventOnlyRuntimeOutdated;
+            return EventNoChanges;
         }
     }
 }

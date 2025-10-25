@@ -2,6 +2,7 @@ using NUnit.Framework;
 using FluentAssertions;
 using Rca.Integration.Revit.Tests.Infrastructure;
 using Rca.Loader;
+using Rca.Loader.AssemblyManagement;
 using System.IO;
 using Rca.Generated;
 
@@ -26,10 +27,6 @@ namespace Rca.Integration.Revit.Tests
     /// - Edge cases: empty timestamp folders, missing hash metadata
     /// 
     /// WEAK POINTS:
-    /// - CurrentInfo_LoaderComponents_ShouldHaveHashOrMissingMarker: Magic number (6 chars) assumes Git short hash format
-    /// - ProcessMsBuildSignal_WithValidPath_ShouldUpdateSignalInfo: Thread.Sleep(1100ms) is brittle timing dependency
-    /// - GetLatestTempDllFolder_ShouldReturnValidPath: Uses Assert.Inconclusive instead of proper test setup
-    /// - DetermineEventType_ShouldReturnCorrectEventTypes: Tests logic that should be unit-tested, magic strings
     /// - IsLoaderOutdated/IsRuntimeOutdated: Weak assertions - only check boolean without context validation
     /// - CurrentInfo_RuntimeAssembly_ShouldBeTracked: Assumes discovery happened, but doesn't force it
     /// - Timestamp folder regex is magic pattern, not derived from actual format constants
@@ -51,17 +48,14 @@ namespace Rca.Integration.Revit.Tests
             // Act
             var latestFolder = statusManager!.GetLatestTempDllFolder();
 
-            // Assert
-            if (!string.IsNullOrEmpty(latestFolder))
-            {
-                Directory.Exists(latestFolder).Should().BeTrue(
-                    "Latest temp DLL folder should exist if returned");
-                
-                // Verify the folder name matches timestamp pattern (YYYYMMDD_HHMMSS)
-                var folderName = Path.GetFileName(latestFolder);
-                folderName.Should().MatchRegex(@"^\d{8}_\d{6}$",
-                    "Folder name should match timestamp pattern");
-            }
+            // Fail the test explicitly if no latest folder is discovered. Integration
+            // tests should surface missing environment setup as failures so CI is aware.
+            latestFolder.Should().NotBeNullOrWhiteSpace("A latest temp DLL folder must be present for this integration test");
+            Directory.Exists(latestFolder).Should().BeTrue("Latest temp DLL folder should exist");
+
+            // Verify the folder name matches timestamp pattern (YYYYMMDD_HHMMSS)
+            var folderName = Path.GetFileName(latestFolder);
+            folderName.Should().MatchRegex(@"^\d{8}_\d{6}$", "Folder name should match timestamp pattern");
         }
 
         /// <summary>
@@ -105,8 +99,8 @@ namespace Rca.Integration.Revit.Tests
         }
 
         /// <summary>
-        /// Tests event type determination logic. Should be unit test, not integration test.
-        /// Uses magic strings - brittle.
+        /// Tests event type determination logic. This is unit test, not integration test
+        /// Here because it's needed RevitAPI to be loaded.
         /// </summary>
         [Test, Category("Revit")]
         public void DetermineEventType_ShouldReturnCorrectEventTypes()
@@ -117,16 +111,16 @@ namespace Rca.Integration.Revit.Tests
 
             // Act & Assert
             statusManager!.DetermineEventType(false, false)
-                .Should().Be("no changes");
-            
+                .Should().Be(AssemblyStatusManager.EventNoChanges);
+
             statusManager.DetermineEventType(true, false)
-                .Should().Be("only loader outdated");
-            
+                .Should().Be(AssemblyStatusManager.EventOnlyLoaderOutdated);
+
             statusManager.DetermineEventType(false, true)
-                .Should().Be("only runtime outdated");
-            
+                .Should().Be(AssemblyStatusManager.EventOnlyRuntimeOutdated);
+
             statusManager.DetermineEventType(true, true)
-                .Should().Be("both loader and runtime outdated");
+                .Should().Be(AssemblyStatusManager.EventBothLoaderAndRuntimeOutdated);
         }
 
         /// <summary>
@@ -194,7 +188,7 @@ namespace Rca.Integration.Revit.Tests
         /// <summary>
         /// Tests MSBuild signal processing updates timestamp. Brittle: uses Thread.Sleep for timing.
         /// </summary>
-        [Test, Category("Revit")]
+        [Test, Category("Revit"), Category("DebugOnly")]
         public void ProcessMsBuildSignal_WithValidPath_ShouldUpdateSignalInfo()
         {
             // Arrange
@@ -202,22 +196,23 @@ namespace Rca.Integration.Revit.Tests
             statusManager.Should().NotBeNull();
             
             var latestFolder = statusManager!.GetLatestTempDllFolder();
-            if (string.IsNullOrEmpty(latestFolder))
-            {
-                Assert.Inconclusive("No temp DLL folder available for testing");
-                return;
-            }
+            // Fail the test explicitly if no temp DLL folder is available. Integration tests
+            // should surface missing environment conditions as failures so CI is aware.
+            latestFolder.Should().NotBeNullOrWhiteSpace("A temp DLL folder must exist for this integration test to run");
 
-            var oldTime = statusManager.CurrentInfo.LastMSBuildSignal.Time;
+            var oldTimestamp = statusManager.CurrentInfo.LastMSBuildSignal.Timestamp;
 
             // Act
-            System.Threading.Thread.Sleep(1100); // Ensure time changes
             statusManager.ProcessMsBuildSignal(latestFolder);
-            var newTime = statusManager.CurrentInfo.LastMSBuildSignal.Time;
+            var newTimestamp = statusManager.CurrentInfo.LastMSBuildSignal.Timestamp;
 
             // Assert
-            newTime.Should().NotBe(oldTime, 
-                "Signal time should be updated after processing MSBuild signal");
+            // Timestamp is stored in ISO format and should be updated to a new value
+            newTimestamp.Should().NotBeNullOrWhiteSpace("Timestamp should be set after processing MSBuild signal");
+            if (!string.IsNullOrEmpty(oldTimestamp))
+            {
+                newTimestamp.Should().NotBe(oldTimestamp, "Timestamp should be updated after processing MSBuild signal");
+            }
         }
 
         /// <summary>

@@ -14,6 +14,16 @@ namespace Rca.Loader.AssemblyManagement
         /// Gets or sets the time of the last MSBuild signal in HH:MM:SS format.
         /// </summary>
         public string Time { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Gets or sets the full timestamp (ISO 8601) of the last MSBuild signal.
+        /// </summary>
+        /// <remarks>
+        /// This value is intended for programmatic checks in tests and logs where
+        /// a stable, monotonic timestamp is required. The user-facing `Time`
+        /// property remains in HH:mm:ss format for display in the UI.
+        /// </remarks>
+        public string Timestamp { get; set; } = string.Empty;
         
         /// <summary>
         /// Gets or sets the event type from the last MSBuild signal.
