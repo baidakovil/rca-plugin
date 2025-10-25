@@ -21,6 +21,7 @@ internal class Program
         var optTimestamp = new Option<string>("--timestamp", description: "Build timestamp used for deploy folder") { IsRequired = true };
         var optDeployDir = new Option<string>("--deployDir", description: "Directory where runtime/<timestamp> folder is located (optional)") { IsRequired = false };
         var optWaitMs = new Option<int>("--wait-ms", () => 600000, "Mutex wait timeout in milliseconds (default 600000 = 10min)");
+        var optShortLen = new Option<int>("--short-length", () => 6, "Length of the short hash to emit (default 6)");
 
         var rootCmd = new RootCommand("Source hash generator for RCA hot-reload");
         rootCmd.AddOption(optRoots);
@@ -31,13 +32,27 @@ internal class Program
         rootCmd.AddOption(optTimestamp);
         rootCmd.AddOption(optDeployDir);
         rootCmd.AddOption(optWaitMs);
+        rootCmd.AddOption(optShortLen);
 
-        rootCmd.SetHandler((string roots, string root, string outPath, string ext, string group, string timestamp, string deployDir, int waitMs) => Run(roots, root, outPath, ext, group, timestamp, deployDir, waitMs), optRoots, optRoot, optOut, optExt, optGroup, optTimestamp, optDeployDir, optWaitMs);
+        rootCmd.SetHandler((System.CommandLine.Invocation.InvocationContext ctx) =>
+        {
+            var pr = ctx.ParseResult;
+            var rootsVal = pr.GetValueForOption(optRoots);
+            var rootVal = pr.GetValueForOption(optRoot);
+            var outVal = pr.GetValueForOption(optOut);
+            var extVal = pr.GetValueForOption(optExt);
+            var groupVal = pr.GetValueForOption(optGroup);
+            var timestampVal = pr.GetValueForOption(optTimestamp);
+            var deployDirVal = pr.GetValueForOption(optDeployDir);
+            var waitMsVal = pr.GetValueForOption(optWaitMs);
+            var shortLenVal = pr.GetValueForOption(optShortLen);
+            Run(rootsVal, rootVal, outVal, extVal, groupVal, timestampVal, deployDirVal, waitMsVal, shortLenVal);
+        });
 
         return rootCmd.Invoke(args);
     }
 
-    private static void Run(string roots, string root, string @out, string ext, string group, string timestamp, string deployDir, int waitMs)
+    private static void Run(string roots, string root, string @out, string ext, string group, string timestamp, string deployDir, int waitMs, int shortLen)
     {
         // Normalize group
         if (string.IsNullOrWhiteSpace(group))
@@ -201,7 +216,8 @@ internal class Program
 
             sha.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
             var hash = BitConverter.ToString(sha.Hash!).Replace("-", "").ToLowerInvariant();
-            var shortHash = hash.Length >= 6 ? hash.Substring(0, 6) : hash;
+            var effectiveLen = shortLen > 0 ? shortLen : 6;
+            var shortHash = hash.Length >= effectiveLen ? hash.Substring(0, effectiveLen) : hash;
 
             // Write marker file into runtimeTimestampFolder
             var markerFile = Path.Combine(runtimeTimestampFolder, $"SourceHash-{group}-{shortHash}.txt");

@@ -1,3 +1,8 @@
+root = true
+
+[*.cs]
+build_property.RcaSourceHashLength = 4
+
 # .editorconfig for RCA Plugin (AI-optimized)
 root = true
 

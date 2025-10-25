@@ -1,0 +1,31 @@
+<Project>
+  <PropertyGroup>
+    <!-- Centralized length of short source hash (single source of truth) -->
+    <RcaSourceHashLength Condition="'$(RcaSourceHashLength)' == ''">4</RcaSourceHashLength>
+    <!-- Ensure analyzers (source generators) run during build -->
+    <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
+    <!-- Do not surface generator outputs as physical files under source tree to avoid duplicates -->
+    <EmitCompilerGeneratedFiles>false</EmitCompilerGeneratedFiles>
+  </PropertyGroup>
+
+  <!-- Expose the MSBuild property to the compiler/analyzers for generator consumption -->
+  <ItemGroup>
+    <CompilerVisibleProperty Include="RcaSourceHashLength" />
+  </ItemGroup>
+
+  <!-- Attach the source generator as an Analyzer to Rca.Contracts via ProjectReference (ensures build order) -->
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'Rca.Contracts'">
+    <ProjectReference Include="$(SolutionDir)src\Tools\Rca.BuildMetadata.Generator\Rca.BuildMetadata.Generator.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!-- Also attach generator to integration tests so Rca.Generated is available at compile time -->
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'Rca.Integration.Revit.Tests'">
+    <ProjectReference Include="$(SolutionDir)src\Tools\Rca.BuildMetadata.Generator\Rca.BuildMetadata.Generator.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+</Project>
+
+

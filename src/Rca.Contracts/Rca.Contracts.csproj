@@ -10,4 +10,8 @@
 
   <!-- No Revit API references needed for Contracts project -->
 
+  <ItemGroup>
+    <Compile Remove="Generated\**\*.cs" />
+  </ItemGroup>
+
 </Project>

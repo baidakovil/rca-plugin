@@ -3,6 +3,7 @@ using FluentAssertions;
 using Rca.Integration.Revit.Tests.Infrastructure;
 using Rca.Loader;
 using System.IO;
+using Rca.Generated;
 
 namespace Rca.Integration.Revit.Tests
 {
@@ -80,9 +81,9 @@ namespace Rca.Integration.Revit.Tests
             loaderHash.Should().NotBeNullOrWhiteSpace(
                 "Loader components hash should be set after initialization");
             
-            // Hash should be either a valid hash string (6+ chars) or the missing marker
-            (loaderHash.Length >= 6 || loaderHash == "[MISSING]").Should().BeTrue(
-                "Hash should be either a valid hash (6+ chars, typically 6-8 char Git short hash) or missing marker");
+            // Hash should be either a valid hash string (configured length+) or the missing marker
+            (loaderHash.Length == RcaBuildMetadata.SourceHashLength || loaderHash == "[MISSING]").Should().BeTrue(
+                $"Hash should be either a valid hash ({RcaBuildMetadata.SourceHashLength} chars) or missing marker");
         }
 
         /// <summary>
