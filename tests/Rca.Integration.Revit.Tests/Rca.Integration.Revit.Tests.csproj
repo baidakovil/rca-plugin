@@ -9,26 +9,20 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <!-- Replace ricaun.RevitTest.TestAdapter with our custom adapter -->
+    <!-- Custom test adapter for running tests in Revit context -->
     <ProjectReference Include="..\..\src\Rca.TestAdapter\Rca.TestAdapter.csproj" />
   </ItemGroup>
   
+  <!-- References to RCA assemblies -->
   <ItemGroup>
     <ProjectReference Include="../../src/Rca.Core/Rca.Core.csproj" />
     <ProjectReference Include="../../src/Rca.Contracts/Rca.Contracts.csproj" />
     <ProjectReference Include="../../src/Rca.Loader.Contracts/Rca.Loader.Contracts.csproj" />
   </ItemGroup>
-  
-  <!-- 
-    Reference to merged Rca.Loader.dll (built by Loader project).
-    
-    Why not ProjectReference?
-    - Loader is merged with ILRepack and reference assemblies in obj/ are deleted
-    - Using Reference with HintPath to unified output directory
-    
-    ReferenceOutputAssembly=false ProjectReference enforces build order only.
-  -->
+
+  <!-- Embedded outdated DLLs used by integration tests -->
   <ItemGroup>
+    <EmbeddedResource Include="Resources\OutdatedDll\**\*.dll" />    
   </ItemGroup>
   
   <!-- Ensure Loader builds before this test project -->
@@ -37,6 +31,7 @@
       <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
       <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
     </ProjectReference>
+    <ProjectReference Include="../../src/Rca.Logging.Contracts/Rca.Logging.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>
