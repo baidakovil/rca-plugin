@@ -7,6 +7,9 @@
     <SourceHashProject>$(SolutionDir)src\Tools\SourceHashGenerator\SourceHashGenerator.csproj</SourceHashProject>
     <SourceHashExe>$(SolutionDir)src\Tools\SourceHashGenerator\bin\$(Configuration)\net8.0\SourceHashGenerator.exe</SourceHashExe>
 
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+
     <!-- Source roots -->
     <RcaLoaderRoots>$(SolutionDir)src\Rca.Loader;$(SolutionDir)src\Rca.Loader.Contracts;$(SolutionDir)src\Rca.Logging.Contracts</RcaLoaderRoots>
     <RcaRuntimeRoots>$(SolutionDir)src\Rca.Core;$(SolutionDir)src\Rca.Runtime;$(SolutionDir)src\Rca.Network;$(SolutionDir)src\Rca.UI;$(SolutionDir)src\Rca.Contracts</RcaRuntimeRoots>
@@ -131,8 +134,16 @@
       <LoaderDeployFiles Include="$(TargetDir)Rca.Loader.dll" />
       <LoaderDeployFiles Include="$(TargetDir)Rca.Loader.Contracts.dll" />
       <LoaderDeployFiles Include="$(TargetDir)Rca.Logging.Contracts.dll" />
+      <!-- Ensure deps.json is deployed next to Loader for Default ALC probing -->
+      <LoaderDeployFiles Include="$(TargetDir)Rca.Loader.deps.json" Condition="Exists('$(TargetDir)Rca.Loader.deps.json')" />
     </ItemGroup>
     <Copy SourceFiles="@(LoaderDeployFiles)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" />
+
+    <!-- Copy PDBs next to the DLLs -->
+    <ItemGroup>
+      <LoaderDeployPdbs Include="$(TargetDir)*.pdb" />
+    </ItemGroup>
+    <Copy SourceFiles="@(LoaderDeployPdbs)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" Condition="@(LoaderDeployPdbs)!=''" />
 
     <!-- Marker file is created by SourceHashGenerator in deploy folder -->
 
@@ -155,6 +166,13 @@
       <RuntimeDeployFiles Include="$(TargetDir)Microsoft.Dynamic.dll" />
     </ItemGroup>
     <Copy SourceFiles="@(RuntimeDeployFiles)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" />
+
+    <!-- Copy PDBs next to the DLLs -->
+    <ItemGroup>
+      <RuntimeDeployPdbs Include="$(TargetDir)*.pdb" />
+    </ItemGroup>
+    <Copy SourceFiles="@(RuntimeDeployPdbs)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" Condition="@(RuntimeDeployPdbs)!=''" />
+
     <ItemGroup>
       <LibFiles Include="$(TargetDir)Lib\**\*.*" />
     </ItemGroup>
