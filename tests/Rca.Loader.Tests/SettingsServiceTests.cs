@@ -23,6 +23,8 @@ namespace Rca.Loader.Tests
 
             // Store original path for potential cleanup
             _originalSettingsPath = SettingsService.SettingsFilePath;
+            // Ensure test path starts as null; tests may assign a temp path during execution
+            _testSettingsPath = null;
         }
 
         [TearDown]
