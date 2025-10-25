@@ -88,27 +88,13 @@ namespace Rca.Loader.Restart
         {
             try
             {
-                var sourcePath = _statusManager.GetLatestTempDllFolder();
-                if (string.IsNullOrEmpty(sourcePath)) 
-                { 
-                    error = "Source path not found"; 
-                    Log.LogWarning("Restart script aborted: source path missing"); 
-                    return false; 
-                }
-                
-                var targetPath = LoaderConstants.RcaAddinDir;
-                if (string.IsNullOrEmpty(targetPath) || !Directory.Exists(targetPath)) 
-                { 
-                    error = "Target path not found"; 
-                    Log.LogWarning("Restart script aborted: target path invalid path={Path}", targetPath); 
-                    return false; 
-                }
+                // No file copy anymore; MSBuild deploys to Addins/<timestamp>. We just restart Revit.
 
 #if DEBUG
                 // Use hardcoded script path (minimal fix)
                 if (File.Exists(ScriptPath))
                 {
-                    ExecuteScript(ScriptPath, sourcePath, targetPath, out error);
+                    ExecuteScript(ScriptPath, out error);
                     return string.IsNullOrEmpty(error);
                 }
                 error = $"Restart script not found at path: {ScriptPath}";
@@ -127,7 +113,7 @@ namespace Rca.Loader.Restart
             }
         }
 
-        private void ExecuteScript(string scriptPath, string sourcePath, string targetPath, out string error)
+        private void ExecuteScript(string scriptPath, out string error)
         {
             error = string.Empty;
             try
@@ -143,7 +129,7 @@ namespace Rca.Loader.Restart
 
 #if DEBUG
                 string? projectFilePath = null; // until settings are reintroduced
-                var arguments = $"-ExecutionPolicy Bypass -File \"{scriptPath}\" -SourcePath \"{sourcePath}\" -TargetPath \"{targetPath}\" -RevitExecutable \"{revitExecutable}\"";
+                var arguments = $"-ExecutionPolicy Bypass -File \"{scriptPath}\" -RevitExecutable \"{revitExecutable}\"";
                 if (!string.IsNullOrWhiteSpace(projectFilePath))
                 {
                     var expandedFilePath = PathExpander.ExpandPath(projectFilePath);
@@ -151,7 +137,7 @@ namespace Rca.Loader.Restart
                     Log.LogInformation("Restart script will open Revit with file: {FilePath}", expandedFilePath);
                 }
 #else
-                var arguments = $"-ExecutionPolicy Bypass -File \"{scriptPath}\" -SourcePath \"{sourcePath}\" -TargetPath \"{targetPath}\" -RevitExecutable \"{revitExecutable}\"";
+                var arguments = $"-ExecutionPolicy Bypass -File \"{scriptPath}\" -RevitExecutable \"{revitExecutable}\"";
 #endif
 
                 var startInfo = new ProcessStartInfo

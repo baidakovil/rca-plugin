@@ -1,8 +1,7 @@
 # powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "C:\Users\baidakov\rca-plugin\build\Scripts\Invoke-RcaRestart.ps1
 
 param(
-    [string]$RuntimeRoot = (Join-Path $env:LOCALAPPDATA 'RCA\Runtime'),
-    [string]$TargetAddinDir = (Join-Path $env:APPDATA 'Autodesk\Revit\Addins\2026\Rca'),
+    [string]$RuntimeRoot = (Join-Path $env:APPDATA 'Autodesk\Revit\Addins\2026'),
     [string]$RevitExecutable,
     [string]$FilePath
 )
@@ -29,24 +28,16 @@ if (-not $RevitExecutable) {
 }
 if (-not (Test-Path -LiteralPath $RevitExecutable)) { throw "Revit executable not found: $RevitExecutable" }
 
-# Ensure target addin dir exists
-if (-not (Test-Path -LiteralPath $TargetAddinDir)) {
-    New-Item -ItemType Directory -Path $TargetAddinDir -Force | Out-Null
-}
-
 # Build argument list
 $argList = @(
     '-NoLogo','-NoProfile','-ExecutionPolicy','Bypass',
     '-File', ('"{0}"' -f $scriptPath),
-    '-SourcePath', ('"{0}"' -f $latest),
-    '-TargetPath', ('"{0}"' -f $TargetAddinDir),
     '-RevitExecutable', ('"{0}"' -f $RevitExecutable)
 )
 if ($FilePath) { $argList += @('-FilePath', ('"{0}"' -f $FilePath)) }
 
 Write-Host "Script: $scriptPath"
-Write-Host "SourcePath: $latest"
-Write-Host "TargetPath: $TargetAddinDir"
+Write-Host "Latest timestamped folder: $latest"
 Write-Host "RevitExecutable: $RevitExecutable"
 Write-Host "Invoking: powershell $($argList -join ' ')"
 

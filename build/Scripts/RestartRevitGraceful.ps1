@@ -1,14 +1,8 @@
 # RestartRevitGraceful.ps1
-# Gracefully restarts Revit with updated Loader and Runtime assemblies (separate DLLs)
+# Gracefully restarts Revit. Assemblies are already deployed to timestamped Addins folder.
 # Integrates with RCA unified logging system via named pipe
 
 param(
-    [Parameter(Mandatory=$true)]
-    [string]$SourcePath,
-    
-    [Parameter(Mandatory=$true)]
-    [string]$TargetPath,
-    
     [Parameter(Mandatory=$true)]
     [string]$RevitExecutable,
     
@@ -24,20 +18,10 @@ Import-Module (Join-Path $scriptDir "RcaLogging.psm1") -Force
 $logCategory = "RestartScript"
 
 Write-RcaLog "RestartRevitGraceful script started" -Level "Information" -Category $logCategory
-Write-RcaLog "Parameters: SourcePath=$SourcePath, TargetPath=$TargetPath, RevitExecutable=$RevitExecutable" -Level "Debug" -Category $logCategory
+Write-RcaLog "Parameters: RevitExecutable=$RevitExecutable" -Level "Debug" -Category $logCategory
 
 try {
-    # Ensure required source files exist
-    $required = @('Rca.Loader.dll','Rca.Loader.Contracts.dll','Rca.Logging.Contracts.dll')
-
-    foreach ($f in $required) {
-        $fp = Join-Path $SourcePath $f
-        if (!(Test-Path $fp)) {
-            $errorMsg = "Required assembly not found at $fp"
-            Write-RcaLog $errorMsg -Level "Error" -Category $logCategory
-            throw $errorMsg
-        }
-    }
+    # No copying is needed; files were deployed by MSBuild to Addins/<timestamp>
 
     # Find Revit process
     Write-RcaLog "Searching for Revit process: $RevitExecutable" -Level "Debug" -Category $logCategory
@@ -77,19 +61,7 @@ try {
         Write-RcaLog "Revit process terminated forcefully" -Level "Information" -Category $logCategory
     }
 
-    if (!(Test-Path $TargetPath)) {
-        Write-RcaLog "Creating target directory: $TargetPath" -Level "Debug" -Category $logCategory
-        New-Item -Path $TargetPath -ItemType Directory -Force | Out-Null
-    }
-
-    # Copy all required DLLs from source to target
-    foreach ($f in $required) {
-        $src = Join-Path $SourcePath $f
-        $dst = Join-Path $TargetPath $f
-        Write-RcaLog "Copying $f" -Level "Information" -Category $logCategory
-        Copy-Item -Path $src -Destination $dst -Force
-        if (!(Test-Path $dst)) { throw "Failed to copy $f to $dst" }
-    }
+    # No copy step. Just restart Revit.
 
     # Restart Revit
     if ($FilePath) {

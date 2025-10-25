@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Reflection;
 
 namespace Rca.Loader.Infrastructure
 {
@@ -24,11 +25,11 @@ namespace Rca.Loader.Infrastructure
         public const string PipeName = "RCA_PIPE";
         
         /// <summary>
-        /// The root directory where runtime versions are deployed.
-        /// This is where timestamped runtime folders are created.
+        /// The root directory where timestamped builds are deployed under Revit Addins.
+        /// Example: %APPDATA%/Autodesk/Revit/Addins/2026
         /// </summary>
-        public static readonly string RuntimeDeployRoot = 
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RCA", "Runtime");
+        public static readonly string RuntimeDeployRoot =
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Autodesk", "Revit", "Addins", "2026");
 
         /// <summary>
         /// The root directory where integration test builds are deployed.
@@ -45,16 +46,17 @@ namespace Rca.Loader.Infrastructure
                 "Autodesk", "Revit", "Addins", "2026");
                 
         /// <summary>
-        /// The directory for the Rca addin where the Loader assembly is deployed.
+        /// The directory of the currently loaded Loader assembly. This resolves to the
+        /// timestamped deployment folder (e.g., Addins/2026/20250101_120000).
         /// </summary>
         public static readonly string RcaAddinDir =
-            Path.Combine(RevitAddinDir, "Rca");
+            Path.GetDirectoryName(typeof(LoaderConstants).Assembly.Location) ?? RevitAddinDir;
             
         /// <summary>
         /// The full path to the deployed Loader assembly.
         /// </summary>
         public static readonly string LoaderAssemblyPath =
-            Path.Combine(RcaAddinDir, LoaderFileName);
+            typeof(LoaderConstants).Assembly.Location;
 
         /// <summary>
         /// Unified manifest of assemblies that compose the Loader group.

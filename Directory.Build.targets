@@ -11,8 +11,14 @@
     <RcaLoaderRoots>$(SolutionDir)src\Rca.Loader;$(SolutionDir)src\Rca.Loader.Contracts;$(SolutionDir)src\Rca.Logging.Contracts</RcaLoaderRoots>
     <RcaRuntimeRoots>$(SolutionDir)src\Rca.Core;$(SolutionDir)src\Rca.Runtime;$(SolutionDir)src\Rca.Network;$(SolutionDir)src\Rca.UI;$(SolutionDir)src\Rca.Contracts</RcaRuntimeRoots>
 
-    <!-- Default deploy root under LocalApplicationData if not provided -->
-    <RcaRuntimeDeployRoot Condition="'$(RcaRuntimeDeployRoot)' == ''">$(LOCALAPPDATA)\RCA\Runtime</RcaRuntimeDeployRoot>
+    <!-- Ensure Revit version is available for unified deploy path -->
+    <RcaRevitVersion Condition="'$(RcaRevitVersion)' == ''">2026</RcaRevitVersion>
+
+    <!-- Revit addins directory (roaming AppData) -->
+    <RcaRevitAddinsDir Condition="'$(RcaRevitAddinsDir)' == ''">$(APPDATA)\Autodesk\Revit\Addins\$(RcaRevitVersion)</RcaRevitAddinsDir>
+
+    <!-- Unified deploy root under Revit Addins directory -->
+    <RcaRuntimeDeployRoot Condition="'$(RcaRuntimeDeployRoot)' == ''">$(RcaRevitAddinsDir)</RcaRuntimeDeployRoot>
 
     <!-- Timestamp file moved to deploy root so hashes live only under deploy timestamp folder -->
     <RcaTimestampFile>$(RcaRuntimeDeployRoot)\Timestamp.txt</RcaTimestampFile>

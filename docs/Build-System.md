@@ -8,8 +8,8 @@
 
 ## Core decisions
 1) Per‑build deployment folder by timestamp
-- Each real build emits artifacts into a fresh `%LOCALAPPDATA%\RCA\Runtime\yyyyMMdd_HHmmss` subfolder.
-- Rationale: prevent overwriting DLLs currently loaded by Revit and enable switching to a new version by folder.
+- Each real build emits artifacts into a fresh `%APPDATA%\Autodesk\Revit\Addins\$(RcaRevitVersion)\yyyyMMdd_HHmmss` subfolder.
+- Rationale: prevent overwriting DLLs currently loaded by Revit and enable switching to a new version by folder. Deploying under the Revit Addins path makes it straightforward for Revit to locate the addin and for the `.addin` manifest to reference a relative assembly path.
 
 2) Single timestamp per solution build
 - All projects reuse the same timestamp so Loader and Runtime deploy to the same destination.
@@ -34,7 +34,7 @@
 - `EnsureRcaTimestamp` – runs `build\Scripts\EnsureRcaStamp.ps1` to create/reuse a timestamp under a global mutex, with TTL and force override; exports `RcaHotReloadTimestamp`.
 - `GenerateHash` – computes source hashes for Loader/Runtime groups (diagnostics and version traceability).
 - `EmitAssemblyMetadataSource` – generates `[assembly: AssemblyMetadata("DeployFolder", "<timestamp>")]` and `SourceHash` into a temporary compile unit.
-- `DeployLoaderGroup` / `DeployRuntimeGroup` – copy the corresponding DLLs into `%LOCALAPPDATA%\RCA\Runtime\<timestamp>`.
+- `DeployLoaderGroup` / `DeployRuntimeGroup` – copy the corresponding DLLs into the timestamped folder under the Revit Addins root: `%APPDATA%\Autodesk\Revit\Addins\$(RcaRevitVersion)\<timestamp>`.
 - `NotifyBuildCompleted` – optionally sends a pipe signal so the Loader can detect a new runtime drop.
 
 ## Risks and failure modes avoided
@@ -57,4 +57,4 @@
 ## Artifacts and locations
 - Timestamp file: `build\artifacts\hashes\timestamp.txt`
 - Timestamp format: local time `yyyyMMdd_HHmmss` (e.g., `20251018_112825`)
-- Deployment root: `%LOCALAPPDATA%\RCA\Runtime\<timestamp>`
+- Deployment root: `%APPDATA%\Autodesk\Revit\Addins\$(RcaRevitVersion)\<timestamp>`

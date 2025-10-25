@@ -53,7 +53,7 @@ Benefits:
 
 ## Build-time integration
 
-- `Directory.Build.targets` orchestrates hash computation and metadata injection and deploys build outputs into a timestamped deploy folder under the runtime deploy root (default: `%LOCALAPPDATA%\RCA\Runtime\<timestamp>`).
+- `Directory.Build.targets` orchestrates hash computation and metadata injection and deploys build outputs into a timestamped deploy folder under the Revit Addins root (default: `%APPDATA%\Autodesk\Revit\Addins\$(RcaRevitVersion)\<timestamp>`).
 - The source-hash generator tool (`src/Tools/SourceHashGenerator`) computes a group hash and creates a marker file inside the deploy timestamp folder named `SourceHash-<Group>-<shortHash>.txt` (for example `SourceHash-Runtime-c06c76.txt`).
 - The generator no longer creates a fixed-name duplicate file by default; it writes an explicit `--out` file only if MSBuild or a caller requests it.
 - The MSBuild integration intentionally invokes the generator to produce only marker files in the deploy folder. The build also generates a small source file `Rca.AssemblyMetadata.g.cs` containing `[assembly: AssemblyMetadata("SourceHash", "<hash>")]` and `[assembly: AssemblyMetadata("DeployFolder", "<timestamp>")]` so the hash and deploy timestamp are embedded into every participating assembly.
@@ -66,7 +66,7 @@ Rationale:
 
 ## Change detection at runtime
 
-- Loader updates: compare installed addin hash vs latest loader group hash discovered in the latest deploy folder under `%LOCALAPPDATA%\RCA\Runtime`.
+- Loader updates: compare installed addin hash vs latest loader group hash discovered in the latest deploy folder under the Revit Addins root: `%APPDATA%\Autodesk\Revit\Addins\$(RcaRevitVersion)\<timestamp>`.
 - Runtime updates: compare discovered runtime group hash (from the marker file / discovered assemblies) vs loaded runtime hash (embedded in the loaded runtime assemblies).
 - Classification events produced: `only loader outdated`, `only runtime outdated`, `both loader and runtime outdated`, `no changes`.
 
@@ -74,9 +74,8 @@ Rationale:
 
 ## Restart flow (Loader updates)
 
-- When a Loader update is required, the addin performs a validated copy of the new DLL(s) into the Addins folder and orchestrates a graceful restart of Revit.
-- Validation relies on assembly metadata (`SourceHash`) embedded in the assemblies; the addin compares metadata on source and target files to confirm a correct copy.
-- The restart operation is implemented with a small PowerShell helper script (used in developer/debug scenarios) that performs the copy and launches Revit. CI/packaging should adopt the same metadata-based validation for production deployment.
+- When a Loader update is required in production, the addin performs a validated deploy and orchestrates a graceful restart of Revit. Validation relies on assembly metadata (`SourceHash`) embedded in the assemblies; the addin compares metadata on source and deployed files to confirm a correct deploy.
+- In the developer hot‑reload workflow the build now deploys both Loader and Runtime into a timestamped folder under the Revit Addins root and the `.addin` manifest references the Loader assembly relative to that timestamp folder. The developer restart helper (`build\Scripts\RestartRevitGraceful.ps1`) is simplified and no longer copies files; it only restarts Revit because MSBuild has already deployed artifacts to the timestamped Addins folder. CI/packaging should still validate metadata when moving assemblies into final installation locations.
 
 ---
 
@@ -98,11 +97,11 @@ Rationale:
 
 ## How to test/verify locally
 
-1. Build solution: `dotnet build --no-incremental` (this produces timestamped deploy folder and marker files).
-2. Confirm deploy timestamp folder in `%LOCALAPPDATA%\RCA\Runtime` contains `SourceHash-Loader-<hash>.txt` and `SourceHash-Runtime-<hash>.txt` alongside deployed DLLs.
+1. Build solution: `dotnet build --no-incremental` (this produces a timestamped deploy folder under the Revit Addins root and marker files).
+2. Confirm deploy timestamp folder in `%APPDATA%\Autodesk\Revit\Addins\$(RcaRevitVersion)\<timestamp>` contains `SourceHash-Loader-<hash>.txt` and `SourceHash-Runtime-<hash>.txt` alongside deployed DLLs.
 3. Start Revit with RCA loaded.
 4. Build again; the addin will receive `BUILD_COMPLETED`, discover the latest folder, and classify changes; dialogs will appear according to classification.
-5. For Loader updates choose Restart; the restart helper will validate copies using embedded `SourceHash` metadata before completing.
+5. For Loader updates choose Restart; in the developer workflow the helper script will only restart Revit after MSBuild deployed the timestamped Addins folder. Production installers should perform metadata validation during installation.
 
 ---
 

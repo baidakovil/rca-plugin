@@ -149,10 +149,26 @@ namespace Rca.Loader.AssemblyManagement
         {
             try
             {
+                // Prefer sticky timestamp file produced by MSBuild under Addins root
+                var stampFile = Path.Combine(LoaderConstants.RevitAddinDir, "Timestamp.txt");
+                if (File.Exists(stampFile))
+                {
+                    var stamp = (File.ReadAllText(stampFile) ?? string.Empty).Trim();
+                    if (!string.IsNullOrWhiteSpace(stamp))
+                    {
+                        var folder = Path.Combine(LoaderConstants.RevitAddinDir, stamp);
+                        if (Directory.Exists(folder)) return folder;
+                    }
+                }
+
+                // Fallback: pick the most recent timestamp-like directory under Addins root
                 if (!Directory.Exists(LoaderConstants.RuntimeDeployRoot)) return string.Empty;
-                var dirs = Directory.GetDirectories(LoaderConstants.RuntimeDeployRoot);
+                var dirs = Directory.GetDirectories(LoaderConstants.RuntimeDeployRoot)
+                    .Where(d => Path.GetFileName(d)!.Length == 15 && Path.GetFileName(d)!.Contains("_"))
+                    .OrderByDescending(d => Path.GetFileName(d))
+                    .ToArray();
                 if (dirs.Length == 0) return string.Empty;
-                return dirs.OrderByDescending(d => Path.GetFileName(d)).First();
+                return dirs.First();
             }
             catch (Exception ex)
             {

@@ -109,8 +109,8 @@ namespace Rca.Loader.UI
 
         private string FormatLoaderStatus(AssemblyInfo loaderComponents)
         {
-            if (loaderComponents == null) return "Rca.Loader.dll: unknown";
-            if (string.IsNullOrEmpty(loaderComponents.Path)) return "Rca.Loader.dll: Not loaded";
+            if (loaderComponents == null) return "Loader Group: unknown";
+            if (string.IsNullOrEmpty(loaderComponents.Path)) return "Loader Group: Not loaded";
             string folder = System.IO.Path.GetFileName(loaderComponents.Path);
             bool isOutdated = false;
             try
@@ -119,14 +119,14 @@ namespace Rca.Loader.UI
             }
             catch { }
             return isOutdated
-                ? $"Rca.Loader.dll: Loaded - OUTDATED - {folder} (hash: {TruncateHash(loaderComponents.Hash)})"
-                : $"Rca.Loader.dll: Loaded - Current - {folder} (hash: {TruncateHash(loaderComponents.Hash)})";
+                ? $"Loader Group: Loaded - OUTDATED - {folder} (hash: {TruncateHash(loaderComponents.Hash)})"
+                : $"Loader Group: Loaded - Current - {folder} (hash: {TruncateHash(loaderComponents.Hash)})";
         }
 
         private string FormatRuntimeStatus(AssemblyInfo runtimeAssembly)
         {
-            if (runtimeAssembly == null) return "Rca.Runtime.dll: unknown";
-            if (string.IsNullOrEmpty(runtimeAssembly.Path)) return "Rca.Runtime.dll: Not loaded";
+            if (runtimeAssembly == null) return "Runtime Group: unknown";
+            if (string.IsNullOrEmpty(runtimeAssembly.Path)) return "Runtime Group: Not loaded";
             string folder = System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(runtimeAssembly.Path) ?? string.Empty);
             bool isOutdated = false;
             try
@@ -135,8 +135,8 @@ namespace Rca.Loader.UI
             }
             catch { }
             return isOutdated
-                ? $"Rca.Runtime.dll: Loaded - OUTDATED - {folder} (hash: {TruncateHash(runtimeAssembly.Hash)})"
-                : $"Rca.Runtime.dll: Loaded - Current - {folder} (hash: {TruncateHash(runtimeAssembly.Hash)})";
+                ? $"Runtime Group: Loaded - OUTDATED - {folder} (hash: {TruncateHash(runtimeAssembly.Hash)})"
+                : $"Runtime Group: Loaded - Current - {folder} (hash: {TruncateHash(runtimeAssembly.Hash)})";
         }
 
         private string FormatSignalStatus(SignalInfo signalInfo)
