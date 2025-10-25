@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <!-- Centralized length of short source hash (single source of truth) -->
-    <RcaSourceHashLength Condition="'$(RcaSourceHashLength)' == ''">4</RcaSourceHashLength>
+    <RcaSourceHashLength Condition="'$(RcaSourceHashLength)' == ''">3</RcaSourceHashLength>
     <!-- Ensure analyzers (source generators) run during build -->
     <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
     <!-- Do not surface generator outputs as physical files under source tree to avoid duplicates -->

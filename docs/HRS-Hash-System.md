@@ -44,6 +44,7 @@ This document explains the current source-hash based system used by the RCA hot-
 - Files are ordered deterministically and deduplicated before hashing.
 - SHA256 is computed incrementally and a short hex prefix is used for human-friendly marker filenames (e.g., `c06c76`).
 - The generator writes a marker file into the deploy timestamp folder named `SourceHash-<Group>-<shortHash>.txt` and embeds the short hash into the assemblies via MSBuild-generated source.
+ - The generator writes a marker file into the deploy timestamp folder named `SourceHash-<Group>-<shortHash>.txt`. Assembly metadata (`SourceHash`, `DeployFolder`) is embedded by MSBuild into compiled assemblies. A Roslyn Source Generator (`src/Tools/Rca.BuildMetadata.Generator`) is attached to `Rca.Contracts` to expose `Rca.Generated.RcaBuildMetadata.SourceHashLength` at compile-time; this avoids physical generated files in source.
 
 Rationale for marker filenames:
 - Embedding the short hash in the filename gives a clear, auditable trace of what was deployed in a given timestamp folder. It helps correlate deployed binaries with hashes without opening files or inspecting assembly metadata.

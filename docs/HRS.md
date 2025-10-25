@@ -57,6 +57,7 @@ Benefits:
 - The source-hash generator tool (`src/Tools/SourceHashGenerator`) computes a group hash and creates a marker file inside the deploy timestamp folder named `SourceHash-<Group>-<shortHash>.txt` (for example `SourceHash-Runtime-c06c76.txt`).
 - The generator no longer creates a fixed-name duplicate file by default; it writes an explicit `--out` file only if MSBuild or a caller requests it.
 - The MSBuild integration intentionally invokes the generator to produce only marker files in the deploy folder. The build also generates a small source file `Rca.AssemblyMetadata.g.cs` containing `[assembly: AssemblyMetadata("SourceHash", "<hash>")]` and `[assembly: AssemblyMetadata("DeployFolder", "<timestamp>")]` so the hash and deploy timestamp are embedded into every participating assembly.
+- The MSBuild integration intentionally invokes the generator to produce only marker files in the deploy folder. The build also embeds assembly metadata (`SourceHash` and `DeployFolder`) so the hash and deploy timestamp are included in compiled assemblies. A Roslyn Source Generator (`src/Tools/Rca.BuildMetadata.Generator`) is wired as an analyzer for `Rca.Contracts` (and the integration test project) to emit `Rca.Generated.RcaBuildMetadata` at compile time; physical generator outputs are not written into source tree.
 
 Rationale:
 - Marker files carrying the short hash in their filename provide a single, human-friendly trace of what exactly was deployed at that timestamp and eliminate ambiguity between multiple builds.

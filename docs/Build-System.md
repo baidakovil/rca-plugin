@@ -33,7 +33,8 @@
 ## Build pipeline overview
 - `EnsureRcaTimestamp` – runs `build\Scripts\EnsureRcaStamp.ps1` to create/reuse a timestamp under a global mutex, with TTL and force override; exports `RcaHotReloadTimestamp`.
 - `GenerateHash` – computes source hashes for Loader/Runtime groups (diagnostics and version traceability).
-- `EmitAssemblyMetadataSource` – generates `[assembly: AssemblyMetadata("DeployFolder", "<timestamp>")]` and `SourceHash` into a temporary compile unit.
+ - `GenerateHash` – computes source hashes for Loader/Runtime groups (diagnostics and version traceability).
+ - Assembly metadata (`SourceHash`, `DeployFolder`) are generated and embedded into assemblies. Additionally, a Roslyn Source Generator (`src/Tools/Rca.BuildMetadata.Generator`) is wired into `Rca.Contracts` to expose build-time constants (for example `SourceHashLength`) to other compile units without writing physical files into the source tree.
 - `DeployLoaderGroup` / `DeployRuntimeGroup` – copy the corresponding DLLs into the timestamped folder under the Revit Addins root: `%APPDATA%\Autodesk\Revit\Addins\$(RcaRevitVersion)\<timestamp>`.
 - `NotifyBuildCompleted` – optionally sends a pipe signal so the Loader can detect a new runtime drop.
 
