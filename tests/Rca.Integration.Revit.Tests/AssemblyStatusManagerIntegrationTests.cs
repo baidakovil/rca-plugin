@@ -29,7 +29,6 @@ namespace Rca.Integration.Revit.Tests
     /// 
     /// WEAK POINTS:
     /// - CurrentInfo_RuntimeAssembly_ShouldBeTracked: Assumes discovery happened, but doesn't force it
-    /// - Timestamp folder regex is magic pattern, not derived from actual format constants
     /// </summary>
     [TestFixture]
     public class AssemblyStatusManagerIntegrationTests : UIApplicationTestsBase
