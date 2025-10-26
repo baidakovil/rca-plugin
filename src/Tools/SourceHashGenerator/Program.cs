@@ -37,10 +37,10 @@ internal class Program
         rootCmd.SetHandler((System.CommandLine.Invocation.InvocationContext ctx) =>
         {
             var pr = ctx.ParseResult;
-            var rootsVal = pr.GetValueForOption(optRoots);
-            var rootVal = pr.GetValueForOption(optRoot);
-            var outVal = pr.GetValueForOption(optOut);
-            var extVal = pr.GetValueForOption(optExt);
+            var rootsVal = pr.GetValueForOption(optRoots) ?? string.Empty;
+            var rootVal = pr.GetValueForOption(optRoot) ?? string.Empty;
+            var outVal = pr.GetValueForOption(optOut) ?? string.Empty;
+            var extVal = pr.GetValueForOption(optExt) ?? ".cs,.csproj,.props,.targets,.xaml,.resx,.json,.tt";
             var groupVal = pr.GetValueForOption(optGroup);
             var timestampVal = pr.GetValueForOption(optTimestamp);
             var deployDirVal = pr.GetValueForOption(optDeployDir);
@@ -52,7 +52,7 @@ internal class Program
         return rootCmd.Invoke(args);
     }
 
-    private static void Run(string roots, string root, string @out, string ext, string group, string timestamp, string deployDir, int waitMs, int shortLen)
+    private static void Run(string? roots, string? root, string? @out, string? ext, string? group, string? timestamp, string? deployDir, int waitMs, int shortLen)
     {
         // Normalize group
         if (string.IsNullOrWhiteSpace(group))
@@ -97,7 +97,8 @@ internal class Program
             return;
         }
 
-        var exts = ext.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        var exts = (ext ?? ".cs,.csproj,.props,.targets,.xaml,.resx,.json,.tt")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(e => e.StartsWith('.') ? e : "." + e)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
@@ -124,17 +125,29 @@ internal class Program
         // Do not create a default fallback file. Only write output when --out is provided.
         var writeOut = !string.IsNullOrWhiteSpace(outputPath);
 
+        // Validate timestamp
+        if (string.IsNullOrWhiteSpace(timestamp))
+        {
+            Console.Error.WriteLine("--timestamp is required");
+            Environment.ExitCode = 2;
+            return;
+        }
+        timestamp = timestamp.Trim();
+
         // Determine deploy folder where timestamp subfolder should exist
-        string deployFolder = null;
+        string deployFolder;
         if (!string.IsNullOrWhiteSpace(deployDir))
         {
             deployFolder = Path.GetFullPath(deployDir);
         }
-        else
+        else if (!string.IsNullOrWhiteSpace(outputPath))
         {
-            // Fallback to output folder's parent if deployDir not provided
             var outDir = Path.GetDirectoryName(outputPath);
             deployFolder = string.IsNullOrEmpty(outDir) ? Directory.GetCurrentDirectory() : Path.GetFullPath(outDir);
+        }
+        else
+        {
+            deployFolder = Directory.GetCurrentDirectory();
         }
 
         var runtimeTimestampFolder = Path.Combine(deployFolder, timestamp);
@@ -183,7 +196,7 @@ internal class Program
                     {
                         var outDir = Path.GetDirectoryName(outputPath);
                         if (!string.IsNullOrEmpty(outDir) && !Directory.Exists(outDir)) Directory.CreateDirectory(outDir);
-                        File.WriteAllText(outputPath, txt);
+                        File.WriteAllText(outputPath!, txt);
                     }
                     Console.WriteLine(txt);
                     return;
@@ -221,10 +234,10 @@ internal class Program
 
             // Write marker file into runtimeTimestampFolder
             var markerFile = Path.Combine(runtimeTimestampFolder, $"SourceHash-{group}-{shortHash}.txt");
-            try
-            {
-                File.WriteAllText(markerFile, shortHash);
-            }
+                try
+                {
+                    File.WriteAllText(markerFile, shortHash);
+                }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"Failed to write marker file '{markerFile}': {ex.Message}");
@@ -233,21 +246,21 @@ internal class Program
             }
 
             // Optionally write outputPath for MSBuild compatibility only if --out provided
-            if (writeOut)
-            {
-                try
-                {
-                    var outDir = Path.GetDirectoryName(outputPath);
-                    if (!string.IsNullOrEmpty(outDir) && !Directory.Exists(outDir)) Directory.CreateDirectory(outDir);
-                    File.WriteAllText(outputPath, shortHash);
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine($"Failed to write output file '{outputPath}': {ex.Message}");
-                    Environment.ExitCode = 6;
-                    return;
-                }
-            }
+                    if (writeOut)
+                    {
+                        try
+                        {
+                            var outDir = Path.GetDirectoryName(outputPath);
+                            if (!string.IsNullOrEmpty(outDir) && !Directory.Exists(outDir)) Directory.CreateDirectory(outDir);
+                            File.WriteAllText(outputPath!, shortHash);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.Error.WriteLine($"Failed to write output file '{outputPath}': {ex.Message}");
+                            Environment.ExitCode = 6;
+                            return;
+                        }
+                    }
 
             Console.WriteLine(shortHash);
         }
