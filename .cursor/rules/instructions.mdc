@@ -21,6 +21,7 @@ Follow these guidelines to generate clean, maintainable C# code for AI-first dev
 
 ### General Standards
 
+- When building or testing some project, run full solution build. Per-project building or testing is not allowed
 - Follow the project's [.editorconfig](../../.editorconfig) file for formatting, naming, and code style conventions
 - Add XML doc comments (`///`) above every public class and method following [csharp-docs.prompt.mdc](./csharp-docs.prompt.mdc)
 - Keep each method focused on a single responsibility and follow SOLID principles

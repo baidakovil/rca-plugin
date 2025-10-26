@@ -94,6 +94,21 @@ namespace Rca.Loader.AssemblyManagement
             }
         }
 
+        /// <summary>
+        /// Reads and validates group hash for runtime assemblies in a directory.
+        /// </summary>
+        /// <param name="folder">Directory path containing runtime assemblies to validate.</param>
+        /// <returns>
+        /// A tuple containing success status, group hash string, and failure reason if applicable.
+        /// Returns (false, MissingMarker, reason) on any validation failure.
+        /// </returns>
+        /// <remarks>
+        /// The function performs these validation steps:
+        /// 1. Checks all required runtime assemblies exist in the directory
+        /// 2. Reads SourceHash metadata from each assembly file on disk
+        /// 3. Validates all assemblies have non-empty, non-missing hash values
+        /// 4. Ensures all hashes are identical (group consistency check)
+        /// </remarks>
         private (bool Ok, string Hash, string? Reason) TryReadRuntimeGroupHash(string folder)
         {
             try
@@ -108,12 +123,12 @@ namespace Rca.Loader.AssemblyManagement
                     _log.LogTrace("Runtime group hash read {Dll} -> {Hash}", dll, hash);
                     if (string.IsNullOrEmpty(hash) || hash == AttributeMetadataLoader.MissingMarker)
                         return (false, AttributeMetadataLoader.MissingMarker, $"Missing or empty SourceHash in {dll}");
-                    hashes.Add(hash);
+                    hashes.Add(hash.Trim());
                 }
-                var shortHashes = hashes.Select(h => h.Trim()).Select(h => h.Length > 8 ? h[..8] : h).ToList();
-                var allEqual = shortHashes.Distinct(StringComparer.OrdinalIgnoreCase).Count() == 1;
+
+                var allEqual = hashes.Distinct(StringComparer.OrdinalIgnoreCase).Count() == 1;
                 if (!allEqual)
-                    return (false, AttributeMetadataLoader.MissingMarker, $"Group hash mismatch: {string.Join(", ", shortHashes)}");
+                    return (false, AttributeMetadataLoader.MissingMarker, $"Group hash mismatch: {string.Join(", ", hashes)}");
                 return (true, hashes.First(), null);
             }
             catch (Exception ex)
@@ -123,6 +138,21 @@ namespace Rca.Loader.AssemblyManagement
             }
         }
 
+        /// <summary>
+        /// Reads and validates group hash for loader assemblies in a directory.
+        /// </summary>
+        /// <param name="loaderDir">Directory path containing loader assemblies to validate.</param>
+        /// <returns>
+        /// A tuple containing success status, group hash string, and failure reason if applicable.
+        /// Returns (false, MissingMarker, reason) on any validation failure.
+        /// </returns>
+        /// <remarks>
+        /// The function performs these validation steps:
+        /// 1. Checks all required loader assemblies exist in the directory
+        /// 2. Reads SourceHash metadata from each assembly file on disk
+        /// 3. Validates all assemblies have non-empty, non-missing hash values
+        /// 4. Ensures all hashes are identical (group consistency check)
+        /// </remarks>
         private (bool Ok, string Hash, string? Reason) TryReadLoaderGroupHash(string loaderDir)
         {
             try
@@ -137,12 +167,12 @@ namespace Rca.Loader.AssemblyManagement
                     _log.LogTrace("Loader group hash read {Dll} -> {Hash}", dll, hash);
                     if (string.IsNullOrEmpty(hash) || hash == AttributeMetadataLoader.MissingMarker)
                         return (false, AttributeMetadataLoader.MissingMarker, $"Missing or empty SourceHash in {dll}");
-                    hashes.Add(hash);
+                    hashes.Add(hash.Trim());
                 }
-                var shortHashes = hashes.Select(h => h.Trim()).Select(h => h.Length > 8 ? h[..8] : h).ToList();
-                var allEqual = shortHashes.Distinct(StringComparer.OrdinalIgnoreCase).Count() == 1;
+
+                var allEqual = hashes.Distinct(StringComparer.OrdinalIgnoreCase).Count() == 1;
                 if (!allEqual)
-                    return (false, AttributeMetadataLoader.MissingMarker, $"Group hash mismatch: {string.Join(", ", shortHashes)}");
+                    return (false, AttributeMetadataLoader.MissingMarker, $"Group hash mismatch: {string.Join(", ", hashes)}");
                 return (true, hashes.First(), null);
             }
             catch (Exception ex)
@@ -211,7 +241,10 @@ namespace Rca.Loader.AssemblyManagement
                         CurrentInfo.LoaderComponents.Hash = lhash;
                         var stamp = Path.GetFileName(folder);
                         if (string.IsNullOrEmpty(CurrentInfo.LoaderComponents.Path) || CurrentInfo.LoaderComponents.Path == AttributeMetadataLoader.MissingMarker)
-                            CurrentInfo.LoaderComponents.Path = stamp ?? AttributeMetadataLoader.MissingMarker;
+                        {
+                        CurrentInfo.LoaderComponents.Path = stamp ?? AttributeMetadataLoader.MissingMarker;
+                        }
+
                         _log.LogDebug("Loader info refreshed from runtime folder after reload stamp={Stamp} hash={Hash}", stamp, lhash);
                     }
                 }
