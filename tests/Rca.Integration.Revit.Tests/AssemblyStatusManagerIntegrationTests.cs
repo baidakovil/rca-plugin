@@ -28,7 +28,6 @@ namespace Rca.Integration.Revit.Tests
     /// - Edge cases: empty timestamp folders, missing hash metadata
     /// 
     /// WEAK POINTS:
-    /// - IsLoaderOutdated/IsRuntimeOutdated: Weak assertions - only check boolean without context validation
     /// - CurrentInfo_RuntimeAssembly_ShouldBeTracked: Assumes discovery happened, but doesn't force it
     /// - Timestamp folder regex is magic pattern, not derived from actual format constants
     /// </summary>
@@ -71,9 +70,18 @@ namespace Rca.Integration.Revit.Tests
             latestFolder.Should().NotBeNullOrWhiteSpace("A latest temp DLL folder must be present for this integration test");
             Directory.Exists(latestFolder).Should().BeTrue("Latest temp DLL folder should exist");
 
-            // Verify the folder name matches timestamp pattern (YYYYMMDD_HHMMSS)
+            // Verify the folder name matches timestamp pattern (YYYYMMDD_HHMMSS) using DateTime.TryParseExact
             var folderName = Path.GetFileName(latestFolder);
-            folderName.Should().MatchRegex(@"^\d{8}_\d{6}$", "Folder name should match timestamp pattern");
+
+            // The expected format is "yyyyMMdd_HHmmss"
+            var parsed = DateTime.TryParseExact(
+                folderName,
+                "yyyyMMdd_HHmmss",
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None,
+                out var _);
+
+            parsed.Should().BeTrue("Folder name should match the timestamp pattern 'yyyyMMdd_HHmmss'");
         }
 
         /// <summary>
@@ -187,6 +195,51 @@ namespace Rca.Integration.Revit.Tests
             }
         }
 
+        /// <summary>
+        /// Verifies runtime outdated detection doesn't crash when latest matches installed.
+        /// </summary>
+        [Test, Category("Revit")]
+        public void IsRuntimeOutdated_WhenLatestMatchesInstalled_ShouldReturnFalse()
+        {
+            // Arrange
+            var statusManager = LoaderApp.Instance?.AssemblyStatusManager;
+            statusManager.Should().NotBeNull();
+
+            // Validate installed runtime assembly and its SourceHash metadata — fail the test
+            // if these environment prerequisites are not met.
+            var installedPath = Path.Combine(LoaderConstants.RcaAddinDir, LoaderConstants.RuntimeFileName);
+            File.Exists(installedPath).Should().BeTrue($"Installed runtime assembly must exist at {installedPath}");
+            var installedHash = AttributeMetadataLoader.TryGetFromFile(installedPath, BuildConstants.SourceHashMetadataKey);
+            installedHash.Should().NotBe(AttributeMetadataLoader.MissingMarker, "Installed runtime assembly must contain SourceHash metadata for this integration test");
+
+            // Setup: create a latest timestamp folder under RuntimeDeployRoot and copy current
+            // runtime assemblies into it so the latest group hash matches installed.
+            var stamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            var latestFolder = Path.Combine(LoaderConstants.RuntimeDeployRoot, stamp);
+            _testLatestFolder = latestFolder;
+            try
+            {
+                Directory.CreateDirectory(latestFolder);
+                foreach (var dll in LoaderConstants.RuntimeAssemblies)
+                {
+                    var src = Path.Combine(LoaderConstants.RcaAddinDir, dll);
+                    File.Exists(src).Should().BeTrue($"Required runtime assembly {dll} must exist in addin dir ({LoaderConstants.RcaAddinDir}) to run this integration test");
+                    var dest = Path.Combine(latestFolder, dll);
+                    File.Copy(src, dest, overwrite: true);
+                }
+
+                // Act
+                var isOutdated = statusManager!.IsRuntimeOutdated();
+
+                // Assert
+                // When latest matches installed, runtime should not be considered outdated
+                isOutdated.Should().BeFalse("When the latest runtime files match the installed ones, IsRuntimeOutdated should return false");
+            }
+            finally
+            {
+                try { if (Directory.Exists(latestFolder)) Directory.Delete(latestFolder, recursive: true); } catch { }
+            }
+        }
 
         /// <summary>
         /// Verifies that IsLoaderOutdated detects outdated loader/runtime when latest folder contains
@@ -242,6 +295,68 @@ namespace Rca.Integration.Revit.Tests
 
                 installedHash.Should().NotBe(sampleLatestHash, "Test setup requires installed and latest hashes to differ");
                 statusManager.IsLoaderOutdated().Should().BeTrue("Manager must detect outdated loader when hashes differ");
+            }
+            finally
+            {
+                try { if (oldStamp != null) File.WriteAllText(stampFile, oldStamp); else File.Delete(stampFile); } catch { }
+                try { if (Directory.Exists(latestFolder)) Directory.Delete(latestFolder, recursive: true); } catch { }
+            }
+        }
+
+        /// <summary>
+        /// Verifies that IsRuntimeOutdated detects outdated runtime when latest folder contains
+        /// assemblies with outdated SourceHash metadata. Uses embedded resources for outdated DLLs.
+        /// </summary>
+        [Test, Category("Revit"), Category("DebugOnly")]
+        public void IsRuntimeOutdated_WhenLatestIsOutdated_ShouldReturnTrue()
+        {
+            var statusManager = LoaderApp.Instance?.AssemblyStatusManager;
+            statusManager.Should().NotBeNull();
+
+            var installedPath = Path.Combine(LoaderConstants.RcaAddinDir, LoaderConstants.RuntimeFileName);
+            File.Exists(installedPath).Should().BeTrue($"Installed runtime assembly must exist at {installedPath}");
+            var installedHash = AttributeMetadataLoader.TryGetFromFile(installedPath, BuildConstants.SourceHashMetadataKey);
+            installedHash.Should().NotBe(AttributeMetadataLoader.MissingMarker, "Installed runtime assembly must contain SourceHash metadata for this integration test");
+
+            var stamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            var latestFolder = Path.Combine(LoaderConstants.RevitAddinDir, stamp);
+            Directory.CreateDirectory(latestFolder);
+            var stampFile = Path.Combine(LoaderConstants.RevitAddinDir, "Timestamp.txt");
+            var oldStamp = File.Exists(stampFile) ? File.ReadAllText(stampFile) : null;
+            File.WriteAllText(stampFile, Path.GetFileName(latestFolder));
+
+            try
+            {
+                var resourceNames = _testAssembly.GetManifestResourceNames();
+                foreach (var dll in LoaderConstants.RuntimeAssemblies)
+                {
+                    var match = resourceNames.FirstOrDefault(r => r.EndsWith(dll, StringComparison.OrdinalIgnoreCase) && r.Contains("Resources.OutdatedDll"));
+                    match.Should().NotBeNull($"Embedded resource for {dll} must exist as Resources.OutdatedDll.*");
+                    var outPath = Path.Combine(latestFolder, dll);
+                    using var stream = _testAssembly.GetManifestResourceStream(match!)!;
+                    using var fs = File.Create(outPath);
+                    stream.CopyTo(fs);
+                }
+
+                statusManager!.ProcessMsBuildSignal(latestFolder);
+
+                var sampleLatestDll = Path.Combine(latestFolder, LoaderConstants.RuntimeFileName);
+                var sampleLatestHash = AttributeMetadataLoader.TryGetFromFile(sampleLatestDll, BuildConstants.SourceHashMetadataKey);
+
+                // Log installed vs latest hashes for each runtime DLL
+                foreach (var dll in LoaderConstants.RuntimeAssemblies)
+                {
+                    var instPath = Path.Combine(LoaderConstants.RcaAddinDir, dll);
+                    var instHash = AttributeMetadataLoader.TryGetFromFile(instPath, BuildConstants.SourceHashMetadataKey);
+                    var latestPath = Path.Combine(latestFolder, dll);
+                    var latestHash = AttributeMetadataLoader.TryGetFromFile(latestPath, BuildConstants.SourceHashMetadataKey);
+                    TestLoggerInstance?.Log($"DLL={dll} installedHash={instHash} latestHash={latestHash}");
+                }
+
+                TestLoggerInstance?.Log($"Installed group sample hash={installedHash} Latest sample hash={sampleLatestHash}");
+
+                installedHash.Should().NotBe(sampleLatestHash, "Test setup requires installed and latest hashes to differ");
+                statusManager.IsRuntimeOutdated().Should().BeTrue("Manager must detect outdated runtime when hashes differ");
             }
             finally
             {
