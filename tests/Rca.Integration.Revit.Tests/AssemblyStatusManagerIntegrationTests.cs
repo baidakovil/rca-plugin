@@ -72,15 +72,15 @@ namespace Rca.Integration.Revit.Tests
             // Verify the folder name matches timestamp pattern (YYYYMMDD_HHMMSS) using DateTime.TryParseExact
             var folderName = Path.GetFileName(latestFolder);
 
-            // The expected format is "yyyyMMdd_HHmmss"
+            // The expected format matches the build timestamp pattern
             var parsed = DateTime.TryParseExact(
                 folderName,
-                "yyyyMMdd_HHmmss",
+                RcaBuildMetadata.TimestampPattern,
                 System.Globalization.CultureInfo.InvariantCulture,
                 System.Globalization.DateTimeStyles.None,
                 out var _);
 
-            parsed.Should().BeTrue("Folder name should match the timestamp pattern 'yyyyMMdd_HHmmss'");
+            parsed.Should().BeTrue($"Folder name should match the timestamp pattern '{RcaBuildMetadata.TimestampPattern}'");
         }
 
         /// <summary>
@@ -167,7 +167,7 @@ namespace Rca.Integration.Revit.Tests
 
             // Setup: create a latest timestamp folder under RuntimeDeployRoot and copy current
             // loader assemblies into it so the latest group hash matches installed.
-            var stamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            var stamp = System.DateTime.Now.ToString(RcaBuildMetadata.TimestampPattern);
             var latestFolder = Path.Combine(LoaderConstants.RuntimeDeployRoot, stamp);
             _testLatestFolder = latestFolder;
             try
@@ -213,7 +213,7 @@ namespace Rca.Integration.Revit.Tests
 
             // Setup: create a latest timestamp folder under RuntimeDeployRoot and copy current
             // runtime assemblies into it so the latest group hash matches installed.
-            var stamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            var stamp = System.DateTime.Now.ToString(RcaBuildMetadata.TimestampPattern);
             var latestFolder = Path.Combine(LoaderConstants.RuntimeDeployRoot, stamp);
             _testLatestFolder = latestFolder;
             try
@@ -255,7 +255,7 @@ namespace Rca.Integration.Revit.Tests
             var installedHash = AttributeMetadataLoader.TryGetFromFile(installedPath, BuildConstants.SourceHashMetadataKey);
             installedHash.Should().NotBe(AttributeMetadataLoader.MissingMarker, "Installed loader assembly must contain SourceHash metadata for this integration test");
 
-            var stamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            var stamp = System.DateTime.Now.ToString(RcaBuildMetadata.TimestampPattern);
             var latestFolder = Path.Combine(LoaderConstants.RevitAddinDir, stamp);
             Directory.CreateDirectory(latestFolder);
             var stampFile = Path.Combine(LoaderConstants.RevitAddinDir, "Timestamp.txt");
@@ -317,7 +317,7 @@ namespace Rca.Integration.Revit.Tests
             var installedHash = AttributeMetadataLoader.TryGetFromFile(installedPath, BuildConstants.SourceHashMetadataKey);
             installedHash.Should().NotBe(AttributeMetadataLoader.MissingMarker, "Installed runtime assembly must contain SourceHash metadata for this integration test");
 
-            var stamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            var stamp = System.DateTime.Now.ToString(RcaBuildMetadata.TimestampPattern);
             var latestFolder = Path.Combine(LoaderConstants.RevitAddinDir, stamp);
             Directory.CreateDirectory(latestFolder);
             var stampFile = Path.Combine(LoaderConstants.RevitAddinDir, "Timestamp.txt");
