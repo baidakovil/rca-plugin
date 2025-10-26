@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.Pipes;
 using System.Text.Json;
 using System.Threading;
+using Rca.Generated;
 using Rca.Loader.Infrastructure;
 using Rca.Logging.Contracts;
 
@@ -27,7 +28,7 @@ public sealed class TestLogger : IDisposable
     {
         var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RCA", "Logs");
         Directory.CreateDirectory(dir);
-        var file = Path.Combine(dir, $"integration-{DateTime.Now:yyyyMMdd_HHmmss}.log");
+        var file = Path.Combine(dir, $"integration-{DateTime.Now.ToString(RcaBuildMetadata.TimestampPattern)}.log");
         var fs = new FileStream(file, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
         var writer = new StreamWriter(fs) { AutoFlush = true };
         var logger = new TestLogger(file, writer);

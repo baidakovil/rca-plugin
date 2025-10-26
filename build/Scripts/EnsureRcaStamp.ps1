@@ -1,7 +1,8 @@
 Param(
     [Parameter(Mandatory=$true)] [string]$TargetPath,
     [Parameter(Mandatory=$false)] [int]$TtlSec = 60,
-    [Parameter(Mandatory=$false)] [string]$ForceStr = "false"
+    [Parameter(Mandatory=$false)] [string]$ForceStr = "false",
+    [Parameter(Mandatory=$false)] [string]$TimestampPattern = "yyyyMMdd_HHmmss"
 )
 
 $ErrorActionPreference = 'Stop'
@@ -32,7 +33,7 @@ try {
     }
 
     if ($writeNew) {
-        $stamp = [DateTime]::Now.ToString('yyyyMMdd_HHmmss')
+        $stamp = [DateTime]::Now.ToString($TimestampPattern)
         Set-Content -LiteralPath $TargetPath -Value $stamp -NoNewline -Force
     }
 }

@@ -33,7 +33,7 @@
   <Target Name="EnsureRcaTimestamp" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' != 'SourceHashGenerator'" BeforeTargets="Build">
     <!-- Create deploy root where timestamp and marker files will be stored -->
     <MakeDir Directories="$(RcaRuntimeDeployRoot)" />
-    <Exec Command='powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(SolutionDir)build\Scripts\EnsureRcaStamp.ps1&quot; -TargetPath &quot;$(RcaTimestampFile)&quot; -TtlSec &quot;$(RcaStickyStampSeconds)&quot; -ForceStr &quot;$(RcaForceNewStamp)&quot;' />
+    <Exec Command='powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(SolutionDir)build\Scripts\EnsureRcaStamp.ps1&quot; -TargetPath &quot;$(RcaTimestampFile)&quot; -TtlSec &quot;$(RcaStickyStampSeconds)&quot; -ForceStr &quot;$(RcaForceNewStamp)&quot; -TimestampPattern &quot;$(RcaTimestampPattern)&quot;' />
 
     <ReadLinesFromFile File="$(RcaTimestampFile)">
       <Output TaskParameter="Lines" ItemName="_StampLines" />
