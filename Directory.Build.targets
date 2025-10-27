@@ -21,7 +21,7 @@
     <RcaRuntimeDeployRoot Condition="'$(RcaRuntimeDeployRoot)' == ''">$(RcaRevitAddinsDir)</RcaRuntimeDeployRoot>
 
     <!-- Timestamp file moved to deploy root so hashes live only under deploy timestamp folder -->
-    <RcaTimestampFile>$(RcaRuntimeDeployRoot)\Timestamp.txt</RcaTimestampFile>
+    <RcaTimestampFile>$(RcaRevitAddinsDir)\Timestamp.txt</RcaTimestampFile>
 
     <!-- Sticky timestamp config -->
     <RcaStickyStampSeconds Condition="'$(RcaStickyStampSeconds)' == ''">60</RcaStickyStampSeconds>
@@ -32,7 +32,7 @@
   <!-- Ensure a single shared timestamp per real build with sticky TTL and force override -->
   <Target Name="EnsureRcaTimestamp" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' != 'SourceHashGenerator'" BeforeTargets="Build">
     <!-- Create deploy root where timestamp and marker files will be stored -->
-    <MakeDir Directories="$(RcaRuntimeDeployRoot)" />
+    <MakeDir Directories="$(RcaRevitAddinsDir)" />
     <Exec Command='powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(SolutionDir)build\Scripts\EnsureRcaStamp.ps1&quot; -TargetPath &quot;$(RcaTimestampFile)&quot; -TtlSec &quot;$(RcaStickyStampSeconds)&quot; -ForceStr &quot;$(RcaForceNewStamp)&quot; -TimestampPattern &quot;$(RcaTimestampPattern)&quot;' />
 
     <ReadLinesFromFile File="$(RcaTimestampFile)">
@@ -58,7 +58,7 @@
   <!-- Ensure runtime deploy folder exists before generating hashes -->
   <Target Name="EnsureRuntimeDeployFolder" Condition="'$(DesignTimeBuild)' != 'true'" BeforeTargets="GenerateHash">
     <PropertyGroup>
-      <_RuntimeDeployDir>$(RcaRuntimeDeployRoot)\$(RcaHotReloadTimestamp)</_RuntimeDeployDir>
+      <_RuntimeDeployDir>$(RcaRevitAddinsDir)\$(RcaHotReloadTimestamp)</_RuntimeDeployDir>
     </PropertyGroup>
     <MakeDir Directories="$(_RuntimeDeployDir)" />
     <Message Text="EnsureRuntimeDeployFolder: created $(_RuntimeDeployDir)" Importance="Low" />
@@ -69,10 +69,10 @@
     <Message Text="GenerateHash: compute loader/runtime hashes (deploy-only)" Importance="Low" />
 
     <!-- Call generator for Loader group: generator will create marker files SourceHash-Loader-<hash>.txt in deploy timestamp folder -->
-    <Exec Command='&quot;$(SourceHashExe)&quot; --roots &quot;$(RcaLoaderRoots)&quot; --group Loader --timestamp &quot;$(RcaHotReloadTimestamp)&quot; --deployDir &quot;$(RcaRuntimeDeployRoot)&quot; --wait-ms 600000 --short-length $(RcaSourceHashLength)' />
+    <Exec Command='&quot;$(SourceHashExe)&quot; --roots &quot;$(RcaLoaderRoots)&quot; --group Loader --timestamp &quot;$(RcaHotReloadTimestamp)&quot; --deployDir &quot;$(RcaRevitAddinsDir)&quot; --wait-ms 600000 --short-length $(RcaSourceHashLength)' />
 
     <!-- Call generator for Runtime group: generator will create marker files SourceHash-Runtime-<hash>.txt in deploy timestamp folder -->
-    <Exec Command='&quot;$(SourceHashExe)&quot; --roots &quot;$(RcaRuntimeRoots)&quot; --group Runtime --timestamp &quot;$(RcaHotReloadTimestamp)&quot; --deployDir &quot;$(RcaRuntimeDeployRoot)&quot; --wait-ms 600000 --short-length $(RcaSourceHashLength)' />
+    <Exec Command='&quot;$(SourceHashExe)&quot; --roots &quot;$(RcaRuntimeRoots)&quot; --group Runtime --timestamp &quot;$(RcaHotReloadTimestamp)&quot; --deployDir &quot;$(RcaRevitAddinsDir)&quot; --wait-ms 600000 --short-length $(RcaSourceHashLength)' />
 
     <!-- Generator creates marker files in $(RcaRuntimeDeployRoot)\$(RcaHotReloadTimestamp); no duplicate out files are produced anymore -->
   </Target>
@@ -92,8 +92,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <_LoaderMarker Include="$(RcaRuntimeDeployRoot)\$(RcaHotReloadTimestamp)\SourceHash-Loader-*.txt" />
-      <_RuntimeMarker Include="$(RcaRuntimeDeployRoot)\$(RcaHotReloadTimestamp)\SourceHash-Runtime-*.txt" />
+      <_LoaderMarker Include="$(_RuntimeDeployDir)\SourceHash-Loader-*.txt" />
+      <_RuntimeMarker Include="$(_RuntimeDeployDir)\SourceHash-Runtime-*.txt" />
     </ItemGroup>
 
     <ReadLinesFromFile File="@(_LoaderMarker)" Condition="'@(_LoaderMarker)' != ''">
@@ -132,7 +132,7 @@
   <!-- Deploy groups (real builds only) -->
   <Target Name="DeployLoaderGroup" AfterTargets="Build" DependsOnTargets="EnsureRcaTimestamp" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.Loader'">
     <PropertyGroup>
-      <RuntimeDeployDir>$(RcaRuntimeDeployRoot)\$(RcaHotReloadTimestamp)</RuntimeDeployDir>
+      <RuntimeDeployDir>$(RcaRevitAddinsDir)\$(RcaHotReloadTimestamp)</RuntimeDeployDir>
     </PropertyGroup>
     <MakeDir Directories="$(RuntimeDeployDir)" />
     <ItemGroup>
@@ -157,7 +157,7 @@
 
   <Target Name="DeployRuntimeGroup" AfterTargets="Build" DependsOnTargets="EnsureRcaTimestamp" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.Runtime'">
     <PropertyGroup>
-      <RuntimeDeployDir>$(RcaRuntimeDeployRoot)\$(RcaHotReloadTimestamp)</RuntimeDeployDir>
+      <RuntimeDeployDir>$(RcaRevitAddinsDir)\$(RcaHotReloadTimestamp)</RuntimeDeployDir>
     </PropertyGroup>
     <MakeDir Directories="$(RuntimeDeployDir)" />
     <ItemGroup>

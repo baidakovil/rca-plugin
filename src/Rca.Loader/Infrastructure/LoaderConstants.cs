@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Reflection;
+using Rca.Generated;
 
 namespace Rca.Loader.Infrastructure
 {
@@ -25,12 +26,11 @@ namespace Rca.Loader.Infrastructure
         public const string PipeName = "RCA_PIPE";
         
         /// <summary>
-        /// The root directory where timestamped builds are deployed under Revit Addins.
-        /// Example: %APPDATA%/Autodesk/Revit/Addins/2026
+        /// Directory where Revit Addins and timestamp subfolders are located.
+        /// Delegates to generated build metadata single source of truth.
         /// </summary>
-        public static readonly string RuntimeDeployRoot =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Autodesk", "Revit", "Addins", "2026");
-
+        public static string RevitAddinsDir => RcaBuildMetadata.RevitAddinsDir;
+        
         /// <summary>
         /// The root directory where integration test builds are deployed.
         /// A timestamped subfolder (yyyyMMdd_HHmmss) is created per test build to avoid file locks.
@@ -79,5 +79,15 @@ namespace Rca.Loader.Infrastructure
             "Rca.UI.dll",
             "Rca.Contracts.dll"
         };
+
+        /// <summary>
+        /// Length of the short source hash used for Loader/Runtime groups.
+        /// </summary>
+        public static int SourceHashLength => RcaBuildMetadata.SourceHashLength;
+
+        /// <summary>
+        /// Timestamp pattern for build output directory names.
+        /// </summary>
+        public static string TimestampPattern => RcaBuildMetadata.TimestampPattern;
     }
 }

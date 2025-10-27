@@ -373,13 +373,13 @@ namespace Rca.Loader.Services
         /// <returns>True if successful, false otherwise.</returns>
         public bool ReloadLatest(out string? error)
         {
-            if (!Directory.Exists(LoaderConstants.RuntimeDeployRoot))
+            if (!Directory.Exists(LoaderConstants.RevitAddinsDir))
             {
-                error = $"Runtime root not found: {LoaderConstants.RuntimeDeployRoot}";
+                error = $"Revit addins directory not found: {LoaderConstants.RevitAddinsDir}";
                 _log.LogWarning("{Msg}", error);
                 return false;
             }
-            var latest = Directory.GetDirectories(LoaderConstants.RuntimeDeployRoot).OrderByDescending(d => d).FirstOrDefault();
+            var latest = Directory.GetDirectories(LoaderConstants.RevitAddinsDir).OrderByDescending(d => d).FirstOrDefault();
             _log.LogDebug("ReloadLatest selected dir={Dir}", latest);
             if (latest == null)
             {

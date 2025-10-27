@@ -39,10 +39,10 @@ namespace Rca.Loader.Tests
         }
 
         /// <summary>
-        /// Verifies that RuntimeDeployRoot now points to the Revit Addins folder under ApplicationData.
+        /// Verifies that RevitAddinsDir points to the Revit Addins folder under ApplicationData.
         /// </summary>
         [Test]
-        public void RuntimeDeployRoot_ShouldPointToRevitAddinsUnderAppData()
+        public void RevitAddinsDir_ShouldPointToRevitAddinsUnderAppData()
         {
             var expected = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -51,7 +51,7 @@ namespace Rca.Loader.Tests
                 "Addins",
                 "2026");
 
-            Assert.That(LoaderConstants.RuntimeDeployRoot, Is.EqualTo(expected));
+            Assert.That(LoaderConstants.RevitAddinsDir, Is.EqualTo(expected));
         }
 
         /// <summary>

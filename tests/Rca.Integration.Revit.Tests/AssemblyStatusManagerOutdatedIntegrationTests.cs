@@ -98,9 +98,9 @@ namespace Rca.Integration.Revit.Tests
         /// <param name="outdated">When <see langword="true"/>, use embedded outdated DLL resources.</param>
         private void SetupLatestFolder(bool isRuntime, bool outdated)
         {
-            // Create unique timestamped folder under RuntimeDeployRoot
-            var stamp = DateTime.Now.ToString(RcaBuildMetadata.TimestampPattern);
-            _testLatestFolder = Path.Combine(LoaderConstants.RuntimeDeployRoot, stamp);
+            // Create unique timestamped folder under RevitAddinsDir
+            var stamp = DateTime.Now.ToString(LoaderConstants.TimestampPattern);
+            _testLatestFolder = Path.Combine(LoaderConstants.RevitAddinsDir, stamp);
             Directory.CreateDirectory(_testLatestFolder);
 
             var assemblies = isRuntime

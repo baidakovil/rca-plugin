@@ -28,7 +28,7 @@ public sealed class TestLogger : IDisposable
     {
         var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RCA", "Logs");
         Directory.CreateDirectory(dir);
-        var file = Path.Combine(dir, $"integration-{DateTime.Now.ToString(RcaBuildMetadata.TimestampPattern)}.log");
+        var file = Path.Combine(dir, $"integration-{DateTime.Now.ToString(LoaderConstants.TimestampPattern)}.log");
         var fs = new FileStream(file, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
         var writer = new StreamWriter(fs) { AutoFlush = true };
         var logger = new TestLogger(file, writer);

@@ -199,8 +199,8 @@ namespace Rca.Loader.AssemblyManagement
                 }
 
                 // Fallback: pick the most recent timestamp-like directory under Addins root
-                if (!Directory.Exists(LoaderConstants.RuntimeDeployRoot)) return string.Empty;
-                var dirs = Directory.GetDirectories(LoaderConstants.RuntimeDeployRoot)
+                if (!Directory.Exists(LoaderConstants.RevitAddinsDir)) return string.Empty;
+                var dirs = Directory.GetDirectories(LoaderConstants.RevitAddinsDir)
                     .Where(d => Path.GetFileName(d)!.Length == 15 && Path.GetFileName(d)!.Contains("_"))
                     .OrderByDescending(d => Path.GetFileName(d))
                     .ToArray();
@@ -341,7 +341,7 @@ namespace Rca.Loader.AssemblyManagement
                 if (string.IsNullOrEmpty(latestDir)) return false;
                 var (lok, latestHash, _) = TryReadLoaderGroupHash(latestDir);
                 if (!lok || string.IsNullOrEmpty(installedHash) || installedHash == AttributeMetadataLoader.MissingMarker) return false;
-                var result = !string.Equals(installedHash, latestHash, StringComparison.OrdinalIgnoreCase);
+                var result = CompareHashes(installedHash, latestHash);
                 _log.LogDebug("IsLoaderOutdated installed={Installed} latest={Latest} result={Result}", installedHash, latestHash, result);
                 return result;
             }
@@ -375,7 +375,7 @@ namespace Rca.Loader.AssemblyManagement
                     _log.LogDebug("IsRuntimeOutdated: no loaded hash recorded -> true");
                     return true;
                 }
-                var result = !string.Equals(hash, loadedHash, StringComparison.OrdinalIgnoreCase);
+                var result = CompareHashes(loadedHash, hash);
                 _log.LogDebug("IsRuntimeOutdated: discovered={Discovered} loaded={Loaded} result={Result}", hash, loadedHash, result);
                 return result;
             }
@@ -420,6 +420,23 @@ namespace Rca.Loader.AssemblyManagement
             if (loaderComponentsChanged) return EventOnlyLoaderOutdated;
             if (runtimeChanged) return EventOnlyRuntimeOutdated;
             return EventNoChanges;
+        }
+
+        /// <summary>
+        /// Compares two hash strings to determine if they represent different versions.
+        /// </summary>
+        /// <param name="installedHash">The hash of the currently installed assembly. If null, empty, or missing marker, comparison is false.</param>
+        /// <param name="latestHash">The hash of the latest discovered assembly.</param>
+        /// <returns>True if both hashes are non-null and differ (case-insensitive); otherwise false.</returns>
+        public static bool CompareHashes(string? installedHash, string? latestHash)
+        {
+            // If there's no valid installed hash, treat as not outdated
+            if (string.IsNullOrEmpty(installedHash) || installedHash == AttributeMetadataLoader.MissingMarker)
+            {
+                return false;
+            }
+            // Compare case-insensitive for difference
+            return !string.Equals(installedHash, latestHash, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

@@ -4,6 +4,10 @@
     <RcaSourceHashLength Condition="'$(RcaSourceHashLength)' == ''">3</RcaSourceHashLength>
     <!-- Centralized timestamp folder pattern for build output directories -->
     <RcaTimestampPattern Condition="'$(RcaTimestampPattern)' == ''">yyyyMMdd_HHmmss</RcaTimestampPattern>
+    <!-- Centralized Revit version -->
+    <RcaRevitVersion Condition="'$(RcaRevitVersion)' == ''">2026</RcaRevitVersion>
+    <!-- Directory where Revit Addins and timestamp subfolders are located -->
+    <RcaRevitAddinsDir Condition="'$(RcaRevitAddinsDir)' == ''">$(APPDATA)\Autodesk\Revit\Addins\$(RcaRevitVersion)</RcaRevitAddinsDir>
     <!-- Ensure analyzers (source generators) run during build -->
     <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
     <!-- Do not surface generator outputs as physical files under source tree to avoid duplicates -->
@@ -14,6 +18,7 @@
   <ItemGroup>
     <CompilerVisibleProperty Include="RcaSourceHashLength" />
     <CompilerVisibleProperty Include="RcaTimestampPattern" />
+    <CompilerVisibleProperty Include="RcaRevitAddinsDir" />
   </ItemGroup>
 
   <!-- Attach the source generator as an Analyzer to Rca.Contracts via ProjectReference (ensures build order) -->

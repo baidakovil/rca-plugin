@@ -75,12 +75,12 @@ namespace Rca.Integration.Revit.Tests
             // The expected format matches the build timestamp pattern
             var parsed = DateTime.TryParseExact(
                 folderName,
-                RcaBuildMetadata.TimestampPattern,
+                LoaderConstants.TimestampPattern,
                 System.Globalization.CultureInfo.InvariantCulture,
                 System.Globalization.DateTimeStyles.None,
                 out var _);
 
-            parsed.Should().BeTrue($"Folder name should match the timestamp pattern '{RcaBuildMetadata.TimestampPattern}'");
+            parsed.Should().BeTrue($"Folder name should match the timestamp pattern '{LoaderConstants.TimestampPattern}'");
         }
 
         /// <summary>
@@ -101,8 +101,8 @@ namespace Rca.Integration.Revit.Tests
                 "Loader components hash should be set after initialization");
             
             // Hash should be either a valid hash string (configured length+) or the missing marker
-            (loaderHash.Length == RcaBuildMetadata.SourceHashLength || loaderHash == "[MISSING]").Should().BeTrue(
-                $"Hash should be either a valid hash ({RcaBuildMetadata.SourceHashLength} chars) or missing marker");
+            (loaderHash.Length == LoaderConstants.SourceHashLength || loaderHash == "[MISSING]").Should().BeTrue(
+                $"Hash should be either a valid hash ({LoaderConstants.SourceHashLength} chars) or missing marker");
         }
 
         /// <summary>
