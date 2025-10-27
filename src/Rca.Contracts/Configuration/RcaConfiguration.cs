@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+// CommandPipeName is centralized in build metadata and used in loader/provider layers, not needed here.
 
 namespace Rca.Contracts.Configuration
 {
@@ -8,11 +9,6 @@ namespace Rca.Contracts.Configuration
     /// </summary>
     public static class RcaConfiguration
     {
-        /// <summary>
-        /// Named pipe name for hot-reload communication.
-        /// </summary>
-        public const string PipeName = "RCA_PIPE";
-
         /// <summary>
         /// Runtime assembly file name.
         /// </summary>
@@ -25,11 +21,6 @@ namespace Rca.Contracts.Configuration
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), 
             "RCA", 
             "Runtime");
-
-        /// <summary>
-        /// Revit version targeted by the plugin.
-        /// </summary>
-        public const string RevitVersion = "2026";
 
         /// <summary>
         /// RCA ribbon tab name.

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+// CommandPipeName is centralized in build metadata and not needed in this assembly.
 
 namespace Rca.Contracts.Configuration
 {
@@ -8,15 +9,9 @@ namespace Rca.Contracts.Configuration
     /// </summary>
     public static class RcaConstants
     {
-        public const string PipeName = "RCA_PIPE";
         public const string RuntimeFileName = "Rca.Runtime.dll";
         public const string RibbonTabName = "RCA";
         public const string ErrorDialogTitle = "RCA";
-        public const string RevitVersion = "2026";
         
-        public static readonly string RuntimeDeployRoot = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), 
-            "RCA", 
-            "Runtime");
     }
 }
