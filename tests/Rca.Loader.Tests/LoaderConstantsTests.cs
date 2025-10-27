@@ -33,9 +33,9 @@ namespace Rca.Loader.Tests
         /// Verifies that pipe name constant is correct.
         /// </summary>
         [Test]
-        public void PipeName_ShouldHaveExpectedValue()
+        public void CommandPipeName_ShouldHaveExpectedValue()
         {
-            Assert.That(LoaderConstants.PipeName, Is.EqualTo("RCA_PIPE"));
+            Assert.That(LoaderConstants.CommandPipeName, Is.EqualTo("RCA_COMMAND_PIPE"));
         }
 
         /// <summary>

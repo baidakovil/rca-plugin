@@ -12,6 +12,12 @@
     <RcaTestDeployRoot Condition="'$(RcaTestDeployRoot)' == ''">$(LOCALAPPDATA)\RCA\Test</RcaTestDeployRoot>
     <!-- Directory where RCA logs are written -->
     <RcaLogRoot Condition="'$(RcaLogRoot)' == ''">$(LOCALAPPDATA)\RCA\Logs</RcaLogRoot>
+    <!-- Path to Revit API libs (RevitAPI.dll, RevitAPIUI.dll) -->
+    <RcaRevitLibsPath Condition="'$(RcaRevitLibsPath)' == ''">$(SolutionDir)libs\Revit\$(RcaRevitVersion)</RcaRevitLibsPath>
+    <!-- Named pipe for loader <-> UI commands -->
+    <RcaCommandPipeName Condition="'$(RcaCommandPipeName)' == ''">RCA_COMMAND_PIPE</RcaCommandPipeName>
+    <!-- Named pipe for UI logging transport -->
+    <RcaLogPipeName Condition="'$(RcaLogPipeName)' == ''">RCA_LOG_PIPE</RcaLogPipeName>
     <!-- Ensure analyzers (source generators) run during build -->
     <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
     <!-- Do not surface generator outputs as physical files under source tree to avoid duplicates -->
@@ -26,6 +32,9 @@
     <CompilerVisibleProperty Include="RcaRevitVersion" />
     <CompilerVisibleProperty Include="RcaTestDeployRoot" />
     <CompilerVisibleProperty Include="RcaLogRoot" />
+    <CompilerVisibleProperty Include="RcaRevitLibsPath" />
+    <CompilerVisibleProperty Include="RcaCommandPipeName" />
+    <CompilerVisibleProperty Include="RcaLogPipeName" />
   </ItemGroup>
 
   <!-- Attach the source generator as an Analyzer to Rca.Contracts via ProjectReference (ensures build order) -->

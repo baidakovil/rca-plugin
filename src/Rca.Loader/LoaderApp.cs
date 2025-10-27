@@ -376,7 +376,7 @@ namespace Rca.Loader
             if (uiapp == null) throw new InvalidOperationException("UIApplication not initialized");
             _log.LogInformation("Starting command pipe server");
             commandHandler = new RuntimeCommandHandler(RuntimeManager, uiapp);
-            pipeServer = new PipeServerService(LoaderConstants.PipeName, commandHandler.HandlePipeCommandAsync);
+            pipeServer = new PipeServerService(LoaderConstants.CommandPipeName, commandHandler.HandlePipeCommandAsync);
             pipeServer.Start();
             _log.LogInformation("Command pipe server started");
         }

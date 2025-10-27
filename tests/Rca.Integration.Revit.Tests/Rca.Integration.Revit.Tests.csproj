@@ -6,6 +6,8 @@
     <UseWPF>true</UseWPF>
     <PlatformTarget>x64</PlatformTarget>
     <UseMergedLoader>true</UseMergedLoader>
+    <!-- Exclude this project from default dotnet test runs; integration tests require Revit context -->
+    <IsTestProject>true</IsTestProject>
   </PropertyGroup>
   
   <ItemGroup>

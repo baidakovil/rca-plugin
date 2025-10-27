@@ -18,9 +18,6 @@
     <!-- Revit version targeted by the plugin (2026) -->
     <RcaRevitVersion Condition="'$(RcaRevitVersion)' == ''">2026</RcaRevitVersion>
     
-    <!-- Path to Revit API libraries (RevitAPI.dll, RevitAPIUI.dll) -->
-    <RcaRevitLibsPath Condition="'$(RcaRevitLibsPath)' == ''">$(SolutionDir)libs\Revit\$(RcaRevitVersion)</RcaRevitLibsPath>
-    
     <!-- Revit addins directory where .addin file is deployed -->
     <RcaRevitAddinsDir Condition="'$(RcaRevitAddinsDir)' == ''">$(APPDATA)\Autodesk\Revit\Addins\$(RcaRevitVersion)</RcaRevitAddinsDir>
     

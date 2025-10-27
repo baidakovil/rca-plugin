@@ -115,7 +115,7 @@ namespace Rca.TestAdapter
             
             try
             {
-                pipeClient = new NamedPipeClientStream(".", Constants.PipeName, PipeDirection.InOut, PipeOptions.None);
+                pipeClient = new NamedPipeClientStream(".", Constants.CommandPipeName, PipeDirection.InOut, PipeOptions.None);
                 pipeClient.Connect(5000);
                 
                 if (!pipeClient.IsConnected)

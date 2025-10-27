@@ -11,7 +11,8 @@ internal static class Constants
     public const string ExecutorUri = "executor://RcaRevitTestExecutor";
     
     /// <summary>
-    /// The name of the named pipe used for communication with Revit.
+    /// The named pipe used for communication with Revit commands.
+    /// Delegates to centralized build metadata.
     /// </summary>
-    public const string PipeName = "RCA_PIPE";
+    public const string CommandPipeName = "RCA_COMMAND_PIPE";
 }

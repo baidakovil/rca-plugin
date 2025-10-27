@@ -55,10 +55,10 @@ public sealed class TestLogger : IDisposable
     {
         try
         {
-            _pipe = new NamedPipeClientStream(".", LoaderConstants.PipeName, PipeDirection.Out, PipeOptions.Asynchronous);
+            _pipe = new NamedPipeClientStream(".", LoaderConstants.CommandPipeName, PipeDirection.Out, PipeOptions.Asynchronous);
             _pipe.Connect(2000); // 2s timeout
             _pipeWriter = new StreamWriter(_pipe) { AutoFlush = true };
-            Log($"Connected to logging pipe '{LoaderConstants.PipeName}'");
+            Log($"Connected to logging pipe '{LoaderConstants.CommandPipeName}'");
         }
         catch
         {

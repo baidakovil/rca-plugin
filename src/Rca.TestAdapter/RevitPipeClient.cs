@@ -35,7 +35,7 @@ public class RevitPipeClient
         try
         {
             Console.WriteLine("DEBUG: Creating fresh pipe connection for test execution");
-            pipeClient = new NamedPipeClientStream(".", Constants.PipeName, PipeDirection.InOut, PipeOptions.None);
+            pipeClient = new NamedPipeClientStream(".", Constants.CommandPipeName, PipeDirection.InOut, PipeOptions.None);
             
             Console.WriteLine($"DEBUG: Connecting to pipe with timeout {timeoutMs}ms");
             pipeClient.Connect(timeoutMs);

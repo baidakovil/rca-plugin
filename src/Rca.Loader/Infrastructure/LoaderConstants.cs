@@ -21,9 +21,21 @@ namespace Rca.Loader.Infrastructure
         public const string LoaderFileName = "Rca.Loader.dll";
         
         /// <summary>
-        /// The name of the named pipe for communication.
+        /// Named pipe for loader <-> UI commands.
+        /// Delegates to generated build metadata single source of truth.
         /// </summary>
-        public const string PipeName = "RCA_PIPE";
+        public static string CommandPipeName => RcaBuildMetadata.CommandPipeName;
+        
+        /// <summary>
+        /// Path to Revit API libraries (RevitAPI.dll, RevitAPIUI.dll).
+        /// </summary>
+        public static string RevitLibsPath => RcaBuildMetadata.RevitLibsPath;
+        
+        /// <summary>
+        /// Name of the named pipe for UI logging transport.
+        /// Delegates to generated build metadata single source of truth.
+        /// </summary>
+        public static string LogPipeName => RcaBuildMetadata.LogPipeName;
         
         /// <summary>
         /// Directory where Revit Addins and timestamp subfolders are located.
