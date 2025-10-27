@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using Rca.Logging.Contracts;
+using Rca.Generated;
 
 namespace Rca.Runtime.Logging;
 
@@ -69,7 +70,7 @@ internal sealed class PipeLogTransport : IDisposable
     private readonly Random _rng = new();
 
     // paths
-    private readonly string _baseDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RCA", "Logs");
+    private readonly string _baseDir = RcaBuildMetadata.LogRoot;
     private readonly object _fileLock = new();
     private StreamWriter? _fallbackWriter;
     private DateTime _fallbackDate;

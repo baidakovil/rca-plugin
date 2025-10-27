@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text;
 using System.IO;
 using System.Threading;
+using Rca.Generated;
 
 namespace Rca.UI.Logging
 {
@@ -36,7 +37,7 @@ namespace Rca.UI.Logging
         private static readonly int[] Backoff = { 50, 200, 500, 1000, 2000, 5000 };
         private static readonly Random _rng = new();
         private const string PipeName = "RCA_LOG_PIPE";
-        private static readonly string BaseDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RCA", "Logs");
+        private static readonly string BaseDir = RcaBuildMetadata.LogRoot;
 
         private enum PipeState { Disconnected, Connected }
 

@@ -69,30 +69,30 @@ namespace Rca.Loader.Tests
         }
 
         /// <summary>
-        /// Verifies that RevitAddinDir uses ApplicationData and correct Revit path.
+        /// Verifies that RevitAddinsDir points to the Revit Addins folder under ApplicationData (uses RcaRevitVersion).
         /// </summary>
         [Test]
-        public void RevitAddinDir_ShouldUseApplicationData()
+        public void RevitAddinsDir_ShouldUseApplicationData()
         {
             var expected = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "Autodesk",
                 "Revit",
                 "Addins",
-                "2026");
+                LoaderConstants.RevitVersion);
 
-            Assert.That(LoaderConstants.RevitAddinDir, Is.EqualTo(expected));
+            Assert.That(LoaderConstants.RevitAddinsDir, Is.EqualTo(expected));
         }
 
         /// <summary>
-        /// Verifies that RcaAddinDir is either under the Revit addins root or is a valid absolute path
+        /// Verifies that RcaLoaderDir is either under the Revit addins root or is a valid absolute path
         /// (fallback to assembly location is allowed in test environment).
         /// </summary>
         [Test]
-        public void RcaAddinDir_ShouldBeUnderRevitAddinDirOrBeAbsolute()
+        public void RcaLoaderDir_ShouldBeUnderRevitAddinsDirOrBeAbsolute()
         {
-            var revitRoot = LoaderConstants.RevitAddinDir;
-            var rcaDir = LoaderConstants.RcaAddinDir;
+            var revitRoot = LoaderConstants.RevitAddinsDir;
+            var rcaDir = LoaderConstants.RcaLoaderDir;
 
             Assert.That(rcaDir, Is.Not.Null.And.Not.Empty, "RcaAddinDir must be set");
 
@@ -104,17 +104,17 @@ namespace Rca.Loader.Tests
             else
             {
                 // In unit test runner the assembly location may be outside Revit addins; ensure it is an absolute path
-                Assert.That(Path.IsPathRooted(rcaDir), Is.True, "RcaAddinDir must be an absolute path when not under Revit addins");
+                Assert.That(Path.IsPathRooted(rcaDir), Is.True, "RcaLoaderDir must be an absolute path when not under Revit addins");
             }
         }
 
         /// <summary>
-        /// Verifies that LoaderAssemblyPath combines RcaAddinDir and LoaderFileName.
+        /// Verifies that LoaderAssemblyPath combines RcaLoaderDir and LoaderFileName.
         /// </summary>
         [Test]
         public void LoaderAssemblyPath_ShouldCombineDirectoryAndFileName()
         {
-            var expected = Path.Combine(LoaderConstants.RcaAddinDir, LoaderConstants.LoaderFileName);
+            var expected = Path.Combine(LoaderConstants.RcaLoaderDir, LoaderConstants.LoaderFileName);
             Assert.That(LoaderConstants.LoaderAssemblyPath, Is.EqualTo(expected));
         }
 

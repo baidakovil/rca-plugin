@@ -187,13 +187,13 @@ namespace Rca.Loader.AssemblyManagement
             try
             {
                 // Prefer sticky timestamp file produced by MSBuild under Addins root
-                var stampFile = Path.Combine(LoaderConstants.RevitAddinDir, "Timestamp.txt");
+                var stampFile = Path.Combine(LoaderConstants.RevitAddinsDir, "Timestamp.txt");
                 if (File.Exists(stampFile))
                 {
                     var stamp = (File.ReadAllText(stampFile) ?? string.Empty).Trim();
                     if (!string.IsNullOrWhiteSpace(stamp))
                     {
-                        var folder = Path.Combine(LoaderConstants.RevitAddinDir, stamp);
+                        var folder = Path.Combine(LoaderConstants.RevitAddinsDir, stamp);
                         if (Directory.Exists(folder)) return folder;
                     }
                 }

@@ -32,25 +32,27 @@ namespace Rca.Loader.Infrastructure
         public static string RevitAddinsDir => RcaBuildMetadata.RevitAddinsDir;
         
         /// <summary>
-        /// The root directory where integration test builds are deployed.
-        /// A timestamped subfolder (yyyyMMdd_HHmmss) is created per test build to avoid file locks.
+        /// Root directory where integration test builds are deployed.
+        /// Delegates to generated build metadata single source of truth.
         /// </summary>
-        public static readonly string TestDeployRoot =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RCA", "Test");
+        public static string TestDeployRoot => RcaBuildMetadata.TestDeployRoot;
         
         /// <summary>
-        /// The base directory where Revit loads addins from.
+        /// Root directory where RCA logs are written.
+        /// Delegates to generated build metadata single source of truth.
         /// </summary>
-        public static readonly string RevitAddinDir = 
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), 
-                "Autodesk", "Revit", "Addins", "2026");
-                
+        public static string LogRoot => RcaBuildMetadata.LogRoot;
+        
         /// <summary>
-        /// The directory of the currently loaded Loader assembly. This resolves to the
-        /// timestamped deployment folder (e.g., Addins/2026/20250101_120000).
+        /// Revit version used for deployment paths.
         /// </summary>
-        public static readonly string RcaAddinDir =
-            Path.GetDirectoryName(typeof(LoaderConstants).Assembly.Location) ?? RevitAddinDir;
+        public static string RevitVersion => RcaBuildMetadata.RevitVersion;
+        
+        /// <summary>
+        /// Directory of the currently loaded Loader assembly. Points to the deployment folder (timestamped).
+        /// </summary>
+        public static readonly string RcaLoaderDir =
+            Path.GetDirectoryName(typeof(LoaderConstants).Assembly.Location) ?? RevitAddinsDir;
             
         /// <summary>
         /// The full path to the deployed Loader assembly.

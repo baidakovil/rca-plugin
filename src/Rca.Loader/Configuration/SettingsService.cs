@@ -26,8 +26,8 @@ namespace Rca.Loader.Configuration
             get
             {
                 var programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
-                // Extract Revit version from LoaderConstants.RevitAddinDir path
-                var revitVersion = "2026"; // Hardcoded from LoaderConstants which has "2026" hardcoded
+                // Use centralized RevitVersion property
+                var revitVersion = LoaderConstants.RevitVersion;
                 return Path.Combine(
                     programData,
                     "Autodesk",

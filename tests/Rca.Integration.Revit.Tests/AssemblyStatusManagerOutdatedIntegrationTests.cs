@@ -110,7 +110,7 @@ namespace Rca.Integration.Revit.Tests
             if (!outdated)
             {
                 // Copy installed assemblies to latest folder
-                var sourceDir = LoaderConstants.RcaAddinDir;
+                var sourceDir = LoaderConstants.RcaLoaderDir;
                 foreach (var dll in assemblies)
                 {
                     var src = Path.Combine(sourceDir, dll);

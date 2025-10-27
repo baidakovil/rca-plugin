@@ -24,9 +24,6 @@
     <!-- Revit addins directory where .addin file is deployed -->
     <RcaRevitAddinsDir Condition="'$(RcaRevitAddinsDir)' == ''">$(APPDATA)\Autodesk\Revit\Addins\$(RcaRevitVersion)</RcaRevitAddinsDir>
     
-    <!-- Legacy property kept for compatibility; now points to Addins root -->
-    <RcaAddinDir Condition="'$(RcaAddinDir)' == ''">$(RcaRevitAddinsDir)</RcaAddinDir>
-    
     <!-- Root directory for all deployments now points to Revit Addins directory (timestamped folders created here) -->
     <RcaRuntimeDeployRoot Condition="'$(RcaRuntimeDeployRoot)' == ''">$(RcaRevitAddinsDir)</RcaRuntimeDeployRoot>
     
