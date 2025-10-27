@@ -4,6 +4,7 @@ using System.IO.Pipes;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Rca.Generated;
 using Rca.Logging.Contracts;
 using Microsoft.Extensions.Logging;
 
@@ -159,7 +160,7 @@ internal sealed class FileLogSink : IDisposable
     public FileLogSink()
     {
         Directory.CreateDirectory(_dir);
-        var path = Path.Combine(_dir, $"rca-logs-{DateTime.Now:yyyyMMdd_HHmmss}.log");
+        var path = Path.Combine(_dir, $"rca-logs-{DateTime.Now.ToString(RcaBuildMetadata.TimestampPattern)}.log");
         _w = new StreamWriter(new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite)) { AutoFlush = true };
         _w.WriteLine($"# RCA Loader Log Session started {DateTime.Now:O}");
     }
