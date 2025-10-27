@@ -10,24 +10,6 @@ namespace Rca.Contracts.Configuration
     public static class RcaConfiguration
     {
         /// <summary>
-        /// Runtime assembly file name.
-        /// </summary>
-        public const string RuntimeFileName = "Rca.Runtime.dll";
-
-        /// <summary>
-        /// Root directory for runtime deployments.
-        /// </summary>
-        public static readonly string RuntimeDeployRoot = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), 
-            "RCA", 
-            "Runtime");
-
-        /// <summary>
-        /// RCA ribbon tab name.
-        /// </summary>
-        public const string RibbonTabName = "RCA";
-
-        /// <summary>
         /// Error dialog title prefix.
         /// </summary>
         public const string ErrorDialogTitle = "RCA";
