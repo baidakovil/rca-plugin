@@ -1,55 +1,18 @@
 <Project>
   <PropertyGroup>
-    <!-- Centralized length of short source hash (single source of truth) -->
-    <RcaSourceHashLength Condition="'$(RcaSourceHashLength)' == ''">3</RcaSourceHashLength>
-    <!-- Centralized timestamp folder pattern for build output directories -->
-    <RcaTimestampPattern Condition="'$(RcaTimestampPattern)' == ''">yyyyMMdd_HHmmss</RcaTimestampPattern>
-    <!-- Centralized Revit version -->
-    <RcaRevitVersion Condition="'$(RcaRevitVersion)' == ''">2026</RcaRevitVersion>
-    <!-- Directory where Revit Addins and timestamp subfolders are located -->
-    <RcaRevitAddinsDir Condition="'$(RcaRevitAddinsDir)' == ''">$(APPDATA)\Autodesk\Revit\Addins\$(RcaRevitVersion)</RcaRevitAddinsDir>
-    <!-- Directory where integration test builds are deployed -->
-    <RcaTestDeployRoot Condition="'$(RcaTestDeployRoot)' == ''">$(LOCALAPPDATA)\RCA\Test</RcaTestDeployRoot>
-    <!-- Directory where RCA logs are written -->
-    <RcaLogRoot Condition="'$(RcaLogRoot)' == ''">$(LOCALAPPDATA)\RCA\Logs</RcaLogRoot>
-    <!-- Path to Revit API libs (RevitAPI.dll, RevitAPIUI.dll) -->
-    <RcaRevitLibsPath Condition="'$(RcaRevitLibsPath)' == ''">$(SolutionDir)libs\Revit\$(RcaRevitVersion)</RcaRevitLibsPath>
-    <!-- Named pipe for loader <-> UI commands -->
-    <RcaCommandPipeName Condition="'$(RcaCommandPipeName)' == ''">RCA_COMMAND_PIPE</RcaCommandPipeName>
-    <!-- Named pipe for UI logging transport -->
-    <RcaLogPipeName Condition="'$(RcaLogPipeName)' == ''">RCA_LOG_PIPE</RcaLogPipeName>
-    <!-- Ensure analyzers (source generators) run during build -->
-    <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
-    <!-- Do not surface generator outputs as physical files under source tree to avoid duplicates -->
-    <EmitCompilerGeneratedFiles>false</EmitCompilerGeneratedFiles>
+    <!-- (moved to build/hot-reloading-system.props) -->
   </PropertyGroup>
 
-  <!-- Expose the MSBuild properties to the compiler/analyzers for generator consumption -->
-  <ItemGroup>
-    <CompilerVisibleProperty Include="RcaSourceHashLength" />
-    <CompilerVisibleProperty Include="RcaTimestampPattern" />
-    <CompilerVisibleProperty Include="RcaRevitAddinsDir" />
-    <CompilerVisibleProperty Include="RcaRevitVersion" />
-    <CompilerVisibleProperty Include="RcaTestDeployRoot" />
-    <CompilerVisibleProperty Include="RcaLogRoot" />
-    <CompilerVisibleProperty Include="RcaRevitLibsPath" />
-    <CompilerVisibleProperty Include="RcaCommandPipeName" />
-    <CompilerVisibleProperty Include="RcaLogPipeName" />
-  </ItemGroup>
+  <!-- Orchestrate property files so every project imports centralized configuration -->
+  <Import Project="$(SolutionDir)build\versioning.props" Condition="Exists('$(SolutionDir)build\versioning.props')" />
+  <Import Project="$(SolutionDir)build\paths.props" Condition="Exists('$(SolutionDir)build\paths.props')" />
+  <Import Project="$(SolutionDir)build\compilation.props" Condition="Exists('$(SolutionDir)build\compilation.props')" />
+  <Import Project="$(SolutionDir)build\hot-reloading-system.props" Condition="Exists('$(SolutionDir)build\hot-reloading-system.props')" />
+  <!-- Revit API and IronPython reference props (optional) -->
+  <Import Project="$(SolutionDir)build\references-revit.props" Condition="Exists('$(SolutionDir)build\references-revit.props')" />
+  <Import Project="$(SolutionDir)build\references-ironpython.props" Condition="Exists('$(SolutionDir)build\references-ironpython.props')" />
 
-  <!-- Attach the source generator as an Analyzer to Rca.Contracts via ProjectReference (ensures build order) -->
-  <ItemGroup Condition="'$(MSBuildProjectName)' == 'Rca.Contracts'">
-    <ProjectReference Include="$(SolutionDir)src\Tools\Rca.BuildMetadata.Generator\Rca.BuildMetadata.Generator.csproj"
-                      OutputItemType="Analyzer"
-                      ReferenceOutputAssembly="false" />
-  </ItemGroup>
-
-  <!-- Also attach generator to integration tests so Rca.Generated is available at compile time -->
-  <ItemGroup Condition="'$(MSBuildProjectName)' == 'Rca.Integration.Revit.Tests'">
-    <ProjectReference Include="$(SolutionDir)src\Tools\Rca.BuildMetadata.Generator\Rca.BuildMetadata.Generator.csproj"
-                      OutputItemType="Analyzer"
-                      ReferenceOutputAssembly="false" />
-  </ItemGroup>
+  <!-- Note: ProjectReference to Rca.BuildMetadata.Generator moved into specific projects (Rca.Contracts and Rca.Integration.Revit.Tests) -->
 </Project>
 
 

@@ -7,11 +7,14 @@
     <RootNamespace>Rca.Loader</RootNamespace>
     <PlatformTarget>x64</PlatformTarget>
     
-    <!-- Identify this as the Loader project for special handling in Common.targets -->
+    <!-- Identify this as the Loader project for special handling in build targets -->
     <IsLoaderProject>true</IsLoaderProject>
     
     <!-- Generate .addin file on build -->
     <GenerateRcaAddinFile>true</GenerateRcaAddinFile>
+
+    <!-- Opt into Revit API references provided by build/references-revit.props -->
+    <IncludeRevitReferences>true</IncludeRevitReferences>
     
     <!-- Suppress Revit API reference warnings (RevitAPI.dll is not copied to output) -->
     <NoWarn>$(NoWarn);MSB3245;MSB3243</NoWarn>
@@ -49,6 +52,4 @@
     </Content>
   </ItemGroup>
 
-  <!-- Import common build configuration (Revit paths, API references, etc.) -->
-  <Import Project="..\..\build\Common.targets" />
 </Project>

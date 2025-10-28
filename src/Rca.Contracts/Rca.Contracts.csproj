@@ -14,4 +14,11 @@
     <Compile Remove="Generated\**\*.cs" />
   </ItemGroup>
 
+  <!-- Ensure source generator project is attached as an analyzer so generated metadata is available -->
+  <ItemGroup>
+    <ProjectReference Include="$(SolutionDir)src\Tools\Rca.BuildMetadata.Generator\Rca.BuildMetadata.Generator.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
 </Project>

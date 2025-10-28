@@ -6,6 +6,7 @@
     <AssemblyName>Rca.Runtime</AssemblyName>
     <RootNamespace>Rca.Runtime</RootNamespace>
     <PlatformTarget>x64</PlatformTarget>
+    <IncludeRevitReferences>true</IncludeRevitReferences>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,6 +26,4 @@
     <IncludeIronPythonContent>true</IncludeIronPythonContent>
   </PropertyGroup>
 
-  <!-- Import common build configuration (Revit paths, API references, etc.) -->
-  <Import Project="..\..\build\Common.targets" />
 </Project>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <!-- Hot-reloading system configuration (timestamps, TTL, flags) -->
+  <PropertyGroup>
+    <!-- Timestamp file moved to deploy root so hashes live only under deploy timestamp folder -->
+    <RcaTimestampFile Condition="'$(RcaTimestampFile)' == ''">$(RcaRevitAddinsDir)\Timestamp.txt</RcaTimestampFile>
+
+    <!-- Sticky timestamp config -->
+    <RcaStickyStampSeconds Condition="'$(RcaStickyStampSeconds)' == ''">30</RcaStickyStampSeconds>
+    <!-- Set to true/1 to force a fresh timestamp, ignoring stickiness -->
+    <RcaForceNewStamp Condition="'$(RcaForceNewStamp)' == ''">false</RcaForceNewStamp>
+    <!-- Hot-reloading system properties (timestamp file, sticky/force flags) -->
+    <!-- Named pipe for loader <-> UI commands -->
+    <RcaCommandPipeName Condition="'$(RcaCommandPipeName)' == ''">RCA_COMMAND_PIPE</RcaCommandPipeName>
+    <!-- Named pipe for UI logging transport -->
+    <RcaLogPipeName Condition="'$(RcaLogPipeName)' == ''">RCA_LOG_PIPE</RcaLogPipeName>
+    <!-- Centralized length of short source hash (single source of truth) -->
+    <RcaSourceHashLength Condition="'$(RcaSourceHashLength)' == ''">3</RcaSourceHashLength>
+    <!-- Centralized timestamp folder pattern for build output directories -->
+    <RcaTimestampPattern Condition="'$(RcaTimestampPattern)' == ''">yyyyMMdd_HHmmss</RcaTimestampPattern>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <CompilerVisibleProperty Include="RcaTimestampFile" />
+    <CompilerVisibleProperty Include="RcaStickyStampSeconds" />
+    <CompilerVisibleProperty Include="RcaForceNewStamp" />
+    <CompilerVisibleProperty Include="RcaCommandPipeName" />
+    <CompilerVisibleProperty Include="RcaLogPipeName" />
+    <CompilerVisibleProperty Include="RcaSourceHashLength" />
+    <CompilerVisibleProperty Include="RcaTimestampPattern" />
+  </ItemGroup>
+</Project>
+
+

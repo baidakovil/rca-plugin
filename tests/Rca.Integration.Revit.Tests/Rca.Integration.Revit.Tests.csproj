@@ -9,10 +9,18 @@
     <!-- Exclude this project from default dotnet test runs; integration tests require Revit context -->
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
+  <!-- Integration tests rely on centralized build props imported via Directory.Build.props -->
   
   <ItemGroup>
     <!-- Custom test adapter for running tests in Revit context -->
     <ProjectReference Include="..\..\src\Rca.TestAdapter\Rca.TestAdapter.csproj" />
+  </ItemGroup>
+
+  <!-- Attach source generator as analyzer for integration tests as well -->
+  <ItemGroup>
+    <ProjectReference Include="$(SolutionDir)src\Tools\Rca.BuildMetadata.Generator\Rca.BuildMetadata.Generator.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
   </ItemGroup>
   
   <!-- References to RCA assemblies -->

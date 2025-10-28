@@ -2,7 +2,6 @@
   <PropertyGroup>
     <!-- Ensure SolutionDir is available even when building individual projects -->
     <SolutionDir Condition="'$(SolutionDir)' == ''">$(MSBuildThisFileDirectory)</SolutionDir>
-
     <!-- Generator project and executable -->
     <SourceHashProject>$(SolutionDir)src\Tools\SourceHashGenerator\SourceHashGenerator.csproj</SourceHashProject>
     <SourceHashExe>$(SolutionDir)src\Tools\SourceHashGenerator\bin\$(Configuration)\net8.0\SourceHashGenerator.exe</SourceHashExe>
@@ -11,37 +10,46 @@
     <RcaLoaderRoots>$(SolutionDir)src\Rca.Loader;$(SolutionDir)src\Rca.Loader.Contracts;$(SolutionDir)src\Rca.Logging.Contracts</RcaLoaderRoots>
     <RcaRuntimeRoots>$(SolutionDir)src\Rca.Core;$(SolutionDir)src\Rca.Runtime;$(SolutionDir)src\Rca.Network;$(SolutionDir)src\Rca.UI;$(SolutionDir)src\Rca.Contracts</RcaRuntimeRoots>
 
-    <!-- Ensure Revit version is available for unified deploy path -->
-    <RcaRevitVersion Condition="'$(RcaRevitVersion)' == ''">2026</RcaRevitVersion>
-
-    <!-- Revit addins directory (roaming AppData) -->
-    <RcaRevitAddinsDir Condition="'$(RcaRevitAddinsDir)' == ''">$(APPDATA)\Autodesk\Revit\Addins\$(RcaRevitVersion)</RcaRevitAddinsDir>
-
-    <!-- Unified deploy root under Revit Addins directory -->
-    <RcaRuntimeDeployRoot Condition="'$(RcaRuntimeDeployRoot)' == ''">$(RcaRevitAddinsDir)</RcaRuntimeDeployRoot>
-
-    <!-- Timestamp file moved to deploy root so hashes live only under deploy timestamp folder -->
-    <RcaTimestampFile>$(RcaRevitAddinsDir)\Timestamp.txt</RcaTimestampFile>
-
-    <!-- Sticky timestamp config -->
-    <RcaStickyStampSeconds Condition="'$(RcaStickyStampSeconds)' == ''">60</RcaStickyStampSeconds>
-    <!-- Set to true/1 to force a fresh timestamp, ignoring stickiness -->
-    <RcaForceNewStamp Condition="'$(RcaForceNewStamp)' == ''">false</RcaForceNewStamp>
+    <!-- NOTE: Revit-related defaults (RcaRevitVersion, RcaRevitAddinsDir, RcaRuntimeDeployRoot)
+         and sticky timestamp defaults are defined in Directory.Build.props (single source of truth).
+         This file relies on those properties being present. -->
   </PropertyGroup>
 
   <!-- Ensure a single shared timestamp per real build with sticky TTL and force override -->
   <Target Name="EnsureRcaTimestamp" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' != 'SourceHashGenerator'" BeforeTargets="Build">
-    <!-- Create deploy root where timestamp and marker files will be stored -->
-    <MakeDir Directories="$(RcaRevitAddinsDir)" />
-    <Exec Command='powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(SolutionDir)build\Scripts\EnsureRcaStamp.ps1&quot; -TargetPath &quot;$(RcaTimestampFile)&quot; -TtlSec &quot;$(RcaStickyStampSeconds)&quot; -ForceStr &quot;$(RcaForceNewStamp)&quot; -TimestampPattern &quot;$(RcaTimestampPattern)&quot;' />
+    <!-- Create deploy root where timestamp and marker files will be stored (guarded if props are missing) -->
+    <MakeDir Condition="'$(RcaRevitAddinsDir)' != ''" Directories="$(RcaRevitAddinsDir)" />
+    <Exec Condition="'$(RcaTimestampFile)' != ''" Command='powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(SolutionDir)build\Scripts\EnsureRcaStamp.ps1&quot; -TargetPath &quot;$(RcaTimestampFile)&quot; -TtlSec &quot;$(RcaStickyStampSeconds)&quot; -ForceStr &quot;$(RcaForceNewStamp)&quot; -TimestampPattern &quot;$(RcaTimestampPattern)&quot;' />
 
-    <ReadLinesFromFile File="$(RcaTimestampFile)">
+    <ReadLinesFromFile Condition="'$(RcaTimestampFile)' != ''" File="$(RcaTimestampFile)">
       <Output TaskParameter="Lines" ItemName="_StampLines" />
     </ReadLinesFromFile>
     <PropertyGroup>
       <RcaHotReloadTimestamp>@(_StampLines)</RcaHotReloadTimestamp>
     </PropertyGroup>
     <Message Text="EnsureRcaTimestamp: $(RcaHotReloadTimestamp) (TTL=$(RcaStickyStampSeconds)s, Force=$(RcaForceNewStamp))" Importance="Low" />
+  </Target>
+
+  <!-- Generate Rca.addin file for Loader project after timestamp is ensured -->
+  <Target Name="GenerateRcaAddinFile" AfterTargets="EnsureRcaTimestamp" Condition="'$(GenerateRcaAddinFile)' == 'true' and '$(MSBuildProjectName)' == 'Rca.Loader'">
+    <PropertyGroup>
+      <!-- Ensure assembly relative path uses the freshly generated timestamp if not overridden -->
+      <RcaAddinAssemblyRelativePath Condition="'$(RcaAddinAssemblyRelativePath)' == ''">$(RcaHotReloadTimestamp)\Rca.Loader.dll</RcaAddinAssemblyRelativePath>
+      <AddinDestFile>$(RcaRevitAddinsDir)\Rca.addin</AddinDestFile>
+    </PropertyGroup>
+
+    <ReadLinesFromFile File="$(RcaAddinTemplatePath)">
+      <Output TaskParameter="Lines" ItemName="TemplateLines" />
+    </ReadLinesFromFile>
+
+    <ItemGroup>
+      <TemplateLinesProcessed Include="@(TemplateLines)">
+        <Replaced>$([System.Text.RegularExpressions.Regex]::Replace('%(TemplateLines.Identity)','RcaAddinAssemblyRelativePath','$(RcaAddinAssemblyRelativePath)'))</Replaced>
+      </TemplateLinesProcessed>
+    </ItemGroup>
+
+    <WriteLinesToFile File="$(AddinDestFile)" Lines="@(TemplateLinesProcessed->'%(Replaced)')" Overwrite="true" />
+    <Message Text="Generated Rca.addin with Assembly=$(RcaAddinAssemblyRelativePath) at $(AddinDestFile)" Importance="High" />
   </Target>
 
   <!-- Ensure SourceHashGenerator -->

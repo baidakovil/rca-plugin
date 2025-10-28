@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>Revit Chat Assistant</Name>
+    <Assembly>RcaAddinAssemblyRelativePath</Assembly>
+    <FullClassName>Rca.Loader.LoaderApp</FullClassName>
+    <AddInId>69632772-0062-48b8-a275-c42ae27ec46e</AddInId>
+    <VendorId>RCA</VendorId>
+    <VendorDescription>Revit Chat Assistant, https://github.com/baidakovil</VendorDescription>
+  </AddIn>
+</RevitAddIns>

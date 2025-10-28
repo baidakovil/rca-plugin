@@ -7,6 +7,9 @@
     <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
 
+  <!-- Import centralized build props from repository root so tests inherit shared settings -->
+  <Import Project="$(SolutionDir)Directory.Build.props" Condition="Exists('$(SolutionDir)Directory.Build.props')" />
+
   <ItemGroup>
     <PackageReference Include="NUnit" Version="4.0.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />

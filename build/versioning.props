@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <!-- Versioning and SDK-target properties -->
+  <PropertyGroup>
+    <!-- Centralized Revit version -->
+    <RcaRevitVersion Condition="'$(RcaRevitVersion)' == ''">2026</RcaRevitVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <CompilerVisibleProperty Include="RcaRevitVersion" />
+  </ItemGroup>
+</Project>

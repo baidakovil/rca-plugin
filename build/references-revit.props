@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <!-- Revit API references: attach only to projects that actually build against Revit -->
+  <ItemGroup Condition="'$(IncludeRevitReferences)' == 'true'">
+    <Reference Include="RevitAPI">
+      <HintPath>$(RcaRevitLibsPath)\RevitAPI.dll</HintPath>
+      <!-- Private=False prevents copying to output dir (Revit provides these at runtime) -->
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>$(RcaRevitLibsPath)\RevitAPIUI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <!-- Compilation-related flags -->
+  <PropertyGroup>
+    <!-- Ensure analyzers (source generators) run during build -->
+    <RunAnalyzersDuringBuild Condition="'$(RunAnalyzersDuringBuild)' == ''">true</RunAnalyzersDuringBuild>
+    <!-- Do not surface generator outputs as physical files under source tree to avoid duplicates -->
+    <EmitCompilerGeneratedFiles Condition="'$(EmitCompilerGeneratedFiles)' == ''">false</EmitCompilerGeneratedFiles>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <CompilerVisibleProperty Include="RunAnalyzersDuringBuild" />
+    <CompilerVisibleProperty Include="EmitCompilerGeneratedFiles" />
+  </ItemGroup>
+</Project>
+

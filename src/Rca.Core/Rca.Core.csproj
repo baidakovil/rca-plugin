@@ -6,7 +6,8 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AssemblyName>Rca.Core</AssemblyName>
     <RootNamespace>Rca.Core</RootNamespace>
-	<PlatformTarget>x64</PlatformTarget>
+	  <PlatformTarget>x64</PlatformTarget>
+    <IncludeRevitReferences>true</IncludeRevitReferences>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,8 +23,5 @@
     <PackageReference Include="IronPython.StdLib" Version="3.4.2" />
     <PackageReference Include="DynamicLanguageRuntime" Version="1.3.5" />
   </ItemGroup>
-
-  <!-- Revit API references provided by Common.targets -->
-  <Import Project="..\..\build\Common.targets" />
 
 </Project>
