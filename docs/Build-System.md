@@ -38,6 +38,12 @@
 - `DeployLoaderGroup` / `DeployRuntimeGroup` – copy the corresponding DLLs into the timestamped folder under the Revit Addins root: `%APPDATA%\Autodesk\Revit\Addins\$(RcaRevitVersion)\<timestamp>`.
 - `NotifyBuildCompleted` – optionally sends a pipe signal so the Loader can detect a new runtime drop.
 
+- `GenerateRcaAddinFile` – project-agnostic addin generation now lives in `Directory.Build.targets`. It runs after `EnsureRcaTimestamp`, reads the template at `build/Resources/Rca.addin.template` and substitutes the `RcaAddinAssemblyRelativePath` token with the computed deploy folder path.
+
+## Notes on configuration
+- Template path: `RcaAddinTemplatePath` (default `$(SolutionDir)build\Resources\Rca.addin.template`) is configured in `build/paths.props`.
+- Revit references are delivered via `build/references-revit.props` and applied opt‑in by projects that set `<IncludeRevitReferences>true</IncludeRevitReferences>`; this prevents tool and generator projects from pulling Revit assemblies unintentionally.
+
 ## Risks and failure modes avoided
 - Multiple deployment folders per single build: a shared timestamp eliminates cross‑project drift.
 - Copying over locked DLLs: every real build uses a new folder; the previous one can remain open in Revit safely.

@@ -136,3 +136,5 @@ All `Debug.WriteLine` replaced except inside `DebugSink` (intentional sink imple
 
 ---
 Schema 1 complete; future changes must increment schema or supply compatibility handling in Loader.
+
+Note: the build uses a named-pipe notification (`BUILD_COMPLETED`) to inform the running addin. Connection attempts may time out; these are logged as warnings by the build notifier and are non‑fatal.
