@@ -12,13 +12,14 @@
     <RcaRevitLibsPath Condition="'$(RcaRevitLibsPath)' == ''">$(SolutionDir)libs\Revit\$(RcaRevitVersion)</RcaRevitLibsPath>
     <!-- Path to addin template used by GenerateRcaAddinFile target (can be overridden per environment) -->
     <RcaAddinTemplatePath Condition="'$(RcaAddinTemplatePath)' == ''">$(SolutionDir)build\Resources\Rca.addin.template</RcaAddinTemplatePath>
-    <!-- Relative assembly path inserted into generated .addin (computed after timestamp is ensured in Directory.Build.targets) -->
+    <!-- Relative assembly path inserted into generated .addin (computed after timestamp is ensured via EnsureRcaTimestamp target in timestamp-management.targets) -->
 
     <!-- Generator project and executable paths -->
     <SourceHashProject>$(SolutionDir)src\Tools\SourceHashGenerator\SourceHashGenerator.csproj</SourceHashProject>
     <SourceHashExe>$(SolutionDir)src\Tools\SourceHashGenerator\bin\$(Configuration)\net8.0\SourceHashGenerator.exe</SourceHashExe>
 
-    <!-- Source roots for Loader and Runtime groups -->
+    <!-- Source code roots for Loader and Runtime groups: directories scanned by SourceHashGenerator -->
+    <!-- These paths are used for hash computation; project names are defined in project-groups.props -->
     <RcaLoaderRoots>$(SolutionDir)src\Rca.Loader;$(SolutionDir)src\Rca.Loader.Contracts;$(SolutionDir)src\Rca.Logging.Contracts</RcaLoaderRoots>
     <RcaRuntimeRoots>$(SolutionDir)src\Rca.Core;$(SolutionDir)src\Rca.Runtime;$(SolutionDir)src\Rca.Network;$(SolutionDir)src\Rca.UI;$(SolutionDir)src\Rca.Contracts</RcaRuntimeRoots>
   </PropertyGroup>

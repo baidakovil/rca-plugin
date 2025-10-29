@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
-  <!-- Project grouping configuration: Single Source of Truth for Loader and Runtime project lists -->
-  <!-- This file defines which projects belong to Loader and Runtime groups -->
-  <!-- Changes here affect hash computation, deployment, and Source Generator behavior -->
+  <!-- Project grouping configuration: defines which projects belong to Loader and Runtime groups -->
+  <!-- Changes here affect grouping detection, deployment targets, and Source Generator behavior -->
+  <!-- Source code root paths (for hash computation) are defined separately in paths.props -->
 
-  <!-- Single Source of Truth for project groupings -->
+  <!-- Project name lists: defines which MSBuild project names belong to each group -->
+  <!-- Note: Source code roots (RcaLoaderRoots, RcaRuntimeRoots) are defined in paths.props -->
+  <!-- These ItemGroups are used for runtime grouping detection and MSBuild conditions -->
   <ItemGroup>
     <LoaderProjects Include="Rca.Loader" />
     <LoaderProjects Include="Rca.Loader.Contracts" />
@@ -25,6 +27,7 @@
     <IsRuntimeGroupProject Condition="'$(MSBuildProjectName)' == 'Rca.Core' or '$(MSBuildProjectName)' == 'Rca.Runtime' or '$(MSBuildProjectName)' == 'Rca.Network' or '$(MSBuildProjectName)' == 'Rca.UI' or '$(MSBuildProjectName)' == 'Rca.Contracts'">true</IsRuntimeGroupProject>
     
     <!-- Convert ItemGroups to semicolon-separated strings for Source Generator access -->
+    <!-- These exported properties allow Source Generator to determine project group membership programmatically -->
     <_LoaderProjectsList>@(LoaderProjects)</_LoaderProjectsList>
     <_RuntimeProjectsList>@(RuntimeProjects)</_RuntimeProjectsList>
     <RcaLoaderProjectsList>$(_LoaderProjectsList)</RcaLoaderProjectsList>

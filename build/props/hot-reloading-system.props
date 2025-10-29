@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
-  <!-- Hot-reloading system configuration (timestamps, TTL, flags) -->
+  <!-- Hot-reloading system configuration (timestamps, TTL, flags, deploy paths) -->
   <PropertyGroup>
-    <!-- Timestamp file moved to deploy root so hashes live only under deploy timestamp folder -->
+    <!-- Timestamp file location: stores the current build timestamp under mutex protection -->
+    <!-- Used for coordination across parallel MSBuild processes and test invocation phases -->
     <RcaTimestampFile Condition="'$(RcaTimestampFile)' == ''">$(RcaRevitAddinsDir)\Timestamp.txt</RcaTimestampFile>
 
-    <!-- Sticky timestamp config -->
+    <!-- Sticky timestamp configuration: reuse timestamp across separate MSBuild invocations within TTL window -->
+    <!-- Rationale: test runners and IDEs spawn multiple builds; TTL prevents accidental folder drift -->
     <RcaStickyStampSeconds Condition="'$(RcaStickyStampSeconds)' == ''">30</RcaStickyStampSeconds>
-    <!-- Set to true/1 to force a fresh timestamp, ignoring stickiness -->
+    <!-- Force override: set to true/1 to force a fresh timestamp, ignoring TTL stickiness -->
     <RcaForceNewStamp Condition="'$(RcaForceNewStamp)' == ''">false</RcaForceNewStamp>
-    <!-- Hot-reloading system properties (timestamp file, sticky/force flags) -->
     <!-- Named pipe for loader <-> UI commands -->
     <RcaCommandPipeName Condition="'$(RcaCommandPipeName)' == ''">RCA_COMMAND_PIPE</RcaCommandPipeName>
     <!-- Named pipe for UI logging transport -->
@@ -28,7 +29,6 @@
     <CompilerVisibleProperty Include="RcaLogPipeName" />
     <CompilerVisibleProperty Include="RcaSourceHashLength" />
     <CompilerVisibleProperty Include="RcaTimestampPattern" />
-    <!-- Build-time values populated by targets prior to CoreCompile -->
     <CompilerVisibleProperty Include="RcaHotReloadTimestamp" />
   </ItemGroup>
 </Project>

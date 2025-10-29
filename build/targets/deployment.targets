@@ -4,9 +4,6 @@
 
   <!-- Deploy groups (real builds only) -->
   <Target Name="DeployLoaderGroup" AfterTargets="Build" DependsOnTargets="EnsureRcaTimestamp" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.Loader'">
-    <PropertyGroup>
-      <RuntimeDeployDir>$(RcaRevitAddinsDir)\$(RcaHotReloadTimestamp)</RuntimeDeployDir>
-    </PropertyGroup>
     <MakeDir Directories="$(RuntimeDeployDir)" />
     <ItemGroup>
       <LoaderDeployFiles Include="$(TargetDir)Rca.Loader.dll" />
@@ -29,9 +26,6 @@
   </Target>
 
   <Target Name="DeployRuntimeGroup" AfterTargets="Build" DependsOnTargets="EnsureRcaTimestamp" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.Runtime'">
-    <PropertyGroup>
-      <RuntimeDeployDir>$(RcaRevitAddinsDir)\$(RcaHotReloadTimestamp)</RuntimeDeployDir>
-    </PropertyGroup>
     <MakeDir Directories="$(RuntimeDeployDir)" />
     <ItemGroup>
       <RuntimeDeployFiles Include="$(TargetDir)Rca.Runtime.dll" />

@@ -53,7 +53,7 @@ Benefits:
 
 ## Build-time integration
 
-- `Directory.Build.targets` orchestrates hash computation and metadata injection and deploys build outputs into a timestamped deploy folder under the Revit Addins root (default: `%APPDATA%\Autodesk\Revit\Addins\$(RcaRevitVersion)\<timestamp>`). It also contains the `GenerateRcaAddinFile` target which runs after `EnsureRcaTimestamp` and produces `Rca.addin` from the template at `build/Resources/Rca.addin.template`, substituting `RcaAddinAssemblyRelativePath` with the computed deploy folder.
+- `Directory.Build.targets` orchestrates hash computation and metadata injection by importing specialized targets. `hash-generation.targets` computes source hashes and creates marker files, `timestamp-management.targets` ensures a shared timestamp and contains `GenerateRcaAddinFile` target, and `deployment.targets` deploys build outputs into a timestamped folder under the Revit Addins root (default: `%APPDATA%\Autodesk\Revit\Addins\$(RcaRevitVersion)\<timestamp>`). The `GenerateRcaAddinFile` target runs after `EnsureRcaTimestamp` and produces `Rca.addin` from the template at `build/Resources/Rca.addin.template`, substituting `RcaAddinAssemblyRelativePath` with the computed deploy folder.
 - The source-hash generator tool (`src/Tools/SourceHashGenerator`) computes a group hash and creates a marker file inside the deploy timestamp folder named `SourceHash-<Group>-<shortHash>.txt` (for example `SourceHash-Runtime-c06c76.txt`).
 - The generator no longer creates a fixed-name duplicate file by default; it writes an explicit `--out` file only if MSBuild or a caller requests it.
 - The MSBuild integration invokes the generator to produce marker files (`SourceHash-Loader-<hash>.txt` and `SourceHash-Runtime-<hash>.txt`) in the deploy timestamp folder. These marker files are added to `AdditionalFiles` and read by a Roslyn Source Generator (`src/Tools/Rca.BuildMetadata.Generator`) that embeds `[assembly: AssemblyMetadata("SourceHash", "<hash>")]` and `[assembly: AssemblyMetadata("DeployFolder", "<timestamp>")]` into compiled assemblies. The same Source Generator also emits `Rca.Generated.RcaBuildMetadata` class in `Rca.Contracts` to expose build-time constants; physical generator outputs are not written into source tree.
@@ -107,7 +107,9 @@ Rationale:
 
 ## Where to change/extend
 
-- Hash roots and orchestration: `Directory.Build.targets`
+- Hash computation and orchestration: `build/targets/hash-generation.targets`
+- Project grouping: `build/props/project-groups.props`
+- Source code roots: `build/props/paths.props`
 - Detection logic: `AssemblyStatusManager`
 - Restart behavior: `RestartManager`
 - UI hot-reload: `Rca.UI.Views.RcaDockablePanel`

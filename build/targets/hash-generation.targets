@@ -2,9 +2,11 @@
 <Project>
   <!-- Hash generation for hot-reloading system -->
 
-  <!-- Ensure SourceHashGenerator -->
+  <!-- Ensure SourceHashGenerator tool is built before hash computation -->
+  <!-- Builds the generator incrementally only when source project or exe timestamp indicates need -->
   <Target Name="BuildSourceHashGenerator" BeforeTargets="ComputeSourceHashes" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' != 'SourceHashGenerator' and '$(MSBuildProjectName)' != 'Rca.BuildMetadata.Generator' and ('$(IsLoaderGroupProject)' == 'true' or '$(IsRuntimeGroupProject)' == 'true')">
     <PropertyGroup>
+      <!-- Compare modification times to determine if rebuild is needed -->
       <SourceHashProjectModTime>$([System.IO.File]::GetLastWriteTime('$(SourceHashProject)').Ticks)</SourceHashProjectModTime>
       <SourceHashExeModTime Condition="Exists('$(SourceHashExe)')">$([System.IO.File]::GetLastWriteTime('$(SourceHashExe)').Ticks)</SourceHashExeModTime>
       <SourceHashExeModTime Condition="!Exists('$(SourceHashExe)')">0</SourceHashExeModTime>
@@ -14,27 +16,23 @@
   </Target>
 
   <!-- Ensure runtime deploy folder exists before generating hashes -->
-  <Target Name="EnsureRuntimeDeployFolder" Condition="'$(DesignTimeBuild)' != 'true' and ('$(IsLoaderGroupProject)' == 'true' or '$(IsRuntimeGroupProject)' == 'true')" BeforeTargets="ComputeSourceHashes">
-    <PropertyGroup>
-      <_RuntimeDeployDir>$(RcaRevitAddinsDir)\$(RcaHotReloadTimestamp)</_RuntimeDeployDir>
-    </PropertyGroup>
-    <MakeDir Directories="$(_RuntimeDeployDir)" />
-    <Message Text="EnsureRuntimeDeployFolder: created $(_RuntimeDeployDir)" Importance="Low" />
+  <Target Name="EnsureRuntimeDeployFolder" Condition="'$(DesignTimeBuild)' != 'true' and ('$(IsLoaderGroupProject)' == 'true' or '$(IsRuntimeGroupProject)' == 'true')" BeforeTargets="ComputeSourceHashes" DependsOnTargets="EnsureRcaTimestamp">
+    <MakeDir Directories="$(RuntimeDeployDir)" />
+    <Message Text="EnsureRuntimeDeployFolder: created $(RuntimeDeployDir)" Importance="Low" />
   </Target>
 
   <!-- Compute hashes once per build and expose them as MSBuild properties for Source Generator -->
   <!-- This target runs for Loader/Runtime projects to compute hashes -->
   <Target Name="ComputeSourceHashes" BeforeTargets="CoreCompile" DependsOnTargets="EnsureRcaTimestamp;EnsureRuntimeDeployFolder;BuildSourceHashGenerator" Condition="'$(DesignTimeBuild)' != 'true' and ( '$(IsLoaderGroupProject)' == 'true' or '$(IsRuntimeGroupProject)' == 'true' )">
-    <PropertyGroup>
-      <_RuntimeDeployDir>$(RcaRevitAddinsDir)\$(RcaHotReloadTimestamp)</_RuntimeDeployDir>
-    </PropertyGroup>
     <Message Text="ComputeSourceHashes: compute loader/runtime hashes (deploy-only)" Importance="Low" />
-    <Message Text="ComputeSourceHashes: deploy dir = $(_RuntimeDeployDir)" Importance="Low" />
+    <Message Text="ComputeSourceHashes: deploy dir = $(RuntimeDeployDir)" Importance="Low" />
 
-    <!-- Call generator for Loader group: generator will create marker files SourceHash-Loader-<hash>.txt in deploy timestamp folder -->
+    <!-- Invoke generator for Loader group: creates marker file SourceHash-Loader-<hash>.txt in deploy timestamp folder -->
+    <!-- The generator computes SHA256 hash over normalized source files in RcaLoaderRoots and writes marker with short hash prefix -->
     <Exec Command='&quot;$(SourceHashExe)&quot; --roots &quot;$(RcaLoaderRoots)&quot; --group Loader --timestamp &quot;$(RcaHotReloadTimestamp)&quot; --deployDir &quot;$(RcaRevitAddinsDir)&quot; --wait-ms 600000 --short-length $(RcaSourceHashLength)' />
 
-    <!-- Call generator for Runtime group: generator will create marker files SourceHash-Runtime-<hash>.txt in deploy timestamp folder -->
+    <!-- Invoke generator for Runtime group: creates marker file SourceHash-Runtime-<hash>.txt in deploy timestamp folder -->
+    <!-- The generator computes SHA256 hash over normalized source files in RcaRuntimeRoots and writes marker with short hash prefix -->
     <Exec Command='&quot;$(SourceHashExe)&quot; --roots &quot;$(RcaRuntimeRoots)&quot; --group Runtime --timestamp &quot;$(RcaHotReloadTimestamp)&quot; --deployDir &quot;$(RcaRevitAddinsDir)&quot; --wait-ms 600000 --short-length $(RcaSourceHashLength)' />
   </Target>
 
@@ -42,14 +40,10 @@
   <!-- This runs for all group projects and adds marker files that may have been created by ComputeSourceHashes -->
   <!-- Works even if ComputeSourceHashes didn't run for this specific project (parallel builds) -->
   <Target Name="AddHashMarkersToAdditionalFiles" BeforeTargets="CoreCompile" AfterTargets="ComputeSourceHashes" DependsOnTargets="EnsureRcaTimestamp" Condition="'$(DesignTimeBuild)' != 'true' and '$(RcaHotReloadTimestamp)' != '' and ('$(IsLoaderGroupProject)' == 'true' or '$(IsRuntimeGroupProject)' == 'true')">
-    <PropertyGroup>
-      <_RuntimeDeployDir>$(RcaRevitAddinsDir)\$(RcaHotReloadTimestamp)</_RuntimeDeployDir>
-    </PropertyGroup>
-    
     <!-- Find and add marker files as AdditionalFiles -->
     <ItemGroup>
-      <AdditionalFiles Include="$(_RuntimeDeployDir)\SourceHash-Loader-*.txt" Condition="Exists('$(_RuntimeDeployDir)')" />
-      <AdditionalFiles Include="$(_RuntimeDeployDir)\SourceHash-Runtime-*.txt" Condition="Exists('$(_RuntimeDeployDir)')" />
+      <AdditionalFiles Include="$(RuntimeDeployDir)\SourceHash-Loader-*.txt" Condition="Exists('$(RuntimeDeployDir)')" />
+      <AdditionalFiles Include="$(RuntimeDeployDir)\SourceHash-Runtime-*.txt" Condition="Exists('$(RuntimeDeployDir)')" />
     </ItemGroup>
   </Target>
 

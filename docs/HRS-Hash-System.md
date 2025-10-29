@@ -54,19 +54,20 @@ Rationale for marker filenames:
 ---
 
 ## What projects are included in each hash (current configuration)
-- Runtime group (`RcaRuntimeRoots` in `Directory.Build.targets`):
+- Runtime group (`RcaRuntimeRoots` in `build/props/paths.props`):
   - `src/Rca.Runtime`
   - `src/Rca.Core`
   - `src/Rca.Network`
   - `src/Rca.UI`
   - `src/Rca.Contracts`
 
-- Loader group (`RcaLoaderRoots` in `Directory.Build.targets`):
+- Loader group (`RcaLoaderRoots` in `build/props/paths.props`):
   - `src/Rca.Loader`
   - `src/Rca.Loader.Contracts`
   - `src/Rca.Logging.Contracts`
 
-Change these semicolon-separated root lists in `Directory.Build.targets` to adjust coverage.
+Change these semicolon-separated root lists in `build/props/paths.props` to adjust hash coverage.
+Project name groupings (for MSBuild conditions and Source Generator) are defined separately in `build/props/project-groups.props`.
 
 ---
 
@@ -97,7 +98,7 @@ Change these semicolon-separated root lists in `Directory.Build.targets` to adju
 
 ## Developer / CI suggestions
 - CI should run `dotnet build --no-incremental` for the solution to produce deployable runtime folders and marker files.
-- Keep `RcaRuntimeRoots`/`RcaLoaderRoots` in `Directory.Build.targets` in sync with projects that contribute to each group.
+- Keep `RcaRuntimeRoots`/`RcaLoaderRoots` in `build/props/paths.props` in sync with projects that contribute to each group.
 - Prefer reading `SourceHash` from assemblies on disk for any tooling that needs to detect changes.
 
 ---

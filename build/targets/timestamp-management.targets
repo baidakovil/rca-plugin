@@ -14,8 +14,13 @@
     </ReadLinesFromFile>
     <PropertyGroup>
       <RcaHotReloadTimestamp>@(_StampLines)</RcaHotReloadTimestamp>
+      <!-- Compute RuntimeDeployDir immediately after timestamp is available -->
+      <!-- Single source of truth for deploy destination: eliminates duplication across deployment and hash-generation targets -->
+      <!-- Format: %APPDATA%\Autodesk\Revit\Addins\$(RcaRevitVersion)\<timestamp> (e.g., 20251018_112825) -->
+      <RuntimeDeployDir>$(RcaRevitAddinsDir)\$(RcaHotReloadTimestamp)</RuntimeDeployDir>
     </PropertyGroup>
     <Message Text="EnsureRcaTimestamp: $(RcaHotReloadTimestamp) (TTL=$(RcaStickyStampSeconds)s, Force=$(RcaForceNewStamp))" Importance="Low" />
+    <Message Text="EnsureRcaTimestamp: RuntimeDeployDir = $(RuntimeDeployDir)" Importance="Low" />
   </Target>
 
   <!-- Generate Rca.addin file for Loader project after timestamp is ensured -->
