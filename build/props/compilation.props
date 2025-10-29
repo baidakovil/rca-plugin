@@ -11,6 +11,15 @@
   <ItemGroup>
     <CompilerVisibleProperty Include="RunAnalyzersDuringBuild" />
     <CompilerVisibleProperty Include="EmitCompilerGeneratedFiles" />
+    <!-- Make project name visible to Source Generators for conditional emission -->
+    <CompilerVisibleProperty Include="MSBuildProjectName" />
+  </ItemGroup>
+
+  <!-- Attach Build Metadata Source Generator to all projects (as Analyzer) -->
+  <ItemGroup Condition="'$(MSBuildProjectName)' != 'Rca.BuildMetadata.Generator' and '$(MSBuildProjectName)' != 'SourceHashGenerator'">
+    <ProjectReference Include="$(SolutionDir)src\Tools\Rca.BuildMetadata.Generator\Rca.BuildMetadata.Generator.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
   </ItemGroup>
 </Project>
 

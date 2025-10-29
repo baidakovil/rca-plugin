@@ -18,9 +18,12 @@ This document explains the current source-hash based system used by the RCA hot-
   - `src/Tools/SourceHashGenerator/Program.cs` — CLI tool that computes SHA256 over normalized source content and writes a deploy marker file `SourceHash-<Group>-<shortHash>.txt` in the deploy timestamp folder. It only writes a fixed `--out` file when explicitly requested by the caller.
 
 - MSBuild orchestration (single place)
-  - `Directory.Build.targets`
-    - Computes both hashes once per build
-    - Invokes generator so it writes marker files into the deploy timestamp folder (no fixed-name duplicates created by default)
+  - `Directory.Build.targets` and `build/targets/hash-generation.targets`
+    - `ComputeSourceHashes` target computes both hashes once per build
+    - Invokes generator to write marker files (`SourceHash-Loader-<hash>.txt`, `SourceHash-Runtime-<hash>.txt`) into the deploy timestamp folder
+    - `AddHashMarkersToAdditionalFiles` target adds marker files to `AdditionalFiles` for Source Generator access
+  - `src/Tools/Rca.BuildMetadata.Generator` (Roslyn Source Generator)
+    - Reads marker files from `AdditionalFiles` to extract hashes
     - Generates `Rca.AssemblyMetadata.g.cs` containing:
       - `AssemblyMetadata("SourceHash", "<hash>")`
       - `AssemblyMetadata("DeployFolder", "<timestamp>")`
@@ -43,8 +46,7 @@ This document explains the current source-hash based system used by the RCA hot-
 - Ignores directories: `bin, obj, .git, .vs, node_modules, packages`.
 - Files are ordered deterministically and deduplicated before hashing.
 - SHA256 is computed incrementally and a short hex prefix is used for human-friendly marker filenames (e.g., `c06c76`).
-- The generator writes a marker file into the deploy timestamp folder named `SourceHash-<Group>-<shortHash>.txt` and embeds the short hash into the assemblies via MSBuild-generated source.
- - The generator writes a marker file into the deploy timestamp folder named `SourceHash-<Group>-<shortHash>.txt`. Assembly metadata (`SourceHash`, `DeployFolder`) is embedded by MSBuild into compiled assemblies. A Roslyn Source Generator (`src/Tools/Rca.BuildMetadata.Generator`) is attached to `Rca.Contracts` to expose `Rca.Generated.RcaBuildMetadata.SourceHashLength` at compile-time; this avoids physical generated files in source.
+- The generator writes a marker file into the deploy timestamp folder named `SourceHash-<Group>-<shortHash>.txt`. A Roslyn Source Generator (`src/Tools/Rca.BuildMetadata.Generator`) reads these marker files via `AdditionalFiles` and embeds `SourceHash` and `DeployFolder` as assembly metadata into compiled assemblies. The same Source Generator also emits `Rca.Generated.RcaBuildMetadata` class in `Rca.Contracts` to expose build-time constants (e.g., `SourceHashLength`); physical generator outputs are not written into source tree.
 
 Rationale for marker filenames:
 - Embedding the short hash in the filename gives a clear, auditable trace of what was deployed in a given timestamp folder. It helps correlate deployed binaries with hashes without opening files or inspecting assembly metadata.
@@ -69,20 +71,21 @@ Change these semicolon-separated root lists in `Directory.Build.targets` to adju
 ---
 
 ## Build-time integration summary
-- Hash computation is executed once per build for both groups; a global mutex keyed by group+timestamp ensures single-writer semantics across concurrent project builds.
-- The generator creates marker files in the deploy timestamp folder. The MSBuild invocation no longer requests a fixed-name out file by default to avoid duplicates.
-- Assembly metadata is generated and included in compiled assemblies so runtime consumers can read `SourceHash` and `DeployFolder` directly from DLLs.
+- Hash computation is executed once per build for both groups via `ComputeSourceHashes` target; a global mutex in `EnsureRcaStamp.ps1` ensures single-writer semantics when creating/updating the timestamp file.
+- The generator creates marker files (`SourceHash-Loader-<hash>.txt`, `SourceHash-Runtime-<hash>.txt`) in the deploy timestamp folder.
+- Marker files are added to `AdditionalFiles` by MSBuild target `AddHashMarkersToAdditionalFiles`, enabling Source Generator to read them.
+- Source Generator (`Rca.BuildMetadata.Generator`) reads marker files, extracts hashes, and embeds `SourceHash` and `DeployFolder` as assembly metadata into compiled assemblies so runtime consumers can read them directly from DLLs.
 
 ---
 
 ## Runtime behavior (startup & detection)
 1. On loader startup, `AssemblyStatusManager.InitializeOnStartup()` reads metadata from disk:
    - Loader: read `SourceHash` from the installed addin DLL(s) in the Addins folder
-   - Runtime (discovered): read `SourceHash` values from DLLs in the latest `%LOCALAPPDATA%/RCA/Runtime/<timestamp>` directory and ensure group consistency
+   - Runtime (discovered): read `SourceHash` values from DLLs in the latest `%APPDATA%\Autodesk\Revit\Addins\$(RcaRevitVersion)\<timestamp>` directory and ensure group consistency
    - Loaded runtime state is established after a successful runtime load/reload and reflects the embedded metadata of the loaded assemblies
 2. On `BUILD_COMPLETED` or manual check, `ProcessMsBuildSignal(latest)` updates discovered hashes and classifies the event as:
    - `only loader outdated`, `only runtime outdated`, `both loader and runtime outdated`, or `no changes`
-3. On successful runtime reload, `UpdateHashesAfterReload` updates the “loaded runtime” hash to match the discovered one.
+3. On successful runtime reload, `UpdateHashesAfterReload` updates the "loaded runtime" hash to match the discovered one.
 
 ---
 
@@ -101,14 +104,14 @@ Change these semicolon-separated root lists in `Directory.Build.targets` to adju
 
 ## How to test/verify locally
 1. Run a full build: `dotnet build --no-incremental`
-2. Confirm the latest folder under `%LOCALAPPDATA%/RCA/Runtime` contains marker files `SourceHash-Loader-<hash>.txt` and `SourceHash-Runtime-<hash>.txt` alongside deployed DLLs.
+2. Confirm the latest folder under `%APPDATA%\Autodesk\Revit\Addins\$(RcaRevitVersion)\<timestamp>` contains marker files `SourceHash-Loader-<hash>.txt` and `SourceHash-Runtime-<hash>.txt` alongside deployed DLLs.
 3. Start Revit with the RCA addin loaded; build the solution to trigger `BUILD_COMPLETED` and verify the addin reacts and classifies changes correctly.
 
 ---
 
 ## Quick links (files you will likely inspect)
 - Generator: `src/Tools/SourceHashGenerator/Program.cs`
-- MSBuild integration: `Directory.Build.targets` (hash generation, metadata injection, deploy markers, notification)
+- MSBuild integration: `build/targets/hash-generation.targets` (hash computation and marker file creation), `src/Tools/Rca.BuildMetadata.Generator/BuildMetadataGenerator.cs` (Source Generator for assembly metadata)
 - Status tracking: `src/Rca.Loader/AssemblyManagement/AssemblyStatusManager.cs`
 - Restart: `src/Rca.Loader/Restart/RestartManager.cs`
 - Loader constants: `src/Rca.Loader/Infrastructure/LoaderConstants.cs`

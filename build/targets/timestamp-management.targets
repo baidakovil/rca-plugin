@@ -3,7 +3,8 @@
   <!-- Timestamp management for hot-reloading system -->
 
   <!-- Ensure a single shared timestamp per real build with sticky TTL and force override -->
-  <Target Name="EnsureRcaTimestamp" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' != 'SourceHashGenerator'" BeforeTargets="Build">
+  <!-- Must run before CoreCompile so Source Generator can access RcaHotReloadTimestamp -->
+  <Target Name="EnsureRcaTimestamp" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' != 'SourceHashGenerator'" BeforeTargets="PrepareForBuild">
     <!-- Create deploy root where timestamp and marker files will be stored (guarded if props are missing) -->
     <MakeDir Condition="'$(RcaRevitAddinsDir)' != ''" Directories="$(RcaRevitAddinsDir)" />
     <Exec Condition="'$(RcaTimestampFile)' != ''" Command='powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(SolutionDir)build\Scripts\EnsureRcaStamp.ps1&quot; -TargetPath &quot;$(RcaTimestampFile)&quot; -TtlSec &quot;$(RcaStickyStampSeconds)&quot; -ForceStr &quot;$(RcaForceNewStamp)&quot; -TimestampPattern &quot;$(RcaTimestampPattern)&quot;' />

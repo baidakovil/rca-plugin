@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
@@ -273,7 +274,174 @@ public sealed class BuildMetadataGenerator : ISourceGenerator
             ? "System.Array.Empty<string>()" 
             : $"new[] {{ \"{string.Join("\", \"", runtimeProjects!.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))}\" }}";
 
-        var src = $$"""
+        // Read project name first (used in diagnostics)
+        context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.MSBuildProjectName", out var projectName);
+
+        // Determine whether this project belongs to Loader/Runtime group and read group hashes + timestamp
+        context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.IsLoaderGroupProject", out var isLoaderStr);
+        context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.IsRuntimeGroupProject", out var isRuntimeStr);
+        var isLoaderProject = string.Equals(isLoaderStr, "true", StringComparison.OrdinalIgnoreCase);
+        var isRuntimeProject = string.Equals(isRuntimeStr, "true", StringComparison.OrdinalIgnoreCase);
+
+        // Read hashes directly from marker files (SourceHash-Loader-*.txt and SourceHash-Runtime-*.txt)
+        // These files are added to AdditionalFiles by MSBuild target AddHashMarkersToAdditionalFiles
+        string? loaderHashProp = null;
+        string? runtimeHashProp = null;
+
+        // Find Loader hash marker file
+        var loaderMarkerFile = context.AdditionalFiles.FirstOrDefault(af =>
+        {
+            var path = af.Path.ToString();
+            return path.IndexOf("SourceHash-Loader-", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                   path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase);
+        });
+        
+        if (loaderMarkerFile != null)
+        {
+            try
+            {
+                var hashText = loaderMarkerFile.GetText(context.CancellationToken)?.ToString();
+                if (!string.IsNullOrWhiteSpace(hashText))
+                {
+                    loaderHashProp = hashText!.Trim();
+                }
+            }
+            catch (Exception ex)
+            {
+                var diag = Diagnostic.Create(new DiagnosticDescriptor(
+                    id: "RCA020",
+                    title: "Failed to read Loader hash marker file",
+                    messageFormat: "Failed to read SourceHash-Loader marker file: {0}",
+                    category: "Rca.BuildMetadata.Generator",
+                    defaultSeverity: DiagnosticSeverity.Warning,
+                    isEnabledByDefault: true), Location.None, ex.Message);
+                context.ReportDiagnostic(diag);
+            }
+        }
+
+        // Find Runtime hash marker file
+        var runtimeMarkerFile = context.AdditionalFiles.FirstOrDefault(af =>
+        {
+            var path = af.Path.ToString();
+            return path.IndexOf("SourceHash-Runtime-", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                   path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase);
+        });
+        
+        if (runtimeMarkerFile != null)
+        {
+            try
+            {
+                var hashText = runtimeMarkerFile.GetText(context.CancellationToken)?.ToString();
+                if (!string.IsNullOrWhiteSpace(hashText))
+                {
+                    runtimeHashProp = hashText!.Trim();
+                }
+            }
+            catch (Exception ex)
+            {
+                var diag = Diagnostic.Create(new DiagnosticDescriptor(
+                    id: "RCA021",
+                    title: "Failed to read Runtime hash marker file",
+                    messageFormat: "Failed to read SourceHash-Runtime marker file: {0}",
+                    category: "Rca.BuildMetadata.Generator",
+                    defaultSeverity: DiagnosticSeverity.Warning,
+                    isEnabledByDefault: true), Location.None, ex.Message);
+                context.ReportDiagnostic(diag);
+            }
+        }
+        
+        // Report diagnostic if marker files are missing for group projects
+        if ((isLoaderProject || isRuntimeProject))
+        {
+            if (isLoaderProject && string.IsNullOrWhiteSpace(loaderHashProp))
+            {
+                var diag = Diagnostic.Create(new DiagnosticDescriptor(
+                    id: "RCA022",
+                    title: "Missing Loader hash marker file",
+                    messageFormat: "SourceHash-Loader marker file not found in AdditionalFiles for {0} project. Found {1} additional files.",
+                    category: "Rca.BuildMetadata.Generator",
+                    defaultSeverity: DiagnosticSeverity.Warning,
+                    isEnabledByDefault: true), Location.None,
+                    projectName ?? "(unknown)", context.AdditionalFiles.Length);
+                context.ReportDiagnostic(diag);
+            }
+            
+            if (isRuntimeProject && string.IsNullOrWhiteSpace(runtimeHashProp))
+            {
+                var diag = Diagnostic.Create(new DiagnosticDescriptor(
+                    id: "RCA023",
+                    title: "Missing Runtime hash marker file",
+                    messageFormat: "SourceHash-Runtime marker file not found in AdditionalFiles for {0} project. Found {1} additional files.",
+                    category: "Rca.BuildMetadata.Generator",
+                    defaultSeverity: DiagnosticSeverity.Warning,
+                    isEnabledByDefault: true), Location.None,
+                    projectName ?? "(unknown)", context.AdditionalFiles.Length);
+                context.ReportDiagnostic(diag);
+            }
+        }
+
+        // Read timestamp from MSBuild properties
+        context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.RcaHotReloadTimestamp", out var hotReloadTimestamp);
+
+        // Choose effective hash for this project if it belongs to a group
+        string? thisSourceHash = null;
+        if (isLoaderProject)
+        {
+            thisSourceHash = loaderHashProp;
+        }
+        else if (isRuntimeProject)
+        {
+            thisSourceHash = runtimeHashProp;
+        }
+
+        // Report diagnostic if properties are missing for group projects
+        if ((isLoaderProject || isRuntimeProject))
+        {
+            if (string.IsNullOrWhiteSpace(thisSourceHash))
+            {
+                var diag = Diagnostic.Create(new DiagnosticDescriptor(
+                    id: "RCA018",
+                    title: "Missing SourceHash property for group project",
+                    messageFormat: "SourceHash property is empty for {0} project. IsLoader={1}, IsRuntime={2}, LoaderHash={3}, RuntimeHash={4}, Timestamp={5}",
+                    category: "Rca.BuildMetadata.Generator",
+                    defaultSeverity: DiagnosticSeverity.Warning,  // Changed from Error to Warning to allow build to proceed
+                    isEnabledByDefault: true), Location.None,
+                    projectName ?? "(unknown)", isLoaderStr ?? "false", isRuntimeStr ?? "false",
+                    loaderHashProp ?? "(empty)", runtimeHashProp ?? "(empty)", hotReloadTimestamp ?? "(empty)");
+                context.ReportDiagnostic(diag);
+            }
+
+            if (string.IsNullOrWhiteSpace(hotReloadTimestamp))
+            {
+                var diag = Diagnostic.Create(new DiagnosticDescriptor(
+                    id: "RCA019",
+                    title: "Missing RcaHotReloadTimestamp property for group project",
+                    messageFormat: "RcaHotReloadTimestamp property is empty for {0} project. Cannot generate assembly metadata.",
+                    category: "Rca.BuildMetadata.Generator",
+                    defaultSeverity: DiagnosticSeverity.Warning,
+                    isEnabledByDefault: true), Location.None, projectName ?? "(unknown)");
+                context.ReportDiagnostic(diag);
+            }
+        }
+
+        // Generate assembly-level metadata only for group projects and only if inputs are available
+        if ((isLoaderProject || isRuntimeProject) && !string.IsNullOrWhiteSpace(thisSourceHash) && !string.IsNullOrWhiteSpace(hotReloadTimestamp))
+        {
+            var asmSrc = $$"""
+// <auto-generated />
+[assembly: System.Reflection.AssemblyMetadata("SourceHash", "{{thisSourceHash}}")]
+[assembly: System.Reflection.AssemblyMetadata("DeployFolder", "{{hotReloadTimestamp}}")]
+namespace Rca.Generated { internal static class __RcaAssemblyMetadataAnchor { } }
+""";
+            context.AddSource("Rca.AssemblyMetadata.g.cs", SourceText.From(asmSrc, Encoding.UTF8));
+        }
+
+        // Only one designated project should emit the RcaBuildMetadata class to avoid type conflicts.
+        var emitBuildMetadataClass = string.Equals(projectName, "Rca.Contracts", StringComparison.OrdinalIgnoreCase);
+
+        if (emitBuildMetadataClass)
+        {
+            var src = $$"""
 // <auto-generated />
 namespace Rca.Generated
 {
@@ -314,7 +482,7 @@ namespace Rca.Generated
         public static string LogRoot => @"{{logRoot}}";
         public static string RevitLibsPath => @"{{libsPath}}";
         /// <summary>
-        /// Named pipe for loader <-> UI commands.
+        /// Named pipe for loader and UI commands.
         /// </summary>
         public static string CommandPipeName => @"{{pipeName}}";
         public static string LogPipeName => "{logPipeName}";
@@ -346,7 +514,8 @@ namespace Rca.Generated
 }
 """;
 
-        context.AddSource("RcaBuildMetadata.g.cs", SourceText.From(src, Encoding.UTF8));
+            context.AddSource("RcaBuildMetadata.g.cs", SourceText.From(src, Encoding.UTF8));
+        }
     }
 }
 

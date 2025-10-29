@@ -45,7 +45,6 @@
   <!-- Orchestrate target files to ensure proper build execution -->
   <Import Project="$(SolutionDir)build\targets\timestamp-management.targets" />
   <Import Project="$(SolutionDir)build\targets\hash-generation.targets" />
-  <Import Project="$(SolutionDir)build\targets\metadata-emission.targets" />
   <Import Project="$(SolutionDir)build\targets\deployment.targets" />
   <Import Project="$(SolutionDir)build\targets\build-notification.targets" />
 </Project>

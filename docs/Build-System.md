@@ -16,13 +16,13 @@
 - Rationale: consistency across project groups; avoid producing multiple folders for a single build.
 
 3) Cross‑process coordination via a global mutex + text file
-- A named OS mutex (`Global\RCA_BuildStamp`) and a shared file `build\artifacts\hashes\timestamp.txt` synchronize parallel builds.
+- A named OS mutex (`Global\RCA_BuildStamp`) and a shared file `%APPDATA%\Autodesk\Revit\Addins\$(RcaRevitVersion)\Timestamp.txt` synchronize parallel builds.
 - The first project in a real build (non‑design‑time) writes a new local‑time timestamp; all other projects only read it.
 - Why a mutex: parallel MSBuild nodes can start concurrently; without a mutex, write races produce different timestamps.
 - Why a file: the timestamp must be shared across processes; a small file is a simple and robust IPC medium for MSBuild.
 
 4) Sticky session TTL + manual override
-- Timestamp reuse is sticky for a configurable TTL: `RcaStickyStampSeconds` (default 60). If `timestamp.txt` is younger than TTL, the same folder is reused across separate MSBuild invocations (e.g., test discovery/build/run).
+- Timestamp reuse is sticky for a configurable TTL: `RcaStickyStampSeconds` (default 30). If the timestamp file is younger than TTL, the same folder is reused across separate MSBuild invocations (e.g., test discovery/build/run).
 - Manual override: set `RcaForceNewStamp=true` (or `1`) to force a fresh timestamp for the next build, ignoring TTL.
 - Rationale: test runners and IDEs often spawn multiple builds; TTL prevents accidental drift while keeping control when a new folder is required.
 
@@ -31,14 +31,13 @@
 - All timestamp‑affecting targets run only for real builds: `DesignTimeBuild != true`.
 
 ## Build pipeline overview
-- `EnsureRcaTimestamp` – runs `build\Scripts\EnsureRcaStamp.ps1` to create/reuse a timestamp under a global mutex, with TTL and force override; exports `RcaHotReloadTimestamp`.
-- `GenerateHash` – computes source hashes for Loader/Runtime groups (diagnostics and version traceability).
- - `GenerateHash` – computes source hashes for Loader/Runtime groups (diagnostics and version traceability).
- - Assembly metadata (`SourceHash`, `DeployFolder`) are generated and embedded into assemblies. Additionally, a Roslyn Source Generator (`src/Tools/Rca.BuildMetadata.Generator`) is wired into `Rca.Contracts` to expose build-time constants (for example `SourceHashLength`) to other compile units without writing physical files into the source tree.
-- `DeployLoaderGroup` / `DeployRuntimeGroup` – copy the corresponding DLLs into the timestamped folder under the Revit Addins root: `%APPDATA%\Autodesk\Revit\Addins\$(RcaRevitVersion)\<timestamp>`.
-- `NotifyBuildCompleted` – optionally sends a pipe signal so the Loader can detect a new runtime drop.
-
-- `GenerateRcaAddinFile` – project-agnostic addin generation now lives in `Directory.Build.targets`. It runs after `EnsureRcaTimestamp`, reads the template at `build/Resources/Rca.addin.template` and substitutes the `RcaAddinAssemblyRelativePath` token with the computed deploy folder path.
+- `EnsureRcaTimestamp` (`build/targets/timestamp-management.targets`) – runs `build\Scripts\EnsureRcaStamp.ps1` to create/reuse a timestamp under a global mutex, with TTL and force override; exports `RcaHotReloadTimestamp` MSBuild property.
+- `ComputeSourceHashes` (`build/targets/hash-generation.targets`) – computes source hashes for Loader/Runtime groups by invoking `SourceHashGenerator` tool, which creates marker files (`SourceHash-Loader-<hash>.txt`, `SourceHash-Runtime-<hash>.txt`) in the deploy timestamp folder.
+- `AddHashMarkersToAdditionalFiles` (`build/targets/hash-generation.targets`) – adds marker files to `AdditionalFiles` so Source Generator can read them.
+- Source Generator (`src/Tools/Rca.BuildMetadata.Generator`) – reads marker files from `AdditionalFiles`, extracts hashes, and generates `Rca.AssemblyMetadata.g.cs` with `[assembly: AssemblyMetadata("SourceHash", "<hash>")]` and `[assembly: AssemblyMetadata("DeployFolder", "<timestamp>")]`. Also emits `Rca.Generated.RcaBuildMetadata` class in `Rca.Contracts` to expose build-time constants.
+- `DeployLoaderGroup` / `DeployRuntimeGroup` (`build/targets/deployment.targets`) – copy the corresponding DLLs into the timestamped folder: `%APPDATA%\Autodesk\Revit\Addins\$(RcaRevitVersion)\<timestamp>`.
+- `NotifyBuildCompleted` (`build/targets/build-notification.targets`) – optionally sends a pipe signal so the Loader can detect a new runtime drop.
+- `GenerateRcaAddinFile` (`build/targets/timestamp-management.targets`) – runs after `EnsureRcaTimestamp`, reads the template at `build/Resources/Rca.addin.template` and substitutes the `RcaAddinAssemblyRelativePath` token with the computed deploy folder path.
 
 ## Notes on configuration
 - Template path: `RcaAddinTemplatePath` (default `$(SolutionDir)build\Resources\Rca.addin.template`) is configured in `build/paths.props`.
@@ -51,9 +50,9 @@
 - Test‑run drift across invocations: sticky TTL keeps a single folder across discovery/build/run phases.
 
 ## Operational guidance
-- New folder per real build is automatic. If it appears to deploy into an old one, inspect `build\artifacts\hashes\timestamp.txt` and look for `EnsureRcaTimestamp` messages in the MSBuild log.
+- New folder per real build is automatic. If it appears to deploy into an old one, inspect the timestamp file at `%APPDATA%\Autodesk\Revit\Addins\$(RcaRevitVersion)\Timestamp.txt` and look for `EnsureRcaTimestamp` messages in the MSBuild log.
 - Change the sticky window: `/p:RcaStickyStampSeconds=90`.
-- Force a fresh folder: `/p:RcaForceNewStamp=true` (or delete `build\artifacts\hashes\timestamp.txt`).
+- Force a fresh folder: `/p:RcaForceNewStamp=true` (or delete the timestamp file).
 - If Revit still holds an older folder open, that is expected. The next build lands in a fresh folder; the Loader can reload the newest drop.
 
 ## Why not environment variables or pure MSBuild properties
@@ -62,6 +61,7 @@
 - Mutex + file provide a minimal, deterministic, cross‑process coordination mechanism.
 
 ## Artifacts and locations
-- Timestamp file: `build\artifacts\hashes\timestamp.txt`
+- Timestamp file: `%APPDATA%\Autodesk\Revit\Addins\$(RcaRevitVersion)\Timestamp.txt` (created by `EnsureRcaStamp.ps1` under global mutex)
 - Timestamp format: local time `yyyyMMdd_HHmmss` (e.g., `20251018_112825`)
 - Deployment root: `%APPDATA%\Autodesk\Revit\Addins\$(RcaRevitVersion)\<timestamp>`
+- Marker files: `SourceHash-Loader-<hash>.txt` and `SourceHash-Runtime-<hash>.txt` in the deploy timestamp folder

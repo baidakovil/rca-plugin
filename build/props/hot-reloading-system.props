@@ -28,6 +28,8 @@
     <CompilerVisibleProperty Include="RcaLogPipeName" />
     <CompilerVisibleProperty Include="RcaSourceHashLength" />
     <CompilerVisibleProperty Include="RcaTimestampPattern" />
+    <!-- Build-time values populated by targets prior to CoreCompile -->
+    <CompilerVisibleProperty Include="RcaHotReloadTimestamp" />
   </ItemGroup>
 </Project>
 
