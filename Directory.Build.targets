@@ -1,47 +1,4 @@
 <Project>
-  <PropertyGroup>
-    <!-- Ensure SolutionDir is available even when building individual projects -->
-    <SolutionDir Condition="'$(SolutionDir)' == ''">$(MSBuildThisFileDirectory)</SolutionDir>
-  </PropertyGroup>
-
-  <!-- Single Source of Truth for project groupings (MUST be defined BEFORE importing targets) -->
-  <ItemGroup>
-    <LoaderProjects Include="Rca.Loader" />
-    <LoaderProjects Include="Rca.Loader.Contracts" />
-    <LoaderProjects Include="Rca.Logging.Contracts" />
-    <RuntimeProjects Include="Rca.Core" />
-    <RuntimeProjects Include="Rca.Runtime" />
-    <RuntimeProjects Include="Rca.Network" />
-    <RuntimeProjects Include="Rca.UI" />
-    <RuntimeProjects Include="Rca.Contracts" />
-  </ItemGroup>
-
-  <!-- Project grouping flags derived from ItemGroups (MUST be defined BEFORE importing targets) -->
-  <PropertyGroup>
-    <IsLoaderGroupProject>false</IsLoaderGroupProject>
-    <IsRuntimeGroupProject>false</IsRuntimeGroupProject>
-    <!-- Convert ItemGroups to semicolon-separated strings for Source Generator access -->
-    <_LoaderProjectsList>@(LoaderProjects)</_LoaderProjectsList>
-    <_RuntimeProjectsList>@(RuntimeProjects)</_RuntimeProjectsList>
-    <!-- Export lists to Source Generator via CompilerVisibleProperty -->
-    <RcaLoaderProjectsList>$(_LoaderProjectsList)</RcaLoaderProjectsList>
-    <RcaRuntimeProjectsList>$(_RuntimeProjectsList)</RcaRuntimeProjectsList>
-  </PropertyGroup>
-
-  <PropertyGroup>
-    <!-- Check if current project is in Loader/Runtime group - explicit enumeration for reliability -->
-    <IsLoaderGroupProject Condition="'$(MSBuildProjectName)' == 'Rca.Loader' or '$(MSBuildProjectName)' == 'Rca.Loader.Contracts' or '$(MSBuildProjectName)' == 'Rca.Logging.Contracts'">true</IsLoaderGroupProject>
-    <IsRuntimeGroupProject Condition="'$(MSBuildProjectName)' == 'Rca.Core' or '$(MSBuildProjectName)' == 'Rca.Runtime' or '$(MSBuildProjectName)' == 'Rca.Network' or '$(MSBuildProjectName)' == 'Rca.UI' or '$(MSBuildProjectName)' == 'Rca.Contracts'">true</IsRuntimeGroupProject>
-  </PropertyGroup>
-
-  <!-- Make project lists visible to Source Generators -->
-  <ItemGroup>
-    <CompilerVisibleProperty Include="RcaLoaderProjectsList" />
-    <CompilerVisibleProperty Include="RcaRuntimeProjectsList" />
-    <CompilerVisibleProperty Include="IsLoaderGroupProject" />
-    <CompilerVisibleProperty Include="IsRuntimeGroupProject" />
-  </ItemGroup>
-
   <!-- Orchestrate target files to ensure proper build execution -->
   <Import Project="$(SolutionDir)build\targets\timestamp-management.targets" />
   <Import Project="$(SolutionDir)build\targets\hash-generation.targets" />

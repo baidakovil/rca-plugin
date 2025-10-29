@@ -1,12 +1,17 @@
 <Project>
+  <!-- Ensure SolutionDir is available for all props and targets -->
+  <!-- This must be defined before importing any props that reference $(SolutionDir) -->
+  <PropertyGroup>
+    <SolutionDir Condition="'$(SolutionDir)' == ''">$(MSBuildThisFileDirectory)</SolutionDir>
+  </PropertyGroup>
+
   <!-- Orchestrate property files so every project imports centralized configuration -->
   <!-- versioning.props MUST be first as it defines RcaRevitVersion used by paths.props -->
   <Import Project="$(SolutionDir)build\props\versioning.props" />
   <Import Project="$(SolutionDir)build\props\paths.props" />
   <Import Project="$(SolutionDir)build\props\compilation.props" />
+  <Import Project="$(SolutionDir)build\props\project-groups.props" />
   <Import Project="$(SolutionDir)build\props\hot-reloading-system.props" />
   <Import Project="$(SolutionDir)build\props\references-revit.props" />
   <Import Project="$(SolutionDir)build\props\references-ironpython.props" />
 </Project>
-
-

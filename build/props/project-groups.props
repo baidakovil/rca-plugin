@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <!-- Project grouping configuration: Single Source of Truth for Loader and Runtime project lists -->
+  <!-- This file defines which projects belong to Loader and Runtime groups -->
+  <!-- Changes here affect hash computation, deployment, and Source Generator behavior -->
+
+  <!-- Single Source of Truth for project groupings -->
+  <ItemGroup>
+    <LoaderProjects Include="Rca.Loader" />
+    <LoaderProjects Include="Rca.Loader.Contracts" />
+    <LoaderProjects Include="Rca.Logging.Contracts" />
+    <RuntimeProjects Include="Rca.Core" />
+    <RuntimeProjects Include="Rca.Runtime" />
+    <RuntimeProjects Include="Rca.Network" />
+    <RuntimeProjects Include="Rca.UI" />
+    <RuntimeProjects Include="Rca.Contracts" />
+  </ItemGroup>
+
+  <!-- Project grouping flags: determine if current project belongs to a group -->
+  <PropertyGroup>
+    <IsLoaderGroupProject>false</IsLoaderGroupProject>
+    <IsRuntimeGroupProject>false</IsRuntimeGroupProject>
+    <!-- Check if current project is in Loader/Runtime group - explicit enumeration for reliability -->
+    <IsLoaderGroupProject Condition="'$(MSBuildProjectName)' == 'Rca.Loader' or '$(MSBuildProjectName)' == 'Rca.Loader.Contracts' or '$(MSBuildProjectName)' == 'Rca.Logging.Contracts'">true</IsLoaderGroupProject>
+    <IsRuntimeGroupProject Condition="'$(MSBuildProjectName)' == 'Rca.Core' or '$(MSBuildProjectName)' == 'Rca.Runtime' or '$(MSBuildProjectName)' == 'Rca.Network' or '$(MSBuildProjectName)' == 'Rca.UI' or '$(MSBuildProjectName)' == 'Rca.Contracts'">true</IsRuntimeGroupProject>
+    
+    <!-- Convert ItemGroups to semicolon-separated strings for Source Generator access -->
+    <_LoaderProjectsList>@(LoaderProjects)</_LoaderProjectsList>
+    <_RuntimeProjectsList>@(RuntimeProjects)</_RuntimeProjectsList>
+    <RcaLoaderProjectsList>$(_LoaderProjectsList)</RcaLoaderProjectsList>
+    <RcaRuntimeProjectsList>$(_RuntimeProjectsList)</RcaRuntimeProjectsList>
+  </PropertyGroup>
+
+  <!-- Make project group properties visible to Source Generators -->
+  <ItemGroup>
+    <CompilerVisibleProperty Include="RcaLoaderProjectsList" />
+    <CompilerVisibleProperty Include="RcaRuntimeProjectsList" />
+    <CompilerVisibleProperty Include="IsLoaderGroupProject" />
+    <CompilerVisibleProperty Include="IsRuntimeGroupProject" />
+  </ItemGroup>
+</Project>
+
