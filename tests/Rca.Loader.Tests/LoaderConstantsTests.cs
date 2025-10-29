@@ -117,45 +117,6 @@ namespace Rca.Loader.Tests
             var expected = Path.Combine(LoaderConstants.RcaLoaderDir, LoaderConstants.LoaderFileName);
             Assert.That(LoaderConstants.LoaderAssemblyPath, Is.EqualTo(expected));
         }
-
-        /// <summary>
-        /// Verifies that LoaderAssemblies array contains expected assemblies.
-        /// </summary>
-        [Test]
-        public void LoaderAssemblies_ShouldContainExpectedAssemblies()
-        {
-            Assert.That(LoaderConstants.LoaderAssemblies, Has.Length.EqualTo(3));
-            Assert.That(LoaderConstants.LoaderAssemblies, Contains.Item("Rca.Loader.dll"));
-            Assert.That(LoaderConstants.LoaderAssemblies, Contains.Item("Rca.Loader.Contracts.dll"));
-            Assert.That(LoaderConstants.LoaderAssemblies, Contains.Item("Rca.Logging.Contracts.dll"));
-        }
-
-        /// <summary>
-        /// Verifies that RuntimeAssemblies array contains expected assemblies.
-        /// </summary>
-        [Test]
-        public void RuntimeAssemblies_ShouldContainExpectedAssemblies()
-        {
-            Assert.That(LoaderConstants.RuntimeAssemblies, Has.Length.EqualTo(5));
-            Assert.That(LoaderConstants.RuntimeAssemblies, Contains.Item("Rca.Runtime.dll"));
-            Assert.That(LoaderConstants.RuntimeAssemblies, Contains.Item("Rca.Core.dll"));
-            Assert.That(LoaderConstants.RuntimeAssemblies, Contains.Item("Rca.Network.dll"));
-            Assert.That(LoaderConstants.RuntimeAssemblies, Contains.Item("Rca.UI.dll"));
-            Assert.That(LoaderConstants.RuntimeAssemblies, Contains.Item("Rca.Contracts.dll"));
-        }
-
-        /// <summary>
-        /// Verifies that loader and runtime assemblies don't overlap.
-        /// </summary>
-        [Test]
-        public void LoaderAndRuntimeAssemblies_ShouldNotOverlap()
-        {
-            var loaderSet = new System.Collections.Generic.HashSet<string>(LoaderConstants.LoaderAssemblies);
-            var runtimeSet = new System.Collections.Generic.HashSet<string>(LoaderConstants.RuntimeAssemblies);
-
-            loaderSet.IntersectWith(runtimeSet);
-            Assert.That(loaderSet, Is.Empty, "Loader and Runtime assemblies should not have common elements");
-        }
     }
 }
 

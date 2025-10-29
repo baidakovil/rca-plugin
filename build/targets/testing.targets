@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <!-- Testing-specific targets -->
+  
+  <!-- Override deployment and build notification targets for test projects -->
+  <Target Name="NotifyBuildCompleted" />
+  <Target Name="DeployLoaderGroup" />
+  <Target Name="DeployRuntimeGroup" />
+</Project>
+

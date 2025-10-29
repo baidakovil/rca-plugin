@@ -1,18 +1,12 @@
 <Project>
-  <PropertyGroup>
-    <!-- (moved to build/hot-reloading-system.props) -->
-  </PropertyGroup>
-
   <!-- Orchestrate property files so every project imports centralized configuration -->
-  <Import Project="$(SolutionDir)build\versioning.props" Condition="Exists('$(SolutionDir)build\versioning.props')" />
-  <Import Project="$(SolutionDir)build\paths.props" Condition="Exists('$(SolutionDir)build\paths.props')" />
-  <Import Project="$(SolutionDir)build\compilation.props" Condition="Exists('$(SolutionDir)build\compilation.props')" />
-  <Import Project="$(SolutionDir)build\hot-reloading-system.props" Condition="Exists('$(SolutionDir)build\hot-reloading-system.props')" />
-  <!-- Revit API and IronPython reference props (optional) -->
-  <Import Project="$(SolutionDir)build\references-revit.props" Condition="Exists('$(SolutionDir)build\references-revit.props')" />
-  <Import Project="$(SolutionDir)build\references-ironpython.props" Condition="Exists('$(SolutionDir)build\references-ironpython.props')" />
-
-  <!-- Note: ProjectReference to Rca.BuildMetadata.Generator moved into specific projects (Rca.Contracts and Rca.Integration.Revit.Tests) -->
+  <!-- versioning.props MUST be first as it defines RcaRevitVersion used by paths.props -->
+  <Import Project="$(SolutionDir)build\props\versioning.props" />
+  <Import Project="$(SolutionDir)build\props\paths.props" />
+  <Import Project="$(SolutionDir)build\props\compilation.props" />
+  <Import Project="$(SolutionDir)build\props\hot-reloading-system.props" />
+  <Import Project="$(SolutionDir)build\props\references-revit.props" />
+  <Import Project="$(SolutionDir)build\props\references-ironpython.props" />
 </Project>
 
 

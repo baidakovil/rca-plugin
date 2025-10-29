@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <!-- Deployment targets for Loader and Runtime groups -->
+
+  <!-- Deploy groups (real builds only) -->
+  <Target Name="DeployLoaderGroup" AfterTargets="Build" DependsOnTargets="EnsureRcaTimestamp" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.Loader'">
+    <PropertyGroup>
+      <RuntimeDeployDir>$(RcaRevitAddinsDir)\$(RcaHotReloadTimestamp)</RuntimeDeployDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(RuntimeDeployDir)" />
+    <ItemGroup>
+      <LoaderDeployFiles Include="$(TargetDir)Rca.Loader.dll" />
+      <LoaderDeployFiles Include="$(TargetDir)Rca.Loader.Contracts.dll" />
+      <LoaderDeployFiles Include="$(TargetDir)Rca.Logging.Contracts.dll" />
+      <!-- Ensure deps.json is deployed next to Loader for Default ALC probing -->
+      <LoaderDeployFiles Include="$(TargetDir)Rca.Loader.deps.json" Condition="Exists('$(TargetDir)Rca.Loader.deps.json')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(LoaderDeployFiles)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" />
+
+    <!-- Copy PDBs next to the DLLs -->
+    <ItemGroup>
+      <LoaderDeployPdbs Include="$(TargetDir)*.pdb" />
+    </ItemGroup>
+    <Copy SourceFiles="@(LoaderDeployPdbs)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" Condition="@(LoaderDeployPdbs)!=''" />
+
+    <!-- Marker file is created by SourceHashGenerator in deploy folder -->
+
+    <Message Text="Loader group deployed to $(RuntimeDeployDir)" Importance="High" />
+  </Target>
+
+  <Target Name="DeployRuntimeGroup" AfterTargets="Build" DependsOnTargets="EnsureRcaTimestamp" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.Runtime'">
+    <PropertyGroup>
+      <RuntimeDeployDir>$(RcaRevitAddinsDir)\$(RcaHotReloadTimestamp)</RuntimeDeployDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(RuntimeDeployDir)" />
+    <ItemGroup>
+      <RuntimeDeployFiles Include="$(TargetDir)Rca.Runtime.dll" />
+      <RuntimeDeployFiles Include="$(TargetDir)Rca.Core.dll" />
+      <RuntimeDeployFiles Include="$(TargetDir)Rca.Network.dll" />
+      <RuntimeDeployFiles Include="$(TargetDir)Rca.UI.dll" />
+      <RuntimeDeployFiles Include="$(TargetDir)Rca.Contracts.dll" />
+      <RuntimeDeployFiles Include="$(TargetDir)IronPython*.dll" />
+      <RuntimeDeployFiles Include="$(TargetDir)Microsoft.Scripting.dll" />
+      <RuntimeDeployFiles Include="$(TargetDir)Microsoft.Dynamic.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(RuntimeDeployFiles)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" />
+
+    <!-- Copy PDBs next to the DLLs -->
+    <ItemGroup>
+      <RuntimeDeployPdbs Include="$(TargetDir)*.pdb" />
+    </ItemGroup>
+    <Copy SourceFiles="@(RuntimeDeployPdbs)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" Condition="@(RuntimeDeployPdbs)!=''" />
+
+    <ItemGroup>
+      <LibFiles Include="$(TargetDir)Lib\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(LibFiles)" DestinationFiles="@(LibFiles-&gt;'$(RuntimeDeployDir)\Lib\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="@(LibFiles)!=''" />
+
+    <!-- Marker file is created by SourceHashGenerator in deploy folder -->
+
+    <Message Text="Runtime group deployed to $(RuntimeDeployDir)" Importance="High" />
+  </Target>
+</Project>
+

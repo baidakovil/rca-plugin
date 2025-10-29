@@ -1,3 +1,7 @@
 <Project>
-  <!-- Coverage logic removed -->
+  <!-- Import parent Directory.Build.targets to inherit shared targets -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../'))" />
+
+  <!-- Import testing-specific targets that override deployment and notification -->
+  <Import Project="$(SolutionDir)build\targets\testing.targets" />
 </Project>

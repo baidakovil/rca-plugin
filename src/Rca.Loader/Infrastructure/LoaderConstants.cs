@@ -73,26 +73,16 @@ namespace Rca.Loader.Infrastructure
             typeof(LoaderConstants).Assembly.Location;
 
         /// <summary>
-        /// Unified manifest of assemblies that compose the Loader group.
+        /// Unified manifest of assemblies that compose the Loader group (Single Source of Truth from MSBuild).
         /// </summary>
         public static readonly string[] LoaderAssemblies =
-        {
-            "Rca.Loader.dll",
-            "Rca.Loader.Contracts.dll",
-            "Rca.Logging.Contracts.dll"
-        };
+            Array.ConvertAll(RcaBuildMetadata.LoaderProjects, p => $"{p}.dll");
 
         /// <summary>
-        /// Unified manifest of assemblies that compose the Runtime group.
+        /// Unified manifest of assemblies that compose the Runtime group (Single Source of Truth from MSBuild).
         /// </summary>
         public static readonly string[] RuntimeAssemblies =
-        {
-            "Rca.Runtime.dll",
-            "Rca.Core.dll",
-            "Rca.Network.dll",
-            "Rca.UI.dll",
-            "Rca.Contracts.dll"
-        };
+            Array.ConvertAll(RcaBuildMetadata.RuntimeProjects, p => $"{p}.dll");
 
         /// <summary>
         /// Length of the short source hash used for Loader/Runtime groups.

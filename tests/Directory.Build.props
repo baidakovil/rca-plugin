@@ -1,20 +1,19 @@
 <Project>
+  <!-- Import parent Directory.Build.props first to inherit shared settings -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <!-- Import testing-specific properties -->
+  <Import Project="$(SolutionDir)build\props\testing.props" />
+
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <PlatformTarget>x64</PlatformTarget>
+
+    <!-- Override group flags for test projects -->
+    <IsLoaderGroupProject>false</IsLoaderGroupProject>
+    <IsRuntimeGroupProject>false</IsRuntimeGroupProject>
   </PropertyGroup>
-
-  <!-- Import centralized build props from repository root so tests inherit shared settings -->
-  <Import Project="$(SolutionDir)Directory.Build.props" Condition="Exists('$(SolutionDir)Directory.Build.props')" />
-
-  <ItemGroup>
-    <PackageReference Include="NUnit" Version="4.0.1" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
-    <PackageReference Include="NSubstitute" Version="5.1.0" />
-    <PackageReference Include="FluentAssertions" Version="6.12.0" />
-    <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
-  </ItemGroup>
 </Project>

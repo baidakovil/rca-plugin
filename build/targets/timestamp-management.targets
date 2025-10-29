@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <!-- Timestamp management for hot-reloading system -->
+
+  <!-- Ensure a single shared timestamp per real build with sticky TTL and force override -->
+  <Target Name="EnsureRcaTimestamp" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' != 'SourceHashGenerator'" BeforeTargets="Build">
+    <!-- Create deploy root where timestamp and marker files will be stored (guarded if props are missing) -->
+    <MakeDir Condition="'$(RcaRevitAddinsDir)' != ''" Directories="$(RcaRevitAddinsDir)" />
+    <Exec Condition="'$(RcaTimestampFile)' != ''" Command='powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(SolutionDir)build\Scripts\EnsureRcaStamp.ps1&quot; -TargetPath &quot;$(RcaTimestampFile)&quot; -TtlSec &quot;$(RcaStickyStampSeconds)&quot; -ForceStr &quot;$(RcaForceNewStamp)&quot; -TimestampPattern &quot;$(RcaTimestampPattern)&quot;' />
+
+    <ReadLinesFromFile Condition="'$(RcaTimestampFile)' != ''" File="$(RcaTimestampFile)">
+      <Output TaskParameter="Lines" ItemName="_StampLines" />
+    </ReadLinesFromFile>
+    <PropertyGroup>
+      <RcaHotReloadTimestamp>@(_StampLines)</RcaHotReloadTimestamp>
+    </PropertyGroup>
+    <Message Text="EnsureRcaTimestamp: $(RcaHotReloadTimestamp) (TTL=$(RcaStickyStampSeconds)s, Force=$(RcaForceNewStamp))" Importance="Low" />
+  </Target>
+
+  <!-- Generate Rca.addin file for Loader project after timestamp is ensured -->
+  <Target Name="GenerateRcaAddinFile" AfterTargets="EnsureRcaTimestamp" Condition="'$(GenerateRcaAddinFile)' == 'true' and '$(MSBuildProjectName)' == 'Rca.Loader'">
+    <PropertyGroup>
+      <!-- Ensure assembly relative path uses the freshly generated timestamp if not overridden -->
+      <RcaAddinAssemblyRelativePath Condition="'$(RcaAddinAssemblyRelativePath)' == ''">$(RcaHotReloadTimestamp)\Rca.Loader.dll</RcaAddinAssemblyRelativePath>
+      <AddinDestFile>$(RcaRevitAddinsDir)\Rca.addin</AddinDestFile>
+    </PropertyGroup>
+
+    <ReadLinesFromFile File="$(RcaAddinTemplatePath)">
+      <Output TaskParameter="Lines" ItemName="TemplateLines" />
+    </ReadLinesFromFile>
+
+    <ItemGroup>
+      <TemplateLinesProcessed Include="@(TemplateLines)">
+        <Replaced>$([System.Text.RegularExpressions.Regex]::Replace('%(TemplateLines.Identity)','RcaAddinAssemblyRelativePath','$(RcaAddinAssemblyRelativePath)'))</Replaced>
+      </TemplateLinesProcessed>
+    </ItemGroup>
+
+    <WriteLinesToFile File="$(AddinDestFile)" Lines="@(TemplateLinesProcessed->'%(Replaced)')" Overwrite="true" />
+    <Message Text="Generated Rca.addin with Assembly=$(RcaAddinAssemblyRelativePath) at $(AddinDestFile)" Importance="High" />
+  </Target>
+</Project>
+
