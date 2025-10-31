@@ -12,6 +12,7 @@
   <Import Project="$(SolutionDir)build\props\compilation.props" />
   <Import Project="$(SolutionDir)build\props\project-groups.props" />
   <Import Project="$(SolutionDir)build\props\hot-reloading-system.props" />
+  <Import Project="$(SolutionDir)build\props\CodeMetrics.props" />
   <Import Project="$(SolutionDir)build\props\references-revit.props" />
   <Import Project="$(SolutionDir)build\props\references-ironpython.props" />
 </Project>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <!-- Code metrics configuration for AltCover integration -->
+  <PropertyGroup>
+    <!-- Enable/disable code metrics collection -->
+    <!-- Set to true to enable instrumentation and coverage collection -->
+    <EnableCodeMetrics Condition="'$(EnableCodeMetrics)' == ''">true</EnableCodeMetrics>
+    
+    <!-- AltCover integration property -->
+    <AltCoverEnabled Condition="'$(EnableCodeMetrics)' == 'true'">true</AltCoverEnabled>
+    
+    <!-- Directory for metrics output files -->
+    <RcaMetricsDir Condition="'$(RcaMetricsDir)' == ''">$(SolutionDir)build\Metrics</RcaMetricsDir>
+    
+    <!-- Output file for final coverage report -->
+    <RcaCoverageOutputFile Condition="'$(RcaCoverageOutputFile)' == ''">$(RcaMetricsDir)\coverage.xml</RcaCoverageOutputFile>
+    
+    <!-- Assembly filter for AltCover instrumentation -->
+    <!-- Only instrument assemblies matching this pattern -->
+    <RcaCoverageAssemblyFilter Condition="'$(RcaCoverageAssemblyFilter)' == ''">Rca.*.dll</RcaCoverageAssemblyFilter>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <CompilerVisibleProperty Include="EnableCodeMetrics" />
+    <CompilerVisibleProperty Include="AltCoverEnabled" />
+  </ItemGroup>
+</Project>
+

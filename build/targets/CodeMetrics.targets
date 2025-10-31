@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <!-- Code metrics targets for AltCover instrumentation and coverage collection -->
+
+  <!-- Instrument deployed assemblies with AltCover after deployment -->
+  <!-- Runs after DeployLoaderGroup and DeployRuntimeGroup when EnableCodeMetrics is true -->
+  <!-- Only runs once per build, triggered by the last deployment target (Runtime group) -->
+  <Target Name="InstrumentDeployedAssemblies" 
+          AfterTargets="DeployRuntimeGroup" 
+          Condition="'$(EnableCodeMetrics)' == 'true' and '$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.Runtime' and '$(RuntimeDeployDir)' != '' and Exists('$(RuntimeDeployDir)')">
+    
+    <PropertyGroup>
+      <AltCoverInputDir>$(RuntimeDeployDir)</AltCoverInputDir>
+      <AltCoverSignalFile>$(RcaMetricsDir)\coverage.xml.acv</AltCoverSignalFile>
+      <AltCoverSavedDir>$(AltCoverInputDir)\__Saved</AltCoverSavedDir>
+    </PropertyGroup>
+
+    <!-- Remove __Saved directory if it exists to avoid AltCover errors -->
+    <RemoveDir Directories="$(AltCoverSavedDir)" Condition="Exists('$(AltCoverSavedDir)')" />
+
+    <Message Text="Instrumenting assemblies in $(AltCoverInputDir) with AltCover" Importance="High" />
+    
+    <!-- Run AltCover instrumentation in-place -->
+    <!-- Using direct command execution instead of PowerShell wrapper for better parameter handling -->
+    <Exec Command="altcover --inputDirectory=&quot;$(AltCoverInputDir)&quot; --assemblyFilter=&quot;$(RcaCoverageAssemblyFilter)&quot; --inplace --save --report=&quot;$(RcaCoverageOutputFile)&quot;" 
+          ContinueOnError="false" />
+    
+    <Message Text="AltCover instrumentation completed. Signal file: $(AltCoverSignalFile)" Importance="Normal" />
+  </Target>
+
+  <!-- Collect coverage after tests complete -->
+  <!-- This target should be invoked manually or via a separate MSBuild invocation after dotnet test -->
+  <!-- RuntimeDeployDir may not be available if called separately, so we compute it from timestamp file -->
+  <!-- Only execute once per build by running on solution level or specific project -->
+  <Target Name="CollectCoverage" Condition="'$(EnableCodeMetrics)' == 'true' and '$(MSBuildProjectName)' == 'Rca.Runtime'">
+    
+    <!-- Compute RuntimeDeployDir from timestamp file if not already set -->
+    <PropertyGroup>
+      <_TimestampContent Condition="'$(RuntimeDeployDir)' == '' and Exists('$(RcaTimestampFile)')">$([System.IO.File]::ReadAllText('$(RcaTimestampFile)').Trim())</_TimestampContent>
+      <_FinalRuntimeDeployDir Condition="'$(RuntimeDeployDir)' != ''">$(RuntimeDeployDir)</_FinalRuntimeDeployDir>
+      <_FinalRuntimeDeployDir Condition="'$(RuntimeDeployDir)' == '' and '$(_TimestampContent)' != ''">$(RcaRevitAddinsDir)\$(_TimestampContent)</_FinalRuntimeDeployDir>
+    </PropertyGroup>
+    
+    <PropertyGroup>
+      <AltCoverRecorderDir>$(_FinalRuntimeDeployDir)</AltCoverRecorderDir>
+      <AltCoverSignalFile Condition="'$(RcaMetricsDir)' != ''">$(RcaMetricsDir)\coverage.xml.acv</AltCoverSignalFile>
+    </PropertyGroup>
+
+    <!-- Ensure metrics directory exists -->
+    <MakeDir Directories="$(RcaMetricsDir)" />
+    
+    <!-- Validate that we have a valid recorder directory -->
+    <Error Text="Cannot determine recorder directory for coverage collection. RuntimeDeployDir is not set and timestamp file is missing or empty." 
+           Condition="'$(AltCoverRecorderDir)' == ''" />
+    
+    <!-- Check if signal file exists before removing it -->
+    <PropertyGroup>
+      <SignalFileExists Condition="'$(AltCoverSignalFile)' != '' and Exists('$(AltCoverSignalFile)')">true</SignalFileExists>
+      <SignalFileExists Condition="'$(AltCoverSignalFile)' == '' or !Exists('$(AltCoverSignalFile)')">false</SignalFileExists>
+    </PropertyGroup>
+
+    <!-- Warn if signal file is missing -->
+    <Warning Text="AltCover signal file not found at $(AltCoverSignalFile). Coverage collection may be incomplete." 
+             Condition="'$(SignalFileExists)' == 'false' and '$(AltCoverSignalFile)' != ''" />
+
+    <!-- Remove signal file if it exists -->
+    <Delete Files="$(AltCoverSignalFile)" Condition="'$(SignalFileExists)' == 'true'" />
+
+    <Message Text="Collecting coverage from $(AltCoverRecorderDir)..." Importance="High" />
+    
+    <!-- Run AltCover runner to collect coverage -->
+    <Exec Command="altcover runner --collect --recorderDirectory=&quot;$(AltCoverRecorderDir)&quot; --outputFile=&quot;$(RcaCoverageOutputFile)&quot;" 
+          ContinueOnError="false" 
+          Condition="'$(SignalFileExists)' == 'true'" />
+    
+    <Message Text="Coverage collected successfully to $(RcaCoverageOutputFile)" Importance="High" Condition="'$(SignalFileExists)' == 'true'" />
+  </Target>
+
+  <!-- Hook into test execution via AfterTargets="Test" or custom test target -->
+  <!-- This will be executed after dotnet test completes if EnableCodeMetrics is true -->
+  <!-- Note: dotnet test doesn't directly expose AfterTargets hooks, so this may need manual invocation -->
+  <Target Name="CollectCoverageAfterTests" 
+          Condition="'$(EnableCodeMetrics)' == 'true' and '$(DesignTimeBuild)' != 'true'"
+          DependsOnTargets="CollectCoverage">
+    <Message Text="Coverage collection completed after test execution" Importance="High" />
+  </Target>
+
+</Project>
+
