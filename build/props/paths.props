@@ -20,7 +20,9 @@
     <RcaRevitLibsPath Condition="'$(RcaRevitLibsPath)' == ''">$(SolutionDir)libs\Revit\$(RcaRevitVersion)</RcaRevitLibsPath>
     <!-- Path to addin template used by GenerateRcaAddinFile target (can be overridden per environment) -->
     <RcaAddinTemplatePath Condition="'$(RcaAddinTemplatePath)' == ''">$(SolutionDir)build\Resources\Rca.addin.template</RcaAddinTemplatePath>
-    <!-- Relative assembly path inserted into generated .addin (computed after timestamp is ensured via EnsureRcaTimestamp target in timestamp-management.targets) -->
+    <!-- Code Metrics -->
+    <ErrorLog>$(RcaMetricsDir)\Sarif\$(MSBuildProjectName).sarif,version=2.1</ErrorLog>
+
 
     <!-- Generator project and executable paths -->
     <SourceHashProject>$(SolutionDir)src\Tools\SourceHashGenerator\SourceHashGenerator.csproj</SourceHashProject>

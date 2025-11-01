@@ -3,6 +3,6 @@
   <Import Project="$(SolutionDir)build\targets\timestamp-management.targets" />
   <Import Project="$(SolutionDir)build\targets\hash-generation.targets" />
   <Import Project="$(SolutionDir)build\targets\deployment.targets" />
-  <Import Project="$(SolutionDir)build\targets\CodeMetrics.targets" />
+  <Import Project="$(SolutionDir)build\targets\code-metrics.targets" />
   <Import Project="$(SolutionDir)build\targets\build-notification.targets" />
 </Project>
