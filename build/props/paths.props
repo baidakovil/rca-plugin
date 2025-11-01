@@ -8,6 +8,14 @@
     <RcaTestDeployRoot Condition="'$(RcaTestDeployRoot)' == ''">$(LOCALAPPDATA)\RCA\Test</RcaTestDeployRoot>
     <!-- Directory where RCA logs are written -->
     <RcaLogRoot Condition="'$(RcaLogRoot)' == ''">$(LOCALAPPDATA)\RCA\Logs</RcaLogRoot>
+    <!-- Directory for code metrics output files -->
+    <RcaMetricsDir Condition="'$(RcaMetricsDir)' == ''">$(SolutionDir)build\Metrics</RcaMetricsDir>
+    <!-- Name for AltCover file-->
+    <CoverageOutputFileName Condition="'$(CoverageOutputFileName)' == ''">coverage.xml</CoverageOutputFileName>
+    <!-- Output file for final coverage report -->
+    <RcaCoverageOutputFile Condition="'$(RcaCoverageOutputFile)' == ''">$(RcaMetricsDir)\$(CoverageOutputFileName)</RcaCoverageOutputFile>
+    <!-- Path to AltCover signal file-->
+    <AltCoverSignalFile>$(RcaCoverageOutputFile).acv</AltCoverSignalFile>
     <!-- Path to Revit API libs (RevitAPI.dll, RevitAPIUI.dll) -->
     <RcaRevitLibsPath Condition="'$(RcaRevitLibsPath)' == ''">$(SolutionDir)libs\Revit\$(RcaRevitVersion)</RcaRevitLibsPath>
     <!-- Path to addin template used by GenerateRcaAddinFile target (can be overridden per environment) -->
@@ -28,6 +36,8 @@
     <CompilerVisibleProperty Include="RcaRevitAddinsDir" />
     <CompilerVisibleProperty Include="RcaTestDeployRoot" />
     <CompilerVisibleProperty Include="RcaLogRoot" />
+    <CompilerVisibleProperty Include="RcaMetricsDir" />
+    <CompilerVisibleProperty Include="RcaCoverageOutputFile" />
     <CompilerVisibleProperty Include="RcaRevitLibsPath" />
     <CompilerVisibleProperty Include="RcaAddinTemplatePath" />
     <CompilerVisibleProperty Include="RcaAddinAssemblyRelativePath" />
