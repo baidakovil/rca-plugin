@@ -12,30 +12,30 @@
     <PropertyGroup>
       <AltCoverInputDir>$(RuntimeDeployDir)</AltCoverInputDir>
     </PropertyGroup>
+
     <!-- Run AltCover instrumentation in-place -->
     <!-- Using direct command execution instead of PowerShell wrapper for better parameter handling -->
     <Message Text="Instrumenting assemblies in $(AltCoverInputDir) with AltCover" Importance="High" />
     <Exec Command="altcover --inputDirectory=&quot;$(AltCoverInputDir)&quot; --assemblyFilter=&quot;$(RcaCoverageAssemblyFilter)&quot; --inplace --save --report=&quot;$(RcaCoverageOutputFile)&quot;" 
           ContinueOnError="false" />
     <Message Text="AltCover instrumentation completed. Signal file: $(AltCoverSignalFile)" Importance="Normal" />
+    
   </Target>
 
   <!-- Collect coverage after tests complete -->
   <!-- This target should be invoked manually via MSBuild after tests have been executed -->
   <!-- Usage: dotnet msbuild src/Rca.Runtime/Rca.Runtime.csproj /t:CollectCoverage /p:EnableCodeMetrics=true -->
-  <!-- RuntimeDeployDir may not be available if called separately, so we compute it from timestamp file -->
   <Target Name="CollectCoverage" Condition="'$(EnableCodeMetrics)' == 'true' and '$(MSBuildProjectName)' == 'Rca.Runtime'">
     
-    <!-- Compute RuntimeDeployDir from timestamp file if not already set -->
+    <!-- Determine AltCoverRecorderDir from RuntimeDeployDir, or from timestamp file if not set -->
     <PropertyGroup>
-      <_TimestampContent Condition="'$(RuntimeDeployDir)' == '' and Exists('$(RcaTimestampFile)')">$([System.IO.File]::ReadAllText('$(RcaTimestampFile)').Trim())</_TimestampContent>
-      <_FinalRuntimeDeployDir Condition="'$(RuntimeDeployDir)' != ''">$(RuntimeDeployDir)</_FinalRuntimeDeployDir>
-      <_FinalRuntimeDeployDir Condition="'$(RuntimeDeployDir)' == '' and '$(_TimestampContent)' != ''">$(RcaRevitAddinsDir)\$(_TimestampContent)</_FinalRuntimeDeployDir>
-      <AltCoverRecorderDir>$(_FinalRuntimeDeployDir)</AltCoverRecorderDir>
+      <AltCoverRecorderDir Condition="'$(RuntimeDeployDir)' != ''">$(RuntimeDeployDir)</AltCoverRecorderDir>
+      <AltCoverRecorderDir Condition="'$(RuntimeDeployDir)' == '' and Exists('$(RcaTimestampFile)')">$(RcaRevitAddinsDir)\$([System.IO.File]::ReadAllText('$(RcaTimestampFile)').Trim())</AltCoverRecorderDir>
     </PropertyGroup>
-    
+
     <!-- Ensure metrics directory exists -->
     <MakeDir Directories="$(RcaMetricsDir)" />
+
     <!-- Validate that we have a valid recorder directory -->
     <Error Text="Cannot determine recorder directory for coverage collection. RuntimeDeployDir is not set and timestamp file is missing or empty." 
            Condition="'$(AltCoverRecorderDir)' == ''" />
@@ -45,18 +45,43 @@
       <SignalFileExists Condition="'$(AltCoverSignalFile)' != '' and Exists('$(AltCoverSignalFile)')">true</SignalFileExists>
       <SignalFileExists Condition="'$(AltCoverSignalFile)' == '' or !Exists('$(AltCoverSignalFile)')">false</SignalFileExists>
     </PropertyGroup>
+
     <!-- Warn if signal file is missing -->
     <Warning Text="AltCover signal file not found at $(AltCoverSignalFile). Coverage collection may be incomplete." 
              Condition="'$(SignalFileExists)' == 'false' and '$(AltCoverSignalFile)' != ''" />
+
     <!-- Remove signal file if it exists -->
     <Delete Files="$(AltCoverSignalFile)" Condition="'$(SignalFileExists)' == 'true'" />
 
-    <Message Text="Collecting coverage from $(AltCoverRecorderDir)..." Importance="High" />    
     <!-- Run AltCover runner to collect coverage -->
+    <Message Text="Collecting coverage from $(AltCoverRecorderDir)..." Importance="High" />    
     <Exec Command="altcover runner --collect --recorderDirectory=&quot;$(AltCoverRecorderDir)&quot;"
           ContinueOnError="false" />
     
-    <Message Text="Coverage collected successfully to $(RcaCoverageOutputFile)" Importance="High" Condition="'$(SignalFileExists)' == 'true'" />
+    <!-- Check if coverage file was created successfully -->
+    <PropertyGroup>
+      <CoverageFileCreated Condition="Exists('$(RcaCoverageOutputFile)')">true</CoverageFileCreated>
+      <CoverageFileCreated Condition="!Exists('$(RcaCoverageOutputFile)')">false</CoverageFileCreated>
+    </PropertyGroup>
+    
+    <Message Text="Coverage collected successfully to $(RcaCoverageOutputFile)" Importance="High" Condition="'$(CoverageFileCreated)' == 'true'" />
+    
+    <!-- Recreate signal file after collection to allow continuous coverage collection -->
+    <PropertyGroup>
+      <CoverageHtmlDir>$(RcaMetricsDir)\html</CoverageHtmlDir>
+    </PropertyGroup>
+    
+    <!-- Recreate signal file to enable continuous coverage collection -->
+    <WriteLinesToFile File="$(AltCoverSignalFile)" Lines="" Overwrite="true" Condition="'$(CoverageFileCreated)' == 'true'" />
+    <Message Text="Signal file recreated at $(AltCoverSignalFile) for continuous coverage collection" Importance="Normal" Condition="'$(CoverageFileCreated)' == 'true'" />
+    
+    <!-- Generate HTML report using reportgenerator -->
+    <MakeDir Directories="$(CoverageHtmlDir)" Condition="'$(CoverageFileCreated)' == 'true'" />
+    <Message Text="Generating HTML coverage report in $(CoverageHtmlDir)..." Importance="High" Condition="'$(CoverageFileCreated)' == 'true'" />
+    <Exec Command="reportgenerator -reports:&quot;$(RcaCoverageOutputFile)&quot; -targetdir:&quot;$(CoverageHtmlDir)&quot; -reporttypes:Html"
+          ContinueOnError="false"
+          Condition="'$(CoverageFileCreated)' == 'true'" />
+    <Message Text="HTML coverage report generated in $(CoverageHtmlDir)" Importance="High" Condition="'$(CoverageFileCreated)' == 'true'" />
   </Target>
 
 </Project>

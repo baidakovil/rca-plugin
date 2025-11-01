@@ -31,6 +31,6 @@
 /build/artifacts/hashes/timestamp.count
 
 # Coverage reports
-/build/Metrics/coverage.xml
+/build/Metrics/*
 src/Rca.Loader/source-hash.txt
 src/Rca.Core/source-hash.txt
