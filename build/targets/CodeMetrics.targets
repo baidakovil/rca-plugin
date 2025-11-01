@@ -22,10 +22,11 @@
     
   </Target>
 
-  <!-- Collect coverage after tests complete -->
-  <!-- This target should be invoked manually via MSBuild after tests have been executed -->
-  <!-- Usage: dotnet msbuild src/Rca.Runtime/Rca.Runtime.csproj /t:CollectCoverage /p:EnableCodeMetrics=true -->
-  <Target Name="CollectCoverage" Condition="'$(EnableCodeMetrics)' == 'true' and '$(MSBuildProjectName)' == 'Rca.Runtime'">
+  <!-- Collect coverage after tests complete. Should be invoked manually via MSBuild after tests have been executed -->
+  <!-- Usage: dotnet msbuild rca-plugin.sln /t:CollectCoverage /p:EnableCodeMetrics=true -->
+  <!-- Or any project : dotnet msbuild src/Rca.Runtime/Rca.Runtime.csproj /t:CollectCoverage /p:EnableCodeMetrics=true -->
+  <!-- Condition ensures it only runs once and not during design-time builds -->
+  <Target Name="CollectCoverage" Condition="'$(EnableCodeMetrics)' == 'true' and '$(DesignTimeBuild)' != 'true'">
     
     <!-- Determine AltCoverRecorderDir from RuntimeDeployDir, or from timestamp file if not set -->
     <PropertyGroup>
