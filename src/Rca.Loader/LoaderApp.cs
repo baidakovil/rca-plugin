@@ -14,8 +14,9 @@ namespace Rca.Loader
 {
     /// <summary>
     /// Main entry point for the RCA Loader Revit add-in.
-    /// Automatically initializes pipe server when UIApplication becomes available!
+    /// Automatically initializes pipe server when UIApplication becomes available.
     /// Optionally auto-loads runtime based on settings.
+    /// HRS (Hot-Reload System) logic is always active, but UI elements are DEBUG-only.
     /// </summary>
     public class LoaderApp : IExternalApplication
     {
@@ -90,11 +91,13 @@ namespace Rca.Loader
                 _log.LogInformation("Loader startup begin");
                 this.uiControlledApp = application;
 
-                // Initialize assembly status manager
+                // Initialize assembly status manager (HRS - Hot Reload System)
+                // Logic is always active, but UI elements are DEBUG-only
                 assemblyStatusManager = new AssemblyStatusManager();
                 assemblyStatusManager.InitializeOnStartup();
 
                 // Start logging pipe server early (must exist before runtime logger tries to connect)
+                // This is NOT HRS - Runtime uses it to send logs
                 loggingPipe = new LoggingPipeServerService("RCA_LOG_PIPE");
                 loggingPipe.Start();
 
@@ -124,15 +127,15 @@ namespace Rca.Loader
                 // Hook into application events for auto-initialization
                 application.Idling += OnApplicationIdling;
 
-                // Update status display if available
-    #if DEBUG
+#if DEBUG
+                // Update status display if available (DEBUG-only UI)
                 var statusDisplay = ((RibbonService)ribbonService).StatusDisplay;
                 if (statusDisplay != null && assemblyStatusManager != null)
                 {
                     _log.LogDebug("Updating status display with initial values: loaderHash={LoaderHash} runtimeHash={RuntimeHash}", assemblyStatusManager.CurrentInfo.LoaderComponents.Hash, assemblyStatusManager.CurrentInfo.RuntimeAssembly.Hash);
                     statusDisplay.UpdateStatus(assemblyStatusManager.CurrentInfo);
                 }
-    #endif
+#endif
                 _log.LogInformation("Loader startup completed successfully");
                 return Result.Succeeded;
             }
@@ -371,10 +374,13 @@ namespace Rca.Loader
     #endif
         }
 
+        /// <summary>
+        /// Starts the HRS command pipe server for MSBuild communication.
+        /// </summary>
         private void StartPipeServer()
         {
             if (uiapp == null) throw new InvalidOperationException("UIApplication not initialized");
-            _log.LogInformation("Starting command pipe server");
+            _log.LogInformation("Starting command pipe server (HRS)");
             commandHandler = new RuntimeCommandHandler(RuntimeManager, uiapp);
             pipeServer = new PipeServerService(LoaderConstants.CommandPipeName, commandHandler.HandlePipeCommandAsync);
             pipeServer.Start();
