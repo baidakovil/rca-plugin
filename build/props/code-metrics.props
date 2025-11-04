@@ -6,9 +6,9 @@
     <!-- Set to true to enable Roslyn metrics collection -->
     <RoslynMetricsEnabled Condition="'$(RoslynMetricsEnabled)' == ''">true</RoslynMetricsEnabled>
     <!-- Set to true to enable Sarif metrics collection -->
-    <SarifMetricsEnabled Condition="'$(SarifMetricsEnabled)' == ''">true</SarifMetricsEnabled>
+    <SarifMetricsEnabled Condition="'$(SarifMetricsEnabled)' == ''">false</SarifMetricsEnabled>
     <!-- Set to true to enable AltCover metrics collection -->
-    <AltCoverEnabled Condition="'$(AltCoverEnabled)' == ''">true</AltCoverEnabled>
+    <AltCoverEnabled Condition="'$(AltCoverEnabled)' == ''">false</AltCoverEnabled>
     <!-- Assembly filter for AltCover instrumentation -->
     <!-- Only instrument assemblies matching this pattern -->
     <RcaCoverageAssemblyFilter Condition="'$(RcaCoverageAssemblyFilter)' == ''">Rca.*.dll</RcaCoverageAssemblyFilter>
