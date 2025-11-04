@@ -36,11 +36,9 @@
   </Target>
 
 
-  <!-- Instrument deployed assemblies with AltCover after deployment -->
-  <!-- Runs after DeployLoaderGroup and DeployRuntimeGroup when AltCoverEnabled is true -->
-  <!-- Only runs once per build, triggered by the last deployment target (Runtime group) -->
-  <Target Name="InstrumentDeployedAssemblies" 
-          AfterTargets="DeployRuntimeGroup" 
+  <!-- Instrument deployed assemblies with AltCover after deployment targets have completed -->
+  <Target Name="InstrumentDeployedAssemblies"
+          AfterTargets="DeployLoaderGroup;DeployRuntimeGroup"
           Condition="'$(AltCoverEnabled)' == 'true' and '$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.Runtime' and '$(RuntimeDeployDir)' != '' and Exists('$(RuntimeDeployDir)')">
     
     <PropertyGroup>
