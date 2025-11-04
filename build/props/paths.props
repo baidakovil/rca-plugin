@@ -8,20 +8,39 @@
     <RcaTestDeployRoot Condition="'$(RcaTestDeployRoot)' == ''">$(LOCALAPPDATA)\RCA\Test</RcaTestDeployRoot>
     <!-- Directory where RCA logs are written -->
     <RcaLogRoot Condition="'$(RcaLogRoot)' == ''">$(LOCALAPPDATA)\RCA\Logs</RcaLogRoot>
+
     <!-- Directory for code metrics output files -->
     <RcaMetricsDir Condition="'$(RcaMetricsDir)' == ''">$(SolutionDir)build\Metrics</RcaMetricsDir>
+
+
+
+    <!-- Roslyn Code Metrics -->
+    <!-- Directory for Roslyn output files -->
+    <RoslynOutputDir Condition="'$(RoslynOutputDir)' == ''">$(RcaMetricsDir)\Roslyn</RoslynOutputDir>
+    <!-- Output file for Roslyn Analyzer (MetricsOutputFile is an system property) -->
+    <MetricsOutputFile Condition="'$(MetricsOutputFile)' == ''">$(RoslynOutputDir)\$(MSBuildProjectName).xml</MetricsOutputFile>
+
+    <!-- AltCover Code Metrics -->
     <!-- Name for AltCover file-->
     <CoverageOutputFileName Condition="'$(CoverageOutputFileName)' == ''">coverage.xml</CoverageOutputFileName>
+    <!-- Directory for AltCover output files -->
+    <AltCoverOutputDir Condition="'$(AltCoverOutputDir)' == ''">$(RcaMetricsDir)\AltCover</AltCoverOutputDir>
     <!-- Output file for final coverage report -->
-    <RcaCoverageOutputFile Condition="'$(RcaCoverageOutputFile)' == ''">$(RcaMetricsDir)\$(CoverageOutputFileName)</RcaCoverageOutputFile>
+    <RcaCoverageOutputFile Condition="'$(RcaCoverageOutputFile)' == ''">$(AltCoverOutputDir)\$(CoverageOutputFileName)</RcaCoverageOutputFile>
     <!-- Path to AltCover signal file-->
-    <AltCoverSignalFile>$(RcaCoverageOutputFile).acv</AltCoverSignalFile>
+    <AltCoverSignalFile Condition="'$(AltCoverSignalFile)' == ''">$(AltCoverOutputDir)\$(CoverageOutputFileName).acv</AltCoverSignalFile>
+
     <!-- Path to Revit API libs (RevitAPI.dll, RevitAPIUI.dll) -->
     <RcaRevitLibsPath Condition="'$(RcaRevitLibsPath)' == ''">$(SolutionDir)libs\Revit\$(RcaRevitVersion)</RcaRevitLibsPath>
     <!-- Path to addin template used by GenerateRcaAddinFile target (can be overridden per environment) -->
     <RcaAddinTemplatePath Condition="'$(RcaAddinTemplatePath)' == ''">$(SolutionDir)build\Resources\Rca.addin.template</RcaAddinTemplatePath>
-    <!-- Code Metrics -->
-    <ErrorLog>$(RcaMetricsDir)\Sarif\$(MSBuildProjectName).sarif,version=2.1</ErrorLog>
+
+    <!-- Sarif Code Metrics -->
+    <!-- Directory for Sarif output files -->
+    <SarifOutputDir Condition="'$(SarifOutputDir)' == ''">$(RcaMetricsDir)\Sarif</SarifOutputDir>
+    <!-- Output file for Sarif (ErrorLog is a system property) -->
+    <!-- Must be set without condition so each project evaluates $(MSBuildProjectName) independently -->
+    <ErrorLog>$(SarifOutputDir)\$(MSBuildProjectName).sarif,version=2.1</ErrorLog>
 
 
     <!-- Generator project and executable paths -->

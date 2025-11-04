@@ -18,7 +18,7 @@
     <ItemGroup>
       <LoaderDeployPdbs Include="$(TargetDir)*.pdb" />
     </ItemGroup>
-    <Copy SourceFiles="@(LoaderDeployPdbs)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" Condition="@(LoaderDeployPdbs)!=''" />
+    <Copy SourceFiles="@(LoaderDeployPdbs)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" Condition="@(LoaderDeployPdbs)!='' and '$(AltCoverEnabled)' == 'true'" />
 
     <!-- Marker file is created by SourceHashGenerator in deploy folder -->
 
@@ -43,7 +43,7 @@
     <ItemGroup>
       <RuntimeDeployPdbs Include="$(TargetDir)*.pdb" />
     </ItemGroup>
-    <Copy SourceFiles="@(RuntimeDeployPdbs)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" Condition="@(RuntimeDeployPdbs)!=''" />
+    <Copy SourceFiles="@(RuntimeDeployPdbs)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" Condition="@(RuntimeDeployPdbs)!='' and '$(AltCoverEnabled)' == 'true'" />
 
     <ItemGroup>
       <LibFiles Include="$(TargetDir)Lib\**\*.*" />

@@ -8,7 +8,7 @@
 
     <!-- Sticky timestamp configuration: reuse timestamp across separate MSBuild invocations within TTL window -->
     <!-- Rationale: test runners and IDEs spawn multiple builds; TTL prevents accidental folder drift -->
-    <RcaStickyStampSeconds Condition="'$(RcaStickyStampSeconds)' == ''">30</RcaStickyStampSeconds>
+    <RcaStickyStampSeconds Condition="'$(RcaStickyStampSeconds)' == ''">90</RcaStickyStampSeconds>
     <!-- Force override: set to true/1 to force a fresh timestamp, ignoring TTL stickiness -->
     <RcaForceNewStamp Condition="'$(RcaForceNewStamp)' == ''">false</RcaForceNewStamp>
     <!-- Named pipe for loader <-> UI commands -->

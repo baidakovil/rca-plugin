@@ -9,7 +9,7 @@
   <Target Name="NotifyBuildCompleted" AfterTargets="DeployRuntimeGroup" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.Runtime' and '$(HotReloadNotify)' == 'true'">
     <PropertyGroup>
       <!-- Use centralized command pipe name for build notifications -->
-      <PsNotifyCmd>powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "try { $p = New-Object System.IO.Pipes.NamedPipeClientStream('.', '$(RcaCommandPipeName)', [System.IO.Pipes.PipeDirection]::InOut); $p.Connect(3000); $sw = New-Object System.IO.StreamWriter($p); $sw.AutoFlush = $true; $sr = New-Object System.IO.StreamReader($p); $msg = '{\"Command\":\"BUILD_COMPLETED\",\"Payload\":\"\"}'; $sw.WriteLine($msg); $resp = $sr.ReadLine(); Write-Host 'Build notification response:' $resp; $p.Close() } catch { Write-Warning ('Build notification failed: ' + $_.Exception.Message) }"</PsNotifyCmd>
+      <PsNotifyCmd>powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "try { $p = New-Object System.IO.Pipes.NamedPipeClientStream('.', '$(RcaCommandPipeName)', [System.IO.Pipes.PipeDirection]::InOut); $p.Connect(300); $sw = New-Object System.IO.StreamWriter($p); $sw.AutoFlush = $true; $sr = New-Object System.IO.StreamReader($p); $msg = '{\"Command\":\"BUILD_COMPLETED\",\"Payload\":\"\"}'; $sw.WriteLine($msg); $resp = $sr.ReadLine(); Write-Host 'Build notification response:' $resp; $p.Close() } catch { Write-Warning ('Build notification failed: ' + $_.Exception.Message) }"</PsNotifyCmd>
     </PropertyGroup>
     <Message Text="Notifying Revit addin about completed build" Importance="High" />
     <Exec Command="$(PsNotifyCmd)" IgnoreExitCode="true" />
