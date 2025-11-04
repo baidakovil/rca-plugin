@@ -12,6 +12,10 @@
     <!-- Assembly filter for AltCover instrumentation -->
     <!-- Only instrument assemblies matching this pattern -->
     <RcaCoverageAssemblyFilter Condition="'$(RcaCoverageAssemblyFilter)' == ''">Rca.*.dll</RcaCoverageAssemblyFilter>
+    <!-- Directory that contains Metrics.exe and its dependencies. -->
+    <RoslynMetricsToolDir Condition="'$(RoslynMetricsToolDir)' == ''">$(SolutionDir)build\Resources\Metrics\win-arm64</RoslynMetricsToolDir>
+    <!-- Full path to Metrics.exe. -->
+    <RoslynMetricsToolExe Condition="'$(RoslynMetricsToolExe)' == ''">$(RoslynMetricsToolDir)\Metrics.exe</RoslynMetricsToolExe>
   </PropertyGroup>
 
   <ItemGroup>

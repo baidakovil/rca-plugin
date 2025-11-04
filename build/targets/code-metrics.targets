@@ -26,8 +26,13 @@
   '$(MSBuildProjectName)' != 'Rca.BuildMetadata.Generator' and
   '$(MSBuildProjectName)' != 'SourceHashGenerator' and
   '$(MSBuildProjectName)' != 'Rca.TestAdapter' and
+  '$(MSBuildProjectName)' != 'RoslynMetrics' and
   '$(RoslynMetricsEnabled)' == 'true'">
-    <Exec Command="dotnet msbuild $(MSBuildProjectFullPath) /t:Metrics /p:MetricsOutputFile=$(MetricsOutputFile)" />
+    <Error Text="Metrics tool not found at '$(RoslynMetricsToolExe)'." Condition="!Exists('$(RoslynMetricsToolExe)')" />
+    <Message Text="Running Roslyn code metrics for $(MSBuildProjectName)" Importance="Low" />
+    <Exec Command="&quot;$(RoslynMetricsToolExe)&quot; /project:&quot;$(MSBuildProjectFullPath)&quot; /out:&quot;$(MetricsOutputFile)&quot; /quiet"
+          WorkingDirectory="$(RoslynMetricsToolDir)"
+          IgnoreExitCode="false" />
   </Target>
 
 
