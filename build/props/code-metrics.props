@@ -4,11 +4,11 @@
   <PropertyGroup>
     <!-- Enable/disable code metrics collection -->
     <!-- Set to true to enable Roslyn metrics collection -->
-    <RoslynMetricsEnabled Condition="'$(RoslynMetricsEnabled)' == ''">false</RoslynMetricsEnabled>
+    <RoslynMetricsEnabled Condition="'$(RoslynMetricsEnabled)' == ''">true</RoslynMetricsEnabled>
     <!-- Set to true to enable Sarif metrics collection -->
     <SarifMetricsEnabled Condition="'$(SarifMetricsEnabled)' == ''">true</SarifMetricsEnabled>
     <!-- Set to true to enable AltCover metrics collection -->
-    <AltCoverEnabled Condition="'$(AltCoverEnabled)' == ''">false</AltCoverEnabled>
+    <AltCoverEnabled Condition="'$(AltCoverEnabled)' == ''">true</AltCoverEnabled>
     <!-- Assembly filter for AltCover instrumentation -->
     <!-- Only instrument assemblies matching this pattern -->
     <RcaCoverageAssemblyFilter Condition="'$(RcaCoverageAssemblyFilter)' == ''">Rca.*.dll</RcaCoverageAssemblyFilter>

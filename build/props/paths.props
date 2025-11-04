@@ -38,10 +38,6 @@
     <!-- Sarif Code Metrics -->
     <!-- Directory for Sarif output files -->
     <SarifOutputDir Condition="'$(SarifOutputDir)' == ''">$(RcaMetricsDir)\Sarif</SarifOutputDir>
-    <!-- Output file for Sarif (ErrorLog is a system property) -->
-    <!-- Must be set without condition so each project evaluates $(MSBuildProjectName) independently -->
-    <ErrorLog>$(SarifOutputDir)\$(MSBuildProjectName).sarif,version=2.1</ErrorLog>
-
 
     <!-- Generator project and executable paths -->
     <SourceHashProject>$(SolutionDir)src\Tools\SourceHashGenerator\SourceHashGenerator.csproj</SourceHashProject>
