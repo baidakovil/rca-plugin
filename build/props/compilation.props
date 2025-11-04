@@ -4,6 +4,8 @@
   <PropertyGroup>
     <!-- Ensure analyzers (source generators) run during build -->
     <RunAnalyzersDuringBuild Condition="'$(RunAnalyzersDuringBuild)' == ''">true</RunAnalyzersDuringBuild>
+    <RunAnalyzers Condition="'$(RunAnalyzers)' == ''">true</RunAnalyzers>
+    <EnforceCodeStyleInBuild Condition="'$(EnforceCodeStyleInBuild)' == ''">true</EnforceCodeStyleInBuild>
     <!-- Do not surface generator outputs as physical files under source tree to avoid duplicates -->
     <EmitCompilerGeneratedFiles Condition="'$(EmitCompilerGeneratedFiles)' == ''">false</EmitCompilerGeneratedFiles>
   </PropertyGroup>
