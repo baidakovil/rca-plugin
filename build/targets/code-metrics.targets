@@ -9,7 +9,7 @@
     </PropertyGroup>
   </Target>
 
-  <!-- Prepare metrics output directories before compilation -->
+  <!-- Ensure metrics directories exist before compilation -->
   <Target Name="PrepareMetricsDirectories" BeforeTargets="CoreCompile" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' != 'SourceHashGenerator'">
     <!-- Ensure Sarif directory exists for compiler-generated SARIF files -->
     <MakeDir Condition="'$(SarifMetricsEnabled)' == 'true'" Directories="$(SarifOutputDir)" />
@@ -116,13 +116,16 @@
     <Message Text="HTML coverage report generated in $(CoverageHtmlDir)" Importance="High" Condition="'$(CoverageFileCreated)' == 'true'" />
   </Target>
 
+  <!-- Generate consolidated metrics dashboard after all code was built and tests completed -->
   <Target Name="GenerateMetricsDashboard"
           AfterTargets="Build"
           Condition="'$(GenerateMetricsDashboard)' == 'true' and '$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.MetricsReporter.Tests'">
 
+    <!-- Collect every Roslyn code-metrics report that was produced during the build -->
     <ItemGroup>
       <RoslynMetricsFiles Include="$(RoslynOutputDir)\*.xml" />
       <SarifMetricsFiles Include="$(SarifOutputDir)\*.sarif" />
+      <!-- Force-build all projects that contribute metrics before we aggregate them -->
       <MetricsDashboardDependencies Include="
           $(SolutionDir)src\Rca.Loader\Rca.Loader.csproj;
           $(SolutionDir)src\Rca.Runtime\Rca.Runtime.csproj;
@@ -140,6 +143,7 @@
           $(SolutionDir)tests\Rca.Integration.Revit.Tests\Rca.Integration.Revit.Tests.csproj" />
     </ItemGroup>
 
+    <!-- Compose command-line arguments for the reporter (coverage, Roslyn, SARIF, baseline, thresholds) -->
     <PropertyGroup>
       <MetricsReporterAltCoverArg Condition="Exists('$(RcaCoverageOutputFile)')"> --altcover &quot;$(RcaCoverageOutputFile)&quot;</MetricsReporterAltCoverArg>
       <MetricsReporterRoslynArgs>@(RoslynMetricsFiles->' --roslyn &quot;%(FullPath)&quot;', ' ')</MetricsReporterRoslynArgs>
@@ -150,6 +154,7 @@
       <MetricsReporterCommand>&quot;$(MetricsReporterExe)&quot; --solution-name &quot;$(MetricsSolutionName)&quot; --metrics-dir &quot;$(RcaMetricsDir)&quot;$(MetricsReporterAltCoverArg)$(MetricsReporterRoslynArgs)$(MetricsReporterSarifArgs)$(MetricsReporterBaselineArg)$(MetricsReporterBaselineRefArg) --output-json &quot;$(MetricsReportJson)&quot; --output-html &quot;$(MetricsReportHtml)&quot;$(MetricsReporterThresholdArg)</MetricsReporterCommand>
     </PropertyGroup>
 
+    <!-- Ensure all metric-producing projects are up to date before running the aggregator -->
     <MSBuild Projects="@(MetricsDashboardDependencies)"
              Targets="Build"
              Properties="Configuration=$(Configuration)"

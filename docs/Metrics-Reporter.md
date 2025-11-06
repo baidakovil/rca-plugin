@@ -4,7 +4,7 @@ Metrics Reporter — консольное приложение .NET 8, объе�
 
 ### Основные артефакты
 - `metrics-report.json` — иерархическая модель Solution → Assembly → Namespace → Type → Member с 12 единообразными метриками.
-- `metrics-baseline.json` — предыдущий снепшот, служащий источником дельт и DEPRECATED/NEW пометок.
+- `metrics-baseline.json` — предыдущий снепшот, служащий источником дельт и пометок `NEW`.
 - `metrics-report.html` — визуализация фактических значений и дельт.
 
 ### Источники данных
@@ -29,7 +29,7 @@ Metrics Reporter — консольное приложение .NET 8, объе�
         "name": "Rca.Loader",
         "kind": "Assembly",
         "fullyQualifiedName": "Rca.Loader",
-      "metrics": {
+        "metrics": {
           "AltCoverSequenceCoverage": { "value": 48.59, "delta": -1.41, "status": "Warning", "unit": "percent" },
           "RoslynMaintainabilityIndex": { "value": 81, "delta": 0, "status": "Success", "unit": "score" },
           "SarifCaRuleViolations": { "value": 12, "delta": 2, "status": "Warning", "unit": "count" }
@@ -80,21 +80,30 @@ Metrics Reporter — консольное приложение .NET 8, объе�
 - `kind` — тип узла (`Solution`, `Assembly`, `Namespace`, `Type`, `Member`), требуется для HTML-дрила.
 - `fullyQualifiedName` — FQN в формате `Namespace.Type.Member(args)`, пусто для Solution/Namespace когда неприменимо.
 - `metrics` — словарь по метрике (строковый идентификатор `MetricIdentifier`) и объекту значения:
-  - `value` (`number?`) — фактическое значение, `null` если данных нет.
-  - `delta` (`number?`) — отклонение от baseline, `null` если элемент новый или baseline отсутствует.
+  - `value` (`number?`) — фактическое значение, `null`, если данных нет.
+  - `delta` (`number?`) — отклонение от baseline, `null`, если элемент новый или baseline отсутствует.
   - `status` — результат сравнения с порогом (`NotApplicable`, `Success`, `Warning`, `Error`).
   - `unit` — `percent`, `count` или `score`, помогает HTML отформатировать значение.
-- `isNew` — пометка новых элементов, для HTML добавляется префикс `NEW` и дельты не рисуются.
-- `source` — сведения о файле/диапазоне строк, используются для сопоставления sarif и подсказок в отчёте.
+- `isNew` — пометка новых элементов, для HTML добавляется префикс `NEW`; дельты не отображаются.
+- `source` — сведения о файле/диапазоне строк, используются для сопоставления SARIF и подсказок в отчёте.
 
 ### JSON Schema
 - Файл `Model/metrics-report.schema.json` фиксирует обязательные поля и допустимые перечисления.
-- В DTO классы сериализуются `System.Text.Json` (кастомный `JsonNamingPolicy` camelCase).
+- DTO сериализуются через `System.Text.Json` (camelCase).
+
+### Автоматическая генерация через MSBuild
+- В `build/Targets/code-metrics.targets` добавлен таргет `GenerateMetricsDashboard`, который срабатывает после сборки проекта `Rca.MetricsReporter.Tests`.
+- Таргет:
+  - Строит набор проектов и тестов, чтобы гарантировать актуальные метрики (через `MSBuild` по списку зависимостей).
+  - Формирует аргументы (AltCover, все Roslyn XML, SARIF, baseline, пороги) с правильными разделителями.
+  - Вызывает `Rca.MetricsReporter.exe` из `src/Tools/Rca.MetricsReporter/bin/<Configuration>/net8.0`.
+  - Создает каталог отчётов (`$(MetricsDir)\Report`) и записывает JSON/HTML + лог.
+- Благодаря этому, после стандартного `dotnet build --no-incremental` в `build/Metrics/Report` автоматически появляются `metrics-report.json` и `metrics-report.html`.
 
 ### Дополнительно
 - Baseline хранится вручную, обновляется копированием свежего `metrics-report.json` поверх `metrics-baseline.json`.
-- Приложение логирует ход работы в `$(MetricsDir)\Report\metrics-reporter.log` и возвращает POSIX-коды (0 — Success, 1 — ParsingError, 2 — IoError, 3 — ValidationError).
-- Пороговые значения загружаются из `build/Props/code-metrics.props` и передаются в агрегатор через MSBuild property `MetricsThresholds`.
+- Приложение логирует шаги в `$(MetricsDir)\Report\metrics-reporter.log` и возвращает коды: 0 — OK, 1 — parsing error, 2 — IO error, 3 — validation error.
+- Пороговые значения задаются в `build/Props/code-metrics.props` (свойство `MetricsThresholds`) и передаются агрегатору.
 
 ### Запуск из командной строки
 Инструмент можно запустить вручную:
@@ -113,7 +122,7 @@ dotnet run --project src/Tools/Rca.MetricsReporter/Rca.MetricsReporter.csproj --
   --thresholds "{'AltCoverSequenceCoverage':{'warning':75,'error':60,'higherIsBetter':true}}"
 ```
 
-Параметры `--roslyn` и `--sarif` допускают множественные значения, `--thresholds` принимает JSON-строку (символ `'` автоматически преобразуется в `"`).
+Параметры `--roslyn` и `--sarif` допускают множественные значения; `--thresholds` принимает JSON-строку (символ `'` автоматически заменяется на `"`).
 
-Подробности реализации, CLI-параметры и интеграция с MSBuild описываются по мере развития инструмента.
+Информация о CLI и MSBuild обновляется по мере развития инструмента.
 
