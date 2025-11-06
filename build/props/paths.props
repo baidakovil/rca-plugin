@@ -12,6 +12,16 @@
     <!-- Directory for code metrics output files -->
     <RcaMetricsDir Condition="'$(RcaMetricsDir)' == ''">$(SolutionDir)build\Metrics</RcaMetricsDir>
 
+    <!-- Aggregated metrics report artifacts -->
+    <MetricsReportDir Condition="'$(MetricsReportDir)' == ''">$(RcaMetricsDir)\Report</MetricsReportDir>
+    <MetricsReportJson Condition="'$(MetricsReportJson)' == ''">$(MetricsReportDir)\metrics-report.json</MetricsReportJson>
+    <MetricsBaselineJson Condition="'$(MetricsBaselineJson)' == ''">$(MetricsReportDir)\metrics-baseline.json</MetricsBaselineJson>
+    <MetricsReportHtml Condition="'$(MetricsReportHtml)' == ''">$(MetricsReportDir)\metrics-report.html</MetricsReportHtml>
+    <MetricsSolutionName Condition="'$(MetricsSolutionName)' == ''">rca-plugin</MetricsSolutionName>
+    <MetricsReporterProject Condition="'$(MetricsReporterProject)' == ''">$(SolutionDir)src\Tools\Rca.MetricsReporter\Rca.MetricsReporter.csproj</MetricsReporterProject>
+    <MetricsReporterExe Condition="'$(MetricsReporterExe)' == ''">$(SolutionDir)src\Tools\Rca.MetricsReporter\bin\$(Configuration)\net8.0\Rca.MetricsReporter.exe</MetricsReporterExe>
+    <MetricsBaselineReference Condition="'$(MetricsBaselineReference)' == ''"></MetricsBaselineReference>
+
 
 
     <!-- Roslyn Code Metrics -->
@@ -54,6 +64,14 @@
     <CompilerVisibleProperty Include="RcaTestDeployRoot" />
     <CompilerVisibleProperty Include="RcaLogRoot" />
     <CompilerVisibleProperty Include="RcaMetricsDir" />
+    <CompilerVisibleProperty Include="MetricsReportDir" />
+    <CompilerVisibleProperty Include="MetricsReportJson" />
+    <CompilerVisibleProperty Include="MetricsBaselineJson" />
+    <CompilerVisibleProperty Include="MetricsReportHtml" />
+    <CompilerVisibleProperty Include="MetricsSolutionName" />
+    <CompilerVisibleProperty Include="MetricsReporterProject" />
+    <CompilerVisibleProperty Include="MetricsReporterExe" />
+    <CompilerVisibleProperty Include="MetricsBaselineReference" />
     <CompilerVisibleProperty Include="RcaCoverageOutputFile" />
     <CompilerVisibleProperty Include="RcaRevitLibsPath" />
     <CompilerVisibleProperty Include="RcaAddinTemplatePath" />

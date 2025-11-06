@@ -16,12 +16,20 @@
     <RoslynMetricsToolDir Condition="'$(RoslynMetricsToolDir)' == ''">$(SolutionDir)build\Resources\Metrics\win-arm64</RoslynMetricsToolDir>
     <!-- Full path to Metrics.exe. -->
     <RoslynMetricsToolExe Condition="'$(RoslynMetricsToolExe)' == ''">$(RoslynMetricsToolDir)\Metrics.exe</RoslynMetricsToolExe>
+
+    <!-- JSON string with metric thresholds (passed to metrics reporter). -->
+    <MetricsThresholds Condition="'$(MetricsThresholds)' == ''">{'AltCoverSequenceCoverage':{'warning':75,'error':60,'higherIsBetter':true},'AltCoverBranchCoverage':{'warning':70,'error':55,'higherIsBetter':true},'AltCoverCyclomaticComplexity':{'warning':15,'error':30,'higherIsBetter':false},'AltCoverNPathComplexity':{'warning':200,'error':400,'higherIsBetter':false},'RoslynMaintainabilityIndex':{'warning':65,'error':40,'higherIsBetter':true},'RoslynCyclomaticComplexity':{'warning':12,'error':25,'higherIsBetter':false},'RoslynClassCoupling':{'warning':50,'error':80,'higherIsBetter':false},'RoslynDepthOfInheritance':{'warning':5,'error':8,'higherIsBetter':false},'RoslynSourceLines':{'higherIsBetter':false},'RoslynExecutableLines':{'higherIsBetter':false},'SarifCaRuleViolations':{'warning':5,'error':10,'higherIsBetter':false},'SarifIdeRuleViolations':{'warning':10,'error':20,'higherIsBetter':false}}</MetricsThresholds>
+
+    <!-- Toggle metrics dashboard generation -->
+    <GenerateMetricsDashboard Condition="'$(GenerateMetricsDashboard)' == ''">true</GenerateMetricsDashboard>
   </PropertyGroup>
 
   <ItemGroup>
     <CompilerVisibleProperty Include="RoslynMetricsEnabled" />
     <CompilerVisibleProperty Include="SarifMetricsEnabled" />
     <CompilerVisibleProperty Include="AltCoverEnabled" />
+    <CompilerVisibleProperty Include="MetricsThresholds" />
+    <CompilerVisibleProperty Include="GenerateMetricsDashboard" />
   </ItemGroup>
 </Project>
 

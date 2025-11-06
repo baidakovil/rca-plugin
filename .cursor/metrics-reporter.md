@@ -3,131 +3,54 @@
 
 ## Цель
 Сделать легковесный локальный HTML-дашборд, который агрегирует три источника метрик, строит сравнение с baseline предыдущего состояния и не требует серверной инфраструктуры или сложной поддержки.  
-Идея: 
+
+#### Основной workflow
+
 1. взять метрики с трех источников (xml, xml, json) и спарсить их в единый `metrics-report.json` файл с помощью консольного приложения 
 2. взять единый json из предыдущего состояния проекта (в дальнейшем он называется `metrics-baseline.json`, необходим для анализа изменений в метриках, baseline сохраняется вручную)
 3. сгенерировать html-файл для human-readable анализа на основе `metrics-report.json` и `metrics-baseline.json`.
 
-####
+#### Схема единого json/нормализации
 
-В коде определены следующие уровни, для каждого из которых рассчитывается свое значение метрики:  
+Схема единого json будет иерархической: корневой объект "solution", внутри которого - массив “assemblies”, где каждый assembly содержит “namespaces”, “types” и “members” как объекты с вложенными метриками и нарушениями. Для идентификации элементов кода применяй Fully Qualified Name (FQN) в формате “Namespace.Type.Member(Parameters)” для методов и других members и “Namespace.Type" для классов и других типов, извлекая из Roslyn/OpenCover (Name/FullName атрибуты), для SARIF сопоставляй по file URI + line number к ближайшему методу.
 
-# УТОЧНИТЬ!!!
+Формальную схему json разработай самостоятельно. Migration политики для схемы не требуется, tooling не требуется, следует сохранить минимум диагностических полей (желательно обойтись только одним полем - датой создания файла). Соблюдай максимальную простоту схемы, которая позволяет исполнить указанные в этом документе требования.
 
-- Solution
-- Assembly
-- Namespace
-- Class
-- Method. 
+Каждая метрика имеет только один источник, т.е. приоритета метрик по источникам нет и не может быть.
 
-Если для какого-то уровня метрика не определена, в отчете на этом месте будет прочерк: "-".
+- В узлах метрик располагаются метрики, описанные ниже в Источниках, всего 12 метрик в каждом узле 
+- Если для какого-то уровня данная метрика не определена, в отчете на этом месте будет прочерк: "-". Автоматической аггрегации метрик (суммирование, усреднение, взятие max() и т.п. не требуется. Просто прочерк.
+- В едином json будет более общая модель с type/member вместо модели class/method из opencover. При импорте покрытия просто маппить “Class → Type” и “Method → Member”, учитывая, что геттеры/сеттеры отмечаются флагами и выглядят как методы, что безболезненно вписывается в “member”.
+- При сопоставлении номера строки с FQN при парсинге sarif, для каждого violation ищи method с overlapping line range в том же файле. Для этого не нужно сканировать файлы на диске, но нужно составлять индекс: 
+  1. Нормализуй пути: преобразуй SARIF artifactLocation.uri в локальный путь и сведи к регистронезависимому виду Windows, чтобы совпали с FileRef/fullPath из coverage.xml и File в metrics XML . 
+  2. Построй индекс на сбор: для каждого файла собери список интервалов методов (members) startLine, endLine из coverage.xml; если для member нет sequence points, добавь интервал по CodeMetrics как Line, nextLine-1 в резервном порядке . 
+  3. Отсортируй интервалы по startLine и сделай бинарный поиск по startLine с проверкой попадания в endLine; это даёт  на поиск и  памяти на файл, где N — число members в файле 
+  4. Если несколько интервалов покрывают одну строку (например, async MoveNext или локальные функции), выбирай интервал с минимальной длиной, чтобы предпочесть наиболее “глубокий” member .
+	5. При отсутствии совпадения поднимай диагностику на уровень типа/файла, чтобы не терять событие в отчёте, а member оставить пустым идентификатором. явную политику определи самостоятельно.
+
+
 
 #### Источник 1 (покрытие)
 
 AltCover выводит покрытие в формате OpenCover XML. 
 Отсюда в JSON и HTML нужно выводить:
-- Cyclomatic Complexity AltCover (пометить отдельно "AltCover", чтобы не путать с Cyclomatic Complexity от Roslyn. Нужно иметь обе метрики и в JSON и в HTML, даже если они дают одинаковое значение)
+- Cyclomatic Complexity AltCover (пометить отдельно "AltCover", чтобы не путать с Cyclomatic Complexity от Roslyn. Нужно иметь обе метрики и в JSON и в HTML, интерпретировать их как две различные метрики с различными названиями)
 - NPath Complexity  
 - Sequence Coverage  
 - Branch Coverage  
-
-
-Пример xml (начало файла): 
-```xml
-<?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<CoverageSession xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <Summary numSequencePoints="2616" visitedSequencePoints="1271" numBranchPoints="834" visitedBranchPoints="334" sequenceCoverage="48.59" branchCoverage="40.05" maxCyclomaticComplexity="37" minCyclomaticComplexity="1" visitedClasses="57" numClasses="71" visitedMethods="161" numMethods="232" minCrapScore="1" maxCrapScore="462" />
-  <Modules>
-    <Module hash="7A-3D-D3-85-74-04-6D-5B-97-BA-60-4E-7D-DB-0C-F5-55-72-C3-F3">
-      <Summary numSequencePoints="2582" visitedSequencePoints="1250" numBranchPoints="824" visitedBranchPoints="330" sequenceCoverage="48.41" branchCoverage="40.05" maxCyclomaticComplexity="37" minCyclomaticComplexity="1" visitedClasses="55" numClasses="69" visitedMethods="157" numMethods="226" minCrapScore="1" maxCrapScore="462" />
-      <ModulePath>C:\Users\baidakov\AppData\Roaming\Autodesk\Revit\Addins\2026\20251105_001521\__Saved\Rca.Loader.dll</ModulePath>
-      <ModuleTime>2025-11-04T21:16:00.4319617Z</ModuleTime>
-      <ModuleName>Rca.Loader</ModuleName>
-      <Files>
-        <File uid="3" fullPath="C:\Users\baidakov\rca-plugin\src\Rca.Loader\LoaderApp.cs" />
-        <File uid="4" fullPath="C:\Users\baidakov\rca-plugin\src\Rca.Loader\UI\DockablePanelHost.cs" />
-        ...
-      </Files>
-      <Classes>
-        <Class>
-          <Summary numSequencePoints="201" visitedSequencePoints="112" numBranchPoints="51" visitedBranchPoints="23" sequenceCoverage="55.72" branchCoverage="45.1" maxCyclomaticComplexity="9" minCyclomaticComplexity="1" visitedClasses="1" numClasses="1" visitedMethods="11" numMethods="13" minCrapScore="1" maxCrapScore="20" />
-          <FullName>Rca.Loader.LoaderApp</FullName>
-          <Methods>
-            <Method visited="true" cyclomaticComplexity="1" nPathComplexity="0" sequenceCoverage="100" branchCoverage="0" isConstructor="false" isStatic="false" isGetter="true" isSetter="false" crapScore="1">
-              <Summary numSequencePoints="1" visitedSequencePoints="1" numBranchPoints="1" visitedBranchPoints="0" sequenceCoverage="100" branchCoverage="0" maxCyclomaticComplexity="1" minCyclomaticComplexity="1" visitedClasses="0" numClasses="0" visitedMethods="1" numMethods="1" minCrapScore="1" maxCrapScore="1" />
-              <MetadataToken>100663298</MetadataToken>
-              <Name>Rca.Loader.AssemblyManagement.AssemblyStatusManager Rca.Loader.LoaderApp::get_AssemblyStatusManager()</Name>
-              <FileRef uid="3" />
-              <SequencePoints>
-                <SequencePoint vc="1" uspid="0" ordinal="0" offset="0" sl="48" sc="64" el="48" ec="85" bec="0" bev="0" fileid="3" />
-              </SequencePoints>
-              <BranchPoints />
-              <MethodPoint xsi:type="SequencePoint" vc="1" uspid="0" ordinal="0" offset="0" sl="48" sc="64" el="48" ec="85" bec="0" bev="0" fileid="3" />
-            </Method>
-            <Method visited="true" cyclomaticComplexity="1" nPathComplexity="0" sequenceCoverage="100" branchCoverage="0" isConstructor="false" isStatic="false" isGetter="true" isSetter="false" crapScore="1">
-              <Summary numSequencePoints="1" visitedSequencePoints="1" numBranchPoints="1" visitedBranchPoints="0" sequenceCoverage="100" branchCoverage="0" maxCyclomaticComplexity="1" minCyclomaticComplexity="1" visitedClasses="0" numClasses="0" visitedMethods="1" numMethods="1" minCrapScore="1" maxCrapScore="1" />
-              <MetadataToken>100663301</MetadataToken>
-              <Name>Autodesk.Revit.UI.UIApplication Rca.Loader.LoaderApp::get_UIApplication()</Name>
-              <FileRef uid="3" />
-              <SequencePoints>
-                <SequencePoint vc="1" uspid="1" ordinal="0" offset="0" sl="59" sc="48" el="59" ec="53" bec="0" bev="0" fileid="3" />
-              </SequencePoints>
-              <BranchPoints />
-              <MethodPoint xsi:type="SequencePoint" vc="1" uspid="1" ordinal="0" offset="0" sl="59" sc="48" el="59" ec="53" bec="0" bev="0" fileid="3" />
-            </Method>
-```
 
 Фактическая схема может отличаться от примера, поэтому изучай реальные файлы после написания первых примеров для отладки парсинга. Адрес реального файла для отладки консольного приложения: `$(SolutionDir)build\Metrics\AltCover\coverage.xml`.
 
 #### Источник 2 (кодовые метрики)
 Microsoft.CodeAnalysis.Metrics выдает следующие метрики:
 - Maintainability Index  
-- Cyclomatic Complexity   (пометить отдельно "Roslyn", чтобы не путать с Cyclomatic Complexity от AltCover. Нужно иметь обе метрики и в JSON и в HTML, даже если они дают одинаковое значение)
+- Cyclomatic Complexity   (пометить отдельно "Roslyn", чтобы не путать с Cyclomatic Complexity от AltCover. Нужно иметь обе метрики и в JSON и в HTML, интерпретировать их как две различные метрики с различными названиями)
 - Class Coupling  
 - Depth Of Inheritance  
 - Source Lines  
 - Executable Lines.
 
-Адрес файла для отладки консольного приложения: `$(SolutionDir)\build\Metrics\Roslyn\Rca.Loader.xml`
-
-Пример xml (начало):
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<CodeMetricsReport Version="1.0">
-  <Targets>
-    <Target Name="Rca.Loader.csproj">
-      <Assembly Name="Rca.Loader, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
-        <Metrics>
-          <Metric Name="MaintainabilityIndex" Value="81" />
-          <Metric Name="CyclomaticComplexity" Value="748" />
-          <Metric Name="ClassCoupling" Value="204" />
-          <Metric Name="DepthOfInheritance" Value="9" />
-          <Metric Name="SourceLines" Value="4246" />
-          <Metric Name="ExecutableLines" Value="1506" />
-        </Metrics>
-        <Namespaces>
-          <Namespace Name="Rca.Loader">
-            <Metrics>
-              <Metric Name="MaintainabilityIndex" Value="66" />
-              <Metric Name="CyclomaticComplexity" Value="48" />
-              <Metric Name="ClassCoupling" Value="40" />
-              <Metric Name="DepthOfInheritance" Value="1" />
-              <Metric Name="SourceLines" Value="0" />
-              <Metric Name="ExecutableLines" Value="111" />
-            </Metrics>
-            <Types>
-              <NamedType Name="LoaderApp">
-                  <Field Name="AssemblyStatusManager? LoaderApp.assemblyStatusManager" File="C:\Users\baidakov\rca-plugin\src\Rca.Loader\LoaderApp.cs" Line="27">
-                    <Metrics>
-                      <Metric Name="MaintainabilityIndex" Value="100" />
-                      <Metric Name="CyclomaticComplexity" Value="0" />
-                      <Metric Name="ClassCoupling" Value="1" />
-                      <Metric Name="SourceLines" Value="1" />
-                      <Metric Name="ExecutableLines" Value="0" />
-                    </Metrics>
-```
-
-Поля внутри xml могут также уходить дальше вглубь через `<Accessors><Method Name="..."><Metrics><Metric Name="..." Value="..." />`, поэтому изучай фактический файл и его схему. 
+Адрес файла для отладки консольного приложения: `$(SolutionDir)\build\Metrics\Roslyn\Rca.Loader.xml` 
 
 #### Источник 3 (нарушения)
 SARIF 2.x файл со списком rule violations (performance/security/quality), который должен быть агрегирован и показан с группировкой по проекту/файлу/символу. Адрес файла для отладки консольного оприложения: `$(SolutionDir)build\Metrics\Sarif\Rca.Loader.sarif`
@@ -141,7 +64,7 @@ IDE rules Violation.
 
 ## Консольный агрегатор
 Небольшое .NET 8 консольное приложение, принимающее:
-- три пути к исходным данным, т.е. OpenCover XML, SARIF, metrics-JSON/CSV,
+- три пути к исходным данным, т.е. OpenCover XML, SARIF, Roslyn XML,
 - путь к output json, 
 - путь к baseline JSON,
 - путь к  и ouput HTML.
@@ -177,9 +100,11 @@ IDE rules Violation.
 
 
 #### Изменения в коде
-При появлении в коде новых методов (например, при написании новых, или при переименовании), агрегатор должен отреагировать нормально, пометив изменения текстом "NEW" рядом с основным значением метрики, но более мелким шрифтом зеленого цвета, как индекс в верхнем регистре. 
+При появлении в коде новых members (например, при написании новых, или при переименовании), агрегатор должен отреагировать нормально, пометив изменения текстом "NEW" рядом с основным значением метрики, но более мелким шрифтом зеленого цвета, как индекс в верхнем регистре. 
 
-При пропадании методов, (например, при удалении, или при переименовании), агрегатор не должен отображать их в отчете (даже если обнаружит их в baseline файле).
+При пропадании members, (например, при удалении, или при переименовании), агрегатор не должен отображать их в отчете (даже если обнаружит их в baseline файле).
+
+Для перемещённых/переименованных методов delta не рассчитывается.
 
 #### Отсутствие входных данных
 

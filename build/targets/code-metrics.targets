@@ -116,5 +116,31 @@
     <Message Text="HTML coverage report generated in $(CoverageHtmlDir)" Importance="High" Condition="'$(CoverageFileCreated)' == 'true'" />
   </Target>
 
+
+  <Target Name="GenerateMetricsDashboard"
+          AfterTargets="Build"
+          Condition="'$(GenerateMetricsDashboard)' == 'true' and '$(MSBuildProjectExtension)' == '.sln' and Exists('$(MetricsReporterExe)')">
+
+    <ItemGroup>
+      <RoslynMetricsFiles Include="$(RoslynOutputDir)\*.xml" />
+      <SarifMetricsFiles Include="$(SarifOutputDir)\*.sarif" />
+    </ItemGroup>
+
+    <PropertyGroup>
+      <MetricsReporterAltCoverArg Condition="Exists('$(RcaCoverageOutputFile)')"> --altcover &quot;$(RcaCoverageOutputFile)&quot;</MetricsReporterAltCoverArg>
+      <MetricsReporterRoslynArgs>@(RoslynMetricsFiles->' --roslyn &quot;%(FullPath)&quot;')</MetricsReporterRoslynArgs>
+      <MetricsReporterSarifArgs>@(SarifMetricsFiles->' --sarif &quot;%(FullPath)&quot;')</MetricsReporterSarifArgs>
+      <MetricsReporterBaselineArg> --baseline &quot;$(MetricsBaselineJson)&quot;</MetricsReporterBaselineArg>
+      <MetricsReporterBaselineRefArg Condition="'$(MetricsBaselineReference)' != ''"> --baseline-ref &quot;$(MetricsBaselineReference)&quot;</MetricsReporterBaselineRefArg>
+      <MetricsReporterThresholdArg> --thresholds &quot;$(MetricsThresholds)&quot;</MetricsReporterThresholdArg>
+      <MetricsReporterCommand>&quot;$(MetricsReporterExe)&quot; --solution-name &quot;$(MetricsSolutionName)&quot; --metrics-dir &quot;$(RcaMetricsDir)&quot;$(MetricsReporterAltCoverArg)$(MetricsReporterRoslynArgs)$(MetricsReporterSarifArgs)$(MetricsReporterBaselineArg)$(MetricsReporterBaselineRefArg) --output-json &quot;$(MetricsReportJson)&quot; --output-html &quot;$(MetricsReportHtml)&quot;$(MetricsReporterThresholdArg)</MetricsReporterCommand>
+    </PropertyGroup>
+
+    <Message Text="Generating metrics dashboard." Importance="High" />
+    <Exec Command="$(MetricsReporterCommand)"
+          WorkingDirectory="$(SolutionDir)"
+          IgnoreExitCode="false" />
+  </Target>
+
 </Project>
 
