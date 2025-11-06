@@ -116,31 +116,51 @@
     <Message Text="HTML coverage report generated in $(CoverageHtmlDir)" Importance="High" Condition="'$(CoverageFileCreated)' == 'true'" />
   </Target>
 
-
   <Target Name="GenerateMetricsDashboard"
           AfterTargets="Build"
-          Condition="'$(GenerateMetricsDashboard)' == 'true' and '$(MSBuildProjectExtension)' == '.sln' and Exists('$(MetricsReporterExe)')">
+          Condition="'$(GenerateMetricsDashboard)' == 'true' and '$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.MetricsReporter.Tests'">
 
     <ItemGroup>
       <RoslynMetricsFiles Include="$(RoslynOutputDir)\*.xml" />
       <SarifMetricsFiles Include="$(SarifOutputDir)\*.sarif" />
+      <MetricsDashboardDependencies Include="
+          $(SolutionDir)src\Rca.Loader\Rca.Loader.csproj;
+          $(SolutionDir)src\Rca.Runtime\Rca.Runtime.csproj;
+          $(SolutionDir)src\Rca.Core\Rca.Core.csproj;
+          $(SolutionDir)src\Rca.UI\Rca.UI.csproj;
+          $(SolutionDir)src\Rca.Contracts\Rca.Contracts.csproj;
+          $(SolutionDir)src\Rca.Loader.Contracts\Rca.Loader.Contracts.csproj;
+          $(SolutionDir)src\Rca.Logging.Contracts\Rca.Logging.Contracts.csproj;
+          $(SolutionDir)src\Rca.Network\Rca.Network.csproj;
+          $(SolutionDir)tests\Rca.Loader.Tests\Rca.Loader.Tests.csproj;
+          $(SolutionDir)tests\Rca.Core.Tests\Rca.Core.Tests.csproj;
+          $(SolutionDir)tests\Rca.Network.Tests\Rca.Network.Tests.csproj;
+          $(SolutionDir)tests\Rca.UI.Tests\Rca.UI.Tests.csproj;
+          $(SolutionDir)tests\Rca.Contracts.Tests\Rca.Contracts.Tests.csproj;
+          $(SolutionDir)tests\Rca.Integration.Revit.Tests\Rca.Integration.Revit.Tests.csproj" />
     </ItemGroup>
 
     <PropertyGroup>
       <MetricsReporterAltCoverArg Condition="Exists('$(RcaCoverageOutputFile)')"> --altcover &quot;$(RcaCoverageOutputFile)&quot;</MetricsReporterAltCoverArg>
-      <MetricsReporterRoslynArgs>@(RoslynMetricsFiles->' --roslyn &quot;%(FullPath)&quot;')</MetricsReporterRoslynArgs>
-      <MetricsReporterSarifArgs>@(SarifMetricsFiles->' --sarif &quot;%(FullPath)&quot;')</MetricsReporterSarifArgs>
+      <MetricsReporterRoslynArgs>@(RoslynMetricsFiles->' --roslyn &quot;%(FullPath)&quot;', ' ')</MetricsReporterRoslynArgs>
+      <MetricsReporterSarifArgs>@(SarifMetricsFiles->' --sarif &quot;%(FullPath)&quot;', ' ')</MetricsReporterSarifArgs>
       <MetricsReporterBaselineArg> --baseline &quot;$(MetricsBaselineJson)&quot;</MetricsReporterBaselineArg>
       <MetricsReporterBaselineRefArg Condition="'$(MetricsBaselineReference)' != ''"> --baseline-ref &quot;$(MetricsBaselineReference)&quot;</MetricsReporterBaselineRefArg>
       <MetricsReporterThresholdArg> --thresholds &quot;$(MetricsThresholds)&quot;</MetricsReporterThresholdArg>
       <MetricsReporterCommand>&quot;$(MetricsReporterExe)&quot; --solution-name &quot;$(MetricsSolutionName)&quot; --metrics-dir &quot;$(RcaMetricsDir)&quot;$(MetricsReporterAltCoverArg)$(MetricsReporterRoslynArgs)$(MetricsReporterSarifArgs)$(MetricsReporterBaselineArg)$(MetricsReporterBaselineRefArg) --output-json &quot;$(MetricsReportJson)&quot; --output-html &quot;$(MetricsReportHtml)&quot;$(MetricsReporterThresholdArg)</MetricsReporterCommand>
     </PropertyGroup>
 
-    <Message Text="Generating metrics dashboard." Importance="High" />
+    <MSBuild Projects="@(MetricsDashboardDependencies)"
+             Targets="Build"
+             Properties="Configuration=$(Configuration)"
+             Condition="'@(MetricsDashboardDependencies)' != ''" />
+
+    <Message Text="Generating metrics dashboard (Rca.MetricsReporter.Tests)." Importance="High" Condition="Exists('$(MetricsReporterExe)')" />
+    <MakeDir Directories="$(MetricsReportDir)" />
     <Exec Command="$(MetricsReporterCommand)"
           WorkingDirectory="$(SolutionDir)"
-          IgnoreExitCode="false" />
+          IgnoreExitCode="false"
+          Condition="Exists('$(MetricsReporterExe)')" />
   </Target>
-
 </Project>
 
