@@ -6,7 +6,7 @@ using System.IO;
 using System.Text;
 
 /// <summary>
-/// Простейший файловый логгер для агрегатора метрик.
+/// Minimal file logger used by the metrics aggregator.
 /// </summary>
 public sealed class FileLogger : IDisposable
 {
@@ -14,9 +14,9 @@ public sealed class FileLogger : IDisposable
     private readonly object _syncRoot = new();
 
     /// <summary>
-    /// Создаёт новый экземпляр <see cref="FileLogger"/>.
+    /// Initialises a new instance of <see cref="FileLogger"/>.
     /// </summary>
-    /// <param name="logFilePath">Путь к лог-файлу.</param>
+    /// <param name="logFilePath">Destination log file path.</param>
     public FileLogger(string logFilePath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(logFilePath);
@@ -34,13 +34,13 @@ public sealed class FileLogger : IDisposable
     }
 
     /// <summary>
-    /// Записывает информационное сообщение.
+    /// Writes an informational message.
     /// </summary>
     public void LogInformation(string message)
         => WriteLine("INFO", message);
 
     /// <summary>
-    /// Записывает сообщение об ошибке.
+    /// Writes an error message optionally accompanied by an exception.
     /// </summary>
     public void LogError(string message, Exception? exception = null)
     {

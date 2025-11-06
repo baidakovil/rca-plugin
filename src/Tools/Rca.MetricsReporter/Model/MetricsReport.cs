@@ -1,17 +1,17 @@
 namespace Rca.Tools.MetricsReporter.Model;
 
 /// <summary>
-/// Корневой объект сериализации отчёта.
+/// Root serialisable type produced by the reporter.
 /// </summary>
 public sealed class MetricsReport
 {
     /// <summary>
-    /// Метаданные, описывающие генерацию отчёта.
+    /// Metadata describing the report generation.
     /// </summary>
     public ReportMetadata Metadata { get; init; } = new();
 
     /// <summary>
-    /// Корневой узел solution с иерархией метрик.
+    /// Solution-level node that contains the full metrics hierarchy.
     /// </summary>
     public SolutionMetricsNode Solution { get; init; } = new();
 }

@@ -1,12 +1,12 @@
 namespace Rca.Tools.MetricsReporter.Model;
 
 /// <summary>
-/// Узел уровня члена типа.
+/// Represents a member-level node.
 /// </summary>
 public sealed class MemberMetricsNode : MetricsNode
 {
     /// <summary>
-    /// Создаёт узел члена типа.
+    /// Initialises a member node.
     /// </summary>
     public MemberMetricsNode()
         => Kind = CodeElementKind.Member;

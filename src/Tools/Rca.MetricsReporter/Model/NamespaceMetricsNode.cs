@@ -3,18 +3,18 @@ namespace Rca.Tools.MetricsReporter.Model;
 using System.Collections.Generic;
 
 /// <summary>
-/// Узел уровня пространства имён.
+/// Represents a namespace-level node.
 /// </summary>
 public sealed class NamespaceMetricsNode : MetricsNode
 {
     /// <summary>
-    /// Инициализирует узел пространства имён.
+    /// Initialises a namespace node.
     /// </summary>
     public NamespaceMetricsNode()
         => Kind = CodeElementKind.Namespace;
 
     /// <summary>
-    /// Коллекция типов внутри пространства имён.
+    /// Collection of types that belong to the namespace.
     /// </summary>
     public IList<TypeMetricsNode> Types { get; init; }
         = new List<TypeMetricsNode>();

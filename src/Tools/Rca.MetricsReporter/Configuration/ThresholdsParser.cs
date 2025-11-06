@@ -7,15 +7,15 @@ using Rca.Tools.MetricsReporter.Model;
 using Rca.Tools.MetricsReporter.Serialization;
 
 /// <summary>
-/// Преобразует строковое представление порогов в словарь <see cref="MetricThreshold"/>.
+/// Converts a thresholds JSON payload into a <see cref="MetricThreshold"/> dictionary.
 /// </summary>
 public sealed class ThresholdsParser
 {
     /// <summary>
-    /// Разбирает строку с порогами и возвращает словарь пороговых значений.
+    /// Parses the JSON payload and returns a metric threshold dictionary.
     /// </summary>
-    /// <param name="input">Строка с порогами в формате JSON. Может быть <see langword="null"/>.</param>
-    /// <returns>Словарь порогов.</returns>
+    /// <param name="input">JSON payload with thresholds. May be <see langword="null"/>.</param>
+    /// <returns>Dictionary with threshold definitions.</returns>
     public IDictionary<MetricIdentifier, MetricThreshold> Parse(string? input)
     {
         var thresholds = CreateDefaults();

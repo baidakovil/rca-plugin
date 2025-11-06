@@ -11,7 +11,7 @@ using System.Xml.Linq;
 using Rca.Tools.MetricsReporter.Model;
 
 /// <summary>
-/// Парсер отчётов AltCover/OpenCover.
+/// Parses AltCover/OpenCover XML reports.
 /// </summary>
 public sealed class AltCoverMetricsParser : IMetricsSourceParser
 {
@@ -170,7 +170,7 @@ public sealed class AltCoverMetricsParser : IMetricsSourceParser
             return fullName;
         }
 
-        // AltCover форматирует nested types как Namespace.Type/Nested
+        // AltCover uses Namespace.Type/Nested to describe nested types.
         return fullName.Replace('/', '+');
     }
 

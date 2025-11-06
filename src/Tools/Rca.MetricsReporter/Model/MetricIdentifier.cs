@@ -3,68 +3,68 @@ namespace Rca.Tools.MetricsReporter.Model;
 using System.Text.Json.Serialization;
 
 /// <summary>
-/// Enumerates all метрики, поддерживаемые единым отчётом.
+/// Enumerates all metric identifiers supported by the consolidated report.
 /// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum MetricIdentifier
 {
     /// <summary>
-    /// Процент покрытых последовательностей AltCover (Sequence Coverage, %).
+    /// AltCover sequence coverage percentage.
     /// </summary>
     AltCoverSequenceCoverage,
 
     /// <summary>
-    /// Процент покрытых веток AltCover (Branch Coverage, %).
+    /// AltCover branch coverage percentage.
     /// </summary>
     AltCoverBranchCoverage,
 
     /// <summary>
-    /// Цикломатическая сложность из AltCover/OpenCover (Cyclomatic Complexity AltCover).
+    /// AltCover/OpenCover cyclomatic complexity.
     /// </summary>
     AltCoverCyclomaticComplexity,
 
     /// <summary>
-    /// NPath-сложность из AltCover/OpenCover.
+    /// AltCover/OpenCover NPath complexity.
     /// </summary>
     AltCoverNPathComplexity,
 
     /// <summary>
-    /// Индекс сопровождаемости Microsoft.CodeAnalysis.Metrics.
+    /// Maintainability index reported by Microsoft.CodeAnalysis.Metrics.
     /// </summary>
     RoslynMaintainabilityIndex,
 
     /// <summary>
-    /// Цикломатическая сложность Microsoft.CodeAnalysis.Metrics.
+    /// Cyclomatic complexity reported by Microsoft.CodeAnalysis.Metrics.
     /// </summary>
     RoslynCyclomaticComplexity,
 
     /// <summary>
-    /// Coupling между классами Microsoft.CodeAnalysis.Metrics.
+    /// Class coupling reported by Microsoft.CodeAnalysis.Metrics.
     /// </summary>
     RoslynClassCoupling,
 
     /// <summary>
-    /// Глубина наследования Microsoft.CodeAnalysis.Metrics.
+    /// Depth of inheritance reported by Microsoft.CodeAnalysis.Metrics.
     /// </summary>
     RoslynDepthOfInheritance,
 
     /// <summary>
-    /// Количество исходных строк кода (Source Lines).
+    /// Source lines of code reported by Microsoft.CodeAnalysis.Metrics.
     /// </summary>
     RoslynSourceLines,
 
     /// <summary>
-    /// Количество исполняемых строк кода (Executable Lines).
+    /// Executable lines of code reported by Microsoft.CodeAnalysis.Metrics.
     /// </summary>
     RoslynExecutableLines,
 
     /// <summary>
-    /// Количество нарушений правил вида CAxxxx, полученных из SARIF.
+    /// Count of analyzer violations that start with the CA prefix (SARIF).
     /// </summary>
     SarifCaRuleViolations,
 
     /// <summary>
-    /// Количество нарушений правил вида IDExxxx, полученных из SARIF.
+    /// Count of analyzer violations that start with the IDE prefix (SARIF).
     /// </summary>
     SarifIdeRuleViolations,
 }

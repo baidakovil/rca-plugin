@@ -3,33 +3,33 @@ namespace Rca.Tools.MetricsReporter.Model;
 using System.Text.Json.Serialization;
 
 /// <summary>
-/// Тип узла в иерархии отчёта.
+/// Describes the node level inside the aggregated metrics hierarchy.
 /// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum CodeElementKind
 {
     /// <summary>
-    /// Корневой solution.
+    /// The root solution node.
     /// </summary>
     Solution,
 
     /// <summary>
-    /// Assembly (проект).
+    /// An assembly (MSBuild project) level.
     /// </summary>
     Assembly,
 
     /// <summary>
-    /// Пространство имён.
+    /// A namespace level node.
     /// </summary>
     Namespace,
 
     /// <summary>
-    /// Тип (class, struct, record и т.п.).
+    /// A type-level node (class, struct, record, etc.).
     /// </summary>
     Type,
 
     /// <summary>
-    /// Член типа (метод, свойство, поле и т.п.).
+    /// A member of a type (method, property, field, accessor, etc.).
     /// </summary>
     Member,
 }

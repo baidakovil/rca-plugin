@@ -3,18 +3,18 @@ namespace Rca.Tools.MetricsReporter.Model;
 using System.Collections.Generic;
 
 /// <summary>
-/// Узел уровня сборки (MSBuild-проекта).
+/// Represents an assembly-level (MSBuild project) node.
 /// </summary>
 public sealed class AssemblyMetricsNode : MetricsNode
 {
     /// <summary>
-    /// Инициализирует новый экземпляр узла сборки.
+    /// Initialises a new assembly node.
     /// </summary>
     public AssemblyMetricsNode()
         => Kind = CodeElementKind.Assembly;
 
     /// <summary>
-    /// Дочерние пространства имён.
+    /// Namespaces contained inside the assembly.
     /// </summary>
     public IList<NamespaceMetricsNode> Namespaces { get; init; }
         = new List<NamespaceMetricsNode>();

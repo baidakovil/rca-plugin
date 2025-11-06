@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using Rca.Tools.MetricsReporter.Model;
 
 /// <summary>
-/// Парсер SARIF результатов Roslyn анализаторов.
+/// Parses SARIF output produced by Roslyn analyzers.
 /// </summary>
 public sealed class SarifMetricsParser : IMetricsSourceParser
 {

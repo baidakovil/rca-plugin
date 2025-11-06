@@ -11,7 +11,7 @@ using System.Xml.Linq;
 using Rca.Tools.MetricsReporter.Model;
 
 /// <summary>
-/// Парсер отчётов Microsoft.CodeAnalysis.Metrics.
+/// Parses Microsoft.CodeAnalysis.Metrics XML reports.
 /// </summary>
 public sealed class RoslynMetricsParser : IMetricsSourceParser
 {

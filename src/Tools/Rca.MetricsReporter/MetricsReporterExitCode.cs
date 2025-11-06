@@ -1,27 +1,27 @@
 namespace Rca.Tools.MetricsReporter;
 
 /// <summary>
-/// Код завершения консольного агрегатора.
+/// Process exit codes returned by the console aggregator.
 /// </summary>
 public enum MetricsReporterExitCode
 {
     /// <summary>
-    /// Выполнение успешно завершено.
+    /// Execution completed successfully.
     /// </summary>
     Success = 0,
 
     /// <summary>
-    /// Ошибка парсинга входных файлов.
+    /// Parsing error in one of the input files.
     /// </summary>
     ParsingError = 1,
 
     /// <summary>
-    /// Ошибка ввода-вывода.
+    /// Input/output error.
     /// </summary>
     IoError = 2,
 
     /// <summary>
-    /// Ошибка валидации входных параметров или несогласованности данных.
+    /// Validation error or inconsistent data.
     /// </summary>
     ValidationError = 3
 }

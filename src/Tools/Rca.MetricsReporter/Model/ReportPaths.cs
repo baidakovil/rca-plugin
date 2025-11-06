@@ -1,28 +1,28 @@
 namespace Rca.Tools.MetricsReporter.Model;
 
 /// <summary>
-/// Содержит ключевые пути, используемые в отчёте.
+/// Contains well-known file system paths used by the dashboard.
 /// </summary>
 public sealed class ReportPaths
 {
     /// <summary>
-    /// Абсолютный или относительный путь к каталогу с метриками.
+    /// Absolute or relative path to the metrics directory.
     /// </summary>
     public string MetricsDirectory { get; init; } = string.Empty;
 
     /// <summary>
-    /// Путь к baseline файлу.
+    /// Optional path to the baseline file.
     /// </summary>
     public string? Baseline { get; init; }
         = null;
 
     /// <summary>
-    /// Путь к текущему JSON отчёту.
+    /// Path to the generated JSON report.
     /// </summary>
     public string Report { get; init; } = string.Empty;
 
     /// <summary>
-    /// Путь к HTML-дашборду.
+    /// Path to the generated HTML dashboard.
     /// </summary>
     public string Html { get; init; } = string.Empty;
 }

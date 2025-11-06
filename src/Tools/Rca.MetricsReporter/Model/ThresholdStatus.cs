@@ -3,28 +3,28 @@ namespace Rca.Tools.MetricsReporter.Model;
 using System.Text.Json.Serialization;
 
 /// <summary>
-/// Описывает состояние метрики относительно порогов качества.
+/// Describes the threshold status of a metric.
 /// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum ThresholdStatus
 {
     /// <summary>
-    /// Порог не применим или отсутствует.
+    /// No threshold defined or not applicable.
     /// </summary>
     NotApplicable,
 
     /// <summary>
-    /// Фактическое значение укладывается в целевой диапазон.
+    /// Metric value is within the acceptable range.
     /// </summary>
     Success,
 
     /// <summary>
-    /// Порог частично нарушен, требуется внимание разработчика.
+    /// Threshold breached but not critically – developer attention required.
     /// </summary>
     Warning,
 
     /// <summary>
-    /// Критическое нарушение порога качества.
+    /// Critical threshold violation.
     /// </summary>
     Error,
 }

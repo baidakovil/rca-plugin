@@ -1,27 +1,27 @@
 namespace Rca.Tools.MetricsReporter.Model;
 
 /// <summary>
-/// Представляет значение отдельной метрики, включая дельту и статус относительно порогов.
+/// Represents a single metric value, its delta compared to baseline, and the threshold status.
 /// </summary>
 public sealed class MetricValue
 {
     /// <summary>
-    /// Фактическое значение метрики. Для отсутствующих данных используется <see langword="null"/>.
+    /// Actual metric value. Use <see langword="null"/> when the value is not available.
     /// </summary>
     public decimal? Value { get; init; }
 
     /// <summary>
-    /// Отклонение от baseline. Для новых членов или отсутствующего baseline — <see langword="null"/>.
+    /// Difference from baseline. Use <see langword="null"/> for new members or when no baseline exists.
     /// </summary>
     public decimal? Delta { get; init; }
 
     /// <summary>
-    /// Статус относительно пороговых ограничений.
+    /// Threshold status for the value.
     /// </summary>
     public ThresholdStatus Status { get; init; } = ThresholdStatus.NotApplicable;
 
     /// <summary>
-    /// Единицы измерения (`percent`, `count`, `score`).
+    /// Optional unit (for example <c>percent</c>, <c>count</c>, <c>score</c>).
     /// </summary>
     public string? Unit { get; init; }
 }

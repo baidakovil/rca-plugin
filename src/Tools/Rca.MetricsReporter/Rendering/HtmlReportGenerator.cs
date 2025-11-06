@@ -8,17 +8,17 @@ using System.Text;
 using Rca.Tools.MetricsReporter.Model;
 
 /// <summary>
-/// Генерирует HTML-дашборд для отчёта по метрикам.
+/// Generates the HTML dashboard for the metrics report.
 /// </summary>
 public sealed class HtmlReportGenerator
 {
     private static readonly MetricIdentifier[] MetricOrder = Enum.GetValues<MetricIdentifier>();
 
     /// <summary>
-    /// Генерирует HTML-контент для указанного отчёта.
+    /// Produces HTML markup for the specified report.
     /// </summary>
-    /// <param name="report">Отчёт по метрикам.</param>
-    /// <returns>HTML-документ.</returns>
+    /// <param name="report">Metrics report to render.</param>
+    /// <returns>HTML document.</returns>
     public string Generate(MetricsReport report)
     {
         ArgumentNullException.ThrowIfNull(report);

@@ -5,47 +5,47 @@ using Rca.Tools.MetricsReporter.Model;
 using Rca.Tools.MetricsReporter.Processing;
 
 /// <summary>
-/// Данные, необходимые для построения отчёта по метрикам.
+/// Data required to build the consolidated metrics report.
 /// </summary>
 public sealed class MetricsAggregationInput
 {
     /// <summary>
-    /// Имя solution, отображаемое в отчёте.
+    /// Solution name displayed in the report.
     /// </summary>
     public string SolutionName { get; init; } = "UnknownSolution";
 
     /// <summary>
-    /// Документы AltCover/OpenCover.
+    /// AltCover/OpenCover documents.
     /// </summary>
     public IList<ParsedMetricsDocument> AltCoverDocuments { get; init; } = new List<ParsedMetricsDocument>();
 
     /// <summary>
-    /// Документы Roslyn Code Metrics.
+    /// Roslyn code metrics documents.
     /// </summary>
     public IList<ParsedMetricsDocument> RoslynDocuments { get; init; } = new List<ParsedMetricsDocument>();
 
     /// <summary>
-    /// Документы SARIF.
+    /// SARIF documents.
     /// </summary>
     public IList<ParsedMetricsDocument> SarifDocuments { get; init; } = new List<ParsedMetricsDocument>();
 
     /// <summary>
-    /// Базовый отчёт, использующийся для вычисления дельт. Может быть <see langword="null"/>.
+    /// Baseline report used to compute deltas. Can be <see langword="null"/>.
     /// </summary>
     public MetricsReport? Baseline { get; init; }
 
     /// <summary>
-    /// Пороговые значения по метрикам.
+    /// Metric thresholds.
     /// </summary>
     public IDictionary<MetricIdentifier, MetricThreshold> Thresholds { get; init; } = new Dictionary<MetricIdentifier, MetricThreshold>();
 
     /// <summary>
-    /// Пути к основным артефактам.
+    /// Paths to the key artefacts.
     /// </summary>
     public ReportPaths Paths { get; init; } = new();
 
     /// <summary>
-    /// Необязательное описание baseline (например, git commit).
+    /// Optional textual description of the baseline (for example, git commit hash).
     /// </summary>
     public string? BaselineReference { get; init; }
 }

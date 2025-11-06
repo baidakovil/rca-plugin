@@ -1,24 +1,24 @@
 namespace Rca.Tools.MetricsReporter.Model;
 
 /// <summary>
-/// Описывает пороговые значения для конкретной метрики.
+/// Describes warning and error thresholds for a specific metric.
 /// </summary>
 public sealed class MetricThreshold
 {
     /// <summary>
-    /// Граница предупреждения. Для метрик «чем больше тем лучше» — минимально допустимое значение.
+    /// Warning threshold. For metrics where a higher value is desirable, treat this as the minimal acceptable value.
     /// </summary>
     public decimal? Warning { get; init; }
         = null;
 
     /// <summary>
-    /// Критическая граница. Для метрик «чем больше тем лучше» — минимально допустимое значение.
+    /// Error threshold. For metrics where a higher value is desirable, treat this as the minimal acceptable value.
     /// </summary>
     public decimal? Error { get; init; }
         = null;
 
     /// <summary>
-    /// Определяет, лучше ли более высокое значение (<see langword="true"/>) либо наоборот.
+    /// Indicates whether higher values are considered better (<see langword="true"/>) or worse (<see langword="false"/>).
     /// </summary>
     public bool HigherIsBetter { get; init; }
         = true;

@@ -10,12 +10,12 @@ using Rca.Tools.MetricsReporter.Model;
 using Rca.Tools.MetricsReporter.Serialization;
 
 /// <summary>
-/// Сохраняет JSON и HTML отчёты на диск.
+/// Persists JSON and HTML reports to disk.
 /// </summary>
 public sealed class ReportWriter
 {
     /// <summary>
-    /// Сохраняет JSON отчёт.
+    /// Writes the JSON report to disk.
     /// </summary>
     public async Task WriteJsonAsync(MetricsReport report, string path, CancellationToken cancellationToken)
     {
@@ -29,7 +29,7 @@ public sealed class ReportWriter
     }
 
     /// <summary>
-    /// Сохраняет HTML представление отчёта.
+    /// Writes the HTML representation of the report to disk.
     /// </summary>
     public async Task WriteHtmlAsync(string html, string path, CancellationToken cancellationToken)
     {

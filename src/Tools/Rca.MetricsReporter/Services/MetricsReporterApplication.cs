@@ -15,7 +15,7 @@ using Rca.Tools.MetricsReporter.Processing.Parsers;
 using Rca.Tools.MetricsReporter.Rendering;
 
 /// <summary>
-/// Высокоуровневая координация агрегации и генерации отчёта.
+/// Coordinates the aggregation workflow and report generation.
 /// </summary>
 public sealed class MetricsReporterApplication
 {
@@ -29,7 +29,7 @@ public sealed class MetricsReporterApplication
     private readonly ReportWriter _reportWriter = new();
 
     /// <summary>
-    /// Запускает процесс агрегации.
+    /// Executes the aggregation process.
     /// </summary>
     public async Task<MetricsReporterExitCode> RunAsync(MetricsReporterOptions options, CancellationToken cancellationToken)
     {

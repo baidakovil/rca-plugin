@@ -3,18 +3,18 @@ namespace Rca.Tools.MetricsReporter.Model;
 using System.Collections.Generic;
 
 /// <summary>
-/// Корневой узел с агрегированными данными по всему solution.
+/// Root node that aggregates metrics for the entire solution.
 /// </summary>
 public sealed class SolutionMetricsNode : MetricsNode
 {
     /// <summary>
-    /// Создаёт корневой узел solution.
+    /// Initialises the solution node.
     /// </summary>
     public SolutionMetricsNode()
         => Kind = CodeElementKind.Solution;
 
     /// <summary>
-    /// Сборки, включённые в отчёт.
+    /// Assemblies included in the report.
     /// </summary>
     public IList<AssemblyMetricsNode> Assemblies { get; init; }
         = new List<AssemblyMetricsNode>();

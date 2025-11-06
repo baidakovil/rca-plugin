@@ -4,16 +4,16 @@ using System.Collections.Generic;
 using Rca.Tools.MetricsReporter.Model;
 
 /// <summary>
-/// Представляет элемент кода, полученный из исходного источника метрик.
+/// Represents a code element discovered in a raw metrics source.
 /// </summary>
 public sealed class ParsedCodeElement
 {
     /// <summary>
-    /// Создаёт экземпляр <see cref="ParsedCodeElement"/>.
+    /// Initialises a new instance of <see cref="ParsedCodeElement"/>.
     /// </summary>
-    /// <param name="kind">Уровень иерархии.</param>
-    /// <param name="name">Отображаемое имя элемента.</param>
-    /// <param name="fullyQualifiedName">Полностью квалифицированное имя или <see langword="null"/>.</param>
+    /// <param name="kind">Hierarchy level of the element.</param>
+    /// <param name="name">Display name.</param>
+    /// <param name="fullyQualifiedName">Fully qualified name or <see langword="null"/>.</param>
     public ParsedCodeElement(CodeElementKind kind, string name, string? fullyQualifiedName)
     {
         Kind = kind;
@@ -22,32 +22,32 @@ public sealed class ParsedCodeElement
     }
 
     /// <summary>
-    /// Уровень иерархии (assembly/type/member и т.д.).
+    /// Hierarchy level (assembly, type, member, etc.).
     /// </summary>
     public CodeElementKind Kind { get; }
 
     /// <summary>
-    /// Отображаемое имя элемента.
+    /// Display name of the element.
     /// </summary>
     public string Name { get; }
 
     /// <summary>
-    /// Полностью квалифицированное имя или <see langword="null"/>.
+    /// Fully qualified name or <see langword="null"/>.
     /// </summary>
     public string? FullyQualifiedName { get; }
 
     /// <summary>
-    /// Полностью квалифицированное имя родительского элемента.
+    /// Fully qualified name of the parent element.
     /// </summary>
     public string? ParentFullyQualifiedName { get; init; }
 
     /// <summary>
-    /// Локальное расположение в исходном файле (если известно).
+    /// Source location (if available).
     /// </summary>
     public SourceLocation? Source { get; init; }
 
     /// <summary>
-    /// Метрики, предоставленные данным источником.
+    /// Metrics provided by the parser for this element.
     /// </summary>
     public IDictionary<MetricIdentifier, MetricValue> Metrics { get; init; } = new Dictionary<MetricIdentifier, MetricValue>();
 }

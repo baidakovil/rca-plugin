@@ -3,18 +3,18 @@ namespace Rca.Tools.MetricsReporter.Model;
 using System.Collections.Generic;
 
 /// <summary>
-/// Узел уровня типа (class/struct/record и т.д.).
+/// Represents a type-level node (class, struct, record, etc.).
 /// </summary>
 public sealed class TypeMetricsNode : MetricsNode
 {
     /// <summary>
-    /// Создаёт узел для типа.
+    /// Initialises a type node.
     /// </summary>
     public TypeMetricsNode()
         => Kind = CodeElementKind.Type;
 
     /// <summary>
-    /// Методы, свойства и другие члены типа.
+    /// Members that belong to the type.
     /// </summary>
     public IList<MemberMetricsNode> Members { get; init; }
         = new List<MemberMetricsNode>();

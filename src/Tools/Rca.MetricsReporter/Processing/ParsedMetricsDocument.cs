@@ -3,17 +3,17 @@ namespace Rca.Tools.MetricsReporter.Processing;
 using System.Collections.Generic;
 
 /// <summary>
-/// Представляет результаты парсинга одного источника метрик.
+/// Represents the parsing result of a single metrics source.
 /// </summary>
 public sealed class ParsedMetricsDocument
 {
     /// <summary>
-    /// Имя solution, полученное из источника или аргументов.
+    /// Solution name supplied by the source or by command line arguments.
     /// </summary>
     public string SolutionName { get; init; } = string.Empty;
 
     /// <summary>
-    /// Элементы кода, обнаруженные в источнике.
+    /// Code elements discovered in the source.
     /// </summary>
     public IList<ParsedCodeElement> Elements { get; init; } = new List<ParsedCodeElement>();
 }

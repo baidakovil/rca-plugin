@@ -4,12 +4,12 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 /// <summary>
-/// Создаёт преднастроенные JSON-опции для (де)сериализации отчётов.
+/// Creates preconfigured JSON options for (de)serialising reports.
 /// </summary>
 public static class JsonSerializerOptionsFactory
 {
     /// <summary>
-    /// Возвращает опции сериализации JSON с camelCase и поддержкой enum-конвертера.
+    /// Returns JSON serialisation options with camel case naming and enum support.
     /// </summary>
     public static JsonSerializerOptions Create()
     {

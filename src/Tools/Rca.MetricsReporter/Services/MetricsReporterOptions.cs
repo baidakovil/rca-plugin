@@ -3,62 +3,62 @@ namespace Rca.Tools.MetricsReporter.Services;
 using System.Collections.Generic;
 
 /// <summary>
-/// Параметры запуска агрегатора метрик.
+/// Describes command-line options supplied to the metrics reporter.
 /// </summary>
 public sealed class MetricsReporterOptions
 {
     /// <summary>
-    /// Имя solution для отображения в отчёте.
+    /// Solution name displayed in the report.
     /// </summary>
     public string SolutionName { get; init; } = "Solution";
 
     /// <summary>
-    /// Путь к файлу AltCover/OpenCover coverage.xml.
+    /// Path to the AltCover/OpenCover coverage.xml file.
     /// </summary>
     public string? AltCoverPath { get; init; }
 
     /// <summary>
-    /// Пути к XML отчётам Roslyn Code Metrics.
+    /// Paths to Roslyn code metrics XML reports.
     /// </summary>
     public IReadOnlyCollection<string> RoslynPaths { get; init; } = new List<string>();
 
     /// <summary>
-    /// Пути к SARIF файлам.
+    /// Paths to SARIF files.
     /// </summary>
     public IReadOnlyCollection<string> SarifPaths { get; init; } = new List<string>();
 
     /// <summary>
-    /// Путь к baseline JSON.
+    /// Path to the baseline JSON file.
     /// </summary>
     public string? BaselinePath { get; init; }
 
     /// <summary>
-    /// Текстовая пометка baseline (commit, build и т.п.).
+    /// Optional textual descriptor for the baseline (commit hash, build identifier, etc.).
     /// </summary>
     public string? BaselineReference { get; init; }
 
     /// <summary>
-    /// Строка с пороговыми значениями в формате JSON.
+    /// Threshold values encoded as JSON.
     /// </summary>
     public string? ThresholdsJson { get; init; }
 
     /// <summary>
-    /// Путь к итоговому JSON.
+    /// Path to the generated JSON report.
     /// </summary>
     public string OutputJsonPath { get; init; } = string.Empty;
 
     /// <summary>
-    /// Путь к итоговому HTML.
+    /// Path to the generated HTML report.
     /// </summary>
     public string OutputHtmlPath { get; init; } = string.Empty;
 
     /// <summary>
-    /// Каталог метрик (MetricsDir).
+    /// Metrics directory (MetricsDir).
     /// </summary>
     public string MetricsDirectory { get; init; } = string.Empty;
 
     /// <summary>
-    /// Путь к лог-файлу.
+    /// Path to the metrics reporter log file.
     /// </summary>
     public string LogFilePath { get; init; } = string.Empty;
 }

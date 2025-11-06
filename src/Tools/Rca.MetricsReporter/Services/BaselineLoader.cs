@@ -9,16 +9,16 @@ using Rca.Tools.MetricsReporter.Model;
 using Rca.Tools.MetricsReporter.Serialization;
 
 /// <summary>
-/// Загружает baseline отчёт из JSON файла.
+/// Loads the baseline report from a JSON file.
 /// </summary>
 public sealed class BaselineLoader
 {
     /// <summary>
-    /// Асинхронно загружает baseline отчёт.
+    /// Loads the baseline report asynchronously.
     /// </summary>
-    /// <param name="path">Путь к baseline файлу. Может быть <see langword="null"/>.</param>
-    /// <param name="cancellationToken">Токен отмены.</param>
-    /// <returns>Загруженный baseline или <see langword="null"/>.</returns>
+    /// <param name="path">Baseline file path. May be <see langword="null"/>.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Baseline report or <see langword="null"/> when the file does not exist.</returns>
     public async Task<MetricsReport?> LoadAsync(string? path, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(path))

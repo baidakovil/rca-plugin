@@ -1,22 +1,22 @@
 namespace Rca.Tools.MetricsReporter.Model;
 
 /// <summary>
-/// Описывает исходный файл и диапазон строк для узла отчёта.
+/// Describes the source file and line range associated with a metrics node.
 /// </summary>
 public sealed class SourceLocation
 {
     /// <summary>
-    /// Путь к файлу относительно корня решения.
+    /// File path relative to the solution root.
     /// </summary>
     public string? Path { get; init; }
 
     /// <summary>
-    /// Первая строка, охватываемая узлом, или <see langword="null"/> если неизвестно.
+    /// First line covered by the node, or <see langword="null"/> when the information is not available.
     /// </summary>
     public int? StartLine { get; init; }
 
     /// <summary>
-    /// Последняя строка, охватываемая узлом, или <see langword="null"/> если неизвестно.
+    /// Last line covered by the node, or <see langword="null"/> when the information is not available.
     /// </summary>
     public int? EndLine { get; init; }
 }

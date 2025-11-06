@@ -3,41 +3,41 @@ namespace Rca.Tools.MetricsReporter.Model;
 using System.Collections.Generic;
 
 /// <summary>
-/// Базовый узел иерархии метрик.
+/// Base class for every node inside the metrics hierarchy.
 /// </summary>
 public abstract class MetricsNode
 {
     /// <summary>
-    /// Имя узла (как отображается в UI).
+    /// Display name of the node shown in the UI.
     /// </summary>
     public string Name { get; init; } = string.Empty;
 
     /// <summary>
-    /// Тип узла (solution/assembly/namespace/type/member).
+    /// Node kind (solution, assembly, namespace, type, or member).
     /// </summary>
     public CodeElementKind Kind { get; init; }
         = CodeElementKind.Member;
 
     /// <summary>
-    /// Полностью квалифицированное имя (FQN). Для solution/namespace может быть <see langword="null"/>.
+    /// Fully qualified name. May be <see langword="null"/> for solution/namespace nodes.
     /// </summary>
     public string? FullyQualifiedName { get; init; }
         = null;
 
     /// <summary>
-    /// Исходное расположение в файле, используется для сопоставления SARIF и подсказок в HTML.
+    /// Optional source location information, used to match SARIF entries and show hints in HTML.
     /// </summary>
     public SourceLocation? Source { get; set; }
         = null;
 
     /// <summary>
-    /// Признак того, что узел отсутствовал в baseline.
+    /// Indicates that the node was not present in the baseline report.
     /// </summary>
     public bool IsNew { get; set; }
         = false;
 
     /// <summary>
-    /// Набор значений метрик для текущего узла.
+    /// Collection of metric values associated with the node.
     /// </summary>
     public IDictionary<MetricIdentifier, MetricValue> Metrics { get; set; }
         = new Dictionary<MetricIdentifier, MetricValue>();

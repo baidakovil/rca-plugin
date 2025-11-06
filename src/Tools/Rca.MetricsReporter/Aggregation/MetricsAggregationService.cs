@@ -7,15 +7,15 @@ using Rca.Tools.MetricsReporter.Model;
 using Rca.Tools.MetricsReporter.Processing;
 
 /// <summary>
-/// Собирает итоговый отчёт на основе разобранных источников метрик.
+/// Builds the consolidated report from parsed metrics sources.
 /// </summary>
 public sealed class MetricsAggregationService
 {
     /// <summary>
-    /// Строит итоговый отчёт по метрикам.
+    /// Creates the final metrics report.
     /// </summary>
-    /// <param name="input">Входные данные агрегации.</param>
-    /// <returns>Сформированный отчёт.</returns>
+    /// <param name="input">Aggregation input data.</param>
+    /// <returns>Composed metrics report.</returns>
     public MetricsReport BuildReport(MetricsAggregationInput input)
     {
         ArgumentNullException.ThrowIfNull(input);
@@ -267,7 +267,7 @@ public sealed class MetricsAggregationService
         {
             if (element.FullyQualifiedName is null)
             {
-                // Метрики SARIF агрегируются отдельно.
+                // SARIF metrics are aggregated separately by the SARIF pipeline.
                 return;
             }
 

@@ -4,16 +4,16 @@ using System.Threading;
 using System.Threading.Tasks;
 
 /// <summary>
-/// Унифицированный контракт для парсеров исходных метрик.
+/// Unified contract for all raw metrics parsers.
 /// </summary>
 public interface IMetricsSourceParser
 {
     /// <summary>
-    /// Выполняет асинхронный парсинг файла метрик.
+    /// Parses a metrics file asynchronously.
     /// </summary>
-    /// <param name="path">Путь к файлу источника.</param>
-    /// <param name="cancellationToken">Токен отмены операции.</param>
-    /// <returns>Результат парсинга.</returns>
+    /// <param name="path">Path to the source file.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Parsed document snapshot.</returns>
     Task<ParsedMetricsDocument> ParseAsync(string path, CancellationToken cancellationToken);
 }
 
