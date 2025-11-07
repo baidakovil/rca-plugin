@@ -20,6 +20,22 @@ internal static class HtmlScriptGenerator
   
   var getRows = function(){ return Array.from(tbody.querySelectorAll('tr.node-row')); };
   
+  // Helper: update striped classes for visible item rows
+  function updateStripedClasses(){
+    var allRows = Array.from(tbody.querySelectorAll('tr.node-item'));
+    var visibleRows = allRows.filter(function(r){
+      return r.style.display !== 'none' && window.getComputedStyle(r).display !== 'none';
+    });
+    visibleRows.forEach(function(r, index){
+      r.classList.remove('stripe-odd', 'stripe-even');
+      if(index % 2 === 0){
+        r.classList.add('stripe-odd');
+      } else {
+        r.classList.add('stripe-even');
+      }
+    });
+  }
+  
   // Initialize: hide all child rows (level > 0) on load, set all expanders to collapsed state
   (function initVisibility(){
     var rows = getRows();
@@ -31,9 +47,11 @@ internal static class HtmlScriptGenerator
       // Set all expanders to collapsed state initially
       var expander = r.querySelector('.expander');
       if(expander){
-        expander.textContent = '▸';
+        expander.textContent = '+';
       }
     });
+    // Update striped classes after initial visibility setup
+    updateStripedClasses();
   })();
   
   // Helper: get all descendant rows of a parent
@@ -61,7 +79,7 @@ internal static class HtmlScriptGenerator
   function setExpanderState(row, isExpanded){
     var expander = row.querySelector('.expander');
     if(expander){
-      expander.textContent = isExpanded ? '▾' : '▸';
+      expander.textContent = isExpanded ? '-' : '+';
     }
   }
   
@@ -107,6 +125,8 @@ internal static class HtmlScriptGenerator
         setExpanderState(parentRow, false);
       }
       
+      // Update striped classes after expand/collapse
+      updateStripedClasses();
       return;
     }
     
@@ -169,6 +189,8 @@ internal static class HtmlScriptGenerator
         tbody.insertBefore(ch, anchor ? anchor.nextSibling : tbody.firstChild);
       });
     });
+    // Update striped classes after sorting
+    updateStripedClasses();
   });
   
   // Expand all handler
@@ -180,6 +202,7 @@ internal static class HtmlScriptGenerator
         r.style.display = '';
         setExpanderState(r, true);
       });
+      updateStripedClasses();
     });
   }
   
@@ -195,6 +218,7 @@ internal static class HtmlScriptGenerator
         }
         setExpanderState(r, false);
       });
+      updateStripedClasses();
     });
   }
   

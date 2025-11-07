@@ -38,7 +38,7 @@ internal sealed class HtmlTableGenerator
         var builder = new StringBuilder();
 
         builder.AppendLine("<div class=\"table-container\"> ");
-        builder.AppendLine("<table id=\"metrics-table\" class=\"metrics\"> ");
+        builder.AppendLine("<table id=\"metrics-table\" class=\"metrics stripped\"> ");
         builder.AppendLine("  <thead>");
         builder.AppendLine("    <tr>");
         builder.AppendLine("      <th data-col=\"symbol\">Symbol</th>");
@@ -80,7 +80,11 @@ internal sealed class HtmlTableGenerator
             tooltip = WebUtility.HtmlEncode(node.FullyQualifiedName + " — " + kind);
         }
 
-        builder.AppendLine("    <tr class=\"node-row\" " +
+        // Determine if this is a node row (has children) or a regular row
+        var isNodeRow = hasChildren;
+        var rowClass = isNodeRow ? "node-row node-header" : "node-row node-item";
+        
+        builder.AppendLine("    <tr class=\"" + rowClass + "\" " +
             $"data-id=\"{thisId}\" data-level=\"{level}\" data-parent=\"{parentId ?? string.Empty}\">");
 
         // Symbol cell with tooltip and class for expander presence
@@ -90,36 +94,51 @@ internal sealed class HtmlTableGenerator
             symbolClasses += " has-expander";
         }
 
+        // For node rows, use <th>, for regular rows use <td>
+        var symbolTag = isNodeRow ? "th" : "td";
+        
         if (!string.IsNullOrWhiteSpace(tooltip))
         {
-            builder.Append($"      <td class=\"{symbolClasses}\" title=\"{tooltip}\">");
+            builder.Append($"      <{symbolTag} class=\"{symbolClasses}\" title=\"{tooltip}\">");
         }
         else
         {
-            builder.Append($"      <td class=\"{symbolClasses}\">");
+            builder.Append($"      <{symbolTag} class=\"{symbolClasses}\">");
         }
 
         // Expander button (only if node has children)
         if (hasChildren)
         {
-            builder.Append($"<button class=\"expander\" data-target=\"{thisId}\" aria-label=\"Toggle expand/collapse\">▾</button>");
+            builder.Append($"<button class=\"expander\" data-target=\"{thisId}\" aria-label=\"Toggle expand/collapse\">-</button>");
         }
 
         // Name and NEW badge
-        builder.Append("<span class=\"name-text\">" + WebUtility.HtmlEncode(node.Name) + "</span>");
+        var nameText = WebUtility.HtmlEncode(node.Name);
+        if (!isNodeRow)
+        {
+            // For regular rows, wrap name in a span with red color class
+            builder.Append("<span class=\"name-text item-name\">" + nameText + "</span>");
+        }
+        else
+        {
+            // For node rows, use plain text
+            builder.Append("<span class=\"name-text\">" + nameText + "</span>");
+        }
+        
         if (node.IsNew)
         {
             builder.Append(" <span class=\"badge badge-new\">NEW</span>");
         }
 
-        builder.AppendLine("</td>");
+        builder.AppendLine($"</{symbolTag}>");
 
-        // Metric cells
+        // Metric cells - use <th> for node rows, <td> for regular rows
+        var metricTag = isNodeRow ? "th" : "td";
         foreach (var mid in _metricOrder)
         {
             node.Metrics.TryGetValue(mid, out var val);
             var status = val is null ? "na" : val.Status.ToString().ToLowerInvariant();
-            builder.AppendLine($"      <td class=\"metric\" data-status=\"{status}\">{MetricValueRenderer.Render(val)}</td>");
+            builder.AppendLine($"      <{metricTag} class=\"metric\" data-status=\"{status}\">{MetricValueRenderer.Render(val)}</{metricTag}>");
         }
 
         builder.AppendLine("    </tr>");
