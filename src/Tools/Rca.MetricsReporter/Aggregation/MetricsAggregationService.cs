@@ -544,15 +544,68 @@ public sealed class MetricsAggregationService
             return lastDot < 0 ? typeFqn : typeFqn[(lastDot + 1)..];
         }
 
+        /// <summary>
+        /// Extracts the display name for a member from its fully qualified name.
+        /// </summary>
+        /// <param name="memberFqn">The fully qualified member name (e.g., "Namespace.Type.Method(...)").</param>
+        /// <param name="fallback">The fallback display name if extraction fails.</param>
+        /// <returns>The member display name (e.g., "Method").</returns>
+        /// <remarks>
+        /// This method handles normalized member names where parameters are replaced with "...".
+        /// It extracts the method name part, removing both the type prefix and the parameter placeholder.
+        /// </remarks>
         private static string ExtractMemberDisplayName(string memberFqn, string fallback)
         {
-            var lastDot = memberFqn.LastIndexOf('.');
-            return lastDot < 0 ? fallback : memberFqn[(lastDot + 1)..];
+            if (string.IsNullOrWhiteSpace(memberFqn))
+            {
+                return fallback;
+            }
+
+            // Find the last dot before the method name
+            // Handle normalized signatures like "Namespace.Type.Method(...)"
+            var paramStart = memberFqn.IndexOf('(');
+            var searchEnd = paramStart >= 0 ? paramStart : memberFqn.Length;
+            
+            var lastDot = memberFqn.LastIndexOf('.', searchEnd - 1);
+            if (lastDot < 0)
+            {
+                // No dot found, check if it's just a method name
+                if (paramStart >= 0)
+                {
+                    return memberFqn[..paramStart];
+                }
+                return fallback;
+            }
+
+            // Extract method name (between last dot and parameter list)
+            var methodNameStart = lastDot + 1;
+            var methodNameEnd = paramStart >= 0 ? paramStart : memberFqn.Length;
+            var methodName = memberFqn[methodNameStart..methodNameEnd].Trim();
+            
+            return string.IsNullOrWhiteSpace(methodName) ? fallback : methodName;
         }
 
+        /// <summary>
+        /// Resolves the declaring type name from a member's fully qualified name.
+        /// </summary>
+        /// <param name="memberFqn">The fully qualified member name (e.g., "Namespace.Type.Method(...)").</param>
+        /// <returns>The declaring type's fully qualified name (e.g., "Namespace.Type").</returns>
+        /// <remarks>
+        /// This method handles normalized member names where parameters are replaced with "...".
+        /// It extracts everything before the last dot before the method name.
+        /// </remarks>
         private static string ResolveDeclaringType(string memberFqn)
         {
-            var lastDot = memberFqn.LastIndexOf('.');
+            if (string.IsNullOrWhiteSpace(memberFqn))
+            {
+                return memberFqn;
+            }
+
+            // Find the last dot before the method name (before parameter list)
+            var paramStart = memberFqn.IndexOf('(');
+            var searchEnd = paramStart >= 0 ? paramStart : memberFqn.Length;
+            
+            var lastDot = memberFqn.LastIndexOf('.', searchEnd - 1);
             return lastDot < 0 ? memberFqn : memberFqn[..lastDot];
         }
 

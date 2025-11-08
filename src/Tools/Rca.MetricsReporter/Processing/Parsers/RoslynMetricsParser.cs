@@ -125,10 +125,43 @@ public sealed class RoslynMetricsParser : IMetricsSourceParser
     {
         var memberName = memberElement.Attribute("Name")?.Value ?? "<unknown-member>";
         var memberDisplayName = ExtractMemberDisplayName(memberName);
+        
+        // Normalize the member FQN to ensure parameters are replaced with "..." for consistent aggregation
         var memberFqn = BuildMemberFqn(typeNode.FullyQualifiedName, memberDisplayName, typeNode.Name);
+        var normalizedMemberFqn = SymbolNormalizer.NormalizeFullyQualifiedMethodName(memberFqn);
+        
+        // Extract just the method name without parameters for display
+        // Special handling for constructors: if memberDisplayName starts with "TypeName.TypeName(",
+        // it's a constructor and the method name should be the type name
+        string methodNameOnly;
+        var typeNameDot = typeNode.Name + ".";
+        if (memberDisplayName.StartsWith(typeNameDot, StringComparison.Ordinal))
+        {
+            var afterTypeNameDot = memberDisplayName[typeNameDot.Length..];
+            if (afterTypeNameDot.StartsWith(typeNode.Name + "(", StringComparison.Ordinal))
+            {
+                // It's a constructor - use the type name as the method name
+                methodNameOnly = typeNode.Name;
+            }
+            else
+            {
+                // Try normal extraction
+                methodNameOnly = SymbolNormalizer.ExtractMethodName(memberName) 
+                    ?? SymbolNormalizer.ExtractMethodName(memberDisplayName) 
+                    ?? memberDisplayName;
+            }
+        }
+        else
+        {
+            // Normal method - use ExtractMethodName which handles return types
+            methodNameOnly = SymbolNormalizer.ExtractMethodName(memberName) 
+                ?? SymbolNormalizer.ExtractMethodName(memberDisplayName) 
+                ?? memberDisplayName;
+        }
+        
         var source = CreateSourceLocation(memberElement.Attribute("File")?.Value, memberElement.Attribute("Line")?.Value);
 
-        var memberNode = new ParsedCodeElement(CodeElementKind.Member, memberDisplayName, memberFqn)
+        var memberNode = new ParsedCodeElement(CodeElementKind.Member, methodNameOnly, normalizedMemberFqn)
         {
             ParentFullyQualifiedName = typeNode.FullyQualifiedName,
             Metrics = ExtractMetrics(memberElement.Element(XmlNamespace + "Metrics")),
@@ -209,7 +242,46 @@ public sealed class RoslynMetricsParser : IMetricsSourceParser
 
     private static string ExtractMemberDisplayName(string rawName)
     {
-        var spaceIndex = rawName.IndexOf(' ');
+        // Remove return type prefix (format: "ReturnType Method(...)")
+        // This needs to handle complex return types like:
+        // - "Task<string> Method(...)"
+        // - "Task<(bool, string?)> Method(...)"
+        // - "void Method(...)"
+        
+        // Find the first space that's not inside angle brackets (for generic types)
+        // or parentheses (for tuple types)
+        var depth = 0;
+        var angleDepth = 0;
+        var spaceIndex = -1;
+        
+        for (var i = 0; i < rawName.Length; i++)
+        {
+            var ch = rawName[i];
+            
+            if (ch == '<')
+            {
+                angleDepth++;
+            }
+            else if (ch == '>')
+            {
+                angleDepth--;
+            }
+            else if (ch == '(' && angleDepth == 0)
+            {
+                depth++;
+            }
+            else if (ch == ')' && angleDepth == 0)
+            {
+                depth--;
+            }
+            else if (ch == ' ' && depth == 0 && angleDepth == 0)
+            {
+                // Found a space outside of brackets and parentheses - this is the separator
+                spaceIndex = i;
+                break;
+            }
+        }
+        
         return spaceIndex >= 0 ? rawName[(spaceIndex + 1)..] : rawName;
     }
 

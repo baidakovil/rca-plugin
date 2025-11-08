@@ -33,7 +33,8 @@ public sealed class MetricsAggregationServiceTests
         const string assemblyName = "Sample.Assembly";
         const string namespaceFqn = "Sample.Namespace";
         const string typeFqn = "Sample.Namespace.SampleType";
-        const string memberFqn = "Sample.Namespace.SampleType.DoWork()";
+        // Use normalized FQN format (with ...) to match what the normalization produces
+        const string memberFqn = "Sample.Namespace.SampleType.DoWork(...)";
         const string filePath = @"C:\Repo\Sample.cs";
 
         var roslynDocument = new ParsedMetricsDocument
@@ -66,7 +67,7 @@ public sealed class MetricsAggregationServiceTests
                         [MetricIdentifier.RoslynMaintainabilityIndex] = Metric(80, "score")
                     }
                 },
-                new(CodeElementKind.Member, "NewWork", $"{typeFqn}.NewWork()")
+                new(CodeElementKind.Member, "NewWork", $"{typeFqn}.NewWork(...)")
                 {
                     ParentFullyQualifiedName = typeFqn,
                     Source = new SourceLocation { Path = filePath, StartLine = 30, EndLine = 35 },
@@ -141,7 +142,7 @@ public sealed class MetricsAggregationServiceTests
 
         var type = assembly.Namespaces.Should().ContainSingle().Subject.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
         var existingMember = type.Members.Should().ContainSingle(m => m.FullyQualifiedName == memberFqn).Subject;
-        var newMember = type.Members.Should().ContainSingle(m => m.FullyQualifiedName!.EndsWith("NewWork()")).Subject;
+        var newMember = type.Members.Should().ContainSingle(m => m.FullyQualifiedName!.EndsWith("NewWork(...)")).Subject;
 
         existingMember.IsNew.Should().BeFalse();
         existingMember.Metrics[MetricIdentifier.RoslynMaintainabilityIndex].Value.Should().Be(80);
@@ -168,7 +169,7 @@ public sealed class MetricsAggregationServiceTests
     {
         var member = new MemberMetricsNode
         {
-            Name = "DoWork()",
+            Name = "DoWork",
             FullyQualifiedName = memberFqn,
             Metrics = new Dictionary<MetricIdentifier, MetricValue>
             {

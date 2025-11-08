@@ -126,3 +126,146 @@ dotnet run --project src/Tools/Rca.MetricsReporter/Rca.MetricsReporter.csproj --
 
 Информация о CLI и MSBuild обновляется по мере развития инструмента.
 
+## Symbol Normalization
+
+Metrics Reporter объединяет метрики из разных источников (AltCover, Roslyn, SARIF), которые описывают одни и те же символы (классы, методы) в разных форматах. Для корректного объединения метрик символы нормализуются к единому формату.
+
+### Проблема несовместимости форматов
+
+Разные инструменты используют разные форматы для описания символов:
+
+- **AltCover**: `System.Void Rca.Loader.LoaderApp::OnApplicationIdling(System.Object, Autodesk.Revit.UI.Events.IdlingEventArgs)`
+  - Использует полностью квалифицированные имена типов параметров
+  - Использует C++-стиль разделителя `::` для пространств имен
+  - Всегда включает return type в начале
+
+- **Roslyn**: `void OnApplicationIdling(object? sender, IdlingEventArgs e)`
+  - Использует короткие имена типов (без namespace)
+  - Использует nullable annotations (`?`)
+  - Может не включать полный путь к типу в имени метода
+
+Без нормализации один и тот же метод из разных источников рассматривается как два разных символа, что приводит к дублированию записей в отчете.
+
+### Нормализованный формат
+
+Все символы нормализуются к единому формату:
+
+- **Типы**: `Namespace.Type` (generic параметры удаляются, например `List<string>` → `List`)
+- **Методы**: `Namespace.Type.Method(...)` (параметры заменяются на `...`, generic параметры метода удаляются)
+- **Конструкторы**: `Namespace.Type..ctor(...)` (статический конструктор: `.cctor(...)`)
+- **Операторы**: `Namespace.Type.op_Equality(...)`, `Namespace.Type.op_Inequality(...)`
+- **Специальные методы**: `Namespace.Type.<Clone>$(...)`, `Namespace.Type.ToString(...)`
+
+### Процесс нормализации
+
+#### 1. Извлечение имени метода (`ExtractMethodName`)
+
+Извлекает только имя метода без параметров, return type и generic параметров:
+
+- Удаляет return type (например, `void Method(...)` → `Method`)
+- Удаляет generic параметры метода (например, `Method<T>(...)` → `Method`)
+- Извлекает имя после последней точки (например, `Namespace.Type.Method` → `Method`)
+- Сохраняет ведущую точку для конструкторов (`.ctor`, `.cctor`)
+- Сохраняет специальные символы в имени (например, `<Clone>$`)
+
+**Примеры:**
+- `System.String Rca.Logging.Contracts.LogEntryDto::ToString()` → `ToString`
+- `System.Void Rca.UI.Services.ServiceResolver::.ctor(...)` → `.ctor`
+- `Rca.Logging.Contracts.LogEntryDto Rca.Logging.Contracts.LogEntryDto::<Clone>$()` → `<Clone>$`
+- `TInterface IServiceResolver.Resolve<TInterface>()` → `Resolve`
+
+#### 2. Нормализация сигнатуры метода (`NormalizeMethodSignature`)
+
+Заменяет параметры на placeholder `(...)`:
+
+- Находит открывающую скобку параметров `(`
+- Находит соответствующую закрывающую скобку `)`, обрабатывая вложенные скобки в generic типах
+- Заменяет все содержимое между скобками на `...`
+
+**Примеры:**
+- `Method(System.Object, System.String)` → `Method(...)`
+- `Method(object? sender, string name)` → `Method(...)`
+- `Method(System.Collections.Generic.List<System.String>)` → `Method(...)`
+
+#### 3. Нормализация FQN метода (`NormalizeFullyQualifiedMethodName`)
+
+Применяет нормализацию сигнатуры и удаляет generic параметры метода:
+
+- Удаляет generic параметры метода (например, `Process<T>` → `Process`)
+- Отличает generic параметры от части имени метода (например, `<Clone>$` не является generic параметром)
+- Применяет нормализацию сигнатуры для замены параметров
+
+**Примеры:**
+- `IServiceRegistrar.Register<TInterface>(TInterface implementation)` → `IServiceRegistrar.Register(...)`
+- `UiPipeLogger.Log<TState>(LogLevel logLevel, ...)` → `UiPipeLogger.Log(...)`
+- `LogEntryDto.<Clone>$()` → `LogEntryDto.<Clone>$(...)`
+
+#### 4. Нормализация имени типа (`NormalizeTypeName`)
+
+Удаляет generic параметры из имени типа:
+
+- Находит первую открывающую угловую скобку `<`
+- Удаляет все до конца типа (включая вложенные generic параметры)
+
+**Примеры:**
+- `List<string>` → `List`
+- `Dictionary<string, int>` → `Dictionary`
+- `List<Dictionary<string, int>>` → `List`
+
+### Обработка edge cases
+
+#### Generic параметры
+
+Методы с generic параметрами нормализуются одинаково независимо от источника:
+- AltCover: `Register(TInterface)` → `Register(...)`
+- Roslyn: `Register<TInterface>(TInterface implementation)` → `Register(...)`
+
+#### Конструкторы
+
+Конструкторы идентифицируются по паттерну `TypeName.TypeName(...)`. Имя метода для конструкторов извлекается как имя типа:
+- AltCover: `System.Void ServiceResolver::.ctor(...)` → `ServiceResolver..ctor(...)`
+- Roslyn: `ServiceResolver.ServiceResolver(...)` → `ServiceResolver.ServiceResolver(...)`
+
+#### Операторы и специальные методы
+
+Операторы и методы компилятора сохраняют специальные имена:
+- `op_Equality`, `op_Inequality` → `Namespace.Type.op_Equality(...)`
+- `<Clone>$` (для record типов) → `Namespace.Type.<Clone>$(...)`
+
+#### Сложные возвращаемые типы
+
+Методы с tuple или generic возвращаемыми типами обрабатываются корректно:
+- `Task<string> ExecuteAsync(...)` → `ExecuteAsync(...)`
+- `Task<(bool, string?)> LoadRuntimeAsync(...)` → `LoadRuntimeAsync(...)`
+
+#### Nested типы
+
+Вложенные типы используют разделитель `+`: AltCover `Outer/Nested` → `Outer+Nested`
+
+### Результат нормализации
+
+После нормализации методы из разных источников с одинаковой сигнатурой объединяются в одну запись в отчете:
+
+**До нормализации:**
+- AltCover: `Rca.Loader.LoaderApp.OnApplicationIdling(System.Object, Autodesk.Revit.UI.Events.IdlingEventArgs)`
+- Roslyn: `Rca.Loader.LoaderApp.OnApplicationIdling(object? sender, IdlingEventArgs e)`
+- Результат: Две отдельные записи в отчете
+
+**После нормализации:**
+- AltCover: `Rca.Loader.LoaderApp.OnApplicationIdling(...)`
+- Roslyn: `Rca.Loader.LoaderApp.OnApplicationIdling(...)`
+- Результат: Одна запись с метриками из обоих источников
+
+### Реализация
+
+Нормализация реализована в классе `SymbolNormalizer` (`src/Tools/Rca.MetricsReporter/Processing/SymbolNormalizer.cs`):
+
+- `NormalizeMethodSignature(string?)` — нормализует сигнатуру метода
+- `ExtractMethodName(string?)` — извлекает имя метода
+- `NormalizeFullyQualifiedMethodName(string?)` — нормализует FQN метода
+- `NormalizeTypeName(string?)` — нормализует имя типа
+
+Парсеры (`AltCoverMetricsParser`, `RoslynMetricsParser`) используют `SymbolNormalizer` для нормализации символов перед агрегацией.
+
+Все edge cases покрыты unit-тестами в `tests/Rca.MetricsReporter.Tests/Processing/SymbolNormalizerTests.cs` с использованием реальных примеров из метрик проекта.
+
