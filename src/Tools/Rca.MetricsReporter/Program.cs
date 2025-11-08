@@ -102,11 +102,6 @@ static MetricsReporterOptions ParseArguments(string[] args)
         throw new ArgumentException("--output-json is required.");
     }
 
-    if (string.IsNullOrWhiteSpace(outputHtml))
-    {
-        throw new ArgumentException("--output-html is required.");
-    }
-
     var normalizedMetricsDir = Path.GetFullPath(metricsDir);
     var reportDir = Path.Combine(normalizedMetricsDir, "Report");
     var logFilePath = Path.Combine(reportDir, "metrics-reporter.log");
@@ -122,7 +117,7 @@ static MetricsReporterOptions ParseArguments(string[] args)
         BaselineReference = baselineRef,
         ThresholdsJson = thresholds,
         OutputJsonPath = Path.GetFullPath(outputJson),
-        OutputHtmlPath = Path.GetFullPath(outputHtml),
+        OutputHtmlPath = string.IsNullOrWhiteSpace(outputHtml) ? string.Empty : Path.GetFullPath(outputHtml),
         LogFilePath = logFilePath
     };
 }
@@ -145,9 +140,9 @@ static void PrintUsage()
     Console.WriteLine("Required parameters:");
     Console.WriteLine("  --metrics-dir <path>    Root directory for metrics artifacts (MetricsDir).");
     Console.WriteLine("  --output-json <path>    Path to the resulting metrics-report.json.");
-    Console.WriteLine("  --output-html <path>    Path to the resulting metrics-report.html.");
     Console.WriteLine();
     Console.WriteLine("Optional parameters:");
+    Console.WriteLine("  --output-html <path>    Path to the resulting metrics-report.html.");
     Console.WriteLine("  --solution-name <name>  Solution name for the report header.");
     Console.WriteLine("  --altcover <path>       Path to AltCover/OpenCover coverage.xml.");
     Console.WriteLine("  --roslyn <path>         Path to Roslyn metrics XML (repeat for multiple files).");

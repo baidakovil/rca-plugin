@@ -2,6 +2,8 @@
 <Project>
   <!-- Path-related MSBuild properties centralized here -->
   <PropertyGroup>
+    <!-- Ensure Configuration has a default value before it's used in path calculations -->
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
     <!-- Directory where Revit Addins and timestamp subfolders are located -->
     <RcaRevitAddinsDir Condition="'$(RcaRevitAddinsDir)' == ''">$(APPDATA)\Autodesk\Revit\Addins\$(RcaRevitVersion)</RcaRevitAddinsDir>
     <!-- Directory where integration test builds are deployed -->

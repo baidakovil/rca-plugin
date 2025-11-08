@@ -34,3 +34,6 @@
 /build/Metrics/*
 src/Rca.Loader/source-hash.txt
 src/Rca.Core/source-hash.txt
+
+# Build log files
+build/binlog
