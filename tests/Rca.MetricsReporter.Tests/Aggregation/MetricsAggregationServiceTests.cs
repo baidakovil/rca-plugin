@@ -157,6 +157,324 @@ public sealed class MetricsAggregationServiceTests
         newMember.Metrics[MetricIdentifier.RoslynMaintainabilityIndex].Status.Should().Be(ThresholdStatus.Warning);
     }
 
+    [Test]
+    public void BuildReport_ExcludesConstructorMethods_FromAltCover()
+    {
+        // Arrange
+        const string assemblyName = "Sample.Assembly";
+        const string typeFqn = "Sample.Namespace.SampleType";
+        const string constructorFqn = "Sample.Namespace.SampleType..ctor(...)";
+        const string staticConstructorFqn = "Sample.Namespace.SampleType..cctor(...)";
+        const string normalMethodFqn = "Sample.Namespace.SampleType.DoWork(...)";
+
+        var altCoverDocument = new ParsedMetricsDocument
+        {
+            Elements = new List<ParsedCodeElement>
+            {
+                new(CodeElementKind.Assembly, assemblyName, assemblyName),
+                new(CodeElementKind.Type, "Sample.Namespace.SampleType", typeFqn)
+                {
+                    ParentFullyQualifiedName = assemblyName
+                },
+                new(CodeElementKind.Member, ".ctor", constructorFqn)
+                {
+                    ParentFullyQualifiedName = typeFqn,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.AltCoverSequenceCoverage] = Metric(100, "percent")
+                    }
+                },
+                new(CodeElementKind.Member, ".cctor", staticConstructorFqn)
+                {
+                    ParentFullyQualifiedName = typeFqn,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.AltCoverSequenceCoverage] = Metric(100, "percent")
+                    }
+                },
+                new(CodeElementKind.Member, "DoWork", normalMethodFqn)
+                {
+                    ParentFullyQualifiedName = typeFqn,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.AltCoverSequenceCoverage] = Metric(95, "percent")
+                    }
+                }
+            }
+        };
+
+        var input = new MetricsAggregationInput
+        {
+            SolutionName = "SampleSolution",
+            AltCoverDocuments = new List<ParsedMetricsDocument> { altCoverDocument },
+            RoslynDocuments = new List<ParsedMetricsDocument>(),
+            SarifDocuments = new List<ParsedMetricsDocument>(),
+            Baseline = null,
+            Thresholds = thresholds,
+            Paths = new ReportPaths()
+        };
+
+        // Act
+        var report = service.BuildReport(input);
+
+        // Assert
+        var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+        var type = assembly.Namespaces.Should().ContainSingle().Subject.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
+        
+        // Constructors should be excluded
+        type.Members.Should().NotContain(m => m.FullyQualifiedName == constructorFqn);
+        type.Members.Should().NotContain(m => m.FullyQualifiedName == staticConstructorFqn);
+        
+        // Normal method should be included
+        type.Members.Should().ContainSingle(m => m.FullyQualifiedName == normalMethodFqn);
+    }
+
+    [Test]
+    public void BuildReport_ExcludesConstructorMethods_FromRoslyn()
+    {
+        // Arrange
+        const string assemblyName = "Sample.Assembly";
+        const string namespaceFqn = "Sample.Namespace";
+        const string typeFqn = "Sample.Namespace.SampleType";
+        // Roslyn format: constructor name matches type name
+        const string constructorFqn = "Sample.Namespace.SampleType.SampleType(...)";
+        const string normalMethodFqn = "Sample.Namespace.SampleType.DoWork(...)";
+
+        var roslynDocument = new ParsedMetricsDocument
+        {
+            Elements = new List<ParsedCodeElement>
+            {
+                new(CodeElementKind.Assembly, assemblyName, assemblyName),
+                new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
+                {
+                    ParentFullyQualifiedName = assemblyName
+                },
+                new(CodeElementKind.Type, "SampleType", typeFqn)
+                {
+                    ParentFullyQualifiedName = namespaceFqn
+                },
+                new(CodeElementKind.Member, "SampleType", constructorFqn)
+                {
+                    ParentFullyQualifiedName = typeFqn,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.RoslynMaintainabilityIndex] = Metric(80, "score")
+                    }
+                },
+                new(CodeElementKind.Member, "DoWork", normalMethodFqn)
+                {
+                    ParentFullyQualifiedName = typeFqn,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.RoslynMaintainabilityIndex] = Metric(80, "score")
+                    }
+                }
+            }
+        };
+
+        var input = new MetricsAggregationInput
+        {
+            SolutionName = "SampleSolution",
+            AltCoverDocuments = new List<ParsedMetricsDocument>(),
+            RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
+            SarifDocuments = new List<ParsedMetricsDocument>(),
+            Baseline = null,
+            Thresholds = thresholds,
+            Paths = new ReportPaths()
+        };
+
+        // Act
+        var report = service.BuildReport(input);
+
+        // Assert
+        var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+        var type = assembly.Namespaces.Should().ContainSingle().Subject.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
+        
+        // Constructor should be excluded
+        type.Members.Should().NotContain(m => m.FullyQualifiedName == constructorFqn);
+        
+        // Normal method should be included
+        type.Members.Should().ContainSingle(m => m.FullyQualifiedName == normalMethodFqn);
+    }
+
+    [Test]
+    public void BuildReport_ExcludesCompilerGeneratedMethods()
+    {
+        // Arrange
+        const string assemblyName = "Sample.Assembly";
+        const string namespaceFqn = "Sample.Namespace";
+        const string typeFqn = "Sample.Namespace.SampleType";
+        const string moveNextFqn = "Sample.Namespace.SampleType.MoveNext(...)";
+        const string setStateMachineFqn = "Sample.Namespace.SampleType.SetStateMachine(...)";
+        const string moveNextAsyncFqn = "Sample.Namespace.SampleType.MoveNextAsync(...)";
+        const string disposeAsyncFqn = "Sample.Namespace.SampleType.DisposeAsync(...)";
+        const string normalMethodFqn = "Sample.Namespace.SampleType.DoWork(...)";
+
+        var roslynDocument = new ParsedMetricsDocument
+        {
+            Elements = new List<ParsedCodeElement>
+            {
+                new(CodeElementKind.Assembly, assemblyName, assemblyName),
+                new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
+                {
+                    ParentFullyQualifiedName = assemblyName
+                },
+                new(CodeElementKind.Type, "SampleType", typeFqn)
+                {
+                    ParentFullyQualifiedName = namespaceFqn
+                },
+                new(CodeElementKind.Member, "MoveNext", moveNextFqn)
+                {
+                    ParentFullyQualifiedName = typeFqn,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.RoslynMaintainabilityIndex] = Metric(80, "score")
+                    }
+                },
+                new(CodeElementKind.Member, "SetStateMachine", setStateMachineFqn)
+                {
+                    ParentFullyQualifiedName = typeFqn,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.RoslynMaintainabilityIndex] = Metric(80, "score")
+                    }
+                },
+                new(CodeElementKind.Member, "MoveNextAsync", moveNextAsyncFqn)
+                {
+                    ParentFullyQualifiedName = typeFqn,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.RoslynMaintainabilityIndex] = Metric(80, "score")
+                    }
+                },
+                new(CodeElementKind.Member, "DisposeAsync", disposeAsyncFqn)
+                {
+                    ParentFullyQualifiedName = typeFqn,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.RoslynMaintainabilityIndex] = Metric(80, "score")
+                    }
+                },
+                new(CodeElementKind.Member, "DoWork", normalMethodFqn)
+                {
+                    ParentFullyQualifiedName = typeFqn,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.RoslynMaintainabilityIndex] = Metric(80, "score")
+                    }
+                }
+            }
+        };
+
+        var input = new MetricsAggregationInput
+        {
+            SolutionName = "SampleSolution",
+            AltCoverDocuments = new List<ParsedMetricsDocument>(),
+            RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
+            SarifDocuments = new List<ParsedMetricsDocument>(),
+            Baseline = null,
+            Thresholds = thresholds,
+            Paths = new ReportPaths()
+        };
+
+        // Act
+        var report = service.BuildReport(input);
+
+        // Assert
+        var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+        var type = assembly.Namespaces.Should().ContainSingle().Subject.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
+        
+        // Compiler-generated methods should be excluded
+        type.Members.Should().NotContain(m => m.FullyQualifiedName == moveNextFqn);
+        type.Members.Should().NotContain(m => m.FullyQualifiedName == setStateMachineFqn);
+        type.Members.Should().NotContain(m => m.FullyQualifiedName == moveNextAsyncFqn);
+        type.Members.Should().NotContain(m => m.FullyQualifiedName == disposeAsyncFqn);
+        
+        // Normal method should be included
+        type.Members.Should().ContainSingle(m => m.FullyQualifiedName == normalMethodFqn);
+    }
+
+    [Test]
+    public void BuildReport_ExcludedMethods_NotInJsonOutput()
+    {
+        // Arrange
+        const string assemblyName = "Sample.Assembly";
+        const string typeFqn = "Sample.Namespace.SampleType";
+        const string constructorFqn = "Sample.Namespace.SampleType..ctor(...)";
+        const string moveNextFqn = "Sample.Namespace.SampleType.MoveNext(...)";
+        const string normalMethodFqn = "Sample.Namespace.SampleType.DoWork(...)";
+
+        var roslynDocument = new ParsedMetricsDocument
+        {
+            Elements = new List<ParsedCodeElement>
+            {
+                new(CodeElementKind.Assembly, assemblyName, assemblyName),
+                new(CodeElementKind.Namespace, "Sample.Namespace", "Sample.Namespace")
+                {
+                    ParentFullyQualifiedName = assemblyName
+                },
+                new(CodeElementKind.Type, "SampleType", typeFqn)
+                {
+                    ParentFullyQualifiedName = "Sample.Namespace"
+                },
+                new(CodeElementKind.Member, ".ctor", constructorFqn)
+                {
+                    ParentFullyQualifiedName = typeFqn,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.RoslynMaintainabilityIndex] = Metric(80, "score")
+                    }
+                },
+                new(CodeElementKind.Member, "MoveNext", moveNextFqn)
+                {
+                    ParentFullyQualifiedName = typeFqn,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.RoslynMaintainabilityIndex] = Metric(80, "score")
+                    }
+                },
+                new(CodeElementKind.Member, "DoWork", normalMethodFqn)
+                {
+                    ParentFullyQualifiedName = typeFqn,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.RoslynMaintainabilityIndex] = Metric(80, "score")
+                    }
+                }
+            }
+        };
+
+        var input = new MetricsAggregationInput
+        {
+            SolutionName = "SampleSolution",
+            AltCoverDocuments = new List<ParsedMetricsDocument>(),
+            RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
+            SarifDocuments = new List<ParsedMetricsDocument>(),
+            Baseline = null,
+            Thresholds = thresholds,
+            Paths = new ReportPaths()
+        };
+
+        // Act
+        var report = service.BuildReport(input);
+
+        // Assert - Verify that excluded methods are not in the report structure
+        // (which means they won't be in JSON either)
+        var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+        var type = assembly.Namespaces.Should().ContainSingle().Subject.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
+        
+        // Excluded methods should not be in members list
+        type.Members.Should().NotContain(m => m.FullyQualifiedName == constructorFqn);
+        type.Members.Should().NotContain(m => m.FullyQualifiedName == moveNextFqn);
+        
+        // Normal method should be included
+        type.Members.Should().ContainSingle(m => m.FullyQualifiedName == normalMethodFqn);
+        
+        // Verify that only the normal method is present
+        type.Members.Should().HaveCount(1);
+        type.Members[0].FullyQualifiedName.Should().Be(normalMethodFqn);
+    }
+
     private static MetricValue Metric(decimal value, string unit)
         => new()
         {

@@ -272,6 +272,13 @@ public sealed class MetricsAggregationService
             }
 
             var memberFqn = element.FullyQualifiedName;
+            
+            // Filter out compiler-generated and constructor methods
+            if (MemberFilter.ShouldExcludeMethodByFqn(memberFqn))
+            {
+                return;
+            }
+
             var typeFqn = element.ParentFullyQualifiedName ?? ResolveDeclaringType(memberFqn);
 
             if (typeFqn is null)
