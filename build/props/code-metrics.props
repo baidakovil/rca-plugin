@@ -6,9 +6,9 @@
     <!-- Set to true to enable Roslyn metrics collection -->
     <RoslynMetricsEnabled Condition="'$(RoslynMetricsEnabled)' == ''">true</RoslynMetricsEnabled>
     <!-- Set to true to enable Sarif metrics collection -->
-    <SarifMetricsEnabled Condition="'$(SarifMetricsEnabled)' == ''">false</SarifMetricsEnabled>
+    <SarifMetricsEnabled Condition="'$(SarifMetricsEnabled)' == ''">true</SarifMetricsEnabled>
     <!-- Set to true to enable AltCover metrics collection -->
-    <AltCoverEnabled Condition="'$(AltCoverEnabled)' == ''">false</AltCoverEnabled>
+    <AltCoverEnabled Condition="'$(AltCoverEnabled)' == ''">true</AltCoverEnabled>
     <!-- Assembly filter for AltCover instrumentation -->
     <!-- Only instrument assemblies matching this pattern -->
     <RcaCoverageAssemblyFilter Condition="'$(RcaCoverageAssemblyFilter)' == ''">Rca.*.dll</RcaCoverageAssemblyFilter>
@@ -16,6 +16,9 @@
     <RoslynMetricsToolDir Condition="'$(RoslynMetricsToolDir)' == ''">$(SolutionDir)build\Resources\Metrics\win-arm64</RoslynMetricsToolDir>
     <!-- Full path to Metrics.exe. -->
     <RoslynMetricsToolExe Condition="'$(RoslynMetricsToolExe)' == ''">$(RoslynMetricsToolDir)\Metrics.exe</RoslynMetricsToolExe>
+    <!-- Solution file path and output file for metrics calculation -->
+    <RoslynMetricsSolutionPath Condition="'$(RoslynMetricsSolutionPath)' == ''">$(SolutionDir)rca-plugin.sln</RoslynMetricsSolutionPath>
+    <RoslynSolutionMetricsOutputFile Condition="'$(RoslynSolutionMetricsOutputFile)' == ''">$(RoslynOutputDir)\solution-metrics.xml</RoslynSolutionMetricsOutputFile>
 
     <!-- JSON string with metric thresholds (passed to metrics reporter). -->
     <MetricsThresholds Condition="'$(MetricsThresholds)' == ''">{'AltCoverSequenceCoverage':{'warning':75,'error':60,'higherIsBetter':true},'AltCoverBranchCoverage':{'warning':70,'error':55,'higherIsBetter':true},'AltCoverCyclomaticComplexity':{'warning':15,'error':30,'higherIsBetter':false},'AltCoverNPathComplexity':{'warning':200,'error':400,'higherIsBetter':false},'RoslynMaintainabilityIndex':{'warning':65,'error':40,'higherIsBetter':true},'RoslynCyclomaticComplexity':{'warning':12,'error':25,'higherIsBetter':false},'RoslynClassCoupling':{'warning':50,'error':80,'higherIsBetter':false},'RoslynDepthOfInheritance':{'warning':5,'error':8,'higherIsBetter':false},'RoslynSourceLines':{'higherIsBetter':false},'RoslynExecutableLines':{'higherIsBetter':false},'SarifCaRuleViolations':{'warning':5,'error':10,'higherIsBetter':false},'SarifIdeRuleViolations':{'warning':10,'error':20,'higherIsBetter':false}}</MetricsThresholds>

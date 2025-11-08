@@ -9,30 +9,20 @@
     </PropertyGroup>
   </Target>
 
-  <!-- Ensure metrics directories exist before compilation -->
+  <!-- Ensure metrics directories exist before compilation (only for SARIF, as it needs ErrorLog during compilation) -->
   <Target Name="PrepareMetricsDirectories" BeforeTargets="CoreCompile" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' != 'SourceHashGenerator'">
     <!-- Ensure Sarif directory exists for compiler-generated SARIF files -->
     <MakeDir Condition="'$(SarifMetricsEnabled)' == 'true'" Directories="$(SarifOutputDir)" />
     <!-- Ensure AltCover directory exists -->
     <MakeDir Condition="'$(AltCoverEnabled)' == 'true'" Directories="$(AltCoverOutputDir)" />
-    <!-- Ensure Roslyn directory exists -->
-    <MakeDir Condition="'$(RoslynMetricsEnabled)' == 'true'" Directories="$(RoslynOutputDir)" />
+    <!-- Roslyn directory is created only when needed in GenerateSolutionMetrics to avoid blocking parallel builds -->
   </Target>
 
-  <!-- Generate Roslyn metrics for the project -->
-  <!-- Exclude projects that don't support the Metrics target (source generators, test adapters, etc.) -->
-  <Target Name="GenerateMetrics" AfterTargets="Build" Condition="
-  '$(DesignTimeBuild)' != 'true' and
-  '$(MSBuildProjectName)' != 'Rca.BuildMetadata.Generator' and
-  '$(MSBuildProjectName)' != 'SourceHashGenerator' and
-  '$(MSBuildProjectName)' != 'Rca.TestAdapter' and
-  '$(MSBuildProjectName)' != 'RoslynMetrics' and
-  '$(RoslynMetricsEnabled)' == 'true'">
-    <Error Text="Metrics tool not found at '$(RoslynMetricsToolExe)'." Condition="!Exists('$(RoslynMetricsToolExe)')" />
-    <Message Text="Running Roslyn code metrics for $(MSBuildProjectName)" Importance="Low" />
-    <Exec Command="&quot;$(RoslynMetricsToolExe)&quot; /project:&quot;$(MSBuildProjectFullPath)&quot; /out:&quot;$(MetricsOutputFile)&quot; /quiet"
-          WorkingDirectory="$(RoslynMetricsToolDir)"
-          IgnoreExitCode="false" />
+  <!-- Generate Roslyn metrics for entire solution (runs once for Rca.MetricsReporter.Tests after all projects are built) -->
+  <!-- Metrics.exe will use already built projects or build them if needed -->
+  <Target Name="GenerateSolutionMetrics" AfterTargets="Build" Condition="'$(DesignTimeBuild)' != 'true' and '$(RoslynMetricsEnabled)' == 'true' and '$(MSBuildProjectName)' == 'Rca.MetricsReporter.Tests'">
+    <MakeDir Directories="$(RoslynOutputDir)" />
+    <Exec Command="&quot;$(RoslynMetricsToolExe)&quot; /solution:&quot;$(RoslynMetricsSolutionPath)&quot; /out:&quot;$(RoslynSolutionMetricsOutputFile)&quot; /quiet" WorkingDirectory="$(RoslynMetricsToolDir)" IgnoreExitCode="false" />
   </Target>
 
 
@@ -127,34 +117,20 @@
     <Message Text="HTML coverage report generated in $(CoverageHtmlDir)" Importance="High" Condition="'$(CoverageFileCreated)' == 'true'" />
   </Target>
 
-  <!-- Generate consolidated metrics dashboard after all code was built and tests completed -->
+  <!-- Generate consolidated metrics dashboard after all metrics are collected -->
   <Target Name="GenerateMetricsDashboard"
           AfterTargets="Build"
+          DependsOnTargets="GenerateSolutionMetrics"
           Condition="'$(GenerateMetricsDashboard)' == 'true' and '$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.MetricsReporter.Tests'">
 
-    <!-- Collect every Roslyn code-metrics report that was produced during the build -->
-    <ItemGroup>
-      <RoslynMetricsFiles Include="$(RoslynOutputDir)\*.xml" />
-      <SarifMetricsFiles Include="$(SarifOutputDir)\*.sarif" />
-      <!-- Force-build all projects that contribute metrics before we aggregate them -->
-      <MetricsDashboardDependencies Include="
-          $(SolutionDir)src\Rca.Loader\Rca.Loader.csproj;
-          $(SolutionDir)src\Rca.Runtime\Rca.Runtime.csproj;
-          $(SolutionDir)src\Rca.Core\Rca.Core.csproj;
-          $(SolutionDir)src\Rca.UI\Rca.UI.csproj;
-          $(SolutionDir)src\Rca.Contracts\Rca.Contracts.csproj;
-          $(SolutionDir)src\Rca.Loader.Contracts\Rca.Loader.Contracts.csproj;
-          $(SolutionDir)src\Rca.Logging.Contracts\Rca.Logging.Contracts.csproj;
-          $(SolutionDir)src\Rca.Network\Rca.Network.csproj;
-          $(SolutionDir)tests\Rca.Loader.Tests\Rca.Loader.Tests.csproj;
-          $(SolutionDir)tests\Rca.Core.Tests\Rca.Core.Tests.csproj;
-          $(SolutionDir)tests\Rca.Network.Tests\Rca.Network.Tests.csproj;
-          $(SolutionDir)tests\Rca.UI.Tests\Rca.UI.Tests.csproj;
-          $(SolutionDir)tests\Rca.Contracts.Tests\Rca.Contracts.Tests.csproj;
-          $(SolutionDir)tests\Rca.Integration.Revit.Tests\Rca.Integration.Revit.Tests.csproj" />
-    </ItemGroup>
+    <!-- Verify that solution metrics file exists before generating dashboard -->
+    <Error Text="Solution metrics file not found at '$(RoslynSolutionMetricsOutputFile)'. Metrics calculation may have failed." 
+           Condition="'$(RoslynMetricsEnabled)' == 'true' and !Exists('$(RoslynSolutionMetricsOutputFile)')" />
 
-    <!-- Compose command-line arguments for the reporter (coverage, Roslyn, SARIF, baseline, thresholds) -->
+    <ItemGroup>
+      <RoslynMetricsFiles Include="$(RoslynSolutionMetricsOutputFile)" Condition="Exists('$(RoslynSolutionMetricsOutputFile)')" />
+      <SarifMetricsFiles Include="$(SarifOutputDir)\*.sarif" />
+    </ItemGroup>
     <PropertyGroup>
       <MetricsReporterAltCoverArg Condition="Exists('$(RcaCoverageOutputFile)')"> --altcover &quot;$(RcaCoverageOutputFile)&quot;</MetricsReporterAltCoverArg>
       <MetricsReporterRoslynArgs>@(RoslynMetricsFiles->' --roslyn &quot;%(FullPath)&quot;', ' ')</MetricsReporterRoslynArgs>
@@ -164,12 +140,6 @@
       <MetricsReporterThresholdArg> --thresholds &quot;$(MetricsThresholds)&quot;</MetricsReporterThresholdArg>
       <MetricsReporterCommand>&quot;$(MetricsReporterExe)&quot; --solution-name &quot;$(MetricsSolutionName)&quot; --metrics-dir &quot;$(RcaMetricsDir)&quot;$(MetricsReporterAltCoverArg)$(MetricsReporterRoslynArgs)$(MetricsReporterSarifArgs)$(MetricsReporterBaselineArg)$(MetricsReporterBaselineRefArg) --output-json &quot;$(MetricsReportJson)&quot; --output-html &quot;$(MetricsReportHtml)&quot;$(MetricsReporterThresholdArg)</MetricsReporterCommand>
     </PropertyGroup>
-
-    <!-- Ensure all metric-producing projects are up to date before running the aggregator -->
-    <MSBuild Projects="@(MetricsDashboardDependencies)"
-             Targets="Build"
-             Properties="Configuration=$(Configuration)"
-             Condition="'@(MetricsDashboardDependencies)' != ''" />
 
     <Message Text="Generating metrics dashboard (Rca.MetricsReporter.Tests)." Importance="High" Condition="Exists('$(MetricsReporterExe)')" />
     <MakeDir Directories="$(MetricsReportDir)" />
