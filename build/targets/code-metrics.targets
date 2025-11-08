@@ -36,19 +36,30 @@
   </Target>
 
 
-  <!-- Instrument deployed assemblies with AltCover after deployment targets have completed -->
+  <!-- Intermediate gate that waits for deployment targets to complete -->
+  <Target Name="WaitForAllDeployments"
+          AfterTargets="Build"
+          DependsOnTargets="DeployLoaderGroup;DeployRuntimeGroup"
+          Condition="'$(AltCoverEnabled)' == 'true' and '$(DesignTimeBuild)' != 'true'">
+    
+    <Message Text="Deployment targets completed, proceeding to instrumentation" Importance="Normal" />
+  </Target>
+
+  <!-- Instrument deployed assemblies with AltCover after all deployment targets have completed -->
   <Target Name="InstrumentDeployedAssemblies"
-          AfterTargets="DeployLoaderGroup;DeployRuntimeGroup"
+          AfterTargets="WaitForAllDeployments"
           Condition="'$(AltCoverEnabled)' == 'true' and '$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.Runtime' and '$(RuntimeDeployDir)' != '' and Exists('$(RuntimeDeployDir)')">
     
     <PropertyGroup>
       <AltCoverInputDir>$(RuntimeDeployDir)</AltCoverInputDir>
+      <!-- Method filter to exclude constructors (ctor) and static constructors (cctor) from coverage -->
+      <AltCoverMethodFilter Condition="'$(AltCoverMethodFilter)' == ''">\.cctor|\.ctor</AltCoverMethodFilter>
     </PropertyGroup>
 
     <!-- Run AltCover instrumentation in-place -->
     <!-- Using direct command execution instead of PowerShell wrapper for better parameter handling -->
     <Message Text="Instrumenting assemblies in $(AltCoverInputDir) with AltCover" Importance="High" />
-    <Exec Command="altcover --inputDirectory=&quot;$(AltCoverInputDir)&quot; --assemblyFilter=&quot;$(RcaCoverageAssemblyFilter)&quot; --inplace --save --report=&quot;$(RcaCoverageOutputFile)&quot;" 
+    <Exec Command="altcover --inputDirectory=&quot;$(AltCoverInputDir)&quot; --assemblyFilter=&quot;$(RcaCoverageAssemblyFilter)&quot; --methodFilter=&quot;$(AltCoverMethodFilter)&quot; --inplace --save --report=&quot;$(RcaCoverageOutputFile)&quot;" 
           ContinueOnError="false" />
     <Message Text="AltCover instrumentation completed. Signal file: $(AltCoverSignalFile)" Importance="Normal" />
     
