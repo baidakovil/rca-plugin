@@ -10,6 +10,15 @@
     <EmitCompilerGeneratedFiles Condition="'$(EmitCompilerGeneratedFiles)' == ''">false</EmitCompilerGeneratedFiles>
   </PropertyGroup>
 
+  <!-- Optimize ProjectReference evaluation: skip GetTargetFrameworks for all ProjectReference items -->
+  <!-- WHY: All projects in solution use the same TargetFramework (net8.0-windows), so framework compatibility -->
+  <!-- NOTE: ItemDefinitionGroup applies to all ProjectReference items regardless of where they are declared -->
+  <ItemDefinitionGroup>
+    <ProjectReference>
+      <SkipGetTargetFrameworkProperties Condition="'%(ProjectReference.SkipGetTargetFrameworkProperties)' == ''">true</SkipGetTargetFrameworkProperties>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+
   <ItemGroup>
     <CompilerVisibleProperty Include="RunAnalyzersDuringBuild" />
     <CompilerVisibleProperty Include="EmitCompilerGeneratedFiles" />
@@ -21,7 +30,8 @@
   <ItemGroup Condition="'$(MSBuildProjectName)' != 'Rca.BuildMetadata.Generator' and '$(MSBuildProjectName)' != 'SourceHashGenerator'">
     <ProjectReference Include="$(SolutionDir)src\Tools\Rca.BuildMetadata.Generator\Rca.BuildMetadata.Generator.csproj"
                       OutputItemType="Analyzer"
-                      ReferenceOutputAssembly="false" />
+                      ReferenceOutputAssembly="false"
+                      SkipGetTargetFrameworkProperties="true" />
   </ItemGroup>
 
   <!-- Add Microsoft.CodeAnalysis.Metrics package to all projects that need it -->
