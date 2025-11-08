@@ -25,6 +25,8 @@
 
     <!-- Toggle metrics dashboard generation -->
     <GenerateMetricsDashboard Condition="'$(GenerateMetricsDashboard)' == ''">false</GenerateMetricsDashboard>
+    <!-- When true, generates HTML from existing JSON without collecting metrics -->
+    <GenerateHtmlFromJson Condition="'$(GenerateHtmlFromJson)' == ''">false</GenerateHtmlFromJson>
   </PropertyGroup>
 
   <ItemGroup>
@@ -33,6 +35,7 @@
     <CompilerVisibleProperty Include="AltCoverEnabled" />
     <CompilerVisibleProperty Include="MetricsThresholds" />
     <CompilerVisibleProperty Include="GenerateMetricsDashboard" />
+    <CompilerVisibleProperty Include="GenerateHtmlFromJson" />
   </ItemGroup>
 </Project>
 

@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Rca.Tools.MetricsReporter.Aggregation;
@@ -13,6 +14,7 @@ using Rca.Tools.MetricsReporter.Model;
 using Rca.Tools.MetricsReporter.Processing;
 using Rca.Tools.MetricsReporter.Processing.Parsers;
 using Rca.Tools.MetricsReporter.Rendering;
+using Rca.Tools.MetricsReporter.Serialization;
 
 /// <summary>
 /// Coordinates the aggregation workflow and report generation.
@@ -37,6 +39,12 @@ public sealed class MetricsReporterApplication
 
         using var logger = new FileLogger(options.LogFilePath);
         logger.LogInformation("Metrics Reporter started.");
+
+        // If input JSON is specified, load it and generate HTML only
+        if (!string.IsNullOrWhiteSpace(options.InputJsonPath))
+        {
+            return await GenerateHtmlFromJsonAsync(options, logger, cancellationToken).ConfigureAwait(false);
+        }
 
         try
         {
@@ -146,11 +154,16 @@ public sealed class MetricsReporterApplication
 
     private static void ValidateOptions(MetricsReporterOptions options)
     {
+        // Skip validation if using input JSON mode
+        if (!string.IsNullOrWhiteSpace(options.InputJsonPath))
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(options.OutputJsonPath))
         {
             throw new ArgumentException("Output JSON path is required.", nameof(options));
         }
-
 
         if (string.IsNullOrWhiteSpace(options.MetricsDirectory))
         {
@@ -211,6 +224,72 @@ public sealed class MetricsReporterApplication
         {
             logger.LogError($"Failed to parse metrics file: {path}", ex);
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Loads an existing JSON report and generates HTML from it without parsing source files.
+    /// </summary>
+    private async Task<MetricsReporterExitCode> GenerateHtmlFromJsonAsync(
+        MetricsReporterOptions options,
+        FileLogger logger,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(options.InputJsonPath))
+        {
+            logger.LogError("Input JSON path is required for HTML-only generation.");
+            return MetricsReporterExitCode.ValidationError;
+        }
+
+        if (string.IsNullOrWhiteSpace(options.OutputHtmlPath))
+        {
+            logger.LogError("Output HTML path is required for HTML-only generation.");
+            return MetricsReporterExitCode.ValidationError;
+        }
+
+        if (!File.Exists(options.InputJsonPath))
+        {
+            logger.LogError($"Input JSON file not found: {options.InputJsonPath}");
+            return MetricsReporterExitCode.ValidationError;
+        }
+
+        try
+        {
+            logger.LogInformation($"Loading metrics report from: {options.InputJsonPath}");
+            await using var stream = File.OpenRead(options.InputJsonPath);
+            var report = await JsonSerializer.DeserializeAsync<MetricsReport>(
+                stream,
+                JsonSerializerOptionsFactory.Create(),
+                cancellationToken).ConfigureAwait(false);
+
+            if (report is null)
+            {
+                logger.LogError("Failed to deserialize metrics report from JSON.");
+                return MetricsReporterExitCode.ValidationError;
+            }
+
+            logger.LogInformation("Generating HTML report...");
+            var html = _htmlGenerator.Generate(report);
+            
+            var htmlDir = Path.GetDirectoryName(options.OutputHtmlPath);
+            if (!string.IsNullOrWhiteSpace(htmlDir) && !Directory.Exists(htmlDir))
+            {
+                Directory.CreateDirectory(htmlDir);
+            }
+
+            await _reportWriter.WriteHtmlAsync(html, options.OutputHtmlPath, cancellationToken).ConfigureAwait(false);
+            logger.LogInformation($"HTML report generated successfully: {options.OutputHtmlPath}");
+            return MetricsReporterExitCode.Success;
+        }
+        catch (JsonException ex)
+        {
+            logger.LogError($"Failed to deserialize JSON report: {ex.Message}", ex);
+            return MetricsReporterExitCode.ValidationError;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            logger.LogError("Failed to write HTML output file.", ex);
+            return MetricsReporterExitCode.IoError;
         }
     }
 }

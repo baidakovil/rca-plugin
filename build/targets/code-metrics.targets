@@ -118,30 +118,52 @@
   </Target>
 
   <!-- Generate consolidated metrics dashboard after all metrics are collected -->
+  <!-- When GenerateHtmlFromJson=true, generates HTML from existing JSON without collecting metrics -->
+  <!-- DependsOnTargets ensures GenerateSolutionMetrics completes first in normal mode -->
+  <!-- If GenerateSolutionMetrics doesn't run (RoslynMetricsEnabled=false), dependency is skipped gracefully -->
   <Target Name="GenerateMetricsDashboard"
           AfterTargets="Build"
           DependsOnTargets="GenerateSolutionMetrics"
           Condition="'$(GenerateMetricsDashboard)' == 'true' and '$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.MetricsReporter.Tests'">
 
-    <!-- Verify that solution metrics file exists before generating dashboard -->
-    <Error Text="Solution metrics file not found at '$(RoslynSolutionMetricsOutputFile)'. Metrics calculation may have failed." 
-           Condition="'$(RoslynMetricsEnabled)' == 'true' and !Exists('$(RoslynSolutionMetricsOutputFile)')" />
+    <!-- When GenerateHtmlFromJson=true, skip metric collection and generate HTML from existing JSON -->
+    <PropertyGroup Condition="'$(GenerateHtmlFromJson)' == 'true'">
+      <InputJsonFile Condition="'$(InputJsonFile)' == ''">$(MetricsReportJson)</InputJsonFile>
+      <OutputHtmlFile Condition="'$(OutputHtmlFile)' == ''">$(MetricsReportHtml)</OutputHtmlFile>
+      <MetricsReporterCommand>&quot;$(MetricsReporterExe)&quot; --input-json &quot;$(InputJsonFile)&quot; --output-html &quot;$(OutputHtmlFile)&quot;</MetricsReporterCommand>
+    </PropertyGroup>
 
-    <ItemGroup>
+    <!-- Error if input JSON file not found when using GenerateHtmlFromJson mode -->
+    <Error Text="Input JSON file not found at '$(InputJsonFile)'. Cannot generate HTML report." 
+           Condition="'$(GenerateHtmlFromJson)' == 'true' and !Exists('$(InputJsonFile)')" />
+
+    <!-- Normal mode: collect metrics and generate dashboard -->
+
+    <PropertyGroup Condition="'$(GenerateHtmlFromJson)' != 'true'">
+      <!-- Verify that solution metrics file exists before generating dashboard -->
+      <_RoslynMetricsMissing Condition="'$(RoslynMetricsEnabled)' == 'true' and !Exists('$(RoslynSolutionMetricsOutputFile)')">true</_RoslynMetricsMissing>
+    </PropertyGroup>
+
+    <Error Text="Solution metrics file not found at '$(RoslynSolutionMetricsOutputFile)'. Metrics calculation may have failed." 
+           Condition="'$(GenerateHtmlFromJson)' != 'true' and '$(_RoslynMetricsMissing)' == 'true'" />
+
+    <ItemGroup Condition="'$(GenerateHtmlFromJson)' != 'true'">
       <RoslynMetricsFiles Include="$(RoslynSolutionMetricsOutputFile)" Condition="Exists('$(RoslynSolutionMetricsOutputFile)')" />
       <SarifMetricsFiles Include="$(SarifOutputDir)\*.sarif" />
     </ItemGroup>
-    <PropertyGroup>
+
+    <PropertyGroup Condition="'$(GenerateHtmlFromJson)' != 'true'">
       <MetricsReporterAltCoverArg Condition="Exists('$(RcaCoverageOutputFile)')"> --altcover &quot;$(RcaCoverageOutputFile)&quot;</MetricsReporterAltCoverArg>
       <MetricsReporterRoslynArgs>@(RoslynMetricsFiles->' --roslyn &quot;%(FullPath)&quot;', ' ')</MetricsReporterRoslynArgs>
       <MetricsReporterSarifArgs>@(SarifMetricsFiles->' --sarif &quot;%(FullPath)&quot;', ' ')</MetricsReporterSarifArgs>
-      <MetricsReporterBaselineArg> --baseline &quot;$(MetricsBaselineJson)&quot;</MetricsReporterBaselineArg>
+      <MetricsReporterBaselineArg Condition="Exists('$(MetricsBaselineJson)')"> --baseline &quot;$(MetricsBaselineJson)&quot;</MetricsReporterBaselineArg>
       <MetricsReporterBaselineRefArg Condition="'$(MetricsBaselineReference)' != ''"> --baseline-ref &quot;$(MetricsBaselineReference)&quot;</MetricsReporterBaselineRefArg>
       <MetricsReporterThresholdArg> --thresholds &quot;$(MetricsThresholds)&quot;</MetricsReporterThresholdArg>
       <MetricsReporterCommand>&quot;$(MetricsReporterExe)&quot; --solution-name &quot;$(MetricsSolutionName)&quot; --metrics-dir &quot;$(RcaMetricsDir)&quot;$(MetricsReporterAltCoverArg)$(MetricsReporterRoslynArgs)$(MetricsReporterSarifArgs)$(MetricsReporterBaselineArg)$(MetricsReporterBaselineRefArg) --output-json &quot;$(MetricsReportJson)&quot; --output-html &quot;$(MetricsReportHtml)&quot;$(MetricsReporterThresholdArg)</MetricsReporterCommand>
     </PropertyGroup>
 
-    <Message Text="Generating metrics dashboard (Rca.MetricsReporter.Tests)." Importance="High" Condition="Exists('$(MetricsReporterExe)')" />
+    <Message Text="Generating HTML report from existing JSON: $(InputJsonFile)" Importance="High" Condition="'$(GenerateHtmlFromJson)' == 'true' and Exists('$(MetricsReporterExe)')" />
+    <Message Text="Generating metrics dashboard (Rca.MetricsReporter.Tests)." Importance="High" Condition="'$(GenerateHtmlFromJson)' != 'true' and Exists('$(MetricsReporterExe)')" />
     <MakeDir Directories="$(MetricsReportDir)" />
     <Exec Command="$(MetricsReporterCommand)"
           WorkingDirectory="$(SolutionDir)"

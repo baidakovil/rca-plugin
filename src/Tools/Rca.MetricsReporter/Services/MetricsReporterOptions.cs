@@ -43,6 +43,11 @@ public sealed class MetricsReporterOptions
     public string? ThresholdsJson { get; init; }
 
     /// <summary>
+    /// Path to an existing JSON report to load (for HTML generation only).
+    /// </summary>
+    public string? InputJsonPath { get; init; }
+
+    /// <summary>
     /// Path to the generated JSON report.
     /// </summary>
     public string OutputJsonPath { get; init; } = string.Empty;

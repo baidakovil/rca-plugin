@@ -51,6 +51,7 @@ static MetricsReporterOptions ParseArguments(string[] args)
     string? outputJson = null;
     string? outputHtml = null;
     string? thresholds = null;
+    string? inputJson = null;
 
     for (var index = 0; index < args.Length; index++)
     {
@@ -87,23 +88,34 @@ static MetricsReporterOptions ParseArguments(string[] args)
             case "--thresholds":
                 thresholds = RequireValue(args, ref index, argument);
                 break;
+            case "--input-json":
+                inputJson = RequireValue(args, ref index, argument);
+                break;
             default:
                 throw new ArgumentException($"Unknown argument '{argument}'. Use --help to view usage.", argument);
         }
     }
 
-    if (string.IsNullOrWhiteSpace(metricsDir))
+    // When using --input-json, metrics-dir and output-json are optional
+    if (string.IsNullOrWhiteSpace(inputJson))
     {
-        throw new ArgumentException("--metrics-dir is required.");
+        if (string.IsNullOrWhiteSpace(metricsDir))
+        {
+            throw new ArgumentException("--metrics-dir is required when not using --input-json.");
+        }
+
+        if (string.IsNullOrWhiteSpace(outputJson))
+        {
+            throw new ArgumentException("--output-json is required when not using --input-json.");
+        }
+    }
+    else if (string.IsNullOrWhiteSpace(outputHtml))
+    {
+        throw new ArgumentException("--output-html is required when using --input-json.");
     }
 
-    if (string.IsNullOrWhiteSpace(outputJson))
-    {
-        throw new ArgumentException("--output-json is required.");
-    }
-
-    var normalizedMetricsDir = Path.GetFullPath(metricsDir);
-    var reportDir = Path.Combine(normalizedMetricsDir, "Report");
+    var normalizedMetricsDir = string.IsNullOrWhiteSpace(metricsDir) ? string.Empty : Path.GetFullPath(metricsDir);
+    var reportDir = string.IsNullOrWhiteSpace(normalizedMetricsDir) ? Path.GetTempPath() : Path.Combine(normalizedMetricsDir, "Report");
     var logFilePath = Path.Combine(reportDir, "metrics-reporter.log");
 
     return new MetricsReporterOptions
@@ -116,7 +128,8 @@ static MetricsReporterOptions ParseArguments(string[] args)
         BaselinePath = baselinePath is null ? null : Path.GetFullPath(baselinePath),
         BaselineReference = baselineRef,
         ThresholdsJson = thresholds,
-        OutputJsonPath = Path.GetFullPath(outputJson),
+        InputJsonPath = inputJson is null ? null : Path.GetFullPath(inputJson),
+        OutputJsonPath = string.IsNullOrWhiteSpace(outputJson) ? string.Empty : Path.GetFullPath(outputJson),
         OutputHtmlPath = string.IsNullOrWhiteSpace(outputHtml) ? string.Empty : Path.GetFullPath(outputHtml),
         LogFilePath = logFilePath
     };
@@ -150,5 +163,6 @@ static void PrintUsage()
     Console.WriteLine("  --baseline <path>       Path to baseline metrics JSON.");
     Console.WriteLine("  --baseline-ref <text>   Baseline reference label (git commit, build ID, etc.).");
     Console.WriteLine("  --thresholds <json>     JSON string with metric thresholds.");
+    Console.WriteLine("  --input-json <path>     Path to existing metrics-report.json (generates HTML only).");
 }
 
