@@ -23,13 +23,35 @@
     <Message Text="EnsureRcaTimestamp: RuntimeDeployDir = $(RuntimeDeployDir)" Importance="Low" />
   </Target>
 
-  <!-- Generate Rca.addin file for Loader project after timestamp is ensured -->
-  <Target Name="GenerateRcaAddinFile" AfterTargets="EnsureRcaTimestamp" Condition="'$(GenerateRcaAddinFile)' == 'true' and '$(MSBuildProjectName)' == 'Rca.Loader'">
+  <!-- Generate Rca.addin file for Loader project -->
+  <!-- This target runs after Build and EnsureRcaTimestamp to ensure timestamp is always correct -->
+  <!-- It always reads timestamp from file to guarantee correctness in all build contexts -->
+  <Target Name="GenerateRcaAddinFile" 
+          AfterTargets="Build" 
+          DependsOnTargets="EnsureRcaTimestamp"
+          Condition="'$(GenerateRcaAddinFile)' == 'true' and '$(MSBuildProjectName)' == 'Rca.Loader' and '$(DesignTimeBuild)' != 'true'">
+    
+    <!-- Always read timestamp from file to ensure correctness even if RcaHotReloadTimestamp property is not set -->
+    <!-- This ensures timestamp is correct regardless of build context (direct build, rebuild triggered by external tools, etc.) -->
+    <ReadLinesFromFile Condition="'$(RcaTimestampFile)' != '' and Exists('$(RcaTimestampFile)')" File="$(RcaTimestampFile)">
+      <Output TaskParameter="Lines" ItemName="_TimestampFileLines" />
+    </ReadLinesFromFile>
+    
     <PropertyGroup>
-      <!-- Ensure assembly relative path uses the freshly generated timestamp if not overridden -->
-      <RcaAddinAssemblyRelativePath Condition="'$(RcaAddinAssemblyRelativePath)' == ''">$(RcaHotReloadTimestamp)\Rca.Loader.dll</RcaAddinAssemblyRelativePath>
+      <!-- Resolve timestamp: prefer property, then file content, with fallback to reading file directly -->
+      <_ResolvedTimestamp Condition="'$(RcaHotReloadTimestamp)' != ''">$(RcaHotReloadTimestamp)</_ResolvedTimestamp>
+      <_ResolvedTimestamp Condition="'$(RcaHotReloadTimestamp)' == '' and '@(_TimestampFileLines)' != ''">@(_TimestampFileLines)</_ResolvedTimestamp>
+      <_ResolvedTimestamp Condition="'$(_ResolvedTimestamp)' == '' and '$(RcaTimestampFile)' != '' and Exists('$(RcaTimestampFile)')">$([System.IO.File]::ReadAllText('$(RcaTimestampFile)').Trim())</_ResolvedTimestamp>
+      
+      <!-- Ensure assembly relative path uses the resolved timestamp if not overridden -->
+      <RcaAddinAssemblyRelativePath Condition="'$(RcaAddinAssemblyRelativePath)' == '' and '$(_ResolvedTimestamp)' != ''">$(_ResolvedTimestamp)\Rca.Loader.dll</RcaAddinAssemblyRelativePath>
+      
       <AddinDestFile>$(RcaRevitAddinsDir)\Rca.addin</AddinDestFile>
     </PropertyGroup>
+
+    <!-- Validate that we have a valid timestamp -->
+    <Error Condition="'$(_ResolvedTimestamp)' == ''" 
+           Text="Cannot generate Rca.addin: timestamp could not be resolved. Timestamp file: $(RcaTimestampFile), RcaHotReloadTimestamp: $(RcaHotReloadTimestamp)" />
 
     <ReadLinesFromFile File="$(RcaAddinTemplatePath)">
       <Output TaskParameter="Lines" ItemName="TemplateLines" />
