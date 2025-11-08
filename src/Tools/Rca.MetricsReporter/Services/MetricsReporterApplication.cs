@@ -128,8 +128,11 @@ public sealed class MetricsReporterApplication
         try
         {
             await _reportWriter.WriteJsonAsync(report, options.OutputJsonPath, cancellationToken).ConfigureAwait(false);
-            var html = _htmlGenerator.Generate(report);
-            await _reportWriter.WriteHtmlAsync(html, options.OutputHtmlPath, cancellationToken).ConfigureAwait(false);
+            if (!string.IsNullOrWhiteSpace(options.OutputHtmlPath))
+            {
+                var html = _htmlGenerator.Generate(report);
+                await _reportWriter.WriteHtmlAsync(html, options.OutputHtmlPath, cancellationToken).ConfigureAwait(false);
+            }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -148,10 +151,6 @@ public sealed class MetricsReporterApplication
             throw new ArgumentException("Output JSON path is required.", nameof(options));
         }
 
-        if (string.IsNullOrWhiteSpace(options.OutputHtmlPath))
-        {
-            throw new ArgumentException("Output HTML path is required.", nameof(options));
-        }
 
         if (string.IsNullOrWhiteSpace(options.MetricsDirectory))
         {
@@ -163,6 +162,15 @@ public sealed class MetricsReporterApplication
             if (!File.Exists(path))
             {
                 throw new FileNotFoundException($"Input file not found: {path}", path);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(options.OutputHtmlPath))
+        {
+            var htmlDir = Path.GetDirectoryName(options.OutputHtmlPath);
+            if (!string.IsNullOrWhiteSpace(htmlDir) && !Directory.Exists(htmlDir))
+            {
+                Directory.CreateDirectory(htmlDir);
             }
         }
     }
