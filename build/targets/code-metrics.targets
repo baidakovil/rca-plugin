@@ -43,7 +43,7 @@
     <PropertyGroup>
       <AltCoverInputDir>$(RuntimeDeployDir)</AltCoverInputDir>
       <!-- Method filter to exclude constructors (ctor) and static constructors (cctor) from coverage -->
-      <AltCoverMethodFilter Condition="'$(AltCoverMethodFilter)' == ''">\.cctor|\.ctor</AltCoverMethodFilter>
+      <AltCoverMethodFilter Condition="'$(AltCoverMethodFilter)' == ''">.cctor|.ctor</AltCoverMethodFilter>
     </PropertyGroup>
 
     <!-- Run AltCover instrumentation in-place -->

@@ -269,3 +269,19 @@ Metrics Reporter объединяет метрики из разных исто�
 
 Все edge cases покрыты unit-тестами в `tests/Rca.MetricsReporter.Tests/Processing/SymbolNormalizerTests.cs` с использованием реальных примеров из метрик проекта.
 
+## Member Filtering
+
+Metrics Reporter автоматически исключает методы конструктора и компилятора из отчетов, так как они не представляют интереса для анализа качества кода.
+
+### Исключаемые методы
+
+Фильтруются и не попадают в JSON/HTML отчеты: конструкторы (`.ctor`, `.cctor`) и методы компилятора (`MoveNext`, `SetStateMachine`, `MoveNextAsync`, `DisposeAsync`). Список захардкожен в классе `MemberFilter` для простоты и прозрачности.
+
+### Механизм работы
+
+Фильтрация происходит в `MetricsAggregationService.MergeMember()` после нормализации FQN. Конструкторы AltCover: `Namespace.Type..ctor(...)`. Конструкторы Roslyn: `Namespace.Type.Type(...)` (имя метода совпадает с типом). Методы компилятора определяются по имени. Исключенные методы не добавляются в структуру отчета и отсутствуют в JSON/HTML.
+
+### Реализация
+
+Фильтрация в `MemberFilter` (`src/Tools/Rca.MetricsReporter/Processing/MemberFilter.cs`): `ShouldExcludeMethod(string?)` — проверка по имени, `ShouldExcludeMethodByFqn(string?)` — проверка по FQN с поддержкой AltCover и Roslyn. Тесты: `MemberFilterTests.cs` и `MetricsAggregationServiceTests.cs`.
+
