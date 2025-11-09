@@ -45,7 +45,7 @@ h1 { margin-bottom: 4px; }
 .status-error{ background:rgb(255,200,200); color:#d9534f; font-size:9px; padding:3px 6px; }
 .table-actions{ display:flex; align-items:center; justify-content:flex-end; gap:8px; margin:0; position:sticky; top:0; background:rgb(235, 235, 235); z-index:10; padding:6px 0 }
 .status-badges{ display:flex; gap:8px; align-items:center; }
-.table-actions button{ margin-left:6px; padding:6px 10px; font-size:12px }
+.table-actions button{ margin-left:6px; padding:4px 8px; font-size:10px }
 .table-container{ max-width:100%; }
 .metrics{ border-collapse:collapse; width:100%; table-layout:fixed; word-wrap:break-word; border-spacing:0; font-size:0.9em; border:var(--border-dark-width) solid var(--border-dark-color); }
 /* Clean borders - each cell has only right and bottom borders to prevent double borders */
@@ -74,6 +74,8 @@ h1 { margin-bottom: 4px; }
 .metrics tbody tr:last-child td, .metrics tbody tr:last-child th{ border-bottom:var(--border-dark-width) solid var(--border-dark-color); }
 /* Table headers - sticky header rows, positioned below table-actions */
 .metrics thead th{ background-color:#d1d1d1; text-align:left; white-space:normal; word-wrap:break-word; cursor:pointer; position:sticky; top:40px; z-index:5; will-change:transform; -webkit-hyphens:auto; -ms-hyphens:auto; hyphens:auto; }
+/* Symbol header cell - add left padding */
+.metrics thead th[data-col='symbol']{ padding-left:8px; }
 /* First header row: group labels (AltCover, Roslyn, Sarif) - center aligned, increased height, top border using box-shadow */
 .metrics thead tr:first-child th{ padding-top:8px; padding-bottom:8px; box-shadow:0 calc(-1 * var(--border-dark-width)) 0 0 var(--border-dark-color); }
 .metrics thead tr:first-child th:not([data-col='symbol']){ text-align:center; font-weight:bold; }
