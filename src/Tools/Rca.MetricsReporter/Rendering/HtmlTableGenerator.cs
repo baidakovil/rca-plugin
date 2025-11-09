@@ -49,9 +49,9 @@ internal sealed class HtmlTableGenerator
         // First header row: group labels (AltCover, Roslyn, Sarif)
         builder.AppendLine("    <tr>");
         builder.AppendLine("      <th data-col=\"symbol\" rowspan=\"2\">Symbol</th>");
-        builder.AppendLine("      <th colspan=\"4\">AltCover</th>");
-        builder.AppendLine("      <th colspan=\"6\">Roslyn</th>");
-        builder.AppendLine("      <th colspan=\"2\">Sarif</th>");
+        builder.AppendLine("      <th colspan=\"4\" data-col-group=\"AltCover\">AltCover</th>");
+        builder.AppendLine("      <th colspan=\"6\" data-col-group=\"Roslyn\">Roslyn</th>");
+        builder.AppendLine("      <th colspan=\"2\" data-col-group=\"Sarif\">Sarif</th>");
         builder.AppendLine("    </tr>");
         // Second header row: individual metric names
         builder.AppendLine("    <tr>");
@@ -158,7 +158,7 @@ internal sealed class HtmlTableGenerator
         {
             node.Metrics.TryGetValue(mid, out var val);
             var status = val is null ? "na" : val.Status.ToString().ToLowerInvariant();
-            builder.AppendLine($"      <{metricTag} class=\"metric\" data-status=\"{status}\">{MetricValueRenderer.Render(val)}</{metricTag}>");
+            builder.AppendLine($"      <{metricTag} class=\"metric\" data-col=\"{mid}\" data-status=\"{status}\">{MetricValueRenderer.Render(val)}</{metricTag}>");
         }
 
         builder.AppendLine("    </tr>");
