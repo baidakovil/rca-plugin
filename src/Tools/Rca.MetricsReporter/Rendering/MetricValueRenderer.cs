@@ -30,7 +30,7 @@ internal static class MetricValueRenderer
 
         if (value.Delta.HasValue && value.Delta.Value != 0)
         {
-            var deltaText = value.Delta.Value > 0 ? $"+{value.Delta.Value:0.##}" : $"{value.Delta.Value:0.##}";
+            var deltaText = FormatDelta(value.Delta.Value, value.Unit);
             var deltaClass = value.Delta.Value >= 0 ? "delta-positive" : "delta-negative";
             builder.Append($"<sup class=\"{deltaClass}\">{WebUtility.HtmlEncode(deltaText)}</sup>");
         }
@@ -47,9 +47,26 @@ internal static class MetricValueRenderer
     private static string FormatValue(decimal value, string? unit)
         => unit switch
         {
-            "percent" => $"{value:0.##}%",
+            "percent" => $"{value:0}%",
             _ => $"{value:0.##}"
         };
+
+    /// <summary>
+    /// Formats a delta value with the appropriate unit and sign.
+    /// </summary>
+    /// <param name="delta">The delta value (can be positive or negative).</param>
+    /// <param name="unit">The unit (e.g., "percent").</param>
+    /// <returns>Formatted string representation of the delta with sign prefix.</returns>
+    private static string FormatDelta(decimal delta, string? unit)
+    {
+        var formattedValue = unit switch
+        {
+            "percent" => $"{delta:0}%",
+            _ => $"{delta:0.##}"
+        };
+        
+        return delta > 0 ? $"+{formattedValue}" : formattedValue;
+    }
 }
 
 
