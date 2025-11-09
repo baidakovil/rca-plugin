@@ -58,12 +58,12 @@ th[data-col='symbol'], td.symbol, th.symbol { width:420px; box-sizing:border-box
 .metrics thead th:not([data-col='symbol']), .metrics td.metric, .metrics th.metric { width:auto }
 .symbol .name-text{ display:inline-block; vertical-align:middle; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 /* Cell backgrounds based on status - success uses base row color, only warning/error have colored backgrounds */
-/* For node-header rows (assembly, namespace, class) - inherit gray background, only warning/error override */
-.metrics tr.node-header th.metric[data-status='warning']{ background: rgba(240,173,78,0.12) }
-.metrics tr.node-header th.metric[data-status='error']{ background: rgba(217,83,79,0.12) }
-/* For node-item rows (members) - inherit striped background, only warning/error override */
-.metrics tr.node-item td.metric[data-status='warning']{ background: rgba(240,173,78,0.12) }
-.metrics tr.node-item td.metric[data-status='error']{ background: rgba(217,83,79,0.12) }
+/* For node-header rows (assembly, namespace, class) - darker colors to contrast with gray background #ddd */
+.metrics tr.node-header th.metric[data-status='warning']{ background: rgba(255,235,156,0.3) }
+.metrics tr.node-header th.metric[data-status='error']{ background: rgba(255,200,200,0.25) }
+/* For node-item rows (members) - lighter colors to contrast with white/light-gray background */
+.metrics tr.node-item td.metric[data-status='warning']{ background: rgba(255,248,220,0.6) }
+.metrics tr.node-item td.metric[data-status='error']{ background: rgba(255,240,240,0.5) }
 /* Text colors - black for success, colored for warning/error */
 .metrics tr.node-item td.metric[data-status='error'] .metric-value{ color:#d9534f }
 .metrics tr.node-item td.metric[data-status='warning'] .metric-value{ color:#b66f1a }
