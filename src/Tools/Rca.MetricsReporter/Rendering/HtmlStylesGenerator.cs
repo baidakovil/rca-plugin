@@ -40,9 +40,12 @@ h1 { margin-bottom: 4px; }
 .metrics th:first-child, .metrics td:first-child{ border-left:1px solid #c1c1c1; }
 .metrics thead th{ border-top:1px solid #c1c1c1; }
 /* Table headers - sticky header rows, positioned below table-actions */
-.metrics thead th{ background-color:#d1d1d1; text-align:left; white-space:normal; word-wrap:break-word; cursor:pointer; position:sticky; top:40px; z-index:5; }
-/* First header row: group labels (AltCover, Roslyn, Sarif) - center aligned */
+.metrics thead th{ background-color:#d1d1d1; text-align:left; white-space:normal; word-wrap:break-word; cursor:pointer; position:sticky; top:40px; z-index:5; will-change:transform; }
+/* First header row: group labels (AltCover, Roslyn, Sarif) - center aligned, increased height, top border using box-shadow */
+.metrics thead tr:first-child th{ padding-top:8px; padding-bottom:8px; box-shadow:0 -1px 0 0 #c1c1c1; }
 .metrics thead tr:first-child th:not([data-col='symbol']){ text-align:center; font-weight:bold; }
+/* Second header row: top border using box-shadow to separate from first row */
+.metrics thead tr:nth-child(2) th{ box-shadow:0 -1px 0 0 #c1c1c1; }
 /* Node rows (with expander) - use th, gray background, bold black text */
 .metrics tr.node-header th{ background-color:#ddd; font-weight:bold; color:#000; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 .metrics tr.node-header th:first-child{ background-color:#dcdcdc; }
