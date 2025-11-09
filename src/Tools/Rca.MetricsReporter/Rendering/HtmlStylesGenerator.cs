@@ -34,9 +34,9 @@ h1 { margin-bottom: 4px; }
 .table-actions{ display:flex; align-items:center; justify-content:flex-end; gap:8px; margin:0; position:sticky; top:0; background:#d6d6d6; z-index:10; padding:6px 0 }
 .table-actions button{ margin-left:6px; padding:6px 10px; font-size:12px }
 .table-container{ max-width:100%; }
-.metrics{ border-collapse:collapse; width:100%; table-layout:fixed; word-wrap:break-word; border-spacing:0; }
+.metrics{ border-collapse:collapse; width:100%; table-layout:fixed; word-wrap:break-word; border-spacing:0; font-size:0.9em; }
 /* Clean borders - each cell has only right and bottom borders to prevent double borders */
-.metrics th, .metrics td{ border-right:1px solid #c1c1c1; border-bottom:1px solid #c1c1c1; border-top:none; border-left:none; padding:2px 4px; vertical-align:middle; line-height:1.4; height:auto; }
+.metrics th, .metrics td{ border-right:1px solid #c1c1c1; border-bottom:1px solid #c1c1c1; border-top:none; border-left:none; padding:1px 3px; vertical-align:middle; line-height:1.3; height:auto; }
 .metrics th:first-child, .metrics td:first-child{ border-left:1px solid #c1c1c1; }
 .metrics thead th{ border-top:1px solid #c1c1c1; }
 /* Table headers - sticky header row, positioned below table-actions */
