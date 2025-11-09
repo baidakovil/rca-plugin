@@ -50,7 +50,14 @@ internal sealed class HtmlTableGenerator
         builder.AppendLine("  </thead>");
         builder.AppendLine("  <tbody>");
 
-        RenderNodeRows(report.Solution, 0, null, builder);
+        // Skip Solution node and render Assemblies directly as top-level items (level 0)
+        if (report.Solution is SolutionMetricsNode solution)
+        {
+            foreach (var assembly in solution.Assemblies.OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                RenderNodeRows(assembly, 0, null, builder);
+            }
+        }
 
         builder.AppendLine("  </tbody>");
         builder.AppendLine("</table>");
