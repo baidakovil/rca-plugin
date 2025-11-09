@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Text;
+
 namespace Rca.Tools.MetricsReporter.Rendering;
 
 /// <summary>
@@ -5,142 +8,232 @@ namespace Rca.Tools.MetricsReporter.Rendering;
 /// </summary>
 internal static class HtmlStylesGenerator
 {
+    private const string ColorScheme = "light dark";
+    private const string DefaultFontStack = "sans-serif";
+    private const string PageBackgroundColor = "rgba(235, 235, 235, 1)";
+    private const string HeaderBackgroundColor = "rgba(209, 209, 209, 1)";
+    private const string HeaderHoverBackgroundColor = "rgba(193, 193, 193, 1)";
+    private const string LeafHoverBackgroundColor = "rgba(176, 176, 176, 1)";
+    private const string NodeHeaderBackgroundColor = "rgba(221, 221, 221, 1)";
+    private const string NodeHeaderFirstColumnBackgroundColor = "rgba(220, 220, 220, 1)";
+    private const string LeafBaseBackgroundColor = "rgba(255, 255, 255, 1)";
+    private const string LeafStripeOddBackgroundColor = "rgba(243, 243, 243, 1)";
+    private const string LeafStripeEvenBackgroundColor = "rgba(255, 255, 255, 1)";
+    private const string LeafPrimaryColor = "rgba(204, 0, 0, 1)";
+
+    private const string BadgeNewBackgroundColor = "rgba(26, 127, 55, 1)";
+    private const string BadgeNewForegroundColor = "rgba(255, 255, 255, 1)";
+    private const string StatusWarningBackgroundColor = "rgba(255, 235, 156, 1)";
+    private const string StatusErrorBackgroundColor = "rgba(255, 200, 200, 1)";
+    private const string StatusWarningColor = "rgba(182, 111, 26, 1)";
+    private const string StatusErrorColor = "rgba(217, 83, 79, 1)";
+
+    private const string HeaderWarningBackgroundColor = "rgba(255,235,156,0.3)";
+    private const string HeaderErrorBackgroundColor = "rgba(255,200,200,0.25)";
+    private const string LeafWarningBackgroundColor = "rgba(255,248,220,0.6)";
+    private const string LeafErrorBackgroundColor = "rgba(255,240,240,0.5)";
+
+    private const string DefaultGap = "8px";
+    private const string CompactBadgeFontSize = "9px";
+    private const string CompactBadgePadding = "3px 6px";
+    private const string DeltaSpacing = "4px";
+
+    private const int MaxSupportedDepth = 4;
+    private const int IndentStep = 12;
+    private const int ExpansionSpacing = 12;
+    private const int RootExpanderPadding = 20;
+    private const int SymbolColumnWidth = 420;
+    private const int BodyMargin = 12;
+    private const int WideLayoutMargin = 110;
+
+    private static readonly CultureInfo InvariantCulture = CultureInfo.InvariantCulture;
+
     /// <summary>
     /// Generates the complete CSS stylesheet for the metrics report.
     /// </summary>
     /// <returns>The CSS stylesheet as a string.</returns>
     public static string Generate()
-        => @"
-:root {
-  color-scheme: light dark;
-  font-family: sans-serif;
-  font-size: 0.9em;
-  /* Border variables for consistent styling */
-  --border-dark-color:rgb(175, 175, 175);
-  --border-dark-width: 1.5px;
-  --border-light-color:rgb(190, 190, 190);
-  --border-light-width: 1px;
-}
-html {
-  background-color:rgb(235, 235, 235);
-}
-body {
-  margin: 12px;
-}
-/* Add side margins for wide screens (width > 1200px) */
-@media (min-width: 1201px) {
-  body {
-    margin-top: 12px;
-    margin-bottom: 12px;
-    margin-left: 110px;
-    margin-right: 110px;
-  }
-}
-h1 { margin-bottom: 4px; }
-.meta p { margin: 2px 0; }
-.legend { margin: 8px 0 12px; display:flex; gap:8px; }
-.badge { padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600; text-transform:uppercase; }
-.badge-new { background:#1a7f37; color:#fff; font-size:9px; }
-.status-warning{ background:rgb(255,235,156); color:#b66f1a; font-size:9px; padding:3px 6px; }
-.status-error{ background:rgb(255,200,200); color:#d9534f; font-size:9px; padding:3px 6px; }
-.table-actions{ display:flex; align-items:center; justify-content:flex-end; gap:8px; margin:0; position:sticky; top:0; background:rgb(235, 235, 235); z-index:10; padding:6px 0 }
-.status-badges{ display:flex; gap:8px; align-items:center; }
-.table-actions button{ margin-left:6px; padding:4px 8px; font-size:10px }
-.table-container{ max-width:100%; }
-.metrics{ border-collapse:collapse; width:100%; table-layout:fixed; word-wrap:break-word; border-spacing:0; font-size:0.9em; border:var(--border-dark-width) solid var(--border-dark-color); }
-/* Clean borders - each cell has only right and bottom borders to prevent double borders */
-.metrics th, .metrics td{ border-right:var(--border-light-width) solid var(--border-light-color); border-bottom:var(--border-light-width) solid var(--border-light-color); border-top:none; border-left:none; padding:1px 3px; vertical-align:middle; line-height:1.3; height:auto; -webkit-hyphens:auto; -ms-hyphens:auto; hyphens:auto; }
-.metrics th:first-child, .metrics td:first-child{ border-left:var(--border-dark-width) solid var(--border-dark-color); }
-.metrics th:last-child, .metrics td:last-child{ border-right:var(--border-dark-width) solid var(--border-dark-color); }
-/* Group separator borders - darker borders to separate column groups */
-/* Symbol column (first column) - right border darker, bottom border darker for header cell */
-.metrics th[data-col='symbol'], .metrics td.symbol, .metrics th.symbol{ border-right:var(--border-dark-width) solid var(--border-dark-color); }
-.metrics thead th[data-col='symbol']{ border-bottom:var(--border-dark-width) solid var(--border-dark-color) !important; }
-/* AltCover group - last column (AltCoverCyclomaticComplexity) has darker right border, applies to both header rows */
-.metrics th[data-col='AltCoverCyclomaticComplexity'], .metrics td.metric[data-col='AltCoverCyclomaticComplexity'], .metrics th.metric[data-col='AltCoverCyclomaticComplexity']{ border-right:var(--border-dark-width) solid var(--border-dark-color); }
-.metrics th[data-col-group='AltCover']{ border-right:var(--border-dark-width) solid var(--border-dark-color); }
-/* Roslyn group - first column (RoslynCyclomaticComplexity) has darker left border, last column (RoslynExecutableLines) has darker right border */
-.metrics th[data-col='RoslynCyclomaticComplexity'], .metrics td.metric[data-col='RoslynCyclomaticComplexity'], .metrics th.metric[data-col='RoslynCyclomaticComplexity']{ border-left:var(--border-dark-width) solid var(--border-dark-color); }
-.metrics th[data-col='RoslynExecutableLines'], .metrics td.metric[data-col='RoslynExecutableLines'], .metrics th.metric[data-col='RoslynExecutableLines']{ border-right:var(--border-dark-width) solid var(--border-dark-color); }
-.metrics th[data-col-group='Roslyn']{ border-left:var(--border-dark-width) solid var(--border-dark-color); border-right:var(--border-dark-width) solid var(--border-dark-color); }
-/* Sarif group - first column (SarifCaRuleViolations) has darker left border */
-.metrics th[data-col='SarifCaRuleViolations'], .metrics td.metric[data-col='SarifCaRuleViolations'], .metrics th.metric[data-col='SarifCaRuleViolations']{ border-left:var(--border-dark-width) solid var(--border-dark-color); }
-.metrics th[data-col-group='Sarif']{ border-left:var(--border-dark-width) solid var(--border-dark-color); }
-/* Header separation - darker border between header and body */
-.metrics thead th{ border-top:var(--border-dark-width) solid var(--border-dark-color); }
-.metrics thead tr:last-child th{ border-bottom:var(--border-dark-width) solid var(--border-dark-color) !important; }
-.metrics tbody tr:first-child td, .metrics tbody tr:first-child th{ border-top:var(--border-dark-width) solid var(--border-dark-color) !important; }
-/* Bottom border of table - darker border for last row */
-.metrics tbody tr:last-child td, .metrics tbody tr:last-child th{ border-bottom:var(--border-dark-width) solid var(--border-dark-color); }
-/* Table headers - sticky header rows, positioned below table-actions */
-.metrics thead th{ background-color:#d1d1d1; text-align:left; white-space:normal; word-wrap:break-word; cursor:pointer; position:sticky; top:40px; z-index:5; will-change:transform; -webkit-hyphens:auto; -ms-hyphens:auto; hyphens:auto; }
-/* Symbol header cell - add left padding */
-.metrics thead th[data-col='symbol']{ padding-left:8px; }
-/* First header row: group labels (AltCover, Roslyn, Sarif) - center aligned, increased height, top border using box-shadow */
-.metrics thead tr:first-child th{ padding-top:8px; padding-bottom:8px; box-shadow:0 calc(-1 * var(--border-dark-width)) 0 0 var(--border-dark-color); }
-.metrics thead tr:first-child th:not([data-col='symbol']){ text-align:center; font-weight:bold; }
-/* Second header row: top border using box-shadow to separate from first row */
-.metrics thead tr:nth-child(2) th{ box-shadow:0 calc(-1 * var(--border-light-width)) 0 0 var(--border-light-color); }
-/* Node rows (with expander) - use th, gray background, bold black text */
-.metrics tr.node-header th{ background-color:#ddd; font-weight:bold; color:#000; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-.metrics tr.node-header th:first-child{ background-color:#dcdcdc; }
-/* Regular rows (items) - use td, striped background, red text in first column */
-.metrics tr.node-item td{ text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; background-color:#fff; }
-/* Striped rows - alternate white and gray for item rows only (handled by JS classes) */
-.metrics tr.node-item.stripe-odd td{ background-color:#F3F3F3; }
-.metrics tr.node-item.stripe-even td{ background-color:#fff; }
-/* Red text for item names in first column */
-.metrics tr.node-item td.symbol .item-name{ color:#c00; }
-/* Fixed width for first column */
-th[data-col='symbol'], td.symbol, th.symbol { width:420px; box-sizing:border-box }
-.symbol{ position:relative; width:420px; white-space:nowrap; overflow:hidden; box-sizing:border-box; line-height:inherit; }
-/* Equal width for all other columns */
-.metrics thead th:not([data-col='symbol']), .metrics td.metric, .metrics th.metric { width:auto }
-.symbol .name-text{ display:inline-block; vertical-align:middle; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-/* Cell backgrounds based on status - success uses base row color, only warning/error have colored backgrounds */
-/* For node-header rows (assembly, namespace, class) - darker colors to contrast with gray background #ddd */
-.metrics tr.node-header th.metric[data-status='warning']{ background: rgba(255,235,156,0.3) }
-.metrics tr.node-header th.metric[data-status='error']{ background: rgba(255,200,200,0.25) }
-/* For node-item rows (members) - lighter colors to contrast with white/light-gray background */
-.metrics tr.node-item td.metric[data-status='warning']{ background: rgba(255,248,220,0.6) }
-.metrics tr.node-item td.metric[data-status='error']{ background: rgba(255,240,240,0.5) }
-/* Text colors - black for success, colored for warning/error */
-.metrics tr.node-item td.metric[data-status='error'] .metric-value{ color:#d9534f }
-.metrics tr.node-item td.metric[data-status='warning'] .metric-value{ color:#b66f1a }
-.metrics tr.node-header th.metric[data-status='error'] .metric-value{ color:#d9534f }
-.metrics tr.node-header th.metric[data-status='warning'] .metric-value{ color:#b66f1a }
-/* Metric values - bold for node-header rows, normal for node-item rows */
-.metrics tr.node-header th .metric-value{ font-weight:bold }
-.metrics tr.node-item td .metric-value{ font-weight:normal }
-.metric-value{ font-weight:normal }
-.delta-positive{ color:#1a7f37; margin-left:4px }
-.delta-negative{ color:#d9534f; margin-left:4px }
-.fqn{ font-family:'Consolas','Courier New',monospace; font-size:12px; color:rgba(128,128,128,0.8) }
-/* expander button - fixed positioning to avoid text overlap */
-.expander{ position:absolute; left:0; top:50%; transform:translateY(-50%); border:0; background:transparent; cursor:pointer; font-size:14px; line-height:1; width:20px; height:20px; display:flex; align-items:center; justify-content:center; z-index:1; padding:0; margin:0; user-select:none; font-weight:bold; }
-.expander:focus{ outline:1px solid rgba(0,0,0,0.3); outline-offset:2px; border-radius:2px }
-/* padding-left for symbol cells: level-based indentation */
-/* Base: no indentation for level 0 */
-tr.node-row[data-level='0'] .symbol{ padding-left:0 }
-tr.node-row[data-level='0'] .symbol.has-expander{ padding-left:20px }
-/* Levels 1-4: indentation increases by 12px per level */
-/* Level 1: 24px base (20px for expander area + 4px spacing) */
-tr.node-row[data-level='1'] .symbol{ padding-left:24px }
-tr.node-row[data-level='1'] .symbol:not(.has-expander){ padding-left:12px }
-/* Level 2: 36px base */
-tr.node-row[data-level='2'] .symbol{ padding-left:36px }
-tr.node-row[data-level='2'] .symbol:not(.has-expander){ padding-left:24px }
-/* Level 3: 48px base */
-tr.node-row[data-level='3'] .symbol{ padding-left:48px }
-tr.node-row[data-level='3'] .symbol:not(.has-expander){ padding-left:36px }
-/* Level 4: 60px base */
-tr.node-row[data-level='4'] .symbol{ padding-left:60px }
-tr.node-row[data-level='4'] .symbol:not(.has-expander){ padding-left:48px }
-/* Ensure text doesn't overlap with expander */
-.symbol .name-text{ margin-left:0; min-width:0 }
-/* Hover effect for rows */
-.metrics tbody tr.node-item:hover td{ background-color:#b0b0b0; }
-.metrics tbody tr.node-header:hover th{ background-color:#c1c1c1; }
-";
+    {
+        var builder = new StringBuilder(capacity: 4_096);
+
+        AppendRootVariables(builder);
+        builder.AppendLine();
+        AppendPageLayout(builder);
+        builder.AppendLine();
+        AppendTypography(builder);
+        builder.AppendLine();
+        AppendControlPanelStyles(builder);
+        builder.AppendLine();
+        AppendTableLayout(builder);
+        builder.AppendLine();
+        AppendColumnGrouping(builder);
+        builder.AppendLine();
+        AppendTableHeaders(builder);
+        builder.AppendLine();
+        AppendNodeRowStyles(builder);
+        builder.AppendLine();
+        AppendMetricStatusStyles(builder);
+        builder.AppendLine();
+        AppendSymbolColumnStyles(builder);
+        builder.AppendLine();
+        AppendExpanderStyles(builder);
+        builder.AppendLine();
+        AppendDepthIndentation(builder);
+        builder.AppendLine();
+        AppendInteractiveStates(builder);
+
+        return builder.ToString();
+    }
+
+    private static void AppendRootVariables(StringBuilder builder)
+    {
+        builder.AppendLine(":root {");
+        builder.AppendLine($"  color-scheme: {ColorScheme};");
+        builder.AppendLine($"  font-family: {DefaultFontStack};");
+        builder.AppendLine("  font-size: 0.9em;");
+        builder.AppendLine("  /* Border variables for consistent styling */");
+        builder.AppendLine("  --border-dark-color: rgb(175, 175, 175);");
+        builder.AppendLine("  --border-dark-width: 1.5px;");
+        builder.AppendLine("  --border-light-color: rgb(190, 190, 190);");
+        builder.AppendLine("  --border-light-width: 1px;");
+        builder.AppendLine("}");
+    }
+
+    private static void AppendPageLayout(StringBuilder builder)
+    {
+        builder.AppendLine("html {");
+        builder.AppendLine($"  background-color: {PageBackgroundColor};");
+        builder.AppendLine("}");
+        builder.AppendLine("body {");
+        builder.AppendLine($"  margin: {BodyMargin.ToString(InvariantCulture)}px;");
+        builder.AppendLine("}");
+        builder.AppendLine("@media (min-width: 1201px) {");
+        builder.AppendLine("  body {");
+        builder.AppendLine($"    margin-top: {BodyMargin.ToString(InvariantCulture)}px;");
+        builder.AppendLine($"    margin-bottom: {BodyMargin.ToString(InvariantCulture)}px;");
+        builder.AppendLine($"    margin-left: {WideLayoutMargin.ToString(InvariantCulture)}px;");
+        builder.AppendLine($"    margin-right: {WideLayoutMargin.ToString(InvariantCulture)}px;");
+        builder.AppendLine("  }");
+        builder.AppendLine("}");
+    }
+
+    private static void AppendTypography(StringBuilder builder)
+    {
+        builder.AppendLine("h1 { margin-bottom: 4px; }");
+        builder.AppendLine(".meta p { margin: 2px 0; }");
+        builder.AppendLine(FormattableString.Invariant($".legend {{ margin: 8px 0 12px; display: flex; gap: {DefaultGap}; }}"));
+        builder.AppendLine(".badge { padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }");
+        builder.AppendLine(FormattableString.Invariant($".badge-new {{ background: {BadgeNewBackgroundColor}; color: {BadgeNewForegroundColor}; font-size: {CompactBadgeFontSize}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".status-warning {{ background: {StatusWarningBackgroundColor}; color: {StatusWarningColor}; font-size: {CompactBadgeFontSize}; padding: {CompactBadgePadding}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".status-error {{ background: {StatusErrorBackgroundColor}; color: {StatusErrorColor}; font-size: {CompactBadgeFontSize}; padding: {CompactBadgePadding}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".delta-positive {{ color: {BadgeNewBackgroundColor}; margin-left: {DeltaSpacing}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".delta-negative {{ color: {StatusErrorColor}; margin-left: {DeltaSpacing}; }}"));
+        builder.AppendLine(".fqn { font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; color: rgba(128, 128, 128, 0.8); }");
+    }
+
+    private static void AppendControlPanelStyles(StringBuilder builder)
+    {
+        builder.AppendLine(".table-container { max-width: 100%; }");
+        builder.AppendLine(FormattableString.Invariant($".table-actions {{ display: flex; align-items: center; justify-content: flex-end; gap: {DefaultGap}; margin: 0; position: sticky; top: 0; background: {PageBackgroundColor}; z-index: 10; padding: 6px 0; }}"));
+        builder.AppendLine(FormattableString.Invariant($".status-badges {{ display: flex; gap: {DefaultGap}; align-items: center; }}"));
+        builder.AppendLine(".table-actions button { margin-left: 6px; padding: 4px 8px; font-size: 10px; }");
+    }
+
+    private static void AppendTableLayout(StringBuilder builder)
+    {
+        builder.AppendLine(".metrics { border-collapse: collapse; width: 100%; table-layout: fixed; word-wrap: break-word; border-spacing: 0; font-size: 0.9em; border: var(--border-dark-width) solid var(--border-dark-color); }");
+        builder.AppendLine(".metrics th, .metrics td { border-right: var(--border-light-width) solid var(--border-light-color); border-bottom: var(--border-light-width) solid var(--border-light-color); border-top: none; border-left: none; padding: 1px 3px; vertical-align: middle; line-height: 1.3; height: auto; -webkit-hyphens: auto; -ms-hyphens: auto; hyphens: auto; }");
+        builder.AppendLine(".metrics th:first-child, .metrics td:first-child { border-left: var(--border-dark-width) solid var(--border-dark-color); }");
+        builder.AppendLine(".metrics th:last-child, .metrics td:last-child { border-right: var(--border-dark-width) solid var(--border-dark-color); }");
+        builder.AppendLine(".metrics tbody tr:first-child td, .metrics tbody tr:first-child th { border-top: var(--border-dark-width) solid var(--border-dark-color) !important; }");
+        builder.AppendLine(".metrics tbody tr:last-child td, .metrics tbody tr:last-child th { border-bottom: var(--border-dark-width) solid var(--border-dark-color); }");
+    }
+
+    private static void AppendColumnGrouping(StringBuilder builder)
+    {
+        builder.AppendLine("/* Column group separators */");
+        builder.AppendLine(".metrics th[data-col='symbol'], .metrics td.symbol, .metrics th.symbol { border-right: var(--border-dark-width) solid var(--border-dark-color); }");
+        builder.AppendLine(".metrics thead th[data-col='symbol'] { border-bottom: var(--border-dark-width) solid var(--border-dark-color) !important; }");
+
+        builder.AppendLine(".metrics th[data-col='AltCoverCyclomaticComplexity'], .metrics td.metric[data-col='AltCoverCyclomaticComplexity'], .metrics th.metric[data-col='AltCoverCyclomaticComplexity'] { border-right: var(--border-dark-width) solid var(--border-dark-color); }");
+        builder.AppendLine(".metrics th[data-col-group='AltCover'] { border-right: var(--border-dark-width) solid var(--border-dark-color); }");
+
+        builder.AppendLine(".metrics th[data-col='RoslynCyclomaticComplexity'], .metrics td.metric[data-col='RoslynCyclomaticComplexity'], .metrics th.metric[data-col='RoslynCyclomaticComplexity'] { border-left: var(--border-dark-width) solid var(--border-dark-color); }");
+        builder.AppendLine(".metrics th[data-col='RoslynExecutableLines'], .metrics td.metric[data-col='RoslynExecutableLines'], .metrics th.metric[data-col='RoslynExecutableLines'] { border-right: var(--border-dark-width) solid var(--border-dark-color); }");
+        builder.AppendLine(".metrics th[data-col-group='Roslyn'] { border-left: var(--border-dark-width) solid var(--border-dark-color); border-right: var(--border-dark-width) solid var(--border-dark-color); }");
+
+        builder.AppendLine(".metrics th[data-col='SarifCaRuleViolations'], .metrics td.metric[data-col='SarifCaRuleViolations'], .metrics th.metric[data-col='SarifCaRuleViolations'] { border-left: var(--border-dark-width) solid var(--border-dark-color); }");
+        builder.AppendLine(".metrics th[data-col-group='Sarif'] { border-left: var(--border-dark-width) solid var(--border-dark-color); }");
+    }
+
+    private static void AppendTableHeaders(StringBuilder builder)
+    {
+        builder.AppendLine(FormattableString.Invariant($".metrics thead th {{ border-top: var(--border-dark-width) solid var(--border-dark-color); background-color: {HeaderBackgroundColor}; text-align: left; white-space: normal; word-wrap: break-word; cursor: pointer; position: sticky; top: 40px; z-index: 5; will-change: transform; -webkit-hyphens: auto; -ms-hyphens: auto; hyphens: auto; }}"));
+        builder.AppendLine(".metrics thead th[data-col='symbol'] { padding-left: 8px; }");
+        builder.AppendLine(".metrics thead tr:first-child th { padding-top: 8px; padding-bottom: 8px; box-shadow: 0 calc(-1 * var(--border-dark-width)) 0 0 var(--border-dark-color); }");
+        builder.AppendLine(".metrics thead tr:first-child th:not([data-col='symbol']) { text-align: center; font-weight: bold; }");
+        builder.AppendLine(".metrics thead tr:nth-child(2) th { box-shadow: 0 calc(-1 * var(--border-light-width)) 0 0 var(--border-light-color); }");
+        builder.AppendLine(".metrics thead tr:last-child th { border-bottom: var(--border-dark-width) solid var(--border-dark-color) !important; }");
+    }
+
+    private static void AppendNodeRowStyles(StringBuilder builder)
+    {
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.node-header th {{ background-color: {NodeHeaderBackgroundColor}; font-weight: bold; color: rgba(0, 0, 0, 1); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.node-header th:first-child {{ background-color: {NodeHeaderFirstColumnBackgroundColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.node-item td {{ text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background-color: {LeafBaseBackgroundColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.node-item.stripe-odd td {{ background-color: {LeafStripeOddBackgroundColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.node-item.stripe-even td {{ background-color: {LeafStripeEvenBackgroundColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.node-item td.symbol .item-name {{ color: {LeafPrimaryColor}; }}"));
+    }
+
+    private static void AppendMetricStatusStyles(StringBuilder builder)
+    {
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.node-header th.metric[data-status='warning'] {{ background: {HeaderWarningBackgroundColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.node-header th.metric[data-status='error'] {{ background: {HeaderErrorBackgroundColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.node-item td.metric[data-status='warning'] {{ background: {LeafWarningBackgroundColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.node-item td.metric[data-status='error'] {{ background: {LeafErrorBackgroundColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.node-item td.metric[data-status='error'] .metric-value {{ color: {StatusErrorColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.node-item td.metric[data-status='warning'] .metric-value {{ color: {StatusWarningColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.node-header th.metric[data-status='error'] .metric-value {{ color: {StatusErrorColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.node-header th.metric[data-status='warning'] .metric-value {{ color: {StatusWarningColor}; }}"));
+        builder.AppendLine(".metrics tr.node-header th .metric-value { font-weight: bold; }");
+        builder.AppendLine(".metrics tr.node-item td .metric-value { font-weight: normal; }");
+        builder.AppendLine(".metric-value { font-weight: normal; }");
+    }
+
+    private static void AppendSymbolColumnStyles(StringBuilder builder)
+    {
+        builder.AppendLine($"th[data-col='symbol'], td.symbol, th.symbol {{ width: {SymbolColumnWidth.ToString(InvariantCulture)}px; box-sizing: border-box; }}");
+        builder.AppendLine($".symbol {{ position: relative; width: {SymbolColumnWidth.ToString(InvariantCulture)}px; white-space: nowrap; overflow: hidden; box-sizing: border-box; line-height: inherit; }}");
+        builder.AppendLine(".metrics thead th:not([data-col='symbol']), .metrics td.metric, .metrics th.metric { width: auto; }");
+        builder.AppendLine(".symbol .name-text { display: inline-block; vertical-align: middle; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-left: 0; min-width: 0; }");
+    }
+
+    private static void AppendExpanderStyles(StringBuilder builder)
+    {
+        builder.AppendLine(".expander { position: absolute; left: 0; top: 50%; transform: translateY(-50%); border: 0; background: transparent; cursor: pointer; font-size: 14px; line-height: 1; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; z-index: 1; padding: 0; margin: 0; user-select: none; font-weight: bold; }");
+        builder.AppendLine(".expander:focus { outline: 1px solid rgba(0,0,0,0.3); outline-offset: 2px; border-radius: 2px; }");
+    }
+
+    private static void AppendDepthIndentation(StringBuilder builder)
+    {
+        builder.AppendLine("/* Symbol indentation by tree level */");
+        builder.AppendLine("tr.node-row[data-level='0'] .symbol { padding-left: 0; }");
+        builder.AppendLine($"tr.node-row[data-level='0'] .symbol.has-expander {{ padding-left: {RootExpanderPadding.ToString(InvariantCulture)}px; }}");
+
+        for (var level = 1; level <= MaxSupportedDepth; level++)
+        {
+            var basePadding = level * IndentStep;
+            var withExpander = basePadding + ExpansionSpacing;
+            builder.AppendLine(FormattableString.Invariant($"tr.node-row[data-level='{level}'] .symbol {{ padding-left: {withExpander}px; }}"));
+            builder.AppendLine(FormattableString.Invariant($"tr.node-row[data-level='{level}'] .symbol:not(.has-expander) {{ padding-left: {basePadding}px; }}"));
+        }
+    }
+
+    private static void AppendInteractiveStates(StringBuilder builder)
+    {
+        builder.AppendLine(FormattableString.Invariant($".metrics tbody tr.node-item:hover td {{ background-color: {LeafHoverBackgroundColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tbody tr.node-header:hover th {{ background-color: {HeaderHoverBackgroundColor}; }}"));
+    }
 }
 
