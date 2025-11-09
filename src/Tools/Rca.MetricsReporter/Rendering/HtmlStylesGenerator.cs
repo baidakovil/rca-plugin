@@ -15,9 +15,14 @@ internal static class HtmlStylesGenerator
   color-scheme: light dark;
   font-family: sans-serif;
   font-size: 0.9em;
+  /* Border variables for consistent styling */
+  --border-dark-color:rgb(175, 175, 175);
+  --border-dark-width: 1.5px;
+  --border-light-color:rgb(190, 190, 190);
+  --border-light-width: 1px;
 }
 html {
-  background-color: #e5e5e5;
+  background-color:rgb(235, 235, 235);
 }
 body {
   margin: 12px;
@@ -40,41 +45,41 @@ h1 { margin-bottom: 4px; }
 .status-warning{ background:#f0ad4e; color:#000 }
 .status-error{ background:#d9534f; color:#fff }
 .status-notapplicable, .status-na{ background:#6c757d; color:#fff }
-.table-actions{ display:flex; align-items:center; justify-content:flex-end; gap:8px; margin:0; position:sticky; top:0; background:#e5e5e5; z-index:10; padding:6px 0 }
+.table-actions{ display:flex; align-items:center; justify-content:flex-end; gap:8px; margin:0; position:sticky; top:0; background:rgb(235, 235, 235); z-index:10; padding:6px 0 }
 .table-actions button{ margin-left:6px; padding:6px 10px; font-size:12px }
 .table-container{ max-width:100%; }
-.metrics{ border-collapse:collapse; width:100%; table-layout:fixed; word-wrap:break-word; border-spacing:0; font-size:0.9em; border:2px solid #999999; }
+.metrics{ border-collapse:collapse; width:100%; table-layout:fixed; word-wrap:break-word; border-spacing:0; font-size:0.9em; border:var(--border-dark-width) solid var(--border-dark-color); }
 /* Clean borders - each cell has only right and bottom borders to prevent double borders */
-.metrics th, .metrics td{ border-right:1px solid #c1c1c1; border-bottom:1px solid #c1c1c1; border-top:none; border-left:none; padding:1px 3px; vertical-align:middle; line-height:1.3; height:auto; -webkit-hyphens:auto; -ms-hyphens:auto; hyphens:auto; }
-.metrics th:first-child, .metrics td:first-child{ border-left:2px solid #999999; }
-.metrics th:last-child, .metrics td:last-child{ border-right:2px solid #999999; }
+.metrics th, .metrics td{ border-right:var(--border-light-width) solid var(--border-light-color); border-bottom:var(--border-light-width) solid var(--border-light-color); border-top:none; border-left:none; padding:1px 3px; vertical-align:middle; line-height:1.3; height:auto; -webkit-hyphens:auto; -ms-hyphens:auto; hyphens:auto; }
+.metrics th:first-child, .metrics td:first-child{ border-left:var(--border-dark-width) solid var(--border-dark-color); }
+.metrics th:last-child, .metrics td:last-child{ border-right:var(--border-dark-width) solid var(--border-dark-color); }
 /* Group separator borders - darker borders to separate column groups */
 /* Symbol column (first column) - right border darker, bottom border darker for header cell */
-.metrics th[data-col='symbol'], .metrics td.symbol, .metrics th.symbol{ border-right:2px solid #999999; }
-.metrics thead th[data-col='symbol']{ border-bottom:2px solid #999999 !important; }
+.metrics th[data-col='symbol'], .metrics td.symbol, .metrics th.symbol{ border-right:var(--border-dark-width) solid var(--border-dark-color); }
+.metrics thead th[data-col='symbol']{ border-bottom:var(--border-dark-width) solid var(--border-dark-color) !important; }
 /* AltCover group - last column (AltCoverCyclomaticComplexity) has darker right border, applies to both header rows */
-.metrics th[data-col='AltCoverCyclomaticComplexity'], .metrics td.metric[data-col='AltCoverCyclomaticComplexity'], .metrics th.metric[data-col='AltCoverCyclomaticComplexity']{ border-right:2px solid #999999; }
-.metrics th[data-col-group='AltCover']{ border-right:2px solid #999999; }
+.metrics th[data-col='AltCoverCyclomaticComplexity'], .metrics td.metric[data-col='AltCoverCyclomaticComplexity'], .metrics th.metric[data-col='AltCoverCyclomaticComplexity']{ border-right:var(--border-dark-width) solid var(--border-dark-color); }
+.metrics th[data-col-group='AltCover']{ border-right:var(--border-dark-width) solid var(--border-dark-color); }
 /* Roslyn group - first column (RoslynCyclomaticComplexity) has darker left border, last column (RoslynExecutableLines) has darker right border */
-.metrics th[data-col='RoslynCyclomaticComplexity'], .metrics td.metric[data-col='RoslynCyclomaticComplexity'], .metrics th.metric[data-col='RoslynCyclomaticComplexity']{ border-left:2px solid #999999; }
-.metrics th[data-col='RoslynExecutableLines'], .metrics td.metric[data-col='RoslynExecutableLines'], .metrics th.metric[data-col='RoslynExecutableLines']{ border-right:2px solid #999999; }
-.metrics th[data-col-group='Roslyn']{ border-left:2px solid #999999; border-right:2px solid #999999; }
+.metrics th[data-col='RoslynCyclomaticComplexity'], .metrics td.metric[data-col='RoslynCyclomaticComplexity'], .metrics th.metric[data-col='RoslynCyclomaticComplexity']{ border-left:var(--border-dark-width) solid var(--border-dark-color); }
+.metrics th[data-col='RoslynExecutableLines'], .metrics td.metric[data-col='RoslynExecutableLines'], .metrics th.metric[data-col='RoslynExecutableLines']{ border-right:var(--border-dark-width) solid var(--border-dark-color); }
+.metrics th[data-col-group='Roslyn']{ border-left:var(--border-dark-width) solid var(--border-dark-color); border-right:var(--border-dark-width) solid var(--border-dark-color); }
 /* Sarif group - first column (SarifCaRuleViolations) has darker left border */
-.metrics th[data-col='SarifCaRuleViolations'], .metrics td.metric[data-col='SarifCaRuleViolations'], .metrics th.metric[data-col='SarifCaRuleViolations']{ border-left:2px solid #999999; }
-.metrics th[data-col-group='Sarif']{ border-left:2px solid #999999; }
+.metrics th[data-col='SarifCaRuleViolations'], .metrics td.metric[data-col='SarifCaRuleViolations'], .metrics th.metric[data-col='SarifCaRuleViolations']{ border-left:var(--border-dark-width) solid var(--border-dark-color); }
+.metrics th[data-col-group='Sarif']{ border-left:var(--border-dark-width) solid var(--border-dark-color); }
 /* Header separation - darker border between header and body */
-.metrics thead th{ border-top:2px solid #999999; }
-.metrics thead tr:last-child th{ border-bottom:2px solid #999999 !important; }
-.metrics tbody tr:first-child td, .metrics tbody tr:first-child th{ border-top:2px solid #999999 !important; }
+.metrics thead th{ border-top:var(--border-dark-width) solid var(--border-dark-color); }
+.metrics thead tr:last-child th{ border-bottom:var(--border-dark-width) solid var(--border-dark-color) !important; }
+.metrics tbody tr:first-child td, .metrics tbody tr:first-child th{ border-top:var(--border-dark-width) solid var(--border-dark-color) !important; }
 /* Bottom border of table - darker border for last row */
-.metrics tbody tr:last-child td, .metrics tbody tr:last-child th{ border-bottom:2px solid #999999; }
+.metrics tbody tr:last-child td, .metrics tbody tr:last-child th{ border-bottom:var(--border-dark-width) solid var(--border-dark-color); }
 /* Table headers - sticky header rows, positioned below table-actions */
 .metrics thead th{ background-color:#d1d1d1; text-align:left; white-space:normal; word-wrap:break-word; cursor:pointer; position:sticky; top:40px; z-index:5; will-change:transform; -webkit-hyphens:auto; -ms-hyphens:auto; hyphens:auto; }
 /* First header row: group labels (AltCover, Roslyn, Sarif) - center aligned, increased height, top border using box-shadow */
-.metrics thead tr:first-child th{ padding-top:8px; padding-bottom:8px; box-shadow:0 -2px 0 0 #999999; }
+.metrics thead tr:first-child th{ padding-top:8px; padding-bottom:8px; box-shadow:0 calc(-1 * var(--border-dark-width)) 0 0 var(--border-dark-color); }
 .metrics thead tr:first-child th:not([data-col='symbol']){ text-align:center; font-weight:bold; }
 /* Second header row: top border using box-shadow to separate from first row */
-.metrics thead tr:nth-child(2) th{ box-shadow:0 -1px 0 0 #c1c1c1; }
+.metrics thead tr:nth-child(2) th{ box-shadow:0 calc(-1 * var(--border-light-width)) 0 0 var(--border-light-color); }
 /* Node rows (with expander) - use th, gray background, bold black text */
 .metrics tr.node-header th{ background-color:#ddd; font-weight:bold; color:#000; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 .metrics tr.node-header th:first-child{ background-color:#dcdcdc; }
