@@ -44,14 +44,17 @@ internal static class HtmlStylesGenerator
     private const string SliderAccentColor = "rgba(0, 102, 204, 1)";
     private const string SliderThumbColor = "rgba(0, 122, 204, 1)";
     private const string PlaceholderExpanderColor = "rgba(140, 140, 140, 1)";
+    private const int DetailControlRightSpacer = 30;
+    private const int DetailControlSliderWidth = 77;
+    private const int DetailControlSliderMargin = 6;
 
     private const int MaxSupportedDepth = 4;
-    private const int IndentStep = 12;
-    private const int ExpansionSpacing = 12;
-    private const int RootExpanderPadding = 20;
+    private const int ExpanderWidth = 20;
+    private const int RootExpanderPadding = ExpanderWidth;
     private const int SymbolColumnWidth = 420;
     private const int BodyMargin = 12;
     private const int WideLayoutMargin = 110;
+    private const int SymbolIndentBase = 12;
 
     private static readonly CultureInfo InvariantCulture = CultureInfo.InvariantCulture;
 
@@ -150,10 +153,10 @@ internal static class HtmlStylesGenerator
 
     private static void AppendDetailControlStyles(StringBuilder builder)
     {
-        builder.AppendLine(FormattableString.Invariant($".detail-control {{ display: flex; align-items: center; gap: {DeltaSpacing}; font-size: {DetailControlFontSize}; color: {DetailControlLabelColor}; margin-right: 30px; white-space: nowrap; line-height: 1.1; }}"));
+        builder.AppendLine(FormattableString.Invariant($".detail-control {{ display: flex; align-items: center; gap: {DeltaSpacing}; font-size: {DetailControlFontSize}; color: {DetailControlLabelColor}; margin-right: {DetailControlRightSpacer}px; white-space: nowrap; line-height: 1.1; }}"));
         builder.AppendLine(FormattableString.Invariant($".detail-label {{ font-size: {DetailControlFontSize}; margin-right: {DeltaSpacing}; }}"));
         builder.AppendLine(FormattableString.Invariant($".detail-value {{ font-size: {DetailControlFontSize}; min-width: 72px; text-align: left; }}"));
-        builder.AppendLine(FormattableString.Invariant($".detail-control input[type='range'] {{ width: 57px; margin: 0 6px; height: 4px; accent-color: {SliderAccentColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".detail-control input[type='range'] {{ width: {DetailControlSliderWidth}px; margin: 0 {DetailControlSliderMargin}px; height: 4px; accent-color: {SliderAccentColor}; }}"));
         builder.AppendLine(FormattableString.Invariant($".detail-control input[type='range']::-webkit-slider-runnable-track {{ height: 4px; background: {SliderTrackColor}; border-radius: 999px; }}"));
         builder.AppendLine(FormattableString.Invariant($".detail-control input[type='range']::-moz-range-track {{ height: 4px; background: {SliderTrackColor}; border-radius: 999px; }}"));
         builder.AppendLine(FormattableString.Invariant($".detail-control input[type='range']::-webkit-slider-thumb {{ -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%; background: {SliderThumbColor}; margin-top: -5px; cursor: pointer; }}"));
@@ -236,7 +239,8 @@ internal static class HtmlStylesGenerator
         builder.AppendLine($"th[data-col='symbol'], td.symbol, th.symbol {{ width: {SymbolColumnWidth.ToString(InvariantCulture)}px; box-sizing: border-box; }}");
         builder.AppendLine($".symbol {{ position: relative; width: {SymbolColumnWidth.ToString(InvariantCulture)}px; white-space: nowrap; overflow: hidden; box-sizing: border-box; line-height: inherit; }}");
         builder.AppendLine(".metrics thead th:not([data-col='symbol']), .metrics td.metric, .metrics th.metric { width: auto; }");
-        builder.AppendLine(".symbol .name-text { display: inline-block; vertical-align: middle; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-left: 0; min-width: 0; }");
+        builder.AppendLine(FormattableString.Invariant($".symbol .name-text {{ display: inline-block; vertical-align: middle; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr[data-role='member'] .symbol .name-text {{ margin-left: {ExpanderWidth.ToString(InvariantCulture)}px; }}"));
     }
 
     private static void AppendExpanderStyles(StringBuilder builder)
@@ -254,8 +258,8 @@ internal static class HtmlStylesGenerator
 
         for (var level = 1; level <= MaxSupportedDepth; level++)
         {
-            var basePadding = level * IndentStep;
-            var withExpander = basePadding + ExpansionSpacing;
+            var basePadding = level * SymbolIndentBase;
+            var withExpander = basePadding + ExpanderWidth;
             builder.AppendLine(FormattableString.Invariant($"tr.node-row[data-level='{level}'] .symbol {{ padding-left: {withExpander}px; }}"));
             builder.AppendLine(FormattableString.Invariant($"tr.node-row[data-level='{level}'] .symbol:not(.has-expander) {{ padding-left: {basePadding}px; }}"));
         }

@@ -18,55 +18,46 @@ internal static class HtmlScriptGenerator
   var tbody = table.tBodies[0];
   if(!tbody) return;
 
-  function getRows(){
-    return Array.from(tbody.querySelectorAll('tr.node-row'));
-  }
+  var state = {
+    rows: [],
+    rowById: Object.create(null),
+    childrenByParent: Object.create(null)
+  };
 
-  var rowById = Object.create(null);
-  var childrenByParent = Object.create(null);
+  function refreshState(){
+    state.rows = Array.from(tbody.querySelectorAll('tr.node-row'));
+    state.rowById = Object.create(null);
+    state.childrenByParent = Object.create(null);
 
-  (function buildRowIndex(){
-    var rows = getRows();
-    rows.forEach(function(row){
+    state.rows.forEach(function(row){
       var id = row.getAttribute('data-id');
       if(id){
-        rowById[id] = row;
+        state.rowById[id] = row;
       }
       var parentId = row.getAttribute('data-parent');
       if(parentId){
-        if(!childrenByParent[parentId]){
-          childrenByParent[parentId] = [];
-        }
-        childrenByParent[parentId].push(row);
+        (state.childrenByParent[parentId] || (state.childrenByParent[parentId] = [])).push(row);
       }
     });
-  })();
-
-  function getDescendantRows(parentId){
-    var results = [];
-    var stack = [];
-    var directChildren = childrenByParent[parentId];
-    if(directChildren){
-      for(var i = 0; i < directChildren.length; i++){
-        stack.push(directChildren[i]);
-      }
-    }
-    while(stack.length > 0){
-      var current = stack.pop();
-      results.push(current);
-      var currentId = current.getAttribute('data-id');
-      var nested = childrenByParent[currentId];
-      if(nested){
-        for(var j = 0; j < nested.length; j++){
-          stack.push(nested[j]);
-        }
-      }
-    }
-    return results;
   }
 
-  function getDirectChildren(rowId){
-    return childrenByParent[rowId] || [];
+  function directChildren(rowId){
+    return state.childrenByParent[rowId] || [];
+  }
+
+  function getDescendantRows(rowId){
+    var stack = directChildren(rowId).slice();
+    var result = [];
+    while(stack.length){
+      var current = stack.pop();
+      result.push(current);
+      var currentId = current.getAttribute('data-id');
+      var branch = directChildren(currentId);
+      for(var i = 0; i < branch.length; i++){
+        stack.push(branch[i]);
+      }
+    }
+    return result;
   }
 
   function setExpanderState(row, isExpanded){
@@ -81,7 +72,7 @@ internal static class HtmlScriptGenerator
   function isAncestorExpanded(row){
     var parentId = row.getAttribute('data-parent');
     while(parentId){
-      var parentRow = rowById[parentId];
+      var parentRow = state.rowById[parentId];
       if(!parentRow){
         break;
       }
@@ -96,9 +87,18 @@ internal static class HtmlScriptGenerator
     return true;
   }
 
-  function updateLeafClasses(rows){
-    var targetRows = rows || getRows();
-    targetRows.forEach(function(row){
+  var detailControl = document.getElementById('detail-level');
+  var detailLabel = document.getElementById('detail-label');
+  var detailLevels = {
+    '1': { maxDepth: 1, label: 'Namespace' },
+    '2': { maxDepth: 2, label: 'Type' },
+    '3': { maxDepth: 3, label: 'Member' }
+  };
+  var currentDetail = detailLevels['3'];
+
+  function updateLeafClasses(){
+    var maxDepth = currentDetail ? currentDetail.maxDepth : 3;
+    state.rows.forEach(function(row){
       row.classList.remove('leaf-row');
       var expanderReset = row.querySelector('.expander');
       if(expanderReset){
@@ -106,13 +106,15 @@ internal static class HtmlScriptGenerator
         expanderReset.style.pointerEvents = '';
       }
     });
-    targetRows.forEach(function(row){
+
+    state.rows.forEach(function(row){
       var role = row.dataset.role || 'member';
       var isStructural = role === 'assembly' || role === 'namespace' || role === 'type';
       var level = parseInt(row.getAttribute('data-level'), 10) || 0;
-      var isDeepestLevel = level >= currentDetail.maxDepth;
-      var expander = row.querySelector('.expander');
+      var isDeepestLevel = level >= maxDepth;
       var hasChildren = row.dataset.hasChildren === 'true';
+      var expander = row.querySelector('.expander');
+
       if(!hasChildren){
         if(isStructural && !isDeepestLevel){
           return;
@@ -124,11 +126,11 @@ internal static class HtmlScriptGenerator
         }
         return;
       }
-      var id = row.getAttribute('data-id');
-      var children = getDirectChildren(id);
-      var hasEligibleChild = children.some(function(child){
+
+      var hasEligibleChild = directChildren(row.getAttribute('data-id')).some(function(child){
         return child.dataset.hiddenByDetail !== 'true';
       });
+
       if(!hasEligibleChild || isDeepestLevel){
         row.classList.add('leaf-row');
         if(expander){
@@ -139,42 +141,46 @@ internal static class HtmlScriptGenerator
     });
   }
 
-  function updateStripedClasses(rows){
-    var targetRows = rows || getRows();
-    targetRows.forEach(function(row){
+  function updateStripedClasses(){
+    state.rows.forEach(function(row){
       row.classList.remove('stripe-odd', 'stripe-even');
     });
-    var visibleLeafRows = targetRows.filter(function(row){
+
+    var visibleLeafRows = state.rows.filter(function(row){
       return row.classList.contains('leaf-row') && row.style.display !== 'none';
     });
+
     visibleLeafRows.forEach(function(row, index){
       row.classList.add(index % 2 === 0 ? 'stripe-odd' : 'stripe-even');
     });
   }
 
-  var detailControl = document.getElementById('detail-level');
-  var detailLabel = document.getElementById('detail-label');
-  var detailLevels = {
-    '1': { maxDepth: 1, label: 'Namespace' },
-    '2': { maxDepth: 2, label: 'Type' },
-    '3': { maxDepth: 3, label: 'Member' }
-  };
-  var currentDetail = detailLevels['3'];
-
   function applyDetailLevel(maxDepth){
-    var rows = getRows();
-    rows.forEach(function(row){
+    state.rows.forEach(function(row){
       var level = parseInt(row.getAttribute('data-level'), 10) || 0;
       var hiddenByDetail = level > maxDepth ? 'true' : 'false';
       row.dataset.hiddenByDetail = hiddenByDetail;
       if(hiddenByDetail === 'true'){
         row.style.display = 'none';
-        return;
+      } else {
+        row.style.display = isAncestorExpanded(row) ? '' : 'none';
       }
-      row.style.display = isAncestorExpanded(row) ? '' : 'none';
     });
-    updateLeafClasses(rows);
-    updateStripedClasses(rows);
+
+    updateLeafClasses();
+    updateStripedClasses();
+  }
+
+  function setDetailLevel(value){
+    var level = detailLevels[value] || detailLevels['3'];
+    currentDetail = level;
+    if(detailLabel){
+      detailLabel.textContent = level.label;
+    }
+    if(detailControl){
+      detailControl.setAttribute('aria-valuenow', value);
+    }
+    applyDetailLevel(level.maxDepth);
   }
 
   function handleDetailChange(){
@@ -182,12 +188,7 @@ internal static class HtmlScriptGenerator
       return;
     }
     var value = detailControl.value || '3';
-    currentDetail = detailLevels[value] || detailLevels['3'];
-    if(detailLabel){
-      detailLabel.textContent = currentDetail.label;
-    }
-    detailControl.setAttribute('aria-valuenow', value);
-    applyDetailLevel(currentDetail.maxDepth);
+    setDetailLevel(value);
   }
 
   function snapDetailSlider(event){
@@ -221,24 +222,30 @@ internal static class HtmlScriptGenerator
     if(detailControl.value !== snappedText){
       detailControl.value = snappedText;
     }
-    handleDetailChange();
+    setDetailLevel(snappedText);
   }
 
-  (function initVisibility(){
-    var rows = getRows();
-    rows.forEach(function(row){
-      if(row.dataset.hasChildren === 'true'){
-        setExpanderState(row, false);
-      } else {
-        row.dataset.expanded = 'true';
-      }
-      row.dataset.hiddenByDetail = 'false';
+  function collapseDescendants(parentId){
+    getDescendantRows(parentId).forEach(function(descendant){
+      setExpanderState(descendant, false);
     });
-    if(detailControl && !detailControl.value){
-      detailControl.value = '3';
+  }
+
+  refreshState();
+
+  state.rows.forEach(function(row){
+    if(row.dataset.hasChildren === 'true'){
+      setExpanderState(row, false);
+    } else {
+      row.dataset.expanded = 'true';
     }
-    handleDetailChange();
-  })();
+    row.dataset.hiddenByDetail = 'false';
+  });
+
+  if(detailControl && !detailControl.value){
+    detailControl.value = '3';
+  }
+  setDetailLevel(detailControl ? detailControl.value : '3');
 
   if(detailControl){
     detailControl.addEventListener('input', handleDetailChange);
@@ -257,15 +264,12 @@ internal static class HtmlScriptGenerator
       e.stopPropagation();
       var parentId = btn.getAttribute('data-target');
       if(!parentId) return;
-      var parentRow = rowById[parentId];
+      var parentRow = state.rowById[parentId];
       if(!parentRow) return;
       var shouldExpand = parentRow.dataset.expanded === 'false';
       setExpanderState(parentRow, shouldExpand);
       if(!shouldExpand){
-        var descendants = getDescendantRows(parentId);
-        descendants.forEach(function(descendant){
-          setExpanderState(descendant, false);
-        });
+        collapseDescendants(parentId);
       }
       applyDetailLevel(currentDetail.maxDepth);
       return;
@@ -275,8 +279,6 @@ internal static class HtmlScriptGenerator
     if(!th || !th.dataset.col) return;
 
     var col = th.dataset.col;
-    var allRows = getRows();
-
     var colIndex = -1;
     if(col === 'symbol'){
       colIndex = 0;
@@ -292,12 +294,12 @@ internal static class HtmlScriptGenerator
 
     if(colIndex < 0) return;
 
-    var parents = Array.from(new Set(allRows.map(function(r){
+    var parents = Array.from(new Set(state.rows.map(function(r){
       return r.getAttribute('data-parent') || '';
     })));
 
     parents.forEach(function(parentId){
-      var children = allRows.filter(function(r){
+      var children = state.rows.filter(function(r){
         return (r.getAttribute('data-parent') || '') === parentId;
       });
 
@@ -320,11 +322,7 @@ internal static class HtmlScriptGenerator
         return va.localeCompare(vb);
       });
 
-      if(parentId){
-        childrenByParent[parentId] = children.slice();
-      }
-
-      var anchor = parentId ? rowById[parentId] : null;
+      var anchor = parentId ? state.rowById[parentId] : null;
       if(anchor){
         children.forEach(function(child){
           tbody.insertBefore(child, anchor.nextSibling);
@@ -337,14 +335,14 @@ internal static class HtmlScriptGenerator
       }
     });
 
+    refreshState();
     applyDetailLevel(currentDetail.maxDepth);
   });
 
   var expandBtn = document.getElementById('expand-all');
   if(expandBtn){
     expandBtn.addEventListener('click', function(){
-      var rows = getRows();
-      rows.forEach(function(row){
+      state.rows.forEach(function(row){
         if(row.dataset.hasChildren === 'true'){
           setExpanderState(row, true);
         }
@@ -356,8 +354,7 @@ internal static class HtmlScriptGenerator
   var collapseBtn = document.getElementById('collapse-all');
   if(collapseBtn){
     collapseBtn.addEventListener('click', function(){
-      var rows = getRows();
-      rows.forEach(function(row){
+      state.rows.forEach(function(row){
         if(row.dataset.hasChildren === 'true'){
           setExpanderState(row, false);
         }
