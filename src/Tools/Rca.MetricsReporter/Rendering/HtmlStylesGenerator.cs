@@ -8,7 +8,7 @@ namespace Rca.Tools.MetricsReporter.Rendering;
 /// </summary>
 internal static class HtmlStylesGenerator
 {
-    private const string ColorScheme = "light dark";
+    private const string ColorScheme = "light";
     private const string DefaultFontStack = "sans-serif";
     private const string PageBackgroundColor = "rgba(235, 235, 235, 1)";
     private const string HeaderBackgroundColor = "rgba(209, 209, 209, 1)";
@@ -118,6 +118,7 @@ internal static class HtmlStylesGenerator
         builder.AppendLine("}");
         builder.AppendLine("body {");
         builder.AppendLine($"  margin: {BodyMargin.ToString(InvariantCulture)}px;");
+        builder.AppendLine("  color: rgba(0,0,0,0.92);");
         builder.AppendLine("}");
         builder.AppendLine("@media (min-width: 1201px) {");
         builder.AppendLine("  body {");
@@ -148,7 +149,8 @@ internal static class HtmlStylesGenerator
         builder.AppendLine(".table-container { max-width: 100%; }");
         builder.AppendLine(FormattableString.Invariant($".table-actions {{ display: flex; align-items: center; justify-content: flex-end; gap: {DefaultGap}; margin: 0; position: sticky; top: 0; background: {PageBackgroundColor}; z-index: 10; padding: 6px 0; }}"));
         builder.AppendLine(FormattableString.Invariant($".status-badges {{ display: flex; gap: {DefaultGap}; align-items: center; }}"));
-        builder.AppendLine(".table-actions button { margin-left: 6px; padding: 4px 8px; font-size: 10px; }");
+        builder.AppendLine(".table-actions button { margin-left: 6px; padding: 4px 8px; font-size: 10px; background: rgba(245,245,245,1); border: 1px solid rgba(180,180,180,1); color: rgba(30,30,30,1); border-radius: 4px; cursor: pointer; }");
+        builder.AppendLine(".table-actions button:hover { background: rgba(230,230,230,1); }");
     }
 
     private static void AppendDetailControlStyles(StringBuilder builder)
@@ -156,11 +158,11 @@ internal static class HtmlStylesGenerator
         builder.AppendLine(FormattableString.Invariant($".detail-control {{ display: flex; align-items: center; gap: {DeltaSpacing}; font-size: {DetailControlFontSize}; color: {DetailControlLabelColor}; margin-right: {DetailControlRightSpacer}px; white-space: nowrap; line-height: 1.1; }}"));
         builder.AppendLine(FormattableString.Invariant($".detail-label {{ font-size: {DetailControlFontSize}; margin-right: {DeltaSpacing}; }}"));
         builder.AppendLine(FormattableString.Invariant($".detail-value {{ font-size: {DetailControlFontSize}; min-width: 72px; text-align: left; }}"));
-        builder.AppendLine(FormattableString.Invariant($".detail-control input[type='range'] {{ width: {DetailControlSliderWidth}px; margin: 0 {DetailControlSliderMargin}px; height: 4px; accent-color: {SliderAccentColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".detail-control input[type='range'] {{ width: {DetailControlSliderWidth}px; margin: 0 {DetailControlSliderMargin}px; height: 4px; accent-color: {SliderAccentColor}; background: {SliderTrackColor}; -webkit-appearance: none; appearance: none; border-radius: 999px; }}"));
+        builder.AppendLine(".detail-control input[type='range']::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%; background: " + SliderThumbColor + "; margin-top: -5px; cursor: pointer; box-shadow: none; border: none; }");
+        builder.AppendLine(".detail-control input[type='range']::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: " + SliderThumbColor + "; border: none; cursor: pointer; }");
         builder.AppendLine(FormattableString.Invariant($".detail-control input[type='range']::-webkit-slider-runnable-track {{ height: 4px; background: {SliderTrackColor}; border-radius: 999px; }}"));
         builder.AppendLine(FormattableString.Invariant($".detail-control input[type='range']::-moz-range-track {{ height: 4px; background: {SliderTrackColor}; border-radius: 999px; }}"));
-        builder.AppendLine(FormattableString.Invariant($".detail-control input[type='range']::-webkit-slider-thumb {{ -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%; background: {SliderThumbColor}; margin-top: -5px; cursor: pointer; }}"));
-        builder.AppendLine(FormattableString.Invariant($".detail-control input[type='range']::-moz-range-thumb {{ width: 14px; height: 14px; border-radius: 50%; background: {SliderThumbColor}; border: none; cursor: pointer; }}"));
     }
 
     private static void AppendTableLayout(StringBuilder builder)
