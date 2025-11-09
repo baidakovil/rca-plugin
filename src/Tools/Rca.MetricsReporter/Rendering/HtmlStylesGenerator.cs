@@ -69,7 +69,10 @@ th[data-col='symbol'], td.symbol, th.symbol { width:420px; box-sizing:border-box
 .metrics tr.node-item td.metric[data-status='warning'] .metric-value{ color:#b66f1a }
 .metrics tr.node-header th.metric[data-status='error'] .metric-value{ color:#d9534f }
 .metrics tr.node-header th.metric[data-status='warning'] .metric-value{ color:#b66f1a }
-.metric-value{ font-weight:600 }
+/* Metric values - bold for node-header rows, normal for node-item rows */
+.metrics tr.node-header th .metric-value{ font-weight:bold }
+.metrics tr.node-item td .metric-value{ font-weight:normal }
+.metric-value{ font-weight:normal }
 .delta-positive{ color:#1a7f37; margin-left:4px }
 .delta-negative{ color:#d9534f; margin-left:4px }
 .fqn{ font-family:'Consolas','Courier New',monospace; font-size:12px; color:rgba(128,128,128,0.8) }
