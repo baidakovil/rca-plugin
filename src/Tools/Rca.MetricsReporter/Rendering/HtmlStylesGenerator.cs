@@ -34,25 +34,29 @@ h1 { margin-bottom: 4px; }
 .table-actions{ display:flex; align-items:center; justify-content:flex-end; gap:8px; margin:0; position:sticky; top:0; background:#d6d6d6; z-index:10; padding:6px 0 }
 .table-actions button{ margin-left:6px; padding:6px 10px; font-size:12px }
 .table-container{ max-width:100%; }
-.metrics{ border:1px solid #c1c1c1; border-collapse:collapse; width:100%; table-layout:fixed; word-wrap:break-word; }
+.metrics{ border-collapse:collapse; width:100%; table-layout:fixed; word-wrap:break-word; border-spacing:0; }
+/* Clean borders - each cell has only right and bottom borders to prevent double borders */
+.metrics th, .metrics td{ border-right:1px solid #c1c1c1; border-bottom:1px solid #c1c1c1; border-top:none; border-left:none; padding:2px 4px; vertical-align:middle; line-height:1.4; height:auto; }
+.metrics th:first-child, .metrics td:first-child{ border-left:1px solid #c1c1c1; }
+.metrics thead th{ border-top:1px solid #c1c1c1; }
 /* Table headers - sticky header row, positioned below table-actions */
-.metrics thead th{ border:1px solid #c1c1c1; border-top:none; padding:2px 4px 2px 4px; background-color:#d1d1d1; text-align:left; vertical-align:top; white-space:normal; word-break:break-word; cursor:pointer; position:sticky; top:40px; z-index:5; }
+.metrics thead th{ background-color:#d1d1d1; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; position:sticky; top:40px; z-index:5; }
 /* Node rows (with expander) - use th, gray background, bold black text */
-.metrics tr.node-header th{ border:1px solid #c1c1c1; padding:2px 4px 2px 4px; background-color:#ddd; font-weight:bold; color:#000; text-align:left; vertical-align:top; white-space:normal; word-break:break-word }
+.metrics tr.node-header th{ background-color:#ddd; font-weight:bold; color:#000; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 .metrics tr.node-header th:first-child{ background-color:#dcdcdc; }
 /* Regular rows (items) - use td, striped background, red text in first column */
-.metrics tr.node-item td{ border:1px solid #c1c1c1; padding:2px 5px 2px 5px; text-align:left; vertical-align:top; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; background-color:#fff; }
+.metrics tr.node-item td{ text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; background-color:#fff; }
 /* Striped rows - alternate white and gray for item rows only (handled by JS classes) */
 .metrics tr.node-item.stripe-odd td{ background-color:#F3F3F3; }
 .metrics tr.node-item.stripe-even td{ background-color:#fff; }
 /* Red text for item names in first column */
 .metrics tr.node-item td.symbol .item-name{ color:#c00; }
 /* Fixed width for first column */
-th[data-col='symbol'], td.symbol, th.symbol { width:420px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; box-sizing:border-box }
-.symbol{ position:relative; width:420px; white-space:nowrap; overflow:hidden; box-sizing:border-box; display:flex; align-items:center }
+th[data-col='symbol'], td.symbol, th.symbol { width:420px; box-sizing:border-box }
+.symbol{ position:relative; width:420px; white-space:nowrap; overflow:hidden; box-sizing:border-box; line-height:inherit; }
 /* Equal width for all other columns */
 .metrics thead th:not([data-col='symbol']), .metrics td.metric, .metrics th.metric { width:auto }
-.symbol .name-text{ display:inline-block; vertical-align:middle; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1 }
+.symbol .name-text{ display:inline-block; vertical-align:middle; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 /* Cell backgrounds based on status - success uses base row color, only warning/error have colored backgrounds */
 /* For node-header rows (assembly, namespace, class) - inherit gray background, only warning/error override */
 .metrics tr.node-header th.metric[data-status='warning']{ background: rgba(240,173,78,0.12) }
