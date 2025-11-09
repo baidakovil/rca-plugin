@@ -40,7 +40,7 @@ h1 { margin-bottom: 4px; }
 .metrics th:first-child, .metrics td:first-child{ border-left:1px solid #c1c1c1; }
 .metrics thead th{ border-top:1px solid #c1c1c1; }
 /* Table headers - sticky header row, positioned below table-actions */
-.metrics thead th{ background-color:#d1d1d1; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; position:sticky; top:40px; z-index:5; }
+.metrics thead th{ background-color:#d1d1d1; text-align:left; white-space:normal; word-wrap:break-word; cursor:pointer; position:sticky; top:40px; z-index:5; }
 /* Node rows (with expander) - use th, gray background, bold black text */
 .metrics tr.node-header th{ background-color:#ddd; font-weight:bold; color:#000; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 .metrics tr.node-header th:first-child{ background-color:#dcdcdc; }
