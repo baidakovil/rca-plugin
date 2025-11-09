@@ -17,30 +17,39 @@ internal static class HtmlStylesGenerator
   font-size: 0.9em;
 }
 html {
-  background-color: #d6d6d6;
+  background-color: #e5e5e5;
 }
 body {
   margin: 12px;
+}
+/* Add side margins for wide screens (width > 1200px) */
+@media (min-width: 1201px) {
+  body {
+    margin-top: 12px;
+    margin-bottom: 12px;
+    margin-left: 110px;
+    margin-right: 110px;
+  }
 }
 h1 { margin-bottom: 4px; }
 .meta p { margin: 2px 0; }
 .legend { margin: 8px 0 12px; display:flex; gap:8px; }
 .badge { padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600; text-transform:uppercase; }
-.badge-new { background:#1a7f37; color:#fff }
+.badge-new { background:#1a7f37; color:#fff; font-size:9px; }
 .status-success{ background:#1a7f37; color:#fff }
 .status-warning{ background:#f0ad4e; color:#000 }
 .status-error{ background:#d9534f; color:#fff }
 .status-notapplicable, .status-na{ background:#6c757d; color:#fff }
-.table-actions{ display:flex; align-items:center; justify-content:flex-end; gap:8px; margin:0; position:sticky; top:0; background:#d6d6d6; z-index:10; padding:6px 0 }
+.table-actions{ display:flex; align-items:center; justify-content:flex-end; gap:8px; margin:0; position:sticky; top:0; background:#e5e5e5; z-index:10; padding:6px 0 }
 .table-actions button{ margin-left:6px; padding:6px 10px; font-size:12px }
 .table-container{ max-width:100%; }
 .metrics{ border-collapse:collapse; width:100%; table-layout:fixed; word-wrap:break-word; border-spacing:0; font-size:0.9em; }
 /* Clean borders - each cell has only right and bottom borders to prevent double borders */
-.metrics th, .metrics td{ border-right:1px solid #c1c1c1; border-bottom:1px solid #c1c1c1; border-top:none; border-left:none; padding:1px 3px; vertical-align:middle; line-height:1.3; height:auto; }
+.metrics th, .metrics td{ border-right:1px solid #c1c1c1; border-bottom:1px solid #c1c1c1; border-top:none; border-left:none; padding:1px 3px; vertical-align:middle; line-height:1.3; height:auto; -webkit-hyphens:auto; -ms-hyphens:auto; hyphens:auto; }
 .metrics th:first-child, .metrics td:first-child{ border-left:1px solid #c1c1c1; }
 .metrics thead th{ border-top:1px solid #c1c1c1; }
 /* Table headers - sticky header rows, positioned below table-actions */
-.metrics thead th{ background-color:#d1d1d1; text-align:left; white-space:normal; word-wrap:break-word; cursor:pointer; position:sticky; top:40px; z-index:5; will-change:transform; }
+.metrics thead th{ background-color:#d1d1d1; text-align:left; white-space:normal; word-wrap:break-word; cursor:pointer; position:sticky; top:40px; z-index:5; will-change:transform; -webkit-hyphens:auto; -ms-hyphens:auto; hyphens:auto; }
 /* First header row: group labels (AltCover, Roslyn, Sarif) - center aligned, increased height, top border using box-shadow */
 .metrics thead tr:first-child th{ padding-top:8px; padding-bottom:8px; box-shadow:0 -1px 0 0 #c1c1c1; }
 .metrics thead tr:first-child th:not([data-col='symbol']){ text-align:center; font-weight:bold; }
