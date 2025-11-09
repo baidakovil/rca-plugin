@@ -46,8 +46,15 @@ internal sealed class HtmlTableGenerator
         builder.AppendLine("</div>");
         builder.AppendLine("<table id=\"metrics-table\" class=\"metrics stripped\"> ");
         builder.AppendLine("  <thead>");
+        // First header row: group labels (AltCover, Roslyn, Sarif)
         builder.AppendLine("    <tr>");
-        builder.AppendLine("      <th data-col=\"symbol\">Symbol</th>");
+        builder.AppendLine("      <th data-col=\"symbol\" rowspan=\"2\">Symbol</th>");
+        builder.AppendLine("      <th colspan=\"4\">AltCover</th>");
+        builder.AppendLine("      <th colspan=\"6\">Roslyn</th>");
+        builder.AppendLine("      <th colspan=\"2\">Sarif</th>");
+        builder.AppendLine("    </tr>");
+        // Second header row: individual metric names
+        builder.AppendLine("    <tr>");
         foreach (var id in _metricOrder)
         {
             builder.AppendLine($"      <th data-col=\"{id}\">{WebUtility.HtmlEncode(MetricDisplayNameProvider.GetDisplayName(id))}</th>");

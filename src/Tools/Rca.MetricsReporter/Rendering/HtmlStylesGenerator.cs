@@ -39,8 +39,10 @@ h1 { margin-bottom: 4px; }
 .metrics th, .metrics td{ border-right:1px solid #c1c1c1; border-bottom:1px solid #c1c1c1; border-top:none; border-left:none; padding:1px 3px; vertical-align:middle; line-height:1.3; height:auto; }
 .metrics th:first-child, .metrics td:first-child{ border-left:1px solid #c1c1c1; }
 .metrics thead th{ border-top:1px solid #c1c1c1; }
-/* Table headers - sticky header row, positioned below table-actions */
+/* Table headers - sticky header rows, positioned below table-actions */
 .metrics thead th{ background-color:#d1d1d1; text-align:left; white-space:normal; word-wrap:break-word; cursor:pointer; position:sticky; top:40px; z-index:5; }
+/* First header row: group labels (AltCover, Roslyn, Sarif) - center aligned */
+.metrics thead tr:first-child th:not([data-col='symbol']){ text-align:center; font-weight:bold; }
 /* Node rows (with expander) - use th, gray background, bold black text */
 .metrics tr.node-header th{ background-color:#ddd; font-weight:bold; color:#000; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 .metrics tr.node-header th:first-child{ background-color:#dcdcdc; }

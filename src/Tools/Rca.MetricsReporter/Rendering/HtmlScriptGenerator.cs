@@ -224,14 +224,27 @@ internal static class HtmlScriptGenerator
   
   // Sticky header positioning: dynamically calculate table-actions height and set thead th top
   var tableActions = document.querySelector('.table-actions');
-  var theadThs = table ? Array.from(table.querySelectorAll('thead th')) : [];
+  var theadRows = table ? Array.from(table.querySelectorAll('thead tr')) : [];
   function updateStickyHeaderPosition(){
-    if(tableActions && theadThs.length > 0){
+    if(tableActions && theadRows.length > 0){
       var actionsHeight = tableActions.offsetHeight;
-      // Subtract 1px to eliminate gap between table-actions and header
-      theadThs.forEach(function(th){
-        th.style.top = (actionsHeight - 1) + 'px';
+      // First row: position below table-actions
+      var firstRow = theadRows[0];
+      var firstRowThs = Array.from(firstRow.querySelectorAll('th'));
+      var firstRowTop = actionsHeight - 1;
+      firstRowThs.forEach(function(th){
+        th.style.top = firstRowTop + 'px';
       });
+      // Second row: position below first row
+      if(theadRows.length > 1){
+        var secondRow = theadRows[1];
+        var secondRowThs = Array.from(secondRow.querySelectorAll('th'));
+        var firstRowHeight = firstRow.offsetHeight;
+        var secondRowTop = firstRowTop + firstRowHeight - 1;
+        secondRowThs.forEach(function(th){
+          th.style.top = secondRowTop + 'px';
+        });
+      }
     }
   }
   // Update on load and resize
