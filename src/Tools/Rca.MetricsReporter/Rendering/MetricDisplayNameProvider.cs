@@ -15,11 +15,11 @@ internal static class MetricDisplayNameProvider
     public static string GetDisplayName(MetricIdentifier identifier)
         => identifier switch
         {
-            MetricIdentifier.AltCoverSequenceCoverage => "Sequence Coverage (AltCover)",
-            MetricIdentifier.AltCoverBranchCoverage => "Branch Coverage (AltCover)",
+            MetricIdentifier.AltCoverSequenceCoverage => "Sequence Coverage",
+            MetricIdentifier.AltCoverBranchCoverage => "Branch Coverage",
             MetricIdentifier.AltCoverCyclomaticComplexity => "Cyclomatic (AltCover)",
-            MetricIdentifier.AltCoverNPathComplexity => "NPath (AltCover)",
-            MetricIdentifier.RoslynMaintainabilityIndex => "Maintainability (Roslyn)",
+            MetricIdentifier.AltCoverNPathComplexity => "NPath",
+            MetricIdentifier.RoslynMaintainabilityIndex => "Maintainability",
             MetricIdentifier.RoslynCyclomaticComplexity => "Cyclomatic (Roslyn)",
             MetricIdentifier.RoslynClassCoupling => "Class Coupling",
             MetricIdentifier.RoslynDepthOfInheritance => "Depth of Inheritance",
