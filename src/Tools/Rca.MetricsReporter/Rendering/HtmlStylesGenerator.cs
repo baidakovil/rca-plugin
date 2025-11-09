@@ -38,6 +38,13 @@ internal static class HtmlStylesGenerator
     private const string CompactBadgePadding = "3px 6px";
     private const string DeltaSpacing = "4px";
 
+    private const string DetailControlFontSize = "11px";
+    private const string DetailControlLabelColor = "rgba(60, 60, 60, 1)";
+    private const string SliderTrackColor = "rgba(206, 206, 206, 1)";
+    private const string SliderAccentColor = "rgba(0, 102, 204, 1)";
+    private const string SliderThumbColor = "rgba(0, 122, 204, 1)";
+    private const string PlaceholderExpanderColor = "rgba(140, 140, 140, 1)";
+
     private const int MaxSupportedDepth = 4;
     private const int IndentStep = 12;
     private const int ExpansionSpacing = 12;
@@ -63,6 +70,8 @@ internal static class HtmlStylesGenerator
         AppendTypography(builder);
         builder.AppendLine();
         AppendControlPanelStyles(builder);
+        builder.AppendLine();
+        AppendDetailControlStyles(builder);
         builder.AppendLine();
         AppendTableLayout(builder);
         builder.AppendLine();
@@ -139,6 +148,18 @@ internal static class HtmlStylesGenerator
         builder.AppendLine(".table-actions button { margin-left: 6px; padding: 4px 8px; font-size: 10px; }");
     }
 
+    private static void AppendDetailControlStyles(StringBuilder builder)
+    {
+        builder.AppendLine(FormattableString.Invariant($".detail-control {{ display: flex; align-items: center; gap: {DeltaSpacing}; font-size: {DetailControlFontSize}; color: {DetailControlLabelColor}; margin-right: 30px; white-space: nowrap; line-height: 1.1; }}"));
+        builder.AppendLine(FormattableString.Invariant($".detail-label {{ font-size: {DetailControlFontSize}; margin-right: {DeltaSpacing}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".detail-value {{ font-size: {DetailControlFontSize}; min-width: 72px; text-align: left; }}"));
+        builder.AppendLine(FormattableString.Invariant($".detail-control input[type='range'] {{ width: 57px; margin: 0 6px; height: 4px; accent-color: {SliderAccentColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".detail-control input[type='range']::-webkit-slider-runnable-track {{ height: 4px; background: {SliderTrackColor}; border-radius: 999px; }}"));
+        builder.AppendLine(FormattableString.Invariant($".detail-control input[type='range']::-moz-range-track {{ height: 4px; background: {SliderTrackColor}; border-radius: 999px; }}"));
+        builder.AppendLine(FormattableString.Invariant($".detail-control input[type='range']::-webkit-slider-thumb {{ -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%; background: {SliderThumbColor}; margin-top: -5px; cursor: pointer; }}"));
+        builder.AppendLine(FormattableString.Invariant($".detail-control input[type='range']::-moz-range-thumb {{ width: 14px; height: 14px; border-radius: 50%; background: {SliderThumbColor}; border: none; cursor: pointer; }}"));
+    }
+
     private static void AppendTableLayout(StringBuilder builder)
     {
         builder.AppendLine(".metrics { border-collapse: collapse; width: 100%; table-layout: fixed; word-wrap: break-word; border-spacing: 0; font-size: 0.9em; border: var(--border-dark-width) solid var(--border-dark-color); }");
@@ -184,6 +205,10 @@ internal static class HtmlStylesGenerator
         builder.AppendLine(FormattableString.Invariant($".metrics tr.node-item.stripe-odd td {{ background-color: {LeafStripeOddBackgroundColor}; }}"));
         builder.AppendLine(FormattableString.Invariant($".metrics tr.node-item.stripe-even td {{ background-color: {LeafStripeEvenBackgroundColor}; }}"));
         builder.AppendLine(FormattableString.Invariant($".metrics tr.node-item td.symbol .item-name {{ color: {LeafPrimaryColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.leaf-row th, .metrics tr.leaf-row td {{ background-color: {LeafBaseBackgroundColor}; color: rgba(0, 0, 0, 1); font-weight: normal; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.leaf-row.stripe-odd th, .metrics tr.leaf-row.stripe-odd td {{ background-color: {LeafStripeOddBackgroundColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.leaf-row.stripe-even th, .metrics tr.leaf-row.stripe-even td {{ background-color: {LeafStripeEvenBackgroundColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.leaf-row .symbol .name-text {{ color: {LeafPrimaryColor}; }}"));
     }
 
     private static void AppendMetricStatusStyles(StringBuilder builder)
@@ -198,6 +223,11 @@ internal static class HtmlStylesGenerator
         builder.AppendLine(FormattableString.Invariant($".metrics tr.node-header th.metric[data-status='warning'] .metric-value {{ color: {StatusWarningColor}; }}"));
         builder.AppendLine(".metrics tr.node-header th .metric-value { font-weight: bold; }");
         builder.AppendLine(".metrics tr.node-item td .metric-value { font-weight: normal; }");
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.leaf-row .metric[data-status='warning'] {{ background: {LeafWarningBackgroundColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.leaf-row .metric[data-status='error'] {{ background: {LeafErrorBackgroundColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.leaf-row .metric[data-status='error'] .metric-value {{ color: {StatusErrorColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.leaf-row .metric[data-status='warning'] .metric-value {{ color: {StatusWarningColor}; }}"));
+        builder.AppendLine(".metrics tr.leaf-row .metric-value { font-weight: normal; }");
         builder.AppendLine(".metric-value { font-weight: normal; }");
     }
 
@@ -213,6 +243,7 @@ internal static class HtmlStylesGenerator
     {
         builder.AppendLine(".expander { position: absolute; left: 0; top: 50%; transform: translateY(-50%); border: 0; background: transparent; cursor: pointer; font-size: 14px; line-height: 1; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; z-index: 1; padding: 0; margin: 0; user-select: none; font-weight: bold; }");
         builder.AppendLine(".expander:focus { outline: 1px solid rgba(0,0,0,0.3); outline-offset: 2px; border-radius: 2px; }");
+        builder.AppendLine(FormattableString.Invariant($".expander-placeholder {{ position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: {PlaceholderExpanderColor}; pointer-events: none; user-select: none; }}"));
     }
 
     private static void AppendDepthIndentation(StringBuilder builder)
@@ -234,6 +265,7 @@ internal static class HtmlStylesGenerator
     {
         builder.AppendLine(FormattableString.Invariant($".metrics tbody tr.node-item:hover td {{ background-color: {LeafHoverBackgroundColor}; }}"));
         builder.AppendLine(FormattableString.Invariant($".metrics tbody tr.node-header:hover th {{ background-color: {HeaderHoverBackgroundColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tbody tr.leaf-row:hover td, .metrics tbody tr.leaf-row:hover th {{ background-color: {LeafHoverBackgroundColor}; }}"));
     }
 }
 

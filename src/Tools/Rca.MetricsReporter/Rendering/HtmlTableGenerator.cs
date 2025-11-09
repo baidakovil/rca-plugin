@@ -45,6 +45,11 @@ internal sealed class HtmlTableGenerator
         builder.AppendLine("    <span class=\"badge status-error\">Error</span>");
         builder.AppendLine("  </div>");
         builder.AppendLine("  <div style=\"flex:1\"></div>");
+        builder.AppendLine("  <div class=\"detail-control\">");
+        builder.AppendLine("    <label for=\"detail-level\" class=\"detail-label\">Detailing:</label>");
+        builder.AppendLine("    <input type=\"range\" id=\"detail-level\" min=\"1\" max=\"3\" step=\"1\" value=\"3\" aria-valuemin=\"1\" aria-valuemax=\"3\" aria-valuenow=\"3\" aria-label=\"Detail level\" />");
+        builder.AppendLine("    <span id=\"detail-label\" class=\"detail-value\">Member</span>");
+        builder.AppendLine("  </div>");
         builder.AppendLine("  <button id=\"expand-all\">Expand all</button>");
         builder.AppendLine("  <button id=\"collapse-all\">Collapse all</button>");
         builder.AppendLine("</div>");
@@ -97,6 +102,9 @@ internal sealed class HtmlTableGenerator
             _ => false
         };
 
+        var role = GetNodeRole(node);
+        var isStructuralNode = role is "assembly" or "namespace" or "type";
+
         var kind = NodeKindProvider.GetKind(node);
         var tooltip = string.Empty;
         if (!string.IsNullOrWhiteSpace(node.FullyQualifiedName))
@@ -105,15 +113,15 @@ internal sealed class HtmlTableGenerator
         }
 
         // Determine if this is a node row (has children) or a regular row
-        var isNodeRow = hasChildren;
+        var isNodeRow = hasChildren || isStructuralNode;
         var rowClass = isNodeRow ? "node-row node-header" : "node-row node-item";
         
         builder.AppendLine("    <tr class=\"" + rowClass + "\" " +
-            $"data-id=\"{thisId}\" data-level=\"{level}\" data-parent=\"{parentId ?? string.Empty}\">");
+            $"data-id=\"{thisId}\" data-level=\"{level}\" data-parent=\"{parentId ?? string.Empty}\" data-has-children=\"{hasChildren.ToString().ToLowerInvariant()}\" data-role=\"{role}\">");
 
         // Symbol cell with tooltip and class for expander presence
         var symbolClasses = "symbol";
-        if (hasChildren)
+        if (hasChildren || isStructuralNode)
         {
             symbolClasses += " has-expander";
         }
@@ -134,6 +142,10 @@ internal sealed class HtmlTableGenerator
         if (hasChildren)
         {
             builder.Append($"<button class=\"expander\" data-target=\"{thisId}\" aria-label=\"Toggle expand/collapse\">-</button>");
+        }
+        else if (isStructuralNode)
+        {
+            builder.Append("<span class=\"expander-placeholder\" aria-hidden=\"true\">∅</span>");
         }
 
         // Name and NEW badge
@@ -196,5 +208,15 @@ internal sealed class HtmlTableGenerator
                 break;
         }
     }
+
+    private static string GetNodeRole(MetricsNode node)
+        => node switch
+        {
+            AssemblyMetricsNode => "assembly",
+            NamespaceMetricsNode => "namespace",
+            TypeMetricsNode => "type",
+            MemberMetricsNode => "member",
+            _ => "node"
+        };
 }
 
