@@ -41,11 +41,10 @@ h1 { margin-bottom: 4px; }
 .legend { margin: 8px 0 12px; display:flex; gap:8px; }
 .badge { padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600; text-transform:uppercase; }
 .badge-new { background:#1a7f37; color:#fff; font-size:9px; }
-.status-success{ background:#1a7f37; color:#fff }
-.status-warning{ background:#f0ad4e; color:#000 }
-.status-error{ background:#d9534f; color:#fff }
-.status-notapplicable, .status-na{ background:#6c757d; color:#fff }
+.status-warning{ background:rgb(255,235,156); color:#b66f1a; font-size:9px; padding:3px 6px; }
+.status-error{ background:rgb(255,200,200); color:#d9534f; font-size:9px; padding:3px 6px; }
 .table-actions{ display:flex; align-items:center; justify-content:flex-end; gap:8px; margin:0; position:sticky; top:0; background:rgb(235, 235, 235); z-index:10; padding:6px 0 }
+.status-badges{ display:flex; gap:8px; align-items:center; }
 .table-actions button{ margin-left:6px; padding:6px 10px; font-size:12px }
 .table-container{ max-width:100%; }
 .metrics{ border-collapse:collapse; width:100%; table-layout:fixed; word-wrap:break-word; border-spacing:0; font-size:0.9em; border:var(--border-dark-width) solid var(--border-dark-color); }

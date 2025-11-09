@@ -37,15 +37,6 @@ internal static class HtmlHeaderGenerator
         }
         builder.AppendLine("</section>");
 
-        // Legend
-        builder.AppendLine("<section class=\"legend\"> ");
-        builder.AppendLine("  <span class=\"badge status-success\">Success</span>");
-        builder.AppendLine("  <span class=\"badge status-warning\">Warning</span>");
-        builder.AppendLine("  <span class=\"badge status-error\">Error</span>");
-        builder.AppendLine("  <span class=\"badge status-na\">N/A</span>");
-        builder.AppendLine("  <span class=\"badge badge-new\">NEW</span>");
-        builder.AppendLine("</section>");
-
         return builder.ToString();
     }
 }

@@ -40,6 +40,10 @@ internal sealed class HtmlTableGenerator
         builder.AppendLine("<div class=\"table-container\"> ");
         // Action buttons inside table-container for proper sticky positioning
         builder.AppendLine("<div class=\"table-actions\"> ");
+        builder.AppendLine("  <div class=\"status-badges\">");
+        builder.AppendLine("    <span class=\"badge status-warning\">Warning</span>");
+        builder.AppendLine("    <span class=\"badge status-error\">Error</span>");
+        builder.AppendLine("  </div>");
         builder.AppendLine("  <div style=\"flex:1\"></div>");
         builder.AppendLine("  <button id=\"expand-all\">Expand all</button>");
         builder.AppendLine("  <button id=\"collapse-all\">Collapse all</button>");
