@@ -221,6 +221,22 @@ internal static class HtmlScriptGenerator
       updateStripedClasses();
     });
   }
+  
+  // Sticky header positioning: dynamically calculate table-actions height and set thead th top
+  var tableActions = document.querySelector('.table-actions');
+  var theadThs = table ? Array.from(table.querySelectorAll('thead th')) : [];
+  function updateStickyHeaderPosition(){
+    if(tableActions && theadThs.length > 0){
+      var actionsHeight = tableActions.offsetHeight;
+      // Subtract 1px to eliminate gap between table-actions and header
+      theadThs.forEach(function(th){
+        th.style.top = (actionsHeight - 1) + 'px';
+      });
+    }
+  }
+  // Update on load and resize
+  updateStickyHeaderPosition();
+  window.addEventListener('resize', updateStickyHeaderPosition);
 })();";
 }
 

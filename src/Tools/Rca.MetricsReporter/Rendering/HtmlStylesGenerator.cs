@@ -31,12 +31,12 @@ h1 { margin-bottom: 4px; }
 .status-warning{ background:#f0ad4e; color:#000 }
 .status-error{ background:#d9534f; color:#fff }
 .status-notapplicable, .status-na{ background:#6c757d; color:#fff }
-.table-actions{ display:flex; align-items:center; justify-content:flex-end; gap:8px; margin:8px 0 10px; position:sticky; top:8px; background:linear-gradient(transparent, rgba(255,255,255,0.6)); z-index:3; padding:6px 0 }
+.table-actions{ display:flex; align-items:center; justify-content:flex-end; gap:8px; margin:0; position:sticky; top:0; background:#d6d6d6; z-index:10; padding:6px 0 }
 .table-actions button{ margin-left:6px; padding:6px 10px; font-size:12px }
-.table-container{ overflow:auto; max-width:100%; }
+.table-container{ max-width:100%; }
 .metrics{ border:1px solid #c1c1c1; border-collapse:collapse; width:100%; table-layout:fixed; word-wrap:break-word; }
-/* Table headers - sticky header row */
-.metrics thead th{ border:1px solid #c1c1c1; padding:2px 4px 2px 4px; background-color:#d1d1d1; text-align:left; vertical-align:top; white-space:normal; word-break:break-word; cursor:pointer; position:sticky; top:0 }
+/* Table headers - sticky header row, positioned below table-actions */
+.metrics thead th{ border:1px solid #c1c1c1; border-top:none; padding:2px 4px 2px 4px; background-color:#d1d1d1; text-align:left; vertical-align:top; white-space:normal; word-break:break-word; cursor:pointer; position:sticky; top:40px; z-index:5; }
 /* Node rows (with expander) - use th, gray background, bold black text */
 .metrics tr.node-header th{ border:1px solid #c1c1c1; padding:2px 4px 2px 4px; background-color:#ddd; font-weight:bold; color:#000; text-align:left; vertical-align:top; white-space:normal; word-break:break-word }
 .metrics tr.node-header th:first-child{ background-color:#dcdcdc; }

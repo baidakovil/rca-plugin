@@ -46,13 +46,6 @@ internal static class HtmlHeaderGenerator
         builder.AppendLine("  <span class=\"badge badge-new\">NEW</span>");
         builder.AppendLine("</section>");
 
-        // Action buttons
-        builder.AppendLine("<div class=\"table-actions\"> ");
-        builder.AppendLine("  <div style=\"flex:1\"></div>");
-        builder.AppendLine("  <button id=\"expand-all\">Expand all</button>");
-        builder.AppendLine("  <button id=\"collapse-all\">Collapse all</button>");
-        builder.AppendLine("</div>");
-
         return builder.ToString();
     }
 }
