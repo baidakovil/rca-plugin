@@ -46,12 +46,8 @@ internal static class HtmlHeaderGenerator
         builder.AppendLine("  <span class=\"badge badge-new\">NEW</span>");
         builder.AppendLine("</section>");
 
-        // Action buttons and width control
+        // Action buttons
         builder.AppendLine("<div class=\"table-actions\"> ");
-        builder.AppendLine("  <label style=\"margin-right:8px;font-size:12px;line-height:28px\">Column width:</label>");
-        builder.AppendLine("  <input id=\"symbol-width-slider\" type=\"range\" min=\"240\" max=\"800\" value=\"420\" style=\"width:120px;margin-right:8px\" />");
-        builder.AppendLine("  <span id=\"symbol-width-display\" style=\"font-size:12px;min-width:50px;display:inline-block\">420px</span>");
-        builder.AppendLine("  <button id=\"reset-width\" style=\"margin-left:6px\">Reset</button>");
         builder.AppendLine("  <div style=\"flex:1\"></div>");
         builder.AppendLine("  <button id=\"expand-all\">Expand all</button>");
         builder.AppendLine("  <button id=\"collapse-all\">Collapse all</button>");

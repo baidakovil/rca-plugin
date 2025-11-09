@@ -34,7 +34,7 @@ h1 { margin-bottom: 4px; }
 .table-actions{ display:flex; align-items:center; justify-content:flex-end; gap:8px; margin:8px 0 10px; position:sticky; top:8px; background:linear-gradient(transparent, rgba(255,255,255,0.6)); z-index:3; padding:6px 0 }
 .table-actions button{ margin-left:6px; padding:6px 10px; font-size:12px }
 .table-container{ overflow:auto; max-width:100%; }
-.metrics{ border:1px solid #c1c1c1; border-collapse:collapse; width:100%; table-layout:auto; word-wrap:break-word; }
+.metrics{ border:1px solid #c1c1c1; border-collapse:collapse; width:100%; table-layout:fixed; word-wrap:break-word; }
 /* Table headers - sticky header row */
 .metrics thead th{ border:1px solid #c1c1c1; padding:2px 4px 2px 4px; background-color:#d1d1d1; text-align:left; vertical-align:top; white-space:normal; word-break:break-word; cursor:pointer; position:sticky; top:0 }
 /* Node rows (with expander) - use th, gray background, bold black text */
@@ -47,9 +47,11 @@ h1 { margin-bottom: 4px; }
 .metrics tr.node-item.stripe-even td{ background-color:#fff; }
 /* Red text for item names in first column */
 .metrics tr.node-item td.symbol .item-name{ color:#c00; }
-/* reasonable default width for first column; allow other columns to remain visible */
-th[data-col='symbol'], td.symbol, th.symbol { width:420px; min-width:240px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; box-sizing:border-box }
-.symbol{ position:relative; width:420px; min-width:240px; white-space:nowrap; overflow:hidden; box-sizing:border-box; display:flex; align-items:center }
+/* Fixed width for first column */
+th[data-col='symbol'], td.symbol, th.symbol { width:420px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; box-sizing:border-box }
+.symbol{ position:relative; width:420px; white-space:nowrap; overflow:hidden; box-sizing:border-box; display:flex; align-items:center }
+/* Equal width for all other columns */
+.metrics thead th:not([data-col='symbol']), .metrics td.metric, .metrics th.metric { width:auto }
 .symbol .name-text{ display:inline-block; vertical-align:middle; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1 }
 /* soft translucent cell backgrounds based on status - only for regular rows */
 .metrics tr.node-item td.metric[data-status='success']{ background: rgba(26,127,55,0.12) }

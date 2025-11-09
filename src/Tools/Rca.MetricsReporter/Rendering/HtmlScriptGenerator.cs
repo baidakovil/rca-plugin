@@ -221,51 +221,6 @@ internal static class HtmlScriptGenerator
       updateStripedClasses();
     });
   }
-  
-  // Width control handlers
-  var widthSlider = document.getElementById('symbol-width-slider');
-  var widthDisplay = document.getElementById('symbol-width-display');
-  var resetBtn = document.getElementById('reset-width');
-  var defaultWidth = 420;
-  var minWidth = 240;
-  var maxWidth = 800;
-  
-  function applyWidth(width){
-    if(isNaN(width) || width < minWidth || width > maxWidth){
-      width = defaultWidth;
-    }
-    var elems = table.querySelectorAll('th[data-col=\'symbol\'], td.symbol');
-    elems.forEach(function(e){
-      e.style.width = width + 'px';
-    });
-    if(widthSlider){
-      widthSlider.value = width;
-    }
-    if(widthDisplay){
-      widthDisplay.textContent = width + 'px';
-    }
-  }
-  
-  function resetWidth(){
-    applyWidth(defaultWidth);
-  }
-  
-  if(widthSlider){
-    widthSlider.min = minWidth;
-    widthSlider.max = maxWidth;
-    widthSlider.value = defaultWidth;
-    widthSlider.addEventListener('input', function(){
-      var w = parseInt(this.value, 10);
-      applyWidth(w);
-    });
-  }
-  
-  if(resetBtn){
-    resetBtn.addEventListener('click', resetWidth);
-  }
-  
-  // Apply default width on load
-  resetWidth();
 })();";
 }
 
