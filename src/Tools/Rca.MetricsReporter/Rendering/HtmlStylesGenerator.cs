@@ -93,6 +93,8 @@ internal static class HtmlStylesGenerator
         AppendDepthIndentation(builder);
         builder.AppendLine();
         AppendInteractiveStates(builder);
+        builder.AppendLine();
+        AppendMetaSectionStyles(builder);
 
         return builder.ToString();
     }
@@ -272,6 +274,15 @@ internal static class HtmlStylesGenerator
         builder.AppendLine(FormattableString.Invariant($".metrics tbody tr.node-item:hover td {{ background-color: {LeafHoverBackgroundColor}; }}"));
         builder.AppendLine(FormattableString.Invariant($".metrics tbody tr.node-header:hover th {{ background-color: {HeaderHoverBackgroundColor}; }}"));
         builder.AppendLine(FormattableString.Invariant($".metrics tbody tr.leaf-row:hover td, .metrics tbody tr.leaf-row:hover th {{ background-color: {LeafHoverBackgroundColor}; }}"));
+    }
+
+    private static void AppendMetaSectionStyles(StringBuilder builder)
+    {
+        builder.AppendLine(".meta-summary { cursor: pointer; user-select: none; }");
+        builder.AppendLine(".meta-summary:hover { opacity: 0.7; }");
+        builder.AppendLine(".meta-toggle { display: inline-block; transition: transform 0.2s ease; margin-left: 4px; }");
+        builder.AppendLine(".meta-summary.expanded .meta-toggle { transform: rotate(90deg); }");
+        builder.AppendLine(".meta-details { margin-top: 8px; }");
     }
 }
 

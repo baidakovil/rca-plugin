@@ -71,7 +71,9 @@ public sealed class MetricsAggregationService
             GeneratedAtUtc = DateTime.UtcNow,
             BaselineReference = input.BaselineReference,
             Paths = input.Paths,
-            Thresholds = new Dictionary<MetricIdentifier, MetricThreshold>(input.Thresholds)
+            Thresholds = new Dictionary<MetricIdentifier, MetricThreshold>(input.Thresholds),
+            ExcludedMethodNames = _memberFilter.GetExcludedMethodNamesString(),
+            ExcludedAssemblyNames = _assemblyFilter.GetExcludedAssemblyPatternsString()
         };
 
         return new MetricsReport
@@ -582,23 +584,6 @@ public sealed class MetricsAggregationService
             }
 
             return entries[0].Assembly;
-        }
-
-        private AssemblyMetricsNode? TryResolveAssemblyForType(string typeFqn)
-        {
-            if (_types.TryGetValue(typeFqn, out var entry))
-            {
-                return entry.Assembly;
-            }
-
-            var namespaceName = ResolveNamespaceName(typeFqn);
-            return TryResolveAssembly(namespaceName);
-        }
-
-        private AssemblyMetricsNode? TryResolveAssemblyForMember(string memberFqn)
-        {
-            var typeFqn = ResolveDeclaringType(memberFqn);
-            return TryResolveAssemblyForType(typeFqn);
         }
 
         private void MergeMetrics(IDictionary<MetricIdentifier, MetricValue> target, IDictionary<MetricIdentifier, MetricValue> source)

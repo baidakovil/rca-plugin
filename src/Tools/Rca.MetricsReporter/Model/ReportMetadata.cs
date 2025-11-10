@@ -30,5 +30,23 @@ public sealed class ReportMetadata
     /// </summary>
     public IDictionary<MetricIdentifier, MetricThreshold> Thresholds { get; init; }
         = new Dictionary<MetricIdentifier, MetricThreshold>();
+
+    /// <summary>
+    /// Comma-separated list of excluded method names used when generating this report.
+    /// </summary>
+    /// <remarks>
+    /// This property stores the list of method names that were excluded from the metrics report.
+    /// It is used for display purposes in the HTML report header.
+    /// </remarks>
+    public string? ExcludedMethodNames { get; init; }
+
+    /// <summary>
+    /// Comma-separated list of excluded assembly name patterns used when generating this report.
+    /// </summary>
+    /// <remarks>
+    /// This property stores the list of assembly name patterns that were excluded from the metrics report.
+    /// It is used for display purposes in the HTML report header.
+    /// </remarks>
+    public string? ExcludedAssemblyNames { get; init; }
 }
 

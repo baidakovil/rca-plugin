@@ -2,6 +2,7 @@ namespace Rca.Tools.MetricsReporter.Processing;
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 /// <summary>
 /// Filters out compiler-generated and constructor methods from metrics reports.
@@ -176,6 +177,27 @@ public sealed class MemberFilter
         }
 
         return methodNames.Count == 0 ? new MemberFilter() : new MemberFilter(methodNames);
+    }
+
+    /// <summary>
+    /// Gets a comma-separated string of excluded method names.
+    /// </summary>
+    /// <returns>
+    /// A comma-separated string of excluded method names, or an empty string if no methods are excluded.
+    /// </returns>
+    /// <remarks>
+    /// This method returns the list of excluded method names in a format suitable for display.
+    /// The names are sorted alphabetically for consistent output.
+    /// </remarks>
+    public string GetExcludedMethodNamesString()
+    {
+        if (_excludedMethodNames.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var sortedNames = _excludedMethodNames.OrderBy(x => x, StringComparer.Ordinal);
+        return string.Join(", ", sortedNames);
     }
 
     /// <summary>

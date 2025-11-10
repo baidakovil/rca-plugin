@@ -27,17 +27,39 @@ internal static class HtmlHeaderGenerator
         // Convert UTC time to local time for display
         // WHY: Users expect to see time in their local timezone, not UTC, for better readability
         var localTime = report.Metadata.GeneratedAtUtc.ToLocalTime();
-        builder.AppendLine($"  <p><strong>Generated at:</strong> {localTime:yyyy-MM-dd HH:mm:ss}</p>");
+        builder.AppendLine($"  <p class=\"meta-summary\"><strong>Generated at:</strong> {localTime:yyyy-MM-dd HH:mm:ss}<span class=\"meta-toggle\"> ▶</span></p>");
+        
+        builder.AppendLine("  <div class=\"meta-details\" style=\"display: none;\">");
         if (!string.IsNullOrWhiteSpace(report.Metadata.BaselineReference))
         {
-            builder.AppendLine($"  <p><strong>Baseline:</strong> {WebUtility.HtmlEncode(report.Metadata.BaselineReference)}</p>");
+            builder.AppendLine($"    <p><strong>Baseline:</strong> {WebUtility.HtmlEncode(report.Metadata.BaselineReference)}</p>");
         }
 
-        builder.AppendLine($"  <p><strong>Metrics JSON:</strong> {WebUtility.HtmlEncode(report.Metadata.Paths.Report)}</p>");
+        builder.AppendLine($"    <p><strong>Metrics JSON:</strong> {WebUtility.HtmlEncode(report.Metadata.Paths.Report)}</p>");
         if (!string.IsNullOrWhiteSpace(report.Metadata.Paths.Baseline))
         {
-            builder.AppendLine($"  <p><strong>Baseline JSON:</strong> {WebUtility.HtmlEncode(report.Metadata.Paths.Baseline)}</p>");
+            builder.AppendLine($"    <p><strong>Baseline JSON:</strong> {WebUtility.HtmlEncode(report.Metadata.Paths.Baseline)}</p>");
         }
+        
+        if (!string.IsNullOrWhiteSpace(report.Metadata.ExcludedMethodNames))
+        {
+            builder.AppendLine($"    <p><strong>Excluded member names:</strong> {WebUtility.HtmlEncode(report.Metadata.ExcludedMethodNames)}</p>");
+        }
+        else
+        {
+            builder.AppendLine("    <p><strong>Excluded member names:</strong> (none)</p>");
+        }
+        
+        if (!string.IsNullOrWhiteSpace(report.Metadata.ExcludedAssemblyNames))
+        {
+            builder.AppendLine($"    <p><strong>Excluded assembly names:</strong> {WebUtility.HtmlEncode(report.Metadata.ExcludedAssemblyNames)}</p>");
+        }
+        else
+        {
+            builder.AppendLine("    <p><strong>Excluded assembly names:</strong> (none)</p>");
+        }
+        
+        builder.AppendLine("  </div>");
         builder.AppendLine("</section>");
 
         return builder.ToString();

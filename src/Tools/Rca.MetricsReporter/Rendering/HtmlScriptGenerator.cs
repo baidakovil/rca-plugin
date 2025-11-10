@@ -391,6 +391,22 @@ internal static class HtmlScriptGenerator
 
   updateStickyHeaderPosition();
   window.addEventListener('resize', updateStickyHeaderPosition);
+
+  // Meta section spoiler toggle
+  var metaSummary = document.querySelector('.meta-summary');
+  var metaDetails = document.querySelector('.meta-details');
+  if(metaSummary && metaDetails){
+    metaSummary.addEventListener('click', function(){
+      var isExpanded = metaSummary.classList.contains('expanded');
+      if(isExpanded){
+        metaSummary.classList.remove('expanded');
+        metaDetails.style.display = 'none';
+      } else {
+        metaSummary.classList.add('expanded');
+        metaDetails.style.display = '';
+      }
+    });
+  }
 })();";
 }
 

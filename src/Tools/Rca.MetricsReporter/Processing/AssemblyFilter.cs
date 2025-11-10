@@ -91,5 +91,26 @@ public sealed class AssemblyFilter
 
         return new AssemblyFilter(patterns);
     }
+
+    /// <summary>
+    /// Gets a comma-separated string of excluded assembly name patterns.
+    /// </summary>
+    /// <returns>
+    /// A comma-separated string of excluded assembly name patterns, or an empty string if no patterns are excluded.
+    /// </returns>
+    /// <remarks>
+    /// This method returns the list of excluded assembly name patterns in a format suitable for display.
+    /// The patterns are sorted alphabetically for consistent output.
+    /// </remarks>
+    public string GetExcludedAssemblyPatternsString()
+    {
+        if (_excludedPatterns.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var sortedPatterns = _excludedPatterns.OrderBy(x => x, StringComparer.OrdinalIgnoreCase);
+        return string.Join(", ", sortedPatterns);
+    }
 }
 
