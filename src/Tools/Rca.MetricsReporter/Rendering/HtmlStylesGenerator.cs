@@ -76,6 +76,8 @@ internal static class HtmlStylesGenerator
         builder.AppendLine();
         AppendDetailControlStyles(builder);
         builder.AppendLine();
+        AppendFilterControlStyles(builder);
+        builder.AppendLine();
         AppendTableLayout(builder);
         builder.AppendLine();
         AppendColumnGrouping(builder);
@@ -165,6 +167,18 @@ internal static class HtmlStylesGenerator
         builder.AppendLine(".detail-control input[type='range']::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: " + SliderThumbColor + "; border: none; cursor: pointer; }");
         builder.AppendLine(FormattableString.Invariant($".detail-control input[type='range']::-webkit-slider-runnable-track {{ height: 4px; background: {SliderTrackColor}; border-radius: 999px; }}"));
         builder.AppendLine(FormattableString.Invariant($".detail-control input[type='range']::-moz-range-track {{ height: 4px; background: {SliderTrackColor}; border-radius: 999px; }}"));
+    }
+
+    private static void AppendFilterControlStyles(StringBuilder builder)
+    {
+        builder.AppendLine(".filter-control { display: flex; align-items: center; }");
+        builder.AppendLine(".filter-input-wrapper { position: relative; display: inline-block; }");
+        builder.AppendLine(".filter-input { width: 100px; padding: 4px 24px 4px 8px; font-size: 11px; border: 1px solid rgba(180,180,180,1); border-radius: 4px; background: rgba(255,255,255,1); color: rgba(30,30,30,1); }");
+        builder.AppendLine(".filter-input:focus { outline: none; border-color: rgba(0,102,204,1); }");
+        builder.AppendLine(".filter-input::placeholder { color: rgba(128,128,128,0.8); }");
+        builder.AppendLine(".filter-clear { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; color: rgba(128,128,128,0.8); font-size: 18px; line-height: 1; cursor: pointer; padding: 0; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; }");
+        builder.AppendLine(".filter-clear:hover { color: rgba(30,30,30,1); }");
+        builder.AppendLine(".filter-clear:focus { outline: none; color: rgba(0,102,204,1); }");
     }
 
     private static void AppendTableLayout(StringBuilder builder)

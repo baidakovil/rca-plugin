@@ -160,7 +160,12 @@ internal static class HtmlScriptGenerator
       var level = parseInt(row.getAttribute('data-level'), 10) || 0;
       var hiddenByDetail = level > maxDepth ? 'true' : 'false';
       row.dataset.hiddenByDetail = hiddenByDetail;
-      if(hiddenByDetail === 'true'){
+      
+      // Apply filter if active
+      var hiddenByFilter = row.dataset.hiddenByFilter === 'true';
+      var isMatching = !hiddenByFilter || currentFilter.length === 0;
+      
+      if(hiddenByDetail === 'true' || !isMatching){
         row.style.display = 'none';
       } else {
         row.style.display = isAncestorExpanded(row) ? '' : 'none';
@@ -243,6 +248,7 @@ internal static class HtmlScriptGenerator
       row.dataset.expanded = 'true';
     }
     row.dataset.hiddenByDetail = 'false';
+    row.dataset.hiddenByFilter = 'false';
   });
 
   if(detailControl && !detailControl.value){
@@ -391,6 +397,89 @@ internal static class HtmlScriptGenerator
 
   updateStickyHeaderPosition();
   window.addEventListener('resize', updateStickyHeaderPosition);
+
+  // Filter functionality
+  var filterInput = document.getElementById('filter-input');
+  var filterClear = document.getElementById('filter-clear');
+  var currentFilter = '';
+
+  function updateFilterClearVisibility(){
+    if(filterClear){
+      filterClear.style.display = currentFilter.length > 0 ? '' : 'none';
+    }
+  }
+
+  function applyFilter(filterText){
+    currentFilter = (filterText || '').trim().toLowerCase();
+    updateFilterClearVisibility();
+
+    if(!currentFilter){
+      // No filter - clear filter state and reapply detail level
+      state.rows.forEach(function(row){
+        row.dataset.hiddenByFilter = 'false';
+      });
+      applyDetailLevel(currentDetail ? currentDetail.maxDepth : 2);
+      return;
+    }
+
+    // Build a map of matching rows and their ancestors
+    var matchingRows = new Set();
+    var matchingAncestors = new Set();
+
+    // First pass: find all rows that match the filter
+    state.rows.forEach(function(row){
+      var fqn = row.getAttribute('data-fqn') || '';
+      var matches = fqn.toLowerCase().includes(currentFilter);
+      row.dataset.hiddenByFilter = matches ? 'false' : 'true';
+      
+      if(matches){
+        matchingRows.add(row);
+        // Add all ancestors to matching set
+        var parentId = row.getAttribute('data-parent');
+        while(parentId){
+          var parentRow = state.rowById[parentId];
+          if(parentRow){
+            matchingAncestors.add(parentRow);
+            parentId = parentRow.getAttribute('data-parent');
+          } else {
+            break;
+          }
+        }
+      }
+    });
+
+    // Second pass: mark ancestors as matching
+    matchingAncestors.forEach(function(row){
+      row.dataset.hiddenByFilter = 'false';
+    });
+
+    // Reapply detail level which will now respect the filter
+    applyDetailLevel(currentDetail ? currentDetail.maxDepth : 2);
+  }
+
+  if(filterInput){
+    filterInput.addEventListener('input', function(e){
+      applyFilter(e.target.value);
+    });
+    
+    filterInput.addEventListener('keydown', function(e){
+      // ESC key clears the filter
+      if(e.key === 'Escape'){
+        filterInput.value = '';
+        applyFilter('');
+      }
+    });
+  }
+
+  if(filterClear){
+    filterClear.addEventListener('click', function(){
+      if(filterInput){
+        filterInput.value = '';
+        applyFilter('');
+        filterInput.focus();
+      }
+    });
+  }
 
   // Meta section spoiler toggle
   var metaSummary = document.querySelector('.meta-summary');

@@ -45,6 +45,12 @@ internal sealed class HtmlTableGenerator
         builder.AppendLine("    <span class=\"badge status-error\">Error</span>");
         builder.AppendLine("  </div>");
         builder.AppendLine("  <div style=\"flex:1\"></div>");
+        builder.AppendLine("  <div class=\"filter-control\" style=\"margin-right: 30px;\">");
+        builder.AppendLine("    <div class=\"filter-input-wrapper\">");
+        builder.AppendLine("      <input type=\"text\" id=\"filter-input\" class=\"filter-input\" placeholder=\"Filter:\" aria-label=\"Filter rows by name\" />");
+        builder.AppendLine("      <button type=\"button\" id=\"filter-clear\" class=\"filter-clear\" aria-label=\"Clear filter\" style=\"display: none;\">×</button>");
+        builder.AppendLine("    </div>");
+        builder.AppendLine("  </div>");
         builder.AppendLine("  <div class=\"detail-control\">");
         builder.AppendLine("    <label for=\"detail-level\" class=\"detail-label\">Detailing:</label>");
         builder.AppendLine("    <input type=\"range\" id=\"detail-level\" min=\"1\" max=\"3\" step=\"1\" value=\"2\" aria-valuemin=\"1\" aria-valuemax=\"3\" aria-valuenow=\"2\" aria-label=\"Detail level\" />");
@@ -116,8 +122,13 @@ internal sealed class HtmlTableGenerator
         var isNodeRow = hasChildren || isStructuralNode;
         var rowClass = isNodeRow ? "node-row node-header" : "node-row node-item";
         
+        // Add FQN as data attribute for efficient filtering
+        var fqnAttribute = string.IsNullOrWhiteSpace(node.FullyQualifiedName) 
+            ? string.Empty 
+            : $" data-fqn=\"{WebUtility.HtmlEncode(node.FullyQualifiedName)}\"";
+        
         builder.AppendLine("    <tr class=\"" + rowClass + "\" " +
-            $"data-id=\"{thisId}\" data-level=\"{level}\" data-parent=\"{parentId ?? string.Empty}\" data-has-children=\"{hasChildren.ToString().ToLowerInvariant()}\" data-role=\"{role}\">");
+            $"data-id=\"{thisId}\" data-level=\"{level}\" data-parent=\"{parentId ?? string.Empty}\" data-has-children=\"{hasChildren.ToString().ToLowerInvariant()}\" data-role=\"{role}\"{fqnAttribute}>");
 
         // Symbol cell with tooltip and class for expander presence
         var symbolClasses = "symbol";
