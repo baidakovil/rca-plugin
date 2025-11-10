@@ -24,7 +24,10 @@ internal static class HtmlHeaderGenerator
         
         // Metadata
         builder.AppendLine("<section class=\"meta\"> ");
-        builder.AppendLine($"  <p><strong>Generated at:</strong> {report.Metadata.GeneratedAtUtc:u}</p>");
+        // Convert UTC time to local time for display
+        // WHY: Users expect to see time in their local timezone, not UTC, for better readability
+        var localTime = report.Metadata.GeneratedAtUtc.ToLocalTime();
+        builder.AppendLine($"  <p><strong>Generated at:</strong> {localTime:yyyy-MM-dd HH:mm:ss}</p>");
         if (!string.IsNullOrWhiteSpace(report.Metadata.BaselineReference))
         {
             builder.AppendLine($"  <p><strong>Baseline:</strong> {WebUtility.HtmlEncode(report.Metadata.BaselineReference)}</p>");
