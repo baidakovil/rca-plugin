@@ -23,6 +23,11 @@
     <!-- JSON string with metric thresholds (passed to metrics reporter). -->
     <MetricsThresholds Condition="'$(MetricsThresholds)' == ''">{'AltCoverSequenceCoverage':{'warning':75,'error':60,'higherIsBetter':true},'AltCoverBranchCoverage':{'warning':70,'error':55,'higherIsBetter':true},'AltCoverCyclomaticComplexity':{'warning':15,'error':30,'higherIsBetter':false},'AltCoverNPathComplexity':{'warning':200,'error':400,'higherIsBetter':false},'RoslynMaintainabilityIndex':{'warning':65,'error':40,'higherIsBetter':true},'RoslynCyclomaticComplexity':{'warning':12,'error':25,'higherIsBetter':false},'RoslynClassCoupling':{'warning':50,'error':80,'higherIsBetter':false},'RoslynDepthOfInheritance':{'warning':5,'error':8,'higherIsBetter':false},'RoslynSourceLines':{'higherIsBetter':false},'RoslynExecutableLines':{'higherIsBetter':false},'SarifCaRuleViolations':{'warning':5,'error':10,'higherIsBetter':false},'SarifIdeRuleViolations':{'warning':10,'error':20,'higherIsBetter':false}}</MetricsThresholds>
 
+    <!-- Comma-separated or semicolon-separated list of method names to exclude from metrics reports. -->
+    <!-- Method names are normalized (leading dots are removed). Examples: "ctor,cctor,MoveNext" or "ctor;cctor;MoveNext". -->
+    <!-- If not specified, default excluded methods are used (constructors and compiler-generated methods). -->
+    <ExcludedMethodNames Condition="'$(ExcludedMethodNames)' == ''">ctor,cctor,MoveNext,SetStateMachine,MoveNextAsync,DisposeAsync</ExcludedMethodNames>
+
     <!-- Toggle metrics dashboard generation -->
     <GenerateMetricsDashboard Condition="'$(GenerateMetricsDashboard)' == ''">false</GenerateMetricsDashboard>
     <!-- When true, generates HTML from existing JSON without collecting metrics -->

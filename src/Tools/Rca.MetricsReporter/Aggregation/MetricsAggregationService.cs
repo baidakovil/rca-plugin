@@ -11,6 +11,27 @@ using Rca.Tools.MetricsReporter.Processing;
 /// </summary>
 public sealed class MetricsAggregationService
 {
+    private readonly MemberFilter _memberFilter;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MetricsAggregationService"/> class with default member filter.
+    /// </summary>
+    public MetricsAggregationService()
+        : this(new MemberFilter())
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MetricsAggregationService"/> class with the specified member filter.
+    /// </summary>
+    /// <param name="memberFilter">The member filter to use for excluding methods. Cannot be null.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="memberFilter"/> is null.</exception>
+    public MetricsAggregationService(MemberFilter memberFilter)
+    {
+        ArgumentNullException.ThrowIfNull(memberFilter);
+        _memberFilter = memberFilter;
+    }
+
     /// <summary>
     /// Creates the final metrics report.
     /// </summary>
@@ -20,7 +41,7 @@ public sealed class MetricsAggregationService
     {
         ArgumentNullException.ThrowIfNull(input);
 
-        var workspace = new AggregationWorkspace(input.SolutionName);
+        var workspace = new AggregationWorkspace(input.SolutionName, _memberFilter);
 
         foreach (var document in input.AltCoverDocuments)
         {
@@ -67,8 +88,9 @@ public sealed class MetricsAggregationService
         private readonly Dictionary<string, List<IndexedNode>> _memberLineIndex = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, List<IndexedNode>> _typeLineIndex = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, AssemblyMetricsNode> _fileAssemblyMap = new(StringComparer.OrdinalIgnoreCase);
+        private readonly MemberFilter _memberFilter;
 
-        public AggregationWorkspace(string solutionName)
+        public AggregationWorkspace(string solutionName, MemberFilter memberFilter)
         {
             Solution = new SolutionMetricsNode
             {
@@ -76,6 +98,7 @@ public sealed class MetricsAggregationService
                 FullyQualifiedName = solutionName,
                 Metrics = new Dictionary<MetricIdentifier, MetricValue>()
             };
+            _memberFilter = memberFilter;
         }
 
         public SolutionMetricsNode Solution { get; }
@@ -274,7 +297,7 @@ public sealed class MetricsAggregationService
             var memberFqn = element.FullyQualifiedName;
             
             // Filter out compiler-generated and constructor methods
-            if (MemberFilter.ShouldExcludeMethodByFqn(memberFqn))
+            if (_memberFilter.ShouldExcludeMethodByFqn(memberFqn))
             {
                 return;
             }

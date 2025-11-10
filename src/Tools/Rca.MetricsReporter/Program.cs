@@ -52,6 +52,7 @@ static MetricsReporterOptions ParseArguments(string[] args)
     string? outputHtml = null;
     string? thresholds = null;
     string? inputJson = null;
+    string? excludedMethodNames = null;
 
     for (var index = 0; index < args.Length; index++)
     {
@@ -90,6 +91,9 @@ static MetricsReporterOptions ParseArguments(string[] args)
                 break;
             case "--input-json":
                 inputJson = RequireValue(args, ref index, argument);
+                break;
+            case "--excluded-methods":
+                excludedMethodNames = RequireValue(args, ref index, argument);
                 break;
             default:
                 throw new ArgumentException($"Unknown argument '{argument}'. Use --help to view usage.", argument);
@@ -131,7 +135,8 @@ static MetricsReporterOptions ParseArguments(string[] args)
         InputJsonPath = inputJson is null ? null : Path.GetFullPath(inputJson),
         OutputJsonPath = string.IsNullOrWhiteSpace(outputJson) ? string.Empty : Path.GetFullPath(outputJson),
         OutputHtmlPath = string.IsNullOrWhiteSpace(outputHtml) ? string.Empty : Path.GetFullPath(outputHtml),
-        LogFilePath = logFilePath
+        LogFilePath = logFilePath,
+        ExcludedMethodNames = excludedMethodNames
     };
 }
 

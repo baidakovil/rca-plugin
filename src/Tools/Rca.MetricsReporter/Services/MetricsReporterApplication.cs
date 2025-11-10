@@ -26,9 +26,26 @@ public sealed class MetricsReporterApplication
     private readonly SarifMetricsParser _sarifParser = new();
     private readonly ThresholdsParser _thresholdsParser = new();
     private readonly BaselineLoader _baselineLoader = new();
-    private readonly MetricsAggregationService _aggregationService = new();
+    private readonly MetricsAggregationService _aggregationService;
     private readonly HtmlReportGenerator _htmlGenerator = new();
     private readonly ReportWriter _reportWriter = new();
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MetricsReporterApplication"/> class.
+    /// </summary>
+    public MetricsReporterApplication()
+    {
+        _aggregationService = new MetricsAggregationService();
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MetricsReporterApplication"/> class with the specified member filter.
+    /// </summary>
+    /// <param name="memberFilter">The member filter to use for excluding methods.</param>
+    public MetricsReporterApplication(MemberFilter memberFilter)
+    {
+        _aggregationService = new MetricsAggregationService(memberFilter);
+    }
 
     /// <summary>
     /// Executes the aggregation process.
@@ -104,6 +121,9 @@ public sealed class MetricsReporterApplication
             sarifDocuments.Add(document);
         }
 
+        var memberFilter = MemberFilter.FromString(options.ExcludedMethodNames);
+        var aggregationService = new MetricsAggregationService(memberFilter);
+
         var aggregationInput = new MetricsAggregationInput
         {
             SolutionName = options.SolutionName,
@@ -125,7 +145,7 @@ public sealed class MetricsReporterApplication
         MetricsReport report;
         try
         {
-            report = _aggregationService.BuildReport(aggregationInput);
+            report = aggregationService.BuildReport(aggregationInput);
         }
         catch (Exception ex)
         {

@@ -66,5 +66,14 @@ public sealed class MetricsReporterOptions
     /// Path to the metrics reporter log file.
     /// </summary>
     public string LogFilePath { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Comma-separated or semicolon-separated list of method names to exclude from metrics reports.
+    /// </summary>
+    /// <remarks>
+    /// Method names are normalized (leading dots are removed). Examples: "ctor,cctor,MoveNext" or "ctor;cctor;MoveNext".
+    /// If not specified, default excluded methods are used (constructors and compiler-generated methods).
+    /// </remarks>
+    public string? ExcludedMethodNames { get; init; }
 }
 
