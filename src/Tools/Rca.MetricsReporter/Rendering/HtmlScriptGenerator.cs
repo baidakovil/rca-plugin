@@ -94,10 +94,10 @@ internal static class HtmlScriptGenerator
     '2': { maxDepth: 2, label: 'Type' },
     '3': { maxDepth: 3, label: 'Member' }
   };
-  var currentDetail = detailLevels['3'];
+  var currentDetail = detailLevels['2'];
 
   function updateLeafClasses(){
-    var maxDepth = currentDetail ? currentDetail.maxDepth : 3;
+    var maxDepth = currentDetail ? currentDetail.maxDepth : 2;
     state.rows.forEach(function(row){
       row.classList.remove('leaf-row');
       var expanderReset = row.querySelector('.expander');
@@ -172,7 +172,7 @@ internal static class HtmlScriptGenerator
   }
 
   function setDetailLevel(value){
-    var level = detailLevels[value] || detailLevels['3'];
+    var level = detailLevels[value] || detailLevels['2'];
     currentDetail = level;
     if(detailLabel){
       detailLabel.textContent = level.label;
@@ -187,7 +187,7 @@ internal static class HtmlScriptGenerator
     if(!detailControl){
       return;
     }
-    var value = detailControl.value || '3';
+    var value = detailControl.value || '2';
     setDetailLevel(value);
   }
 
@@ -233,9 +233,12 @@ internal static class HtmlScriptGenerator
 
   refreshState();
 
+  // Initialize all rows: expand all nodes by default, set detail level to Type (2)
+  // WHY: Users expect to see expanded tree structure and Type detail level by default
+  // for better overview of the metrics hierarchy
   state.rows.forEach(function(row){
     if(row.dataset.hasChildren === 'true'){
-      setExpanderState(row, false);
+      setExpanderState(row, true);
     } else {
       row.dataset.expanded = 'true';
     }
@@ -243,9 +246,9 @@ internal static class HtmlScriptGenerator
   });
 
   if(detailControl && !detailControl.value){
-    detailControl.value = '3';
+    detailControl.value = '2';
   }
-  setDetailLevel(detailControl ? detailControl.value : '3');
+  setDetailLevel(detailControl ? detailControl.value : '2');
 
   if(detailControl){
     detailControl.addEventListener('input', handleDetailChange);
