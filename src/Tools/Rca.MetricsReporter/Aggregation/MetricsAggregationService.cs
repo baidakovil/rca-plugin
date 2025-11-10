@@ -12,24 +12,28 @@ using Rca.Tools.MetricsReporter.Processing;
 public sealed class MetricsAggregationService
 {
     private readonly MemberFilter _memberFilter;
+    private readonly AssemblyFilter _assemblyFilter;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="MetricsAggregationService"/> class with default member filter.
+    /// Initializes a new instance of the <see cref="MetricsAggregationService"/> class with default filters.
     /// </summary>
     public MetricsAggregationService()
-        : this(new MemberFilter())
+        : this(new MemberFilter(), new AssemblyFilter())
     {
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="MetricsAggregationService"/> class with the specified member filter.
+    /// Initializes a new instance of the <see cref="MetricsAggregationService"/> class with the specified filters.
     /// </summary>
     /// <param name="memberFilter">The member filter to use for excluding methods. Cannot be null.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="memberFilter"/> is null.</exception>
-    public MetricsAggregationService(MemberFilter memberFilter)
+    /// <param name="assemblyFilter">The assembly filter to use for excluding assemblies. Cannot be null.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="memberFilter"/> or <paramref name="assemblyFilter"/> is null.</exception>
+    public MetricsAggregationService(MemberFilter memberFilter, AssemblyFilter assemblyFilter)
     {
         ArgumentNullException.ThrowIfNull(memberFilter);
+        ArgumentNullException.ThrowIfNull(assemblyFilter);
         _memberFilter = memberFilter;
+        _assemblyFilter = assemblyFilter;
     }
 
     /// <summary>
@@ -41,7 +45,7 @@ public sealed class MetricsAggregationService
     {
         ArgumentNullException.ThrowIfNull(input);
 
-        var workspace = new AggregationWorkspace(input.SolutionName, _memberFilter);
+        var workspace = new AggregationWorkspace(input.SolutionName, _memberFilter, _assemblyFilter);
 
         foreach (var document in input.AltCoverDocuments)
         {
@@ -89,8 +93,9 @@ public sealed class MetricsAggregationService
         private readonly Dictionary<string, List<IndexedNode>> _typeLineIndex = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, AssemblyMetricsNode> _fileAssemblyMap = new(StringComparer.OrdinalIgnoreCase);
         private readonly MemberFilter _memberFilter;
+        private readonly AssemblyFilter _assemblyFilter;
 
-        public AggregationWorkspace(string solutionName, MemberFilter memberFilter)
+        public AggregationWorkspace(string solutionName, MemberFilter memberFilter, AssemblyFilter assemblyFilter)
         {
             Solution = new SolutionMetricsNode
             {
@@ -99,6 +104,7 @@ public sealed class MetricsAggregationService
                 Metrics = new Dictionary<MetricIdentifier, MetricValue>()
             };
             _memberFilter = memberFilter;
+            _assemblyFilter = assemblyFilter;
         }
 
         public SolutionMetricsNode Solution { get; }
@@ -226,6 +232,11 @@ public sealed class MetricsAggregationService
 
                 if (target is null && _fileAssemblyMap.TryGetValue(normalizedPath, out var assembly))
                 {
+                    // Skip SARIF metrics for excluded assemblies
+                    if (_assemblyFilter.ShouldExcludeAssembly(assembly.FullyQualifiedName))
+                    {
+                        continue;
+                    }
                     target = assembly;
                 }
 
@@ -244,6 +255,13 @@ public sealed class MetricsAggregationService
         private void MergeAssembly(ParsedCodeElement element)
         {
             var assemblyName = element.FullyQualifiedName ?? element.Name;
+            
+            // Filter out excluded assemblies
+            if (_assemblyFilter.ShouldExcludeAssembly(assemblyName))
+            {
+                return;
+            }
+            
             if (!_assemblies.TryGetValue(assemblyName, out var assemblyNode))
             {
                 assemblyNode = new AssemblyMetricsNode
@@ -264,9 +282,23 @@ public sealed class MetricsAggregationService
         private void MergeNamespace(ParsedCodeElement element)
         {
             var assemblyName = element.ParentFullyQualifiedName ?? string.Empty;
+            
+            // Filter out namespaces for excluded assemblies
+            if (_assemblyFilter.ShouldExcludeAssembly(assemblyName))
+            {
+                return;
+            }
+            
             var namespaceName = element.FullyQualifiedName ?? element.Name;
 
             var namespaceNode = GetOrCreateNamespace(assemblyName, namespaceName, element.Name);
+            
+            // Double-check that namespace's assembly was actually added (not excluded)
+            if (!_assemblies.ContainsKey(assemblyName))
+            {
+                return;
+            }
+            
             MergeMetrics(namespaceNode.Node.Metrics, element.Metrics);
             MergeSource(namespaceNode.Node, element.Source);
         }
@@ -275,6 +307,13 @@ public sealed class MetricsAggregationService
         {
             var typeFqn = element.FullyQualifiedName ?? element.Name;
             var assemblyName = ResolveAssemblyForType(element);
+            
+            // Filter out types for excluded assemblies
+            if (_assemblyFilter.ShouldExcludeAssembly(assemblyName))
+            {
+                return;
+            }
+            
             var namespaceName = ResolveNamespaceName(typeFqn);
 
             var displayName = string.IsNullOrWhiteSpace(element.Name)
@@ -282,6 +321,13 @@ public sealed class MetricsAggregationService
                 : element.Name.Contains('.') ? ExtractTypeDisplayName(typeFqn) : element.Name;
 
             var typeEntry = GetOrCreateType(assemblyName, namespaceName, typeFqn, displayName);
+            
+            // Double-check that type's assembly was actually added (not excluded)
+            if (!_assemblies.ContainsKey(assemblyName))
+            {
+                return;
+            }
+            
             MergeMetrics(typeEntry.Node.Metrics, element.Metrics);
             MergeSource(typeEntry.Node, element.Source);
         }
@@ -309,7 +355,21 @@ public sealed class MetricsAggregationService
                 return;
             }
 
+            // Filter out members from excluded assemblies
+            var assemblyName = ResolveAssemblyNameFromFqn(typeFqn);
+            if (_assemblyFilter.ShouldExcludeAssembly(assemblyName))
+            {
+                return;
+            }
+
             var typeEntry = EnsureTypeForMember(typeFqn);
+            
+            // Double-check that type's assembly was actually added (not excluded)
+            if (!_assemblies.ContainsKey(assemblyName))
+            {
+                return;
+            }
+            
             var memberNode = GetOrCreateMember(typeEntry, memberFqn, element.Name);
 
             MergeMetrics(memberNode.Metrics, element.Metrics);
@@ -318,18 +378,51 @@ public sealed class MetricsAggregationService
 
         private NamespaceEntry GetOrCreateNamespace(string assemblyName, string namespaceFqn, string displayName)
         {
+            // Filter out namespaces for excluded assemblies
+            if (string.IsNullOrEmpty(assemblyName))
+            {
+                assemblyName = ResolveAssemblyNameFromFqn(namespaceFqn);
+            }
+            
+            if (_assemblyFilter.ShouldExcludeAssembly(assemblyName))
+            {
+                // Return a dummy namespace entry for excluded assemblies
+                var dummyAssembly = new AssemblyMetricsNode
+                {
+                    Name = assemblyName,
+                    FullyQualifiedName = assemblyName,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>()
+                };
+                var dummyNamespace = new NamespaceMetricsNode
+                {
+                    Name = displayName,
+                    FullyQualifiedName = namespaceFqn,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>()
+                };
+                return new NamespaceEntry(dummyNamespace, dummyAssembly);
+            }
+            
             var key = $"{assemblyName}::{namespaceFqn}";
             if (_namespaces.TryGetValue(key, out var entry))
             {
                 return entry;
             }
 
-            if (string.IsNullOrEmpty(assemblyName))
-            {
-                assemblyName = ResolveAssemblyNameFromFqn(namespaceFqn);
-            }
-
             var assembly = GetOrCreateAssembly(assemblyName, new ParsedCodeElement(CodeElementKind.Assembly, assemblyName, assemblyName));
+            
+            // Double-check that assembly was actually added (not excluded)
+            if (!_assemblies.ContainsKey(assemblyName))
+            {
+                // Assembly was excluded, return dummy entry
+                var dummyNamespace = new NamespaceMetricsNode
+                {
+                    Name = displayName,
+                    FullyQualifiedName = namespaceFqn,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>()
+                };
+                return new NamespaceEntry(dummyNamespace, assembly);
+            }
+            
             var node = new NamespaceMetricsNode
             {
                 Name = displayName,
@@ -357,6 +450,19 @@ public sealed class MetricsAggregationService
 
         private AssemblyMetricsNode GetOrCreateAssembly(string assemblyName, ParsedCodeElement element)
         {
+            // Filter out excluded assemblies
+            if (_assemblyFilter.ShouldExcludeAssembly(assemblyName))
+            {
+                // Return a dummy assembly node that won't be added to Solution
+                // This prevents errors when code tries to use the returned assembly
+                return new AssemblyMetricsNode
+                {
+                    Name = element.Name,
+                    FullyQualifiedName = assemblyName,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>()
+                };
+            }
+            
             if (!_assemblies.TryGetValue(assemblyName, out var assemblyNode))
             {
                 assemblyNode = new AssemblyMetricsNode
@@ -370,6 +476,8 @@ public sealed class MetricsAggregationService
                 Solution.Assemblies.Add(assemblyNode);
             }
 
+            MergeMetrics(assemblyNode.Metrics, element.Metrics);
+            MergeSource(assemblyNode, element.Source);
             return assemblyNode;
         }
 
@@ -380,7 +488,46 @@ public sealed class MetricsAggregationService
                 return entry;
             }
 
+            // Filter out types for excluded assemblies
+            if (_assemblyFilter.ShouldExcludeAssembly(assemblyName))
+            {
+                // Return a dummy type entry for excluded assemblies
+                var dummyAssembly = new AssemblyMetricsNode
+                {
+                    Name = assemblyName,
+                    FullyQualifiedName = assemblyName,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>()
+                };
+                var dummyNamespace = new NamespaceMetricsNode
+                {
+                    Name = namespaceName,
+                    FullyQualifiedName = namespaceName,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>()
+                };
+                var dummyType = new TypeMetricsNode
+                {
+                    Name = displayName,
+                    FullyQualifiedName = typeFqn,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>()
+                };
+                return new TypeEntry(dummyType, dummyAssembly);
+            }
+
             var namespaceEntry = GetOrCreateNamespace(assemblyName, namespaceName, namespaceName);
+            
+            // Double-check that namespace's assembly was actually added (not excluded)
+            if (!_assemblies.ContainsKey(assemblyName))
+            {
+                // Assembly was excluded, return dummy entry
+                var dummyType = new TypeMetricsNode
+                {
+                    Name = displayName,
+                    FullyQualifiedName = typeFqn,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>()
+                };
+                return new TypeEntry(dummyType, namespaceEntry.Assembly);
+            }
+            
             var node = new TypeMetricsNode
             {
                 Name = displayName,
@@ -644,28 +791,46 @@ public sealed class MetricsAggregationService
 
         private void RegisterFileAssembly(string normalizedPath, MetricsNode node)
         {
+            // Find the assembly for this node
+            AssemblyMetricsNode? assembly = null;
             switch (node)
             {
-                case AssemblyMetricsNode assembly:
-                    _fileAssemblyMap[normalizedPath] = assembly;
-                    break;
-                case TypeMetricsNode type when type.FullyQualifiedName is not null:
-                    var assemblyForType = TryResolveAssemblyForType(type.FullyQualifiedName);
-                    if (assemblyForType is not null)
-                    {
-                        _fileAssemblyMap[normalizedPath] = assemblyForType;
-                    }
-
+                case AssemblyMetricsNode a:
+                    assembly = a;
                     break;
                 case MemberMetricsNode member when member.FullyQualifiedName is not null:
-                    var assemblyForMember = TryResolveAssemblyForMember(member.FullyQualifiedName);
-                    if (assemblyForMember is not null)
+                    var memberTypeFqn = ResolveDeclaringType(member.FullyQualifiedName);
+                    if (memberTypeFqn is not null && _types.TryGetValue(memberTypeFqn, out var memberTypeEntry))
                     {
-                        _fileAssemblyMap[normalizedPath] = assemblyForMember;
+                        assembly = memberTypeEntry.Assembly;
                     }
-
+                    break;
+                case TypeMetricsNode type when type.FullyQualifiedName is not null:
+                    if (_types.TryGetValue(type.FullyQualifiedName, out var typeEntry))
+                    {
+                        assembly = typeEntry.Assembly;
+                    }
                     break;
             }
+
+            if (assembly is null || string.IsNullOrWhiteSpace(assembly.FullyQualifiedName))
+            {
+                return;
+            }
+            
+            // Don't register files for excluded assemblies
+            if (_assemblyFilter.ShouldExcludeAssembly(assembly.FullyQualifiedName))
+            {
+                return;
+            }
+
+            // Only register if assembly is actually in the solution (not excluded)
+            if (!_assemblies.ContainsKey(assembly.FullyQualifiedName))
+            {
+                return;
+            }
+
+            _fileAssemblyMap[normalizedPath] = assembly;
         }
 
         private static MetricsNode? FindNodeInIndex(Dictionary<string, List<IndexedNode>> index, string path, int line)

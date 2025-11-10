@@ -160,7 +160,8 @@
       <MetricsReporterBaselineRefArg Condition="'$(MetricsBaselineReference)' != ''"> --baseline-ref &quot;$(MetricsBaselineReference)&quot;</MetricsReporterBaselineRefArg>
       <MetricsReporterThresholdArg> --thresholds &quot;$(MetricsThresholds)&quot;</MetricsReporterThresholdArg>
       <MetricsReporterExcludedMethodsArg Condition="'$(ExcludedMethodNames)' != ''"> --excluded-methods &quot;$(ExcludedMethodNames)&quot;</MetricsReporterExcludedMethodsArg>
-      <MetricsReporterCommand>&quot;$(MetricsReporterExe)&quot; --solution-name &quot;$(MetricsSolutionName)&quot; --metrics-dir &quot;$(RcaMetricsDir)&quot;$(MetricsReporterAltCoverArg)$(MetricsReporterRoslynArgs)$(MetricsReporterSarifArgs)$(MetricsReporterBaselineArg)$(MetricsReporterBaselineRefArg) --output-json &quot;$(MetricsReportJson)&quot; --output-html &quot;$(MetricsReportHtml)&quot;$(MetricsReporterThresholdArg)$(MetricsReporterExcludedMethodsArg)</MetricsReporterCommand>
+      <MetricsReporterExcludedAssembliesArg Condition="'$(ExcludedAssemblyNames)' != ''"> --excluded-assemblies &quot;$(ExcludedAssemblyNames)&quot;</MetricsReporterExcludedAssembliesArg>
+      <MetricsReporterCommand>&quot;$(MetricsReporterExe)&quot; --solution-name &quot;$(MetricsSolutionName)&quot; --metrics-dir &quot;$(RcaMetricsDir)&quot;$(MetricsReporterAltCoverArg)$(MetricsReporterRoslynArgs)$(MetricsReporterSarifArgs)$(MetricsReporterBaselineArg)$(MetricsReporterBaselineRefArg) --output-json &quot;$(MetricsReportJson)&quot; --output-html &quot;$(MetricsReportHtml)&quot;$(MetricsReporterThresholdArg)$(MetricsReporterExcludedMethodsArg)$(MetricsReporterExcludedAssembliesArg)</MetricsReporterCommand>
     </PropertyGroup>
 
     <Message Text="Generating HTML report from existing JSON: $(InputJsonFile)" Importance="High" Condition="'$(GenerateHtmlFromJson)' == 'true' and Exists('$(MetricsReporterExe)')" />

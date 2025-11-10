@@ -75,5 +75,14 @@ public sealed class MetricsReporterOptions
     /// If not specified, default excluded methods are used (constructors and compiler-generated methods).
     /// </remarks>
     public string? ExcludedMethodNames { get; init; }
+
+    /// <summary>
+    /// Comma-separated or semicolon-separated list of assembly name patterns to exclude from metrics reports.
+    /// </summary>
+    /// <remarks>
+    /// Assembly names containing any of the specified patterns will be excluded. Matching is case-insensitive.
+    /// Examples: "Tests,Test" or "Tests;Test". If not specified, no assemblies are excluded.
+    /// </remarks>
+    public string? ExcludedAssemblyNames { get; init; }
 }
 

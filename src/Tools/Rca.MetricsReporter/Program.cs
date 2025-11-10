@@ -53,6 +53,7 @@ static MetricsReporterOptions ParseArguments(string[] args)
     string? thresholds = null;
     string? inputJson = null;
     string? excludedMethodNames = null;
+    string? excludedAssemblyNames = null;
 
     for (var index = 0; index < args.Length; index++)
     {
@@ -95,6 +96,9 @@ static MetricsReporterOptions ParseArguments(string[] args)
             case "--excluded-methods":
                 excludedMethodNames = RequireValue(args, ref index, argument);
                 break;
+            case "--excluded-assemblies":
+                excludedAssemblyNames = RequireValue(args, ref index, argument);
+                break;
             default:
                 throw new ArgumentException($"Unknown argument '{argument}'. Use --help to view usage.", argument);
         }
@@ -136,7 +140,8 @@ static MetricsReporterOptions ParseArguments(string[] args)
         OutputJsonPath = string.IsNullOrWhiteSpace(outputJson) ? string.Empty : Path.GetFullPath(outputJson),
         OutputHtmlPath = string.IsNullOrWhiteSpace(outputHtml) ? string.Empty : Path.GetFullPath(outputHtml),
         LogFilePath = logFilePath,
-        ExcludedMethodNames = excludedMethodNames
+        ExcludedMethodNames = excludedMethodNames,
+        ExcludedAssemblyNames = excludedAssemblyNames
     };
 }
 

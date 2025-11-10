@@ -28,6 +28,11 @@
     <!-- If not specified, default excluded methods are used (constructors and compiler-generated methods). -->
     <ExcludedMethodNames Condition="'$(ExcludedMethodNames)' == ''">ctor,cctor,MoveNext,SetStateMachine,MoveNextAsync,DisposeAsync</ExcludedMethodNames>
 
+    <!-- Comma-separated or semicolon-separated list of assembly name patterns to exclude from metrics reports. -->
+    <!-- Assembly names containing any of the specified patterns will be excluded. Matching is case-insensitive. -->
+    <!-- Examples: "Tests,Test" or "Tests;Test". If not specified, no assemblies are excluded. -->
+    <ExcludedAssemblyNames Condition="'$(ExcludedAssemblyNames)' == ''">Tests;Contracts</ExcludedAssemblyNames>
+
     <!-- Toggle metrics dashboard generation -->
     <GenerateMetricsDashboard Condition="'$(GenerateMetricsDashboard)' == ''">false</GenerateMetricsDashboard>
     <!-- When true, generates HTML from existing JSON without collecting metrics -->
