@@ -475,6 +475,50 @@ public sealed class MetricsAggregationServiceTests
         type.Members[0].FullyQualifiedName.Should().Be(normalMethodFqn);
     }
 
+    [Test]
+    public void BuildReport_ExcludedAssemblies_AreNotAddedToSolution()
+    {
+        // Arrange
+        const string includedAssembly = "Rca.Network";
+        const string excludedNamespace = "Rca.UI.Tests";
+        const string excludedTypeFqn = "Rca.UI.Tests.RcaDockablePanelViewModelTests";
+
+        var assemblyFilter = AssemblyFilter.FromString("Tests");
+        var serviceWithFilter = new MetricsAggregationService(new MemberFilter(), assemblyFilter);
+
+        var roslynDocument = new ParsedMetricsDocument
+        {
+            SolutionName = "SampleSolution",
+            Elements = new List<ParsedCodeElement>
+            {
+                new(CodeElementKind.Assembly, includedAssembly, includedAssembly),
+                new(CodeElementKind.Namespace, excludedNamespace, excludedNamespace),
+                new(CodeElementKind.Type, "RcaDockablePanelViewModelTests", excludedTypeFqn)
+                {
+                    ParentFullyQualifiedName = excludedNamespace
+                }
+            }
+        };
+
+        var input = new MetricsAggregationInput
+        {
+            SolutionName = "SampleSolution",
+            AltCoverDocuments = new List<ParsedMetricsDocument>(),
+            RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
+            SarifDocuments = new List<ParsedMetricsDocument>(),
+            Baseline = null,
+            Thresholds = thresholds,
+            Paths = new ReportPaths()
+        };
+
+        // Act
+        var report = serviceWithFilter.BuildReport(input);
+
+        // Assert
+        var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == includedAssembly).Subject;
+        assembly.Namespaces.Should().BeEmpty("namespaces from excluded assemblies must be removed");
+    }
+
     private static MetricValue Metric(decimal value, string unit)
         => new()
         {
