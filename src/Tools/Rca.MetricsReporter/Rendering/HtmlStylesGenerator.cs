@@ -159,14 +159,14 @@ internal static class HtmlStylesGenerator
 
     private static void AppendDetailControlStyles(StringBuilder builder)
     {
-        builder.AppendLine(FormattableString.Invariant($".detail-control {{ display: flex; align-items: center; gap: {DeltaSpacing}; font-size: {DetailControlFontSize}; color: {DetailControlLabelColor}; margin-right: {DetailControlRightSpacer}px; white-space: nowrap; line-height: 1.1; }}"));
-        builder.AppendLine(FormattableString.Invariant($".detail-label {{ font-size: {DetailControlFontSize}; margin-right: {DeltaSpacing}; }}"));
-        builder.AppendLine(FormattableString.Invariant($".detail-value {{ font-size: {DetailControlFontSize}; min-width: 72px; text-align: left; }}"));
-        builder.AppendLine(FormattableString.Invariant($".detail-control input[type='range'] {{ width: {DetailControlSliderWidth}px; margin: 0 {DetailControlSliderMargin}px; height: 4px; accent-color: {SliderAccentColor}; background: {SliderTrackColor}; -webkit-appearance: none; appearance: none; border-radius: 999px; }}"));
-        builder.AppendLine(".detail-control input[type='range']::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%; background: " + SliderThumbColor + "; margin-top: -5px; cursor: pointer; box-shadow: none; border: none; }");
-        builder.AppendLine(".detail-control input[type='range']::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: " + SliderThumbColor + "; border: none; cursor: pointer; }");
-        builder.AppendLine(FormattableString.Invariant($".detail-control input[type='range']::-webkit-slider-runnable-track {{ height: 4px; background: {SliderTrackColor}; border-radius: 999px; }}"));
-        builder.AppendLine(FormattableString.Invariant($".detail-control input[type='range']::-moz-range-track {{ height: 4px; background: {SliderTrackColor}; border-radius: 999px; }}"));
+        builder.AppendLine(FormattableString.Invariant($".detail-control, .awareness-control {{ display: flex; align-items: center; gap: {DeltaSpacing}; font-size: {DetailControlFontSize}; color: {DetailControlLabelColor}; margin-right: {DetailControlRightSpacer}px; white-space: nowrap; line-height: 1.1; }}"));
+        builder.AppendLine(FormattableString.Invariant($".detail-label, .awareness-label {{ font-size: {DetailControlFontSize}; margin-right: {DeltaSpacing}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".detail-value, .awareness-value {{ font-size: {DetailControlFontSize}; min-width: 72px; text-align: left; }}"));
+        builder.AppendLine(FormattableString.Invariant($".detail-control input[type='range'], .awareness-control input[type='range'] {{ width: {DetailControlSliderWidth}px; margin: 0 {DetailControlSliderMargin}px; height: 4px; accent-color: {SliderAccentColor}; background: {SliderTrackColor}; -webkit-appearance: none; appearance: none; border-radius: 999px; }}"));
+        builder.AppendLine(".detail-control input[type='range']::-webkit-slider-thumb, .awareness-control input[type='range']::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%; background: " + SliderThumbColor + "; margin-top: -5px; cursor: pointer; box-shadow: none; border: none; }");
+        builder.AppendLine(".detail-control input[type='range']::-moz-range-thumb, .awareness-control input[type='range']::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: " + SliderThumbColor + "; border: none; cursor: pointer; }");
+        builder.AppendLine(FormattableString.Invariant($".detail-control input[type='range']::-webkit-slider-runnable-track, .awareness-control input[type='range']::-webkit-slider-runnable-track {{ height: 4px; background: {SliderTrackColor}; border-radius: 999px; }}"));
+        builder.AppendLine(FormattableString.Invariant($".detail-control input[type='range']::-moz-range-track, .awareness-control input[type='range']::-moz-range-track {{ height: 4px; background: {SliderTrackColor}; border-radius: 999px; }}"));
     }
 
     private static void AppendFilterControlStyles(StringBuilder builder)

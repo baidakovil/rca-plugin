@@ -39,6 +39,32 @@ internal static class HtmlScriptGenerator
         (state.childrenByParent[parentId] || (state.childrenByParent[parentId] = [])).push(row);
       }
     });
+
+    computeRowSeverity();
+  }
+
+  function computeRowSeverity(){
+    state.rows.forEach(function(row){
+      var metrics = row.querySelectorAll('.metric');
+      var hasError = false;
+      var hasWarning = false;
+      for(var i = 0; i < metrics.length; i++){
+        var status = metrics[i].dataset.status;
+        if(status === 'error'){
+          hasError = true;
+        } else if(status === 'warning'){
+          hasWarning = true;
+        }
+        if(hasError){
+          break;
+        }
+      }
+      row.dataset.hasError = hasError ? 'true' : 'false';
+      row.dataset.hasWarning = hasWarning ? 'true' : 'false';
+      if(row.dataset.hiddenByAwareness === undefined){
+        row.dataset.hiddenByAwareness = 'false';
+      }
+    });
   }
 
   function directChildren(rowId){
@@ -76,7 +102,7 @@ internal static class HtmlScriptGenerator
       if(!parentRow){
         break;
       }
-      if(parentRow.dataset.hiddenByDetail === 'true'){
+      if(isRowHidden(parentRow)){
         return false;
       }
       if(parentRow.dataset.expanded === 'false'){
@@ -95,6 +121,22 @@ internal static class HtmlScriptGenerator
     '3': { maxDepth: 3, label: 'Member' }
   };
   var currentDetail = detailLevels['2'];
+
+  var awarenessControl = document.getElementById('awareness-level');
+  var awarenessLabel = document.getElementById('awareness-label');
+  var awarenessLevels = {
+    '1': { label: 'All', predicate: function(row){ return true; } },
+    '2': { label: 'Warning', predicate: function(row){ return row.dataset.hasError === 'true' || row.dataset.hasWarning === 'true'; } },
+    '3': { label: 'Error', predicate: function(row){ return row.dataset.hasError === 'true'; } }
+  };
+  var currentAwarenessKey = '1';
+  var currentAwareness = awarenessLevels[currentAwarenessKey];
+
+  function isRowHidden(row){
+    return row.dataset.hiddenByDetail === 'true'
+      || row.dataset.hiddenByFilter === 'true'
+      || row.dataset.hiddenByAwareness === 'true';
+  }
 
   function updateLeafClasses(){
     var maxDepth = currentDetail ? currentDetail.maxDepth : 2;
@@ -128,7 +170,7 @@ internal static class HtmlScriptGenerator
       }
 
       var hasEligibleChild = directChildren(row.getAttribute('data-id')).some(function(child){
-        return child.dataset.hiddenByDetail !== 'true';
+        return !isRowHidden(child);
       });
 
       if(!hasEligibleChild || isDeepestLevel){
@@ -158,14 +200,20 @@ internal static class HtmlScriptGenerator
   function applyDetailLevel(maxDepth){
     state.rows.forEach(function(row){
       var level = parseInt(row.getAttribute('data-level'), 10) || 0;
-      var hiddenByDetail = level > maxDepth ? 'true' : 'false';
-      row.dataset.hiddenByDetail = hiddenByDetail;
-      
-      // Apply filter if active
-      var hiddenByFilter = row.dataset.hiddenByFilter === 'true';
-      var isMatching = !hiddenByFilter || currentFilter.length === 0;
-      
-      if(hiddenByDetail === 'true' || !isMatching){
+      row.dataset.hiddenByDetail = level > maxDepth ? 'true' : 'false';
+    });
+    updateRowVisibility();
+  }
+
+  function updateRowVisibility(){
+    state.rows.forEach(function(row){
+      if(row.dataset.hiddenByAwareness === undefined){
+        row.dataset.hiddenByAwareness = 'false';
+      }
+      var hidden = row.dataset.hiddenByDetail === 'true'
+        || row.dataset.hiddenByFilter === 'true'
+        || row.dataset.hiddenByAwareness === 'true';
+      if(hidden){
         row.style.display = 'none';
       } else {
         row.style.display = isAncestorExpanded(row) ? '' : 'none';
@@ -196,23 +244,71 @@ internal static class HtmlScriptGenerator
     setDetailLevel(value);
   }
 
-  function snapDetailSlider(event){
-    if(!detailControl){
+  function applyAwarenessLevel(levelKey){
+    var effectiveKey = awarenessLevels[levelKey] ? levelKey : '1';
+    var level = awarenessLevels[effectiveKey];
+    currentAwarenessKey = effectiveKey;
+    currentAwareness = level;
+
+    state.rows.forEach(function(row){
+      row.dataset.hiddenByAwareness = 'true';
+      row.dataset.awarenessMatch = 'false';
+    });
+
+    state.rows.forEach(function(row){
+      if(level.predicate(row)){
+        row.dataset.awarenessMatch = 'true';
+        var currentRow = row;
+        while(currentRow){
+          currentRow.dataset.hiddenByAwareness = 'false';
+          var parentId = currentRow.getAttribute('data-parent');
+          currentRow = parentId ? state.rowById[parentId] : null;
+        }
+      }
+    });
+
+    updateRowVisibility();
+  }
+
+  function setAwarenessLevel(value){
+    var key = awarenessLevels[value] ? value : '1';
+    applyAwarenessLevel(key);
+    if(awarenessControl){
+      if(awarenessControl.value !== currentAwarenessKey){
+        awarenessControl.value = currentAwarenessKey;
+      }
+      awarenessControl.setAttribute('aria-valuenow', currentAwarenessKey);
+    }
+    if(awarenessLabel && currentAwareness){
+      awarenessLabel.textContent = currentAwareness.label;
+    }
+  }
+
+  function handleAwarenessChange(){
+    if(!awarenessControl){
+      return;
+    }
+    var value = awarenessControl.value || '1';
+    setAwarenessLevel(value);
+  }
+
+  function snapSlider(control, event, setter){
+    if(!control){
       return;
     }
     if(event.clientX === 0 && event.clientY === 0){
       return;
     }
-    var rect = detailControl.getBoundingClientRect();
+    var rect = control.getBoundingClientRect();
     var width = rect.width;
     if(width <= 0){
       return;
     }
-    var min = parseInt(detailControl.min, 10);
+    var min = parseInt(control.min, 10);
     if(isNaN(min)){
       min = 1;
     }
-    var max = parseInt(detailControl.max, 10);
+    var max = parseInt(control.max, 10);
     if(isNaN(max)){
       max = 3;
     }
@@ -224,10 +320,10 @@ internal static class HtmlScriptGenerator
     var snapped = Math.round(ratio * (max - min)) + min;
     snapped = Math.max(min, Math.min(max, snapped));
     var snappedText = snapped.toString();
-    if(detailControl.value !== snappedText){
-      detailControl.value = snappedText;
+    if(control.value !== snappedText){
+      control.value = snappedText;
     }
-    setDetailLevel(snappedText);
+    setter(snappedText);
   }
 
   function collapseDescendants(parentId){
@@ -271,12 +367,19 @@ internal static class HtmlScriptGenerator
     }
     row.dataset.hiddenByDetail = 'false';
     row.dataset.hiddenByFilter = 'false';
+    row.dataset.hiddenByAwareness = row.dataset.hiddenByAwareness === undefined ? 'false' : row.dataset.hiddenByAwareness;
+    row.dataset.awarenessMatch = row.dataset.awarenessMatch === undefined ? 'true' : row.dataset.awarenessMatch;
   });
 
   if(detailControl && !detailControl.value){
     detailControl.value = '2';
   }
   setDetailLevel(detailControl ? detailControl.value : '2');
+
+  if(awarenessControl && !awarenessControl.value){
+    awarenessControl.value = '1';
+  }
+  setAwarenessLevel(awarenessControl ? awarenessControl.value : '1');
 
   if(detailControl){
     detailControl.addEventListener('input', handleDetailChange);
@@ -285,7 +388,18 @@ internal static class HtmlScriptGenerator
       if(e.target !== detailControl){
         return;
       }
-      snapDetailSlider(e);
+      snapSlider(detailControl, e, setDetailLevel);
+    });
+  }
+
+  if(awarenessControl){
+    awarenessControl.addEventListener('input', handleAwarenessChange);
+    awarenessControl.addEventListener('change', handleAwarenessChange);
+    awarenessControl.addEventListener('click', function(e){
+      if(e.target !== awarenessControl){
+        return;
+      }
+      snapSlider(awarenessControl, e, setAwarenessLevel);
     });
   }
 
@@ -444,7 +558,7 @@ internal static class HtmlScriptGenerator
       state.rows.forEach(function(row){
         row.dataset.hiddenByFilter = 'false';
       });
-      applyDetailLevel(currentDetail ? currentDetail.maxDepth : 2);
+      updateRowVisibility();
       return;
     }
 
@@ -480,7 +594,7 @@ internal static class HtmlScriptGenerator
     });
 
     // Reapply detail level which will now respect the filter
-    applyDetailLevel(currentDetail ? currentDetail.maxDepth : 2);
+    updateRowVisibility();
   }
 
   if(filterInput){
