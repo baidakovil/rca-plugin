@@ -12,6 +12,12 @@ Metrics Reporter — консольное приложение .NET 8, объе�
 2. **Roslyn (Microsoft.CodeAnalysis.Metrics)**: `RoslynMaintainabilityIndex`, `RoslynCyclomaticComplexity`, `RoslynClassCoupling`, `RoslynDepthOfInheritance`, `RoslynSourceLines`, `RoslynExecutableLines`.
 3. **SARIF (Roslyn анализаторы)**: количество нарушений `SarifCaRuleViolations`, `SarifIdeRuleViolations`.
 
+### HTML Dashboard Highlights
+- **Фильтрация сборок**: при агрегации исключаются сборки, перечисленные в `ExcludedAssemblyNames`; в HTML они не отображаются.
+- **Раскрытие узлов**: строки уровней Solution/Assembly/Namespace/Type кликабельны по всей ячейке и по кнопке `+/-`, что ускоряет навигацию.
+- **Панель действий**: слайдер `Detailing` управляет глубиной отображения (`Namespace → Type → Member`), слайдер `Awareness` фильтрует строки по наличию Warning/Error (при этом родительские узлы остаются видимыми, если есть видимые потомки), есть поле фильтра и кнопки `Expand all`/`Collapse all`.
+- **Статистика под спойлером**: в блоке `meta-details` отображаются подсчитанные количества символов (total/no metric/clear/warning/error) и проценты с дельтами относительно baseline.
+
 ### JSON-структура (сокращённо)
 ```json
 {
