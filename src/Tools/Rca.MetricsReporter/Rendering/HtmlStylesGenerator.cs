@@ -28,11 +28,6 @@ internal static class HtmlStylesGenerator
     private const string StatusWarningColor = "rgba(182, 111, 26, 1)";
     private const string StatusErrorColor = "rgba(217, 83, 79, 1)";
 
-    private const string HeaderWarningBackgroundColor = "rgba(255,235,156,0.3)";
-    private const string HeaderErrorBackgroundColor = "rgba(255,200,200,0.25)";
-    private const string LeafWarningBackgroundColor = "rgba(255,248,220,0.6)";
-    private const string LeafErrorBackgroundColor = "rgba(255,240,240,0.5)";
-
     private const string DefaultGap = "8px";
     private const string ControlBlockGap = "16px";
     private const string CompactBadgeFontSize = "9px";
@@ -49,7 +44,8 @@ internal static class HtmlStylesGenerator
     private const int DetailControlSliderMargin = 6;
     private const string ControlInternalGap = "3px";
     private const string PlaceholderExpanderColor = "rgba(140, 140, 140, 1)";
-    private const string ActiveRowShadow = "rgba(0, 120, 212, 0.18)";
+    private const string WarningOverlayColor = "rgba(255, 175, 0, 0.12)";
+    private const string ErrorOverlayColor = "rgba(233, 60, 60, 0.14)";
 
     private const int MaxSupportedDepth = 4;
     private const int ExpanderWidth = 20;
@@ -237,18 +233,18 @@ internal static class HtmlStylesGenerator
 
     private static void AppendMetricStatusStyles(StringBuilder builder)
     {
-        builder.AppendLine(FormattableString.Invariant($".metrics tr.node-header th.metric[data-status='warning'] {{ background: {HeaderWarningBackgroundColor}; }}"));
-        builder.AppendLine(FormattableString.Invariant($".metrics tr.node-header th.metric[data-status='error'] {{ background: {HeaderErrorBackgroundColor}; }}"));
-        builder.AppendLine(FormattableString.Invariant($".metrics tr.node-item td.metric[data-status='warning'] {{ background: {LeafWarningBackgroundColor}; }}"));
-        builder.AppendLine(FormattableString.Invariant($".metrics tr.node-item td.metric[data-status='error'] {{ background: {LeafErrorBackgroundColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.node-header th.metric[data-status='warning'] {{ box-shadow: inset 0 0 0 9999px {WarningOverlayColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.node-header th.metric[data-status='error'] {{ box-shadow: inset 0 0 0 9999px {ErrorOverlayColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.node-item td.metric[data-status='warning'] {{ box-shadow: inset 0 0 0 9999px {WarningOverlayColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.node-item td.metric[data-status='error'] {{ box-shadow: inset 0 0 0 9999px {ErrorOverlayColor}; }}"));
         builder.AppendLine(FormattableString.Invariant($".metrics tr.node-item td.metric[data-status='error'] .metric-value {{ color: {StatusErrorColor}; }}"));
         builder.AppendLine(FormattableString.Invariant($".metrics tr.node-item td.metric[data-status='warning'] .metric-value {{ color: {StatusWarningColor}; }}"));
         builder.AppendLine(FormattableString.Invariant($".metrics tr.node-header th.metric[data-status='error'] .metric-value {{ color: {StatusErrorColor}; }}"));
         builder.AppendLine(FormattableString.Invariant($".metrics tr.node-header th.metric[data-status='warning'] .metric-value {{ color: {StatusWarningColor}; }}"));
         builder.AppendLine(".metrics tr.node-header th .metric-value { font-weight: bold; }");
         builder.AppendLine(".metrics tr.node-item td .metric-value { font-weight: normal; }");
-        builder.AppendLine(FormattableString.Invariant($".metrics tr.leaf-row .metric[data-status='warning'] {{ background: {LeafWarningBackgroundColor}; }}"));
-        builder.AppendLine(FormattableString.Invariant($".metrics tr.leaf-row .metric[data-status='error'] {{ background: {LeafErrorBackgroundColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.leaf-row .metric[data-status='warning'] {{ box-shadow: inset 0 0 0 9999px {WarningOverlayColor}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".metrics tr.leaf-row .metric[data-status='error'] {{ box-shadow: inset 0 0 0 9999px {ErrorOverlayColor}; }}"));
         builder.AppendLine(FormattableString.Invariant($".metrics tr.leaf-row .metric[data-status='error'] .metric-value {{ color: {StatusErrorColor}; }}"));
         builder.AppendLine(FormattableString.Invariant($".metrics tr.leaf-row .metric[data-status='warning'] .metric-value {{ color: {StatusWarningColor}; }}"));
         builder.AppendLine(".metrics tr.leaf-row .metric-value { font-weight: normal; }");
