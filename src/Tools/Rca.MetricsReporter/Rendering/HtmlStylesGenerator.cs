@@ -13,7 +13,7 @@ internal static class HtmlStylesGenerator
     private const string PageBackgroundColor = "rgba(235, 235, 235, 1)";
     private const string HeaderBackgroundColor = "rgba(209, 209, 209, 1)";
     private const string HeaderHoverBackgroundColor = "rgba(193, 193, 193, 1)";
-    private const string LeafHoverBackgroundColor = "rgba(176, 176, 176, 1)";
+    private const string LeafHoverBackgroundColor = "rgba(240, 247, 255, 1)";
     private const string NodeHeaderBackgroundColor = "rgba(221, 221, 221, 1)";
     private const string NodeHeaderFirstColumnBackgroundColor = "rgba(220, 220, 220, 1)";
     private const string LeafBaseBackgroundColor = "rgba(255, 255, 255, 1)";
@@ -49,6 +49,7 @@ internal static class HtmlStylesGenerator
     private const int DetailControlSliderMargin = 6;
     private const string ControlInternalGap = "3px";
     private const string PlaceholderExpanderColor = "rgba(140, 140, 140, 1)";
+    private const string ActiveRowShadow = "rgba(0, 120, 212, 0.18)";
 
     private const int MaxSupportedDepth = 4;
     private const int ExpanderWidth = 20;
