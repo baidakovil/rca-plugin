@@ -236,6 +236,28 @@ internal static class HtmlScriptGenerator
     });
   }
 
+  function toggleRowExpansion(row, explicitState){
+    if(!row){
+      return;
+    }
+    if(row.dataset.hasChildren !== 'true'){
+      return;
+    }
+    if(row.classList.contains('leaf-row')){
+      return;
+    }
+    var rowId = row.getAttribute('data-id');
+    if(!rowId){
+      return;
+    }
+    var shouldExpand = typeof explicitState === 'boolean' ? explicitState : row.dataset.expanded === 'false';
+    setExpanderState(row, shouldExpand);
+    if(!shouldExpand){
+      collapseDescendants(rowId);
+    }
+    applyDetailLevel(currentDetail.maxDepth);
+  }
+
   refreshState();
 
   // Initialize all rows: expand all nodes by default, set detail level to Type (2)
@@ -276,15 +298,19 @@ internal static class HtmlScriptGenerator
       var parentRow = state.rowById[parentId];
       if(!parentRow) return;
       var shouldExpand = parentRow.dataset.expanded === 'false';
-      setExpanderState(parentRow, shouldExpand);
-      if(!shouldExpand){
-        collapseDescendants(parentId);
-      }
-      applyDetailLevel(currentDetail.maxDepth);
+      toggleRowExpansion(parentRow, shouldExpand);
       return;
     }
 
-    var th = e.target.closest('th');
+    var row = e.target.closest('tr.node-row');
+    if(row && row.dataset.hasChildren === 'true' && !row.classList.contains('leaf-row')){
+      if(!e.target.closest('button') && !e.target.closest('a') && !e.target.closest('input') && !e.target.closest('textarea') && !e.target.closest('select')){
+        toggleRowExpansion(row);
+        return;
+      }
+    }
+
+    var th = e.target.closest('thead th');
     if(!th || !th.dataset.col) return;
 
     var col = th.dataset.col;
