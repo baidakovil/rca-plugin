@@ -36,10 +36,11 @@ public sealed class RoslynMetricsParser : IMetricsSourceParser
         await using var stream = File.OpenRead(path);
         var document = await XDocument.LoadAsync(stream, LoadOptions.None, cancellationToken).ConfigureAwait(false);
 
-        var targets = document.Element(XmlNamespace + "CodeMetricsReport")
-                              ?.Element(XmlNamespace + "Targets")
-                              ?.Elements(XmlNamespace + "Target")
-                              ?? Enumerable.Empty<XElement>();
+        var targets = document
+            .Element(XmlNamespace + "CodeMetricsReport")
+            ?.Element(XmlNamespace + "Targets")
+            ?.Elements(XmlNamespace + "Target")
+            ?? Enumerable.Empty<XElement>();
 
         var elements = new List<ParsedCodeElement>();
         var solutionName = string.Empty;
@@ -48,26 +49,9 @@ public sealed class RoslynMetricsParser : IMetricsSourceParser
         {
             solutionName = target.Attribute("Name")?.Value ?? solutionName;
 
-            var assemblyElement = target.Element(XmlNamespace + "Assembly");
-            if (assemblyElement is null)
+            if (target.Element(XmlNamespace + "Assembly") is { } assemblyElement)
             {
-                continue;
-            }
-
-            var assemblyName = assemblyElement.Attribute("Name")?.Value ?? "<unknown-assembly>";
-            var assemblyFqn = ExtractAssemblyShortName(assemblyName);
-            var assemblyNode = new ParsedCodeElement(CodeElementKind.Assembly, assemblyFqn, assemblyFqn)
-            {
-                Metrics = ExtractMetrics(assemblyElement.Element(XmlNamespace + "Metrics")),
-                Source = null,
-                ParentFullyQualifiedName = null
-            };
-            elements.Add(assemblyNode);
-
-            foreach (var namespaceElement in assemblyElement.Element(XmlNamespace + "Namespaces")?.Elements(XmlNamespace + "Namespace")
-                     ?? Enumerable.Empty<XElement>())
-            {
-                ProcessNamespace(elements, namespaceElement, assemblyNode);
+                elements.AddRange(ParseAssembly(assemblyElement));
             }
         }
 
@@ -78,7 +62,28 @@ public sealed class RoslynMetricsParser : IMetricsSourceParser
         };
     }
 
-    private static void ProcessNamespace(ICollection<ParsedCodeElement> collector, XElement namespaceElement, ParsedCodeElement assemblyNode)
+    private static IEnumerable<ParsedCodeElement> ParseAssembly(XElement assemblyElement)
+    {
+        var assemblyName = assemblyElement.Attribute("Name")?.Value ?? "<unknown-assembly>";
+        var assemblyFqn = ExtractAssemblyShortName(assemblyName);
+
+        var assemblyNode = new ParsedCodeElement(CodeElementKind.Assembly, assemblyFqn, assemblyFqn)
+        {
+            Metrics = ExtractMetrics(assemblyElement.Element(XmlNamespace + "Metrics"))
+        };
+
+        yield return assemblyNode;
+
+        var namespaces = assemblyElement.Element(XmlNamespace + "Namespaces")?.Elements(XmlNamespace + "Namespace")
+                         ?? Enumerable.Empty<XElement>();
+
+        foreach (var ns in namespaces.SelectMany(namespaceElement => ParseNamespace(namespaceElement, assemblyNode)))
+        {
+            yield return ns;
+        }
+    }
+
+    private static IEnumerable<ParsedCodeElement> ParseNamespace(XElement namespaceElement, ParsedCodeElement assemblyNode)
     {
         var namespaceName = namespaceElement.Attribute("Name")?.Value ?? "<global>";
         var namespaceNode = new ParsedCodeElement(CodeElementKind.Namespace, namespaceName, namespaceName)
@@ -86,15 +91,21 @@ public sealed class RoslynMetricsParser : IMetricsSourceParser
             ParentFullyQualifiedName = assemblyNode.FullyQualifiedName,
             Metrics = ExtractMetrics(namespaceElement.Element(XmlNamespace + "Metrics"))
         };
-        collector.Add(namespaceNode);
 
-        foreach (var typeElement in namespaceElement.Element(XmlNamespace + "Types")?.Elements() ?? Enumerable.Empty<XElement>())
+        yield return namespaceNode;
+
+        var types = namespaceElement.Element(XmlNamespace + "Types")?.Elements() ?? Enumerable.Empty<XElement>();
+
+        foreach (var typeNode in types.SelectMany(type => ParseType(type, namespaceNode, namespaceName)))
         {
-            ProcessType(collector, typeElement, namespaceNode, namespaceName);
+            yield return typeNode;
         }
     }
 
-    private static void ProcessType(ICollection<ParsedCodeElement> collector, XElement typeElement, ParsedCodeElement namespaceNode, string namespaceName)
+    private static IEnumerable<ParsedCodeElement> ParseType(
+        XElement typeElement,
+        ParsedCodeElement namespaceNode,
+        string namespaceName)
     {
         var typeName = typeElement.Attribute("Name")?.Value ?? "<unknown-type>";
         var typeFqn = string.IsNullOrWhiteSpace(namespaceName) || namespaceName == "<global>"
@@ -109,66 +120,49 @@ public sealed class RoslynMetricsParser : IMetricsSourceParser
             Source = source
         };
 
-        collector.Add(typeNode);
+        yield return typeNode;
 
-        var members = typeElement.Element(XmlNamespace + "Members");
-        if (members is not null)
+        var members = typeElement.Element(XmlNamespace + "Members")?.Elements() ?? Enumerable.Empty<XElement>();
+        foreach (var memberNode in members.Select(member => ParseMember(member, typeNode)))
         {
-            foreach (var member in members.Elements())
-            {
-                ProcessMember(collector, member, typeNode);
-            }
+            yield return memberNode;
         }
     }
 
-    private static void ProcessMember(ICollection<ParsedCodeElement> collector, XElement memberElement, ParsedCodeElement typeNode)
+    private static ParsedCodeElement ParseMember(XElement memberElement, ParsedCodeElement typeNode)
     {
         var memberName = memberElement.Attribute("Name")?.Value ?? "<unknown-member>";
         var memberDisplayName = ExtractMemberDisplayName(memberName);
-        
-        // Normalize the member FQN to ensure parameters are replaced with "..." for consistent aggregation
+
         var memberFqn = BuildMemberFqn(typeNode.FullyQualifiedName, memberDisplayName, typeNode.Name);
         var normalizedMemberFqn = SymbolNormalizer.NormalizeFullyQualifiedMethodName(memberFqn);
-        
-        // Extract just the method name without parameters for display
-        // Special handling for constructors: if memberDisplayName starts with "TypeName.TypeName(",
-        // it's a constructor and the method name should be the type name
-        string methodNameOnly;
-        var typeNameDot = typeNode.Name + ".";
-        if (memberDisplayName.StartsWith(typeNameDot, StringComparison.Ordinal))
-        {
-            var afterTypeNameDot = memberDisplayName[typeNameDot.Length..];
-            if (afterTypeNameDot.StartsWith(typeNode.Name + "(", StringComparison.Ordinal))
-            {
-                // It's a constructor - use the type name as the method name
-                methodNameOnly = typeNode.Name;
-            }
-            else
-            {
-                // Try normal extraction
-                methodNameOnly = SymbolNormalizer.ExtractMethodName(memberName) 
-                    ?? SymbolNormalizer.ExtractMethodName(memberDisplayName) 
-                    ?? memberDisplayName;
-            }
-        }
-        else
-        {
-            // Normal method - use ExtractMethodName which handles return types
-            methodNameOnly = SymbolNormalizer.ExtractMethodName(memberName) 
-                ?? SymbolNormalizer.ExtractMethodName(memberDisplayName) 
-                ?? memberDisplayName;
-        }
-        
+
+        var methodNameOnly = ExtractDisplayMethodName(memberName, memberDisplayName, typeNode.Name);
         var source = CreateSourceLocation(memberElement.Attribute("File")?.Value, memberElement.Attribute("Line")?.Value);
 
-        var memberNode = new ParsedCodeElement(CodeElementKind.Member, methodNameOnly, normalizedMemberFqn)
+        return new ParsedCodeElement(CodeElementKind.Member, methodNameOnly, normalizedMemberFqn)
         {
             ParentFullyQualifiedName = typeNode.FullyQualifiedName,
             Metrics = ExtractMetrics(memberElement.Element(XmlNamespace + "Metrics")),
             Source = source
         };
+    }
 
-        collector.Add(memberNode);
+    private static string ExtractDisplayMethodName(string rawMemberName, string memberDisplayName, string typeName)
+    {
+        var typeNameDot = typeName + ".";
+        if (memberDisplayName.StartsWith(typeNameDot, StringComparison.Ordinal))
+        {
+            var afterTypeNameDot = memberDisplayName[typeNameDot.Length..];
+            if (afterTypeNameDot.StartsWith(typeName + "(", StringComparison.Ordinal))
+            {
+                return typeName;
+            }
+        }
+
+        return SymbolNormalizer.ExtractMethodName(rawMemberName)
+            ?? SymbolNormalizer.ExtractMethodName(memberDisplayName)
+            ?? memberDisplayName;
     }
 
     private static IDictionary<MetricIdentifier, MetricValue> ExtractMetrics(XElement? metricsElement)

@@ -28,63 +28,92 @@ public sealed class AltCoverMetricsParser : IMetricsSourceParser
         var coverageSession = document.Element(XmlNamespace + "CoverageSession")
                              ?? throw new InvalidOperationException("CoverageSession root element not found.");
 
-        var modulesElement = coverageSession.Element(XmlNamespace + "Modules");
-        if (modulesElement is null)
-        {
-            return new ParsedMetricsDocument
-            {
-                SolutionName = string.Empty,
-                Elements = Array.Empty<ParsedCodeElement>()
-            };
-        }
+        var modules = coverageSession
+            .Element(XmlNamespace + "Modules")
+            ?.Elements(XmlNamespace + "Module")
+            ?? Enumerable.Empty<XElement>();
 
-        var elements = new List<ParsedCodeElement>();
-        foreach (var module in modulesElement.Elements(XmlNamespace + "Module"))
-        {
-            var assemblyName = module.Element(XmlNamespace + "ModuleName")?.Value ?? "<unknown-assembly>";
-            var assemblyNode = CreateNode(CodeElementKind.Assembly, assemblyName, assemblyName, null, null);
-            PopulateMetrics(assemblyNode.Metrics, module.Element(XmlNamespace + "Summary"));
-            elements.Add(assemblyNode);
-
-            var files = module.Element(XmlNamespace + "Files")?
-                .Elements(XmlNamespace + "File")
-                .Select(file => new
-                {
-                    Id = file.Attribute("uid")?.Value,
-                    Path = file.Attribute("fullPath")?.Value
-                })
-                .Where(file => file.Id is not null && file.Path is not null)
-                .ToDictionary(file => file.Id!, file => file.Path!, StringComparer.OrdinalIgnoreCase)
-                ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var @class in module.Element(XmlNamespace + "Classes")?.Elements(XmlNamespace + "Class") ?? Enumerable.Empty<XElement>())
-            {
-                var className = @class.Element(XmlNamespace + "FullName")?.Value ?? "<unknown-class>";
-                var classNode = CreateNode(CodeElementKind.Type, className, NormalizeTypeName(className), assemblyName, null);
-                PopulateMetrics(classNode.Metrics, @class.Element(XmlNamespace + "Summary"));
-                elements.Add(classNode);
-
-                foreach (var method in @class.Element(XmlNamespace + "Methods")?.Elements(XmlNamespace + "Method") ?? Enumerable.Empty<XElement>())
-                {
-                    var methodName = method.Element(XmlNamespace + "Name")?.Value ?? "<unknown-method>";
-                    // Replace C++ style operators with C# style before extracting method name
-                    var methodNameForExtraction = methodName.Replace("::", ".", StringComparison.Ordinal);
-                    var normalizedMethodFqn = NormalizeMethodName(methodName, classNode.FullyQualifiedName);
-                    var methodDisplayName = SymbolNormalizer.ExtractMethodName(methodNameForExtraction) ?? "<unknown-method>";
-                    var sourceLocation = ResolveSourceLocation(method, files);
-                    var memberNode = CreateNode(CodeElementKind.Member, methodDisplayName, normalizedMethodFqn, classNode.FullyQualifiedName, sourceLocation);
-                    PopulateMethodMetrics(memberNode.Metrics, method);
-
-                    elements.Add(memberNode);
-                }
-            }
-        }
+        var elements = modules.SelectMany(ParseModule).ToList();
 
         return new ParsedMetricsDocument
         {
             SolutionName = string.Empty,
             Elements = elements
         };
+    }
+
+    private static IEnumerable<ParsedCodeElement> ParseModule(XElement module)
+    {
+        var assemblyName = module.Element(XmlNamespace + "ModuleName")?.Value ?? "<unknown-assembly>";
+        var assemblyNode = CreateNode(CodeElementKind.Assembly, assemblyName, assemblyName, null, null);
+        PopulateMetrics(assemblyNode.Metrics, module.Element(XmlNamespace + "Summary"));
+        yield return assemblyNode;
+
+        var files = BuildFileMap(module);
+
+        foreach (var typeNode in ParseClasses(module, assemblyNode, files))
+        {
+            yield return typeNode;
+        }
+    }
+
+    private static IReadOnlyDictionary<string, string> BuildFileMap(XElement module)
+    {
+        return module.Element(XmlNamespace + "Files")?
+                   .Elements(XmlNamespace + "File")
+                   .Select(file => new
+                   {
+                       Id = file.Attribute("uid")?.Value,
+                       Path = file.Attribute("fullPath")?.Value
+                   })
+                   .Where(file => file.Id is not null && file.Path is not null)
+                   .ToDictionary(file => file.Id!, file => file.Path!, StringComparer.OrdinalIgnoreCase)
+               ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static IEnumerable<ParsedCodeElement> ParseClasses(
+        XElement module,
+        ParsedCodeElement assemblyNode,
+        IReadOnlyDictionary<string, string> files)
+    {
+        var classes = module.Element(XmlNamespace + "Classes")?.Elements(XmlNamespace + "Class")
+                      ?? Enumerable.Empty<XElement>();
+
+        foreach (var @class in classes)
+        {
+            var className = @class.Element(XmlNamespace + "FullName")?.Value ?? "<unknown-class>";
+            var classNode = CreateNode(CodeElementKind.Type, className, NormalizeTypeName(className), assemblyNode.FullyQualifiedName, null);
+            PopulateMetrics(classNode.Metrics, @class.Element(XmlNamespace + "Summary"));
+            yield return classNode;
+
+            foreach (var member in ParseMethods(@class, classNode, files))
+            {
+                yield return member;
+            }
+        }
+    }
+
+    private static IEnumerable<ParsedCodeElement> ParseMethods(
+        XElement classElement,
+        ParsedCodeElement classNode,
+        IReadOnlyDictionary<string, string> files)
+    {
+        var methods = classElement.Element(XmlNamespace + "Methods")?.Elements(XmlNamespace + "Method")
+                      ?? Enumerable.Empty<XElement>();
+
+        foreach (var method in methods)
+        {
+            var methodName = method.Element(XmlNamespace + "Name")?.Value ?? "<unknown-method>";
+            var methodNameForExtraction = methodName.Replace("::", ".", StringComparison.Ordinal);
+            var normalizedMethodFqn = NormalizeMethodName(methodName, classNode.FullyQualifiedName);
+            var methodDisplayName = SymbolNormalizer.ExtractMethodName(methodNameForExtraction) ?? "<unknown-method>";
+            var sourceLocation = ResolveSourceLocation(method, files);
+
+            var memberNode = CreateNode(CodeElementKind.Member, methodDisplayName, normalizedMethodFqn, classNode.FullyQualifiedName, sourceLocation);
+            PopulateMethodMetrics(memberNode.Metrics, method);
+
+            yield return memberNode;
+        }
     }
 
     private static ParsedCodeElement CreateNode(CodeElementKind kind, string name, string? fqn, string? parentFqn, SourceLocation? source)

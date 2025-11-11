@@ -24,56 +24,12 @@ public sealed class SarifMetricsParser : IMetricsSourceParser
 
         if (!document.RootElement.TryGetProperty("runs", out var runs) || runs.ValueKind != JsonValueKind.Array)
         {
-            return new ParsedMetricsDocument
-            {
-                SolutionName = string.Empty,
-                Elements = Array.Empty<ParsedCodeElement>()
-            };
+            return EmptyDocument();
         }
 
-        var elements = new List<ParsedCodeElement>();
-
-        foreach (var run in runs.EnumerateArray())
-        {
-            if (!run.TryGetProperty("results", out var results) || results.ValueKind != JsonValueKind.Array)
-            {
-                continue;
-            }
-
-            foreach (var result in results.EnumerateArray())
-            {
-                var ruleId = result.GetPropertyOrDefault("ruleId")?.GetString();
-                if (ruleId is null)
-                {
-                    continue;
-                }
-
-                if (!TryResolveMetric(ruleId, out var identifier))
-                {
-                    continue;
-                }
-
-                foreach (var location in EnumerateLocations(result))
-                {
-                    var node = new ParsedCodeElement(CodeElementKind.Member, ruleId, null)
-                    {
-                        Metrics = new Dictionary<MetricIdentifier, MetricValue>
-                        {
-                            [identifier] = new MetricValue
-                            {
-                                Value = 1,
-                                Unit = "count",
-                                Status = ThresholdStatus.NotApplicable
-                            }
-                        },
-                        Source = location,
-                        ParentFullyQualifiedName = null
-                    };
-
-                    elements.Add(node);
-                }
-            }
-        }
+        var elements = runs.EnumerateArray()
+            .SelectMany(ParseRun)
+            .ToList();
 
         return new ParsedMetricsDocument
         {
@@ -81,6 +37,52 @@ public sealed class SarifMetricsParser : IMetricsSourceParser
             Elements = elements
         };
     }
+
+    private static IEnumerable<ParsedCodeElement> ParseRun(JsonElement run)
+    {
+        if (!run.TryGetProperty("results", out var results) || results.ValueKind != JsonValueKind.Array)
+        {
+            yield break;
+        }
+
+        foreach (var result in results.EnumerateArray())
+        {
+            var ruleId = result.GetPropertyOrDefault("ruleId")?.GetString();
+            if (ruleId is null)
+            {
+                continue;
+            }
+
+            if (!TryResolveMetric(ruleId, out var identifier))
+            {
+                continue;
+            }
+
+            foreach (var location in EnumerateLocations(result))
+            {
+                yield return new ParsedCodeElement(CodeElementKind.Member, ruleId, null)
+                {
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [identifier] = new MetricValue
+                        {
+                            Value = 1,
+                            Unit = "count",
+                            Status = ThresholdStatus.NotApplicable
+                        }
+                    },
+                    Source = location
+                };
+            }
+        }
+    }
+
+    private static ParsedMetricsDocument EmptyDocument()
+        => new()
+        {
+            SolutionName = string.Empty,
+            Elements = Array.Empty<ParsedCodeElement>()
+        };
 
     private static bool TryResolveMetric(string ruleId, out MetricIdentifier identifier)
     {
