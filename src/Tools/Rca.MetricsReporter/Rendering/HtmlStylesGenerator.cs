@@ -243,6 +243,7 @@ internal static class HtmlStylesGenerator
         builder.AppendLine(FormattableString.Invariant($".metrics tr.node-header th.metric[data-status='warning'] .metric-value {{ color: {StatusWarningColor}; }}"));
         builder.AppendLine(".metrics tr.node-header th .metric-value { font-weight: bold; }");
         builder.AppendLine(".metrics tr.node-item td .metric-value { font-weight: normal; }");
+        builder.AppendLine(".metrics tr.leaf-row th.metric .metric-value { font-weight: normal; }");
         builder.AppendLine(FormattableString.Invariant($".metrics tr.leaf-row .metric[data-status='warning'] {{ box-shadow: inset 0 0 0 9999px {WarningOverlayColor}; }}"));
         builder.AppendLine(FormattableString.Invariant($".metrics tr.leaf-row .metric[data-status='error'] {{ box-shadow: inset 0 0 0 9999px {ErrorOverlayColor}; }}"));
         builder.AppendLine(FormattableString.Invariant($".metrics tr.leaf-row .metric[data-status='error'] .metric-value {{ color: {StatusErrorColor}; }}"));
