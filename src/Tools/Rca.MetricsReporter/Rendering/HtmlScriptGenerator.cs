@@ -252,12 +252,10 @@ internal static class HtmlScriptGenerator
 
     state.rows.forEach(function(row){
       row.dataset.hiddenByAwareness = 'true';
-      row.dataset.awarenessMatch = 'false';
     });
 
     state.rows.forEach(function(row){
       if(level.predicate(row)){
-        row.dataset.awarenessMatch = 'true';
         var currentRow = row;
         while(currentRow){
           currentRow.dataset.hiddenByAwareness = 'false';
@@ -368,7 +366,6 @@ internal static class HtmlScriptGenerator
     row.dataset.hiddenByDetail = 'false';
     row.dataset.hiddenByFilter = 'false';
     row.dataset.hiddenByAwareness = row.dataset.hiddenByAwareness === undefined ? 'false' : row.dataset.hiddenByAwareness;
-    row.dataset.awarenessMatch = row.dataset.awarenessMatch === undefined ? 'true' : row.dataset.awarenessMatch;
   });
 
   if(detailControl && !detailControl.value){
