@@ -215,6 +215,8 @@ internal static class HtmlStylesGenerator
         builder.AppendLine(".metrics thead tr:first-child th:not([data-col='symbol']) { text-align: center; font-weight: bold; }");
         builder.AppendLine(".metrics thead tr:nth-child(2) th { box-shadow: 0 calc(-1 * var(--border-light-width)) 0 0 var(--border-light-color); }");
         builder.AppendLine(".metrics thead tr:last-child th { border-bottom: var(--border-dark-width) solid var(--border-dark-color) !important; }");
+        builder.AppendLine(".metrics thead th.sort-asc::after { content: '▲'; font-size: 10px; margin-left: 4px; display: inline-block; }");
+        builder.AppendLine(".metrics thead th.sort-desc::after { content: '▼'; font-size: 10px; margin-left: 4px; display: inline-block; }");
     }
 
     private static void AppendNodeRowStyles(StringBuilder builder)

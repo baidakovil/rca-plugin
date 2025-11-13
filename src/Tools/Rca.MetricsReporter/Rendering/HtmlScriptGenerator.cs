@@ -24,6 +24,15 @@ internal static class HtmlScriptGenerator
     childrenByParent: Object.create(null)
   };
 
+  var ROOT_PARENT_KEY = '__root__';
+
+  function normalizeParentKey(parentId){
+    if(parentId === null || parentId === undefined || parentId === ''){
+      return ROOT_PARENT_KEY;
+    }
+    return parentId;
+  }
+
   function refreshState(){
     state.rows = Array.from(tbody.querySelectorAll('tr.node-row'));
     state.rowById = Object.create(null);
@@ -35,9 +44,8 @@ internal static class HtmlScriptGenerator
         state.rowById[id] = row;
       }
       var parentId = row.getAttribute('data-parent');
-      if(parentId){
-        (state.childrenByParent[parentId] || (state.childrenByParent[parentId] = [])).push(row);
-      }
+      var parentKey = normalizeParentKey(parentId);
+      (state.childrenByParent[parentKey] || (state.childrenByParent[parentKey] = [])).push(row);
     });
 
     computeRowSeverity();
@@ -68,7 +76,8 @@ internal static class HtmlScriptGenerator
   }
 
   function directChildren(rowId){
-    return state.childrenByParent[rowId] || [];
+    var key = normalizeParentKey(rowId);
+    return state.childrenByParent[key] || [];
   }
 
   function getDescendantRows(rowId){
@@ -84,6 +93,161 @@ internal static class HtmlScriptGenerator
       }
     }
     return result;
+  }
+
+  var sortState = {
+    column: null,
+    direction: 'asc'
+  };
+
+  var numericValuePattern = /[^0-9.-]/g;
+
+  function findMetricCell(row, col){
+    var metrics = row.querySelectorAll('.metric');
+    for(var i = 0; i < metrics.length; i++){
+      var metric = metrics[i];
+      if(metric.dataset && metric.dataset.col === col){
+        return metric;
+      }
+    }
+    return null;
+  }
+
+  function extractSortValue(row, col){
+    if(col === 'symbol'){
+      var nameCell = row.querySelector('.symbol .name-text');
+      return nameCell ? nameCell.textContent.trim() : '';
+    }
+    var cell = findMetricCell(row, col);
+    if(!cell){
+      return '';
+    }
+    return cell.textContent.trim();
+  }
+
+  function getSortData(row, col){
+    var text = extractSortValue(row, col);
+    var numeric = parseFloat(text.replace(numericValuePattern, ''));
+    return {
+      text: text,
+      numeric: numeric,
+      hasNumeric: !isNaN(numeric)
+    };
+  }
+
+  function compareRows(a, b, col, direction){
+    var dataA = getSortData(a, col);
+    var dataB = getSortData(b, col);
+
+    if(dataA.hasNumeric && !dataB.hasNumeric){
+      return -1;
+    }
+    if(!dataA.hasNumeric && dataB.hasNumeric){
+      return 1;
+    }
+
+    var result;
+    if(dataA.hasNumeric && dataB.hasNumeric){
+      result = dataA.numeric - dataB.numeric;
+    } else {
+      result = dataA.text.localeCompare(dataB.text, undefined, { numeric: true, sensitivity: 'base' });
+    }
+
+    if(result === 0){
+      var pathA = (a.getAttribute('data-fqn') || '').toLowerCase();
+      var pathB = (b.getAttribute('data-fqn') || '').toLowerCase();
+      result = pathA.localeCompare(pathB);
+    }
+
+    if(direction === 'desc'){
+      result = -result;
+    }
+
+    return result;
+  }
+
+  function collectSubtreeRows(rootRow){
+    var collected = [];
+    (function visit(row){
+      collected.push(row);
+      var rowId = row.getAttribute('data-id');
+      if(!rowId){
+        return;
+      }
+      var children = directChildren(rowId);
+      for(var i = 0; i < children.length; i++){
+        visit(children[i]);
+      }
+    })(rootRow);
+    return collected;
+  }
+
+  function clearSortIndicators(){
+    var headers = table.querySelectorAll('thead th[data-col]');
+    headers.forEach(function(header){
+      header.classList.remove('sort-asc', 'sort-desc');
+      header.removeAttribute('data-sort-direction');
+    });
+  }
+
+  function applySortIndicator(th, direction){
+    if(!th){
+      return;
+    }
+    th.setAttribute('data-sort-direction', direction);
+    th.classList.remove('sort-asc', 'sort-desc');
+    th.classList.add(direction === 'asc' ? 'sort-asc' : 'sort-desc');
+  }
+
+  function sortGroup(parentId, children, col, direction){
+    if(children.length <= 1){
+      return;
+    }
+
+    var sortedChildren = children.slice().sort(function(a, b){
+      return compareRows(a, b, col, direction);
+    });
+
+    var parentRow = parentId ? state.rowById[parentId] : null;
+    if(!parentRow){
+      sortedChildren.forEach(function(child){
+        var subtreeRows = collectSubtreeRows(child);
+        for(var i = 0; i < subtreeRows.length; i++){
+          tbody.appendChild(subtreeRows[i]);
+        }
+      });
+      return;
+    }
+
+    var anchor = parentRow;
+    sortedChildren.forEach(function(child){
+      var subtreeRows = collectSubtreeRows(child);
+      for(var i = 0; i < subtreeRows.length; i++){
+        var row = subtreeRows[i];
+        tbody.insertBefore(row, anchor.nextSibling);
+        anchor = row;
+      }
+    });
+  }
+
+  function sortHierarchy(col, direction){
+    function sortLevel(parentId){
+      var children = directChildren(parentId);
+      if(children.length === 0){
+        return;
+      }
+
+      sortGroup(parentId, children, col, direction);
+
+      children.forEach(function(child){
+        var childId = child.getAttribute('data-id');
+        if(childId){
+          sortLevel(childId);
+        }
+      });
+    }
+
+    sortLevel(null);
   }
 
   function setExpanderState(row, isExpanded){
@@ -422,65 +586,38 @@ internal static class HtmlScriptGenerator
     }
 
     var th = e.target.closest('thead th');
-    if(!th || !th.dataset.col) return;
+    if(!th || !th.dataset.col){
+      return;
+    }
 
     var col = th.dataset.col;
-    var colIndex = -1;
-    if(col === 'symbol'){
-      colIndex = 0;
-    } else {
-      var headers = Array.from(table.querySelectorAll('thead th'));
-      for(var i = 0; i < headers.length; i++){
-        if(headers[i].dataset.col === col){
-          colIndex = i;
-          break;
-        }
+    if(col !== 'symbol'){
+      var hasMetricColumn = state.rows.some(function(r){
+        return !!findMetricCell(r, col);
+      });
+      if(!hasMetricColumn){
+        return;
       }
     }
 
-    if(colIndex < 0) return;
+    var direction;
+    if(sortState.column === col){
+      direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+      direction = 'asc';
+    }
+    sortState.column = col;
+    sortState.direction = direction;
 
-    var parents = Array.from(new Set(state.rows.map(function(r){
-      return r.getAttribute('data-parent') || '';
-    })));
-
-    parents.forEach(function(parentId){
-      var children = state.rows.filter(function(r){
-        return (r.getAttribute('data-parent') || '') === parentId;
-      });
-
-      if(children.length <= 1) return;
-
-      children.sort(function(a, b){
-        var va = col === 'symbol'
-          ? (a.querySelector('.symbol .name-text') ? a.querySelector('.symbol .name-text').textContent.trim() : '')
-          : (a.children[colIndex] ? a.children[colIndex].textContent.trim() : '');
-        var vb = col === 'symbol'
-          ? (b.querySelector('.symbol .name-text') ? b.querySelector('.symbol .name-text').textContent.trim() : '')
-          : (b.children[colIndex] ? b.children[colIndex].textContent.trim() : '');
-
-        var na = parseFloat(va.replace(/[^0-9.-]/g, ''));
-        var nb = parseFloat(vb.replace(/[^0-9.-]/g, ''));
-
-        if(!isNaN(na) && !isNaN(nb)){
-          return na - nb;
-        }
-        return va.localeCompare(vb);
-      });
-
-      var anchor = parentId ? state.rowById[parentId] : null;
-      if(anchor){
-        children.forEach(function(child){
-          tbody.insertBefore(child, anchor.nextSibling);
-          anchor = child;
-        });
-      } else {
-        children.forEach(function(child){
-          tbody.appendChild(child);
-        });
-      }
+    clearSortIndicators();
+    var matchingHeaders = Array.from(table.querySelectorAll('thead th[data-col]')).filter(function(header){
+      return header.dataset.col === col;
+    });
+    matchingHeaders.forEach(function(header){
+      applySortIndicator(header, direction);
     });
 
+    sortHierarchy(col, direction);
     refreshState();
     applyDetailLevel(currentDetail.maxDepth);
   });
