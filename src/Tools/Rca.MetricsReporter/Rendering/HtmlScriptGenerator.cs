@@ -56,6 +56,7 @@ internal static class HtmlScriptGenerator
       var metrics = row.querySelectorAll('.metric');
       var hasError = false;
       var hasWarning = false;
+      var hasDelta = false;
       for(var i = 0; i < metrics.length; i++){
         var status = metrics[i].dataset.status;
         if(status === 'error'){
@@ -63,14 +64,30 @@ internal static class HtmlScriptGenerator
         } else if(status === 'warning'){
           hasWarning = true;
         }
+        if(!hasDelta){
+          if(metrics[i].dataset && metrics[i].dataset.hasDelta === 'true'){
+            hasDelta = true;
+          } else {
+            var deltaElement = metrics[i].querySelector('.delta-positive, .delta-negative');
+            if(deltaElement){
+              hasDelta = true;
+            }
+          }
+        }
         if(hasError){
           break;
         }
       }
       row.dataset.hasError = hasError ? 'true' : 'false';
       row.dataset.hasWarning = hasWarning ? 'true' : 'false';
+      row.dataset.hasDelta = hasDelta ? 'true' : 'false';
+      var isNew = row.dataset.isNew === 'true' || !!row.querySelector('.badge-new');
+      row.dataset.isNew = isNew ? 'true' : 'false';
       if(row.dataset.hiddenByAwareness === undefined){
         row.dataset.hiddenByAwareness = 'false';
+      }
+      if(row.dataset.hiddenByState === undefined){
+        row.dataset.hiddenByState = 'false';
       }
     });
   }
@@ -296,10 +313,18 @@ internal static class HtmlScriptGenerator
   var currentAwarenessKey = '1';
   var currentAwareness = awarenessLevels[currentAwarenessKey];
 
+  var newFilterControl = document.getElementById('filter-new');
+  var changesFilterControl = document.getElementById('filter-changes');
+  var stateFilter = {
+    onlyNew: false,
+    onlyChanges: false
+  };
+
   function isRowHidden(row){
     return row.dataset.hiddenByDetail === 'true'
       || row.dataset.hiddenByFilter === 'true'
-      || row.dataset.hiddenByAwareness === 'true';
+      || row.dataset.hiddenByAwareness === 'true'
+      || row.dataset.hiddenByState === 'true';
   }
 
   function updateLeafClasses(){
@@ -376,7 +401,8 @@ internal static class HtmlScriptGenerator
       }
       var hidden = row.dataset.hiddenByDetail === 'true'
         || row.dataset.hiddenByFilter === 'true'
-        || row.dataset.hiddenByAwareness === 'true';
+        || row.dataset.hiddenByAwareness === 'true'
+        || row.dataset.hiddenByState === 'true';
       if(hidden){
         row.style.display = 'none';
       } else {
@@ -398,6 +424,7 @@ internal static class HtmlScriptGenerator
       detailControl.setAttribute('aria-valuenow', value);
     }
     applyDetailLevel(level.maxDepth);
+    applyStateFilters();
   }
 
   function handleDetailChange(){
@@ -541,6 +568,7 @@ internal static class HtmlScriptGenerator
     awarenessControl.value = '1';
   }
   setAwarenessLevel(awarenessControl ? awarenessControl.value : '1');
+  applyStateFilters();
 
   if(detailControl){
     detailControl.addEventListener('input', handleDetailChange);
@@ -620,6 +648,7 @@ internal static class HtmlScriptGenerator
     sortHierarchy(col, direction);
     refreshState();
     applyDetailLevel(currentDetail.maxDepth);
+    applyStateFilters();
   });
 
   var expandBtn = document.getElementById('expand-all');
@@ -692,7 +721,7 @@ internal static class HtmlScriptGenerator
       state.rows.forEach(function(row){
         row.dataset.hiddenByFilter = 'false';
       });
-      updateRowVisibility();
+      applyStateFilters();
       return;
     }
 
@@ -728,7 +757,7 @@ internal static class HtmlScriptGenerator
     });
 
     // Reapply detail level which will now respect the filter
-    updateRowVisibility();
+    applyStateFilters();
   }
 
   if(filterInput){
@@ -753,6 +782,63 @@ internal static class HtmlScriptGenerator
         filterInput.focus();
       }
     });
+  }
+
+  function applyStateFilters(){
+    var requireNew = stateFilter.onlyNew;
+    var requireChanges = stateFilter.onlyChanges;
+
+    if(!requireNew && !requireChanges){
+      state.rows.forEach(function(row){
+        row.dataset.hiddenByState = 'false';
+      });
+      updateRowVisibility();
+      return;
+    }
+
+    state.rows.forEach(function(row){
+      row.dataset.hiddenByState = 'true';
+    });
+
+    state.rows.forEach(function(row){
+      var matchesNew = requireNew && row.dataset.isNew === 'true';
+      var matchesChanges = requireChanges && row.dataset.hasDelta === 'true';
+      var matches = matchesNew || matchesChanges;
+      if(matches){
+        var current = row;
+        while(current){
+          current.dataset.hiddenByState = 'false';
+          var parentId = current.getAttribute('data-parent');
+          current = parentId ? state.rowById[parentId] : null;
+        }
+      }
+    });
+
+    updateRowVisibility();
+  }
+
+  function handleNewFilterChange(){
+    if(!newFilterControl){
+      return;
+    }
+    stateFilter.onlyNew = newFilterControl.checked;
+    applyStateFilters();
+  }
+
+  function handleChangesFilterChange(){
+    if(!changesFilterControl){
+      return;
+    }
+    stateFilter.onlyChanges = changesFilterControl.checked;
+    applyStateFilters();
+  }
+
+  if(newFilterControl){
+    newFilterControl.addEventListener('change', handleNewFilterChange);
+  }
+
+  if(changesFilterControl){
+    changesFilterControl.addEventListener('change', handleChangesFilterChange);
   }
 
   // Meta section spoiler toggle

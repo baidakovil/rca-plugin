@@ -45,6 +45,17 @@ internal sealed class HtmlTableGenerator
         builder.AppendLine("    <span class=\"badge status-error\">Error</span>");
         builder.AppendLine("  </div>");
         builder.AppendLine("  <div style=\"flex:1\"></div>");
+        builder.AppendLine("  <div class=\"state-filters\" role=\"group\" aria-label=\"Row filters\">");
+        builder.AppendLine("    <span class=\"state-filters-label\">Filter to:</span>");
+        builder.AppendLine("    <label class=\"state-filter-option\">");
+        builder.AppendLine("      <input type=\"checkbox\" id=\"filter-new\" aria-label=\"Show only new rows\" />");
+        builder.AppendLine("      <span>new</span>");
+        builder.AppendLine("    </label>");
+        builder.AppendLine("    <label class=\"state-filter-option\">");
+        builder.AppendLine("      <input type=\"checkbox\" id=\"filter-changes\" aria-label=\"Show only rows with metric changes\" />");
+        builder.AppendLine("      <span>changes</span>");
+        builder.AppendLine("    </label>");
+        builder.AppendLine("  </div>");
         builder.AppendLine("  <div class=\"awareness-control\">");
         builder.AppendLine("    <label for=\"awareness-level\" class=\"awareness-label\">Awareness:</label>");
         builder.AppendLine("    <input type=\"range\" id=\"awareness-level\" min=\"1\" max=\"3\" step=\"1\" value=\"1\" aria-valuemin=\"1\" aria-valuemax=\"3\" aria-valuenow=\"1\" aria-label=\"Awareness level\" />");
@@ -133,7 +144,7 @@ internal sealed class HtmlTableGenerator
             : $" data-fqn=\"{WebUtility.HtmlEncode(node.FullyQualifiedName)}\"";
         
         builder.AppendLine("    <tr class=\"" + rowClass + "\" " +
-            $"data-id=\"{thisId}\" data-level=\"{level}\" data-parent=\"{parentId ?? string.Empty}\" data-has-children=\"{hasChildren.ToString().ToLowerInvariant()}\" data-role=\"{role}\"{fqnAttribute}>");
+            $"data-id=\"{thisId}\" data-level=\"{level}\" data-parent=\"{parentId ?? string.Empty}\" data-has-children=\"{hasChildren.ToString().ToLowerInvariant()}\" data-role=\"{role}\" data-is-new=\"{(node.IsNew ? "true" : "false")}\"{fqnAttribute}>");
 
         // Symbol cell with tooltip and class for expander presence
         var symbolClasses = "symbol";
@@ -187,12 +198,7 @@ internal sealed class HtmlTableGenerator
 
         // Metric cells - use <th> for node rows, <td> for regular rows
         var metricTag = isNodeRow ? "th" : "td";
-        foreach (var mid in _metricOrder)
-        {
-            node.Metrics.TryGetValue(mid, out var val);
-            var status = val is null ? "na" : val.Status.ToString().ToLowerInvariant();
-            builder.AppendLine($"      <{metricTag} class=\"metric\" data-col=\"{mid}\" data-status=\"{status}\">{MetricValueRenderer.Render(val)}</{metricTag}>");
-        }
+        AppendMetricCells(node, metricTag, builder);
 
         builder.AppendLine("    </tr>");
 
@@ -235,5 +241,16 @@ internal sealed class HtmlTableGenerator
             MemberMetricsNode => "member",
             _ => "node"
         };
+
+    private void AppendMetricCells(MetricsNode node, string metricTag, StringBuilder builder)
+    {
+        foreach (var mid in _metricOrder)
+        {
+            node.Metrics.TryGetValue(mid, out var val);
+            var status = val is null ? "na" : val.Status.ToString().ToLowerInvariant();
+            var hasDelta = val is not null && val.Delta.HasValue && val.Delta.Value != 0;
+            builder.AppendLine($"      <{metricTag} class=\"metric\" data-col=\"{mid}\" data-status=\"{status}\" data-has-delta=\"{(hasDelta ? "true" : "false")}\">{MetricValueRenderer.Render(val)}</{metricTag}>");
+        }
+    }
 }
 

@@ -46,6 +46,8 @@ internal static class HtmlStylesGenerator
     private const string PlaceholderExpanderColor = "rgba(140, 140, 140, 1)";
     private const string WarningOverlayColor = "rgba(255, 175, 0, 0.12)";
     private const string ErrorOverlayColor = "rgba(233, 60, 60, 0.14)";
+    private const string StateFilterBorderColor = "rgba(185, 185, 185, 1)";
+    private const int StateFilterExtraSpacing = 40;
 
     private const int MaxSupportedDepth = 4;
     private const int ExpanderWidth = 20;
@@ -72,6 +74,8 @@ internal static class HtmlStylesGenerator
         AppendTypography(builder);
         builder.AppendLine();
         AppendControlPanelStyles(builder);
+        builder.AppendLine();
+        AppendStateFilterStyles(builder);
         builder.AppendLine();
         AppendDetailControlStyles(builder);
         builder.AppendLine();
@@ -152,8 +156,16 @@ internal static class HtmlStylesGenerator
         builder.AppendLine(".table-container { max-width: 100%; }");
         builder.AppendLine(FormattableString.Invariant($".table-actions {{ display: flex; align-items: center; justify-content: flex-end; gap: {ControlBlockGap}; margin: 0; position: sticky; top: 0; background: {PageBackgroundColor}; z-index: 10; padding: 6px 0; }}"));
         builder.AppendLine(FormattableString.Invariant($".status-badges {{ display: flex; gap: {DefaultGap}; align-items: center; }}"));
-        builder.AppendLine(".table-actions button { margin-left: 6px; padding: 4px 8px; font-size: 10px; background: rgba(245,245,245,1); border: 1px solid rgba(180,180,180,1); color: rgba(30,30,30,1); border-radius: 4px; cursor: pointer; }");
+        builder.AppendLine(".table-actions button { margin-left: 0px; padding: 4px 8px; font-size: 10px; background: rgba(245,245,245,1); border: 1px solid rgba(180,180,180,1); color: rgba(30,30,30,1); border-radius: 4px; cursor: pointer; }");
         builder.AppendLine(".table-actions button:hover { background: rgba(230,230,230,1); }");
+    }
+
+    private static void AppendStateFilterStyles(StringBuilder builder)
+    {
+        builder.AppendLine(FormattableString.Invariant($".state-filters {{ display: flex; align-items: center; gap: {DefaultGap}; padding: 4px 8px; border: 1px solid {StateFilterBorderColor}; border-radius: 4px; background: {PageBackgroundColor}; font-size: {DetailControlFontSize}; color: {DetailControlLabelColor}; margin-right: {StateFilterExtraSpacing}px; }}"));
+        builder.AppendLine(".state-filters-label { font-weight: 600; margin-right: 4px; }");
+        builder.AppendLine(FormattableString.Invariant($".state-filter-option {{ display: flex; align-items: center; gap: {ControlInternalGap}; font-size: {DetailControlFontSize}; color: inherit; }}"));
+        builder.AppendLine(".state-filter-option input[type='checkbox'] { margin: 0; accent-color: rgba(0, 102, 204, 1); }");
     }
 
     private static void AppendDetailControlStyles(StringBuilder builder)
