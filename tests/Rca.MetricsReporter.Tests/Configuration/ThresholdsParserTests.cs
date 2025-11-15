@@ -25,8 +25,8 @@ public sealed class ThresholdsParserTests
 
         // Assert
         result.Should().HaveCount(Enum.GetValues<MetricIdentifier>().Length);
-        result[MetricIdentifier.AltCoverSequenceCoverage].HigherIsBetter.Should().BeTrue();
-        result[MetricIdentifier.SarifCaRuleViolations].HigherIsBetter.Should().BeFalse();
+        result[MetricIdentifier.AltCoverSequenceCoverage].Levels[MetricSymbolLevel.Type].HigherIsBetter.Should().BeTrue();
+        result[MetricIdentifier.SarifCaRuleViolations].Levels[MetricSymbolLevel.Type].HigherIsBetter.Should().BeFalse();
     }
 
     [Test]
@@ -39,10 +39,45 @@ public sealed class ThresholdsParserTests
         var result = parser.Parse(customJson);
 
         // Assert
-        result[MetricIdentifier.AltCoverSequenceCoverage].Warning.Should().Be(80);
-        result[MetricIdentifier.AltCoverSequenceCoverage].Error.Should().Be(70);
-        result[MetricIdentifier.SarifCaRuleViolations].Warning.Should().Be(1);
-        result[MetricIdentifier.SarifCaRuleViolations].Error.Should().Be(2);
+        result[MetricIdentifier.AltCoverSequenceCoverage].Levels[MetricSymbolLevel.Type].Warning.Should().Be(80);
+        result[MetricIdentifier.AltCoverSequenceCoverage].Levels[MetricSymbolLevel.Type].Error.Should().Be(70);
+        result[MetricIdentifier.SarifCaRuleViolations].Levels[MetricSymbolLevel.Type].Warning.Should().Be(1);
+        result[MetricIdentifier.SarifCaRuleViolations].Levels[MetricSymbolLevel.Type].Error.Should().Be(2);
+    }
+
+    [Test]
+    public void Parse_SymbolAwareFormat_UpdatesSpecificLevels()
+    {
+        // Arrange
+        const string json = """
+        {
+          "metrics": [
+            {
+              "name": "RoslynDepthOfInheritance",
+              "description": "Avoid excessive inheritance depth.",
+              "higherIsBetter": false,
+              "symbolThresholds": {
+                "Type": { "warning": 5, "error": 7 },
+                "Member": { "warning": null, "error": null }
+              }
+            }
+          ]
+        }
+        """;
+
+        // Act
+        var result = parser.Parse(json);
+
+        // Assert
+        var definition = result[MetricIdentifier.RoslynDepthOfInheritance];
+        definition.Description.Should().Be("Avoid excessive inheritance depth.");
+        definition.Levels[MetricSymbolLevel.Type].Warning.Should().Be(5);
+        definition.Levels[MetricSymbolLevel.Type].Error.Should().Be(7);
+        definition.Levels[MetricSymbolLevel.Type].HigherIsBetter.Should().BeFalse();
+
+        definition.Levels[MetricSymbolLevel.Member].Warning.Should().BeNull();
+        definition.Levels[MetricSymbolLevel.Member].Error.Should().BeNull();
+        definition.Levels[MetricSymbolLevel.Member].HigherIsBetter.Should().BeFalse();
     }
 
     [Test]

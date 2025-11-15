@@ -151,6 +151,17 @@
       "required": ["higherIsBetter"],
       "additionalProperties": false
     },
+    "metricThresholdsByLevel": {
+      "type": "object",
+      "properties": {
+        "Solution": { "$ref": "#/definitions/metricThreshold" },
+        "Assembly": { "$ref": "#/definitions/metricThreshold" },
+        "Namespace": { "$ref": "#/definitions/metricThreshold" },
+        "Type": { "$ref": "#/definitions/metricThreshold" },
+        "Member": { "$ref": "#/definitions/metricThreshold" }
+      },
+      "additionalProperties": false
+    },
     "reportMetadata": {
       "type": "object",
       "properties": {
@@ -162,31 +173,22 @@
             "metricsDirectory": { "type": "string" },
             "baseline": { "type": ["string", "null"] },
             "report": { "type": "string" },
-            "html": { "type": "string" }
+            "html": { "type": "string" },
+            "thresholds": { "type": ["string", "null"] }
           },
           "required": ["metricsDirectory", "report", "html"],
           "additionalProperties": false
         },
-        "thresholds": {
+        "thresholdsByLevel": {
           "type": "object",
-          "properties": {
-            "AltCoverSequenceCoverage": { "$ref": "#/definitions/metricThreshold" },
-            "AltCoverBranchCoverage": { "$ref": "#/definitions/metricThreshold" },
-            "AltCoverCyclomaticComplexity": { "$ref": "#/definitions/metricThreshold" },
-            "AltCoverNPathComplexity": { "$ref": "#/definitions/metricThreshold" },
-            "RoslynMaintainabilityIndex": { "$ref": "#/definitions/metricThreshold" },
-            "RoslynCyclomaticComplexity": { "$ref": "#/definitions/metricThreshold" },
-            "RoslynClassCoupling": { "$ref": "#/definitions/metricThreshold" },
-            "RoslynDepthOfInheritance": { "$ref": "#/definitions/metricThreshold" },
-            "RoslynSourceLines": { "$ref": "#/definitions/metricThreshold" },
-            "RoslynExecutableLines": { "$ref": "#/definitions/metricThreshold" },
-            "SarifCaRuleViolations": { "$ref": "#/definitions/metricThreshold" },
-            "SarifIdeRuleViolations": { "$ref": "#/definitions/metricThreshold" }
-          },
-          "additionalProperties": false
+          "additionalProperties": { "$ref": "#/definitions/metricThresholdsByLevel" }
+        },
+        "thresholdDescriptions": {
+          "type": "object",
+          "additionalProperties": { "type": ["string", "null"] }
         }
       },
-      "required": ["generatedAtUtc", "paths", "thresholds"],
+      "required": ["generatedAtUtc", "paths"],
       "additionalProperties": false
     }
   }

@@ -18,6 +18,224 @@ internal static class HtmlScriptGenerator
   var tbody = table.tBodies[0];
   if(!tbody) return;
 
+  var thresholdElement = document.getElementById('threshold-data');
+  var thresholdData = null;
+  if(thresholdElement){
+    try{
+      var rawText = thresholdElement.textContent || thresholdElement.innerText || '';
+      if(rawText.trim().length > 0){
+        thresholdData = JSON.parse(rawText);
+      }
+    }catch(_){
+      thresholdData = null;
+    }
+  }
+
+  var hasThresholdData = thresholdData && Object.keys(thresholdData).length > 0;
+  var tooltip = null;
+  var tooltipTimer = null;
+  var tooltipVisible = false;
+  var tooltipTarget = null;
+
+  var levelOrder = ['Solution', 'Assembly', 'Namespace', 'Type', 'Member'];
+  var levelLabels = {
+    Solution: 'Solution',
+    Assembly: 'Assembly',
+    Namespace: 'Namespace',
+    Type: 'Type',
+    Member: 'Member'
+  };
+
+  if(hasThresholdData){
+    tooltip = document.createElement('div');
+    tooltip.className = 'metric-tooltip';
+    tooltip.style.display = 'none';
+    document.body.appendChild(tooltip);
+  } else {
+    thresholdData = null;
+  }
+
+  function escapeHtml(value){
+    if(value === null || value === undefined){
+      return '';
+    }
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/""/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function formatThresholdValue(value){
+    if(value === null || value === undefined){
+      return '—';
+    }
+    return String(value);
+  }
+
+  function cancelTooltipTimer(){
+    if(tooltipTimer){
+      clearTimeout(tooltipTimer);
+      tooltipTimer = null;
+    }
+  }
+
+  function hideTooltip(){
+    cancelTooltipTimer();
+    if(!tooltipVisible || !tooltip){
+      tooltipTarget = null;
+      return;
+    }
+    tooltip.style.display = 'none';
+    tooltipVisible = false;
+    tooltipTarget = null;
+  }
+
+  function positionTooltip(target){
+    if(!tooltip || !target){
+      return;
+    }
+    var rect = target.getBoundingClientRect();
+    var tooltipRect = tooltip.getBoundingClientRect();
+    var top = window.scrollY + rect.bottom + 8;
+    var left = window.scrollX + rect.left + (rect.width - tooltipRect.width) / 2;
+
+    var viewportRight = window.scrollX + window.innerWidth;
+    var viewportBottom = window.scrollY + window.innerHeight;
+
+    if(left + tooltipRect.width > viewportRight - 8){
+      left = viewportRight - tooltipRect.width - 8;
+    }
+    if(left < window.scrollX + 8){
+      left = window.scrollX + 8;
+    }
+    if(top + tooltipRect.height > viewportBottom - 8){
+      top = window.scrollY + rect.top - tooltipRect.height - 8;
+    }
+
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = top + 'px';
+  }
+
+  function buildTooltipHtml(metricId){
+    if(!thresholdData || !thresholdData[metricId]){
+      return null;
+    }
+    var info = thresholdData[metricId];
+    var parts = [];
+    if(info.description){
+      parts.push('<p class=""metric-tooltip__desc""><em>' + escapeHtml(info.description) + '</em></p>');
+    }
+    var direction = info.higherIsBetter ? 'Higher values are better' : 'Lower values are better';
+    parts.push('<p class=""metric-tooltip__direction""><em>' + escapeHtml(direction) + '</em></p>');
+    parts.push('<p class=""metric-tooltip__heading""><strong>Warning / Error</strong></p>');
+    parts.push('<ul class=""metric-tooltip__list"">');
+    var levels = info.levels || {};
+    for(var i = 0; i < levelOrder.length; i++){
+      var levelKey = levelOrder[i];
+      var label = levelLabels[levelKey] || levelKey;
+      var entry = levels[levelKey];
+      var warning = entry && entry.warning !== undefined ? entry.warning : null;
+      var error = entry && entry.error !== undefined ? entry.error : null;
+      parts.push('<li><strong>' + escapeHtml(label) + ':</strong> <span>' + escapeHtml(formatThresholdValue(warning)) + ' / ' + escapeHtml(formatThresholdValue(error)) + '</span></li>');
+    }
+    parts.push('</ul>');
+    return parts.join('');
+  }
+
+  function showTooltip(target){
+    if(!tooltip || !thresholdData){
+      return;
+    }
+    var metricId = target && target.dataset ? target.dataset.metricId : null;
+    if(!metricId || !thresholdData[metricId]){
+      return;
+    }
+    var html = buildTooltipHtml(metricId);
+    if(!html){
+      return;
+    }
+    tooltip.innerHTML = html;
+    tooltip.style.display = 'block';
+    tooltipVisible = true;
+    tooltipTarget = target;
+    positionTooltip(target);
+  }
+
+  function scheduleTooltip(target){
+    if(!hasThresholdData || !target){
+      return;
+    }
+    cancelTooltipTimer();
+    tooltipTimer = setTimeout(function(){
+      showTooltip(target);
+    }, 500);
+  }
+
+  function handleHeaderMouseOver(event){
+    var th = event.target.closest('th[data-metric-id]');
+    if(!th){
+      return;
+    }
+    var metricId = th.dataset.metricId;
+    if(!metricId || metricId === 'symbol'){
+      return;
+    }
+    if(tooltipTarget && tooltipTarget !== th){
+      hideTooltip();
+    }
+    scheduleTooltip(th);
+  }
+
+  function handleHeaderMouseOut(event){
+    var th = event.target.closest('th[data-metric-id]');
+    if(!th){
+      return;
+    }
+    var related = event.relatedTarget;
+    if(related && th.contains(related)){
+      return;
+    }
+    cancelTooltipTimer();
+    hideTooltip();
+  }
+
+  if(hasThresholdData && table && table.tHead){
+    table.tHead.addEventListener(""mouseover"", handleHeaderMouseOver);
+    table.tHead.addEventListener(""mouseout"", handleHeaderMouseOut);
+    table.tHead.addEventListener(""focusin"", function(e){
+      var th = e.target.closest('th[data-metric-id]');
+      if(!th){
+        return;
+      }
+      if(th.dataset && th.dataset.metricId === 'symbol'){
+        return;
+      }
+      scheduleTooltip(th);
+    }, true);
+    table.tHead.addEventListener(""focusout"", function(e){
+      var th = e.target.closest('th[data-metric-id]');
+      if(!th){
+        return;
+      }
+      hideTooltip();
+    }, true);
+  }
+
+  if(hasThresholdData){
+    window.addEventListener(""scroll"", function(){
+      if(tooltipVisible && tooltipTarget){
+        positionTooltip(tooltipTarget);
+      }
+    }, true);
+    window.addEventListener(""resize"", function(){
+      if(tooltipVisible && tooltipTarget){
+        positionTooltip(tooltipTarget);
+      }
+    });
+  }
+
   var state = {
     rows: [],
     rowById: Object.create(null),

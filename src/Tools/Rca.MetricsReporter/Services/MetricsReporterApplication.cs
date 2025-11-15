@@ -50,6 +50,9 @@ public sealed class MetricsReporterApplication
     /// <summary>
     /// Executes the aggregation process.
     /// </summary>
+    /// <param name="options">The options for the metrics reporter.</param>
+    /// <param name="cancellationToken">Cancellation token for async operations.</param>
+    /// <returns>The exit code indicating success or failure.</returns>
     public async Task<MetricsReporterExitCode> RunAsync(MetricsReporterOptions options, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -63,74 +66,223 @@ public sealed class MetricsReporterApplication
             return await GenerateHtmlFromJsonAsync(options, logger, cancellationToken).ConfigureAwait(false);
         }
 
+        var validationResult = ValidateOptionsWithLogging(options, logger);
+        if (validationResult != MetricsReporterExitCode.Success)
+        {
+            return validationResult;
+        }
+
+        var thresholdsResult = LoadThresholdsWithLogging(options, logger);
+        if (thresholdsResult.ExitCode != MetricsReporterExitCode.Success)
+        {
+            return thresholdsResult.ExitCode;
+        }
+
+        var baseline = await _baselineLoader.LoadAsync(options.BaselinePath, cancellationToken).ConfigureAwait(false);
+
+        var documentsResult = await ParseAllDocumentsAsync(options, logger, cancellationToken).ConfigureAwait(false);
+        if (documentsResult.ExitCode != MetricsReporterExitCode.Success)
+        {
+            return documentsResult.ExitCode;
+        }
+
+        var aggregationInput = BuildAggregationInput(options, documentsResult, thresholdsResult.Thresholds, baseline);
+        var report = BuildReportWithLogging(aggregationInput, options, logger);
+        if (report is null)
+        {
+            return MetricsReporterExitCode.ValidationError;
+        }
+
+        var writeResult = await WriteReportsAsync(report, options, logger, cancellationToken).ConfigureAwait(false);
+        if (writeResult != MetricsReporterExitCode.Success)
+        {
+            return writeResult;
+        }
+
+        logger.LogInformation("Metrics Reporter completed successfully.");
+        return MetricsReporterExitCode.Success;
+    }
+
+    /// <summary>
+    /// Validates options and logs any errors.
+    /// </summary>
+    /// <param name="options">The options to validate.</param>
+    /// <param name="logger">The logger to use for error messages.</param>
+    /// <returns>The exit code indicating validation result.</returns>
+    private static MetricsReporterExitCode ValidateOptionsWithLogging(MetricsReporterOptions options, FileLogger logger)
+    {
         try
         {
             ValidateOptions(options);
+            return MetricsReporterExitCode.Success;
         }
         catch (Exception ex)
         {
             logger.LogError(ex.Message, ex);
             return MetricsReporterExitCode.ValidationError;
         }
+    }
 
-        IDictionary<MetricIdentifier, MetricThreshold> thresholds;
+    /// <summary>
+    /// Loads thresholds and logs any errors.
+    /// </summary>
+    /// <param name="options">The options containing threshold configuration.</param>
+    /// <param name="logger">The logger to use for error messages.</param>
+    /// <returns>A result containing the exit code and loaded thresholds.</returns>
+    private (MetricsReporterExitCode ExitCode, IDictionary<MetricIdentifier, MetricThresholdDefinition> Thresholds) LoadThresholdsWithLogging(
+        MetricsReporterOptions options,
+        FileLogger logger)
+    {
         try
         {
-            thresholds = ParseThresholds(options.ThresholdsJson);
+            var thresholds = ParseThresholds(options);
+            return (MetricsReporterExitCode.Success, thresholds);
         }
         catch (Exception ex)
         {
             logger.LogError(ex.Message, ex);
-            return MetricsReporterExitCode.ValidationError;
+            return (MetricsReporterExitCode.ValidationError, new Dictionary<MetricIdentifier, MetricThresholdDefinition>());
         }
-        var baseline = await _baselineLoader.LoadAsync(options.BaselinePath, cancellationToken).ConfigureAwait(false);
+    }
 
-        var altCoverDocuments = new List<ParsedMetricsDocument>();
-        if (!string.IsNullOrWhiteSpace(options.AltCoverPath))
+    /// <summary>
+    /// Parses all input documents (AltCover, Roslyn, SARIF).
+    /// </summary>
+    /// <param name="options">The options containing document paths.</param>
+    /// <param name="logger">The logger to use for progress messages.</param>
+    /// <param name="cancellationToken">Cancellation token for async operations.</param>
+    /// <returns>A result containing the exit code and parsed documents.</returns>
+    private async Task<(MetricsReporterExitCode ExitCode, IList<ParsedMetricsDocument> AltCoverDocuments, IList<ParsedMetricsDocument> RoslynDocuments, IList<ParsedMetricsDocument> SarifDocuments)> ParseAllDocumentsAsync(
+        MetricsReporterOptions options,
+        FileLogger logger,
+        CancellationToken cancellationToken)
+    {
+        var altCoverDocuments = await ParseAltCoverDocumentsAsync(options, logger, cancellationToken).ConfigureAwait(false);
+        if (altCoverDocuments is null)
         {
-            var document = await ParseSafeAsync(_altCoverParser, options.AltCoverPath, logger, cancellationToken).ConfigureAwait(false);
-            if (document is null)
-            {
-                return MetricsReporterExitCode.ParsingError;
-            }
-
-            altCoverDocuments.Add(document);
+            return (MetricsReporterExitCode.ParsingError, new List<ParsedMetricsDocument>(), new List<ParsedMetricsDocument>(), new List<ParsedMetricsDocument>());
         }
 
-        var roslynDocuments = new List<ParsedMetricsDocument>();
+        var roslynDocuments = await ParseRoslynDocumentsAsync(options, logger, cancellationToken).ConfigureAwait(false);
+        if (roslynDocuments is null)
+        {
+            return (MetricsReporterExitCode.ParsingError, altCoverDocuments, new List<ParsedMetricsDocument>(), new List<ParsedMetricsDocument>());
+        }
+
+        var sarifDocuments = await ParseSarifDocumentsAsync(options, logger, cancellationToken).ConfigureAwait(false);
+        if (sarifDocuments is null)
+        {
+            return (MetricsReporterExitCode.ParsingError, altCoverDocuments, roslynDocuments, new List<ParsedMetricsDocument>());
+        }
+
+        return (MetricsReporterExitCode.Success, altCoverDocuments, roslynDocuments, sarifDocuments);
+    }
+
+    /// <summary>
+    /// Parses AltCover documents.
+    /// </summary>
+    /// <param name="options">The options containing AltCover path.</param>
+    /// <param name="logger">The logger to use for progress messages.</param>
+    /// <param name="cancellationToken">Cancellation token for async operations.</param>
+    /// <returns>A list of parsed documents, or <see langword="null"/> if parsing failed.</returns>
+    private async Task<IList<ParsedMetricsDocument>?> ParseAltCoverDocumentsAsync(
+        MetricsReporterOptions options,
+        FileLogger logger,
+        CancellationToken cancellationToken)
+    {
+        var documents = new List<ParsedMetricsDocument>();
+        if (string.IsNullOrWhiteSpace(options.AltCoverPath))
+        {
+            return documents;
+        }
+
+        var document = await ParseSafeAsync(_altCoverParser, options.AltCoverPath, logger, cancellationToken).ConfigureAwait(false);
+        if (document is null)
+        {
+            return null;
+        }
+
+        documents.Add(document);
+        return documents;
+    }
+
+    /// <summary>
+    /// Parses Roslyn documents.
+    /// </summary>
+    /// <param name="options">The options containing Roslyn paths.</param>
+    /// <param name="logger">The logger to use for progress messages.</param>
+    /// <param name="cancellationToken">Cancellation token for async operations.</param>
+    /// <returns>A list of parsed documents, or <see langword="null"/> if parsing failed.</returns>
+    private async Task<IList<ParsedMetricsDocument>?> ParseRoslynDocumentsAsync(
+        MetricsReporterOptions options,
+        FileLogger logger,
+        CancellationToken cancellationToken)
+    {
+        var documents = new List<ParsedMetricsDocument>();
         foreach (var path in options.RoslynPaths)
         {
             var document = await ParseSafeAsync(_roslynParser, path, logger, cancellationToken).ConfigureAwait(false);
             if (document is null)
             {
-                return MetricsReporterExitCode.ParsingError;
+                return null;
             }
 
-            roslynDocuments.Add(document);
+            documents.Add(document);
         }
 
-        var sarifDocuments = new List<ParsedMetricsDocument>();
+        return documents;
+    }
+
+    /// <summary>
+    /// Parses SARIF documents.
+    /// </summary>
+    /// <param name="options">The options containing SARIF paths.</param>
+    /// <param name="logger">The logger to use for progress messages.</param>
+    /// <param name="cancellationToken">Cancellation token for async operations.</param>
+    /// <returns>A list of parsed documents, or <see langword="null"/> if parsing failed.</returns>
+    private async Task<IList<ParsedMetricsDocument>?> ParseSarifDocumentsAsync(
+        MetricsReporterOptions options,
+        FileLogger logger,
+        CancellationToken cancellationToken)
+    {
+        var documents = new List<ParsedMetricsDocument>();
         foreach (var path in options.SarifPaths)
         {
             var document = await ParseSafeAsync(_sarifParser, path, logger, cancellationToken).ConfigureAwait(false);
             if (document is null)
             {
-                return MetricsReporterExitCode.ParsingError;
+                return null;
             }
 
-            sarifDocuments.Add(document);
+            documents.Add(document);
         }
 
+        return documents;
+    }
+
+    /// <summary>
+    /// Builds the aggregation input from parsed documents and configuration.
+    /// </summary>
+    /// <param name="options">The options containing configuration.</param>
+    /// <param name="documentsResult">The parsed documents.</param>
+    /// <param name="thresholds">The threshold definitions.</param>
+    /// <param name="baseline">The baseline report, if any.</param>
+    /// <returns>The aggregation input ready for report building.</returns>
+    private static MetricsAggregationInput BuildAggregationInput(
+        MetricsReporterOptions options,
+        (MetricsReporterExitCode ExitCode, IList<ParsedMetricsDocument> AltCoverDocuments, IList<ParsedMetricsDocument> RoslynDocuments, IList<ParsedMetricsDocument> SarifDocuments) documentsResult,
+        IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds,
+        MetricsReport? baseline)
+    {
         var memberFilter = MemberFilter.FromString(options.ExcludedMethodNames);
         var assemblyFilter = AssemblyFilter.FromString(options.ExcludedAssemblyNames);
-        var aggregationService = new MetricsAggregationService(memberFilter, assemblyFilter);
 
-        var aggregationInput = new MetricsAggregationInput
+        return new MetricsAggregationInput
         {
             SolutionName = options.SolutionName,
-            AltCoverDocuments = altCoverDocuments,
-            RoslynDocuments = roslynDocuments,
-            SarifDocuments = sarifDocuments,
+            AltCoverDocuments = documentsResult.AltCoverDocuments,
+            RoslynDocuments = documentsResult.RoslynDocuments,
+            SarifDocuments = documentsResult.SarifDocuments,
             Baseline = baseline,
             Thresholds = thresholds,
             Paths = new ReportPaths
@@ -138,22 +290,56 @@ public sealed class MetricsReporterApplication
                 MetricsDirectory = options.MetricsDirectory,
                 Baseline = options.BaselinePath,
                 Report = options.OutputJsonPath,
-                Html = options.OutputHtmlPath
+                Html = options.OutputHtmlPath,
+                Thresholds = !string.IsNullOrWhiteSpace(options.ThresholdsPath)
+                    ? options.ThresholdsPath
+                    : !string.IsNullOrWhiteSpace(options.ThresholdsJson) ? "(inline thresholds)" : null
             },
             BaselineReference = options.BaselineReference
         };
+    }
 
-        MetricsReport report;
+    /// <summary>
+    /// Builds the metrics report and logs any errors.
+    /// </summary>
+    /// <param name="aggregationInput">The input data for aggregation.</param>
+    /// <param name="options">The options containing filter configuration.</param>
+    /// <param name="logger">The logger to use for error messages.</param>
+    /// <returns>The built report, or <see langword="null"/> if building failed.</returns>
+    private static MetricsReport? BuildReportWithLogging(
+        MetricsAggregationInput aggregationInput,
+        MetricsReporterOptions options,
+        FileLogger logger)
+    {
+        var memberFilter = MemberFilter.FromString(options.ExcludedMethodNames);
+        var assemblyFilter = AssemblyFilter.FromString(options.ExcludedAssemblyNames);
+        var aggregationService = new MetricsAggregationService(memberFilter, assemblyFilter);
+
         try
         {
-            report = aggregationService.BuildReport(aggregationInput);
+            return aggregationService.BuildReport(aggregationInput);
         }
         catch (Exception ex)
         {
             logger.LogError("Failed to build metrics report.", ex);
-            return MetricsReporterExitCode.ValidationError;
+            return null;
         }
+    }
 
+    /// <summary>
+    /// Writes the generated reports to output files.
+    /// </summary>
+    /// <param name="report">The metrics report to write.</param>
+    /// <param name="options">The options containing output paths.</param>
+    /// <param name="logger">The logger to use for error messages.</param>
+    /// <param name="cancellationToken">Cancellation token for async operations.</param>
+    /// <returns>The exit code indicating success or failure.</returns>
+    private async Task<MetricsReporterExitCode> WriteReportsAsync(
+        MetricsReport report,
+        MetricsReporterOptions options,
+        FileLogger logger,
+        CancellationToken cancellationToken)
+    {
         try
         {
             await _reportWriter.WriteJsonAsync(report, options.OutputJsonPath, cancellationToken).ConfigureAwait(false);
@@ -162,15 +348,14 @@ public sealed class MetricsReporterApplication
                 var html = _htmlGenerator.Generate(report);
                 await _reportWriter.WriteHtmlAsync(html, options.OutputHtmlPath, cancellationToken).ConfigureAwait(false);
             }
+
+            return MetricsReporterExitCode.Success;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             logger.LogError("Failed to write output files.", ex);
             return MetricsReporterExitCode.IoError;
         }
-
-        logger.LogInformation("Metrics Reporter completed successfully.");
-        return MetricsReporterExitCode.Success;
     }
 
     private static void ValidateOptions(MetricsReporterOptions options)
@@ -227,8 +412,28 @@ public sealed class MetricsReporterApplication
         }
     }
 
-    private IDictionary<MetricIdentifier, MetricThreshold> ParseThresholds(string? thresholdsJson)
-        => _thresholdsParser.Parse(thresholdsJson);
+    private IDictionary<MetricIdentifier, MetricThresholdDefinition> ParseThresholds(
+        MetricsReporterOptions options)
+    {
+        string? payload = null;
+
+        if (!string.IsNullOrWhiteSpace(options.ThresholdsPath))
+        {
+            var absolutePath = Path.GetFullPath(options.ThresholdsPath);
+            if (!File.Exists(absolutePath))
+            {
+                throw new FileNotFoundException($"Thresholds file not found: {absolutePath}", absolutePath);
+            }
+
+            payload = File.ReadAllText(absolutePath);
+        }
+        else
+        {
+            payload = options.ThresholdsJson;
+        }
+
+        return _thresholdsParser.Parse(payload);
+    }
 
     private static async Task<ParsedMetricsDocument?> ParseSafeAsync(
         IMetricsSourceParser parser,

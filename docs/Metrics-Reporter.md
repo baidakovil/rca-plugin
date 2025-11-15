@@ -109,7 +109,7 @@ Metrics Reporter — консольное приложение .NET 8, объе�
 ### Дополнительно
 - Baseline хранится вручную, обновляется копированием свежего `metrics-report.json` поверх `metrics-baseline.json`.
 - Приложение логирует шаги в `$(MetricsDir)\Report\metrics-reporter.log` и возвращает коды: 0 — OK, 1 — parsing error, 2 — IO error, 3 — validation error.
-- Пороговые значения задаются в `build/Props/code-metrics.props` (свойство `MetricsThresholds`) и передаются агрегатору.
+- Пороговые значения хранятся в `build/MetricsRules/MetricsReporterThresholds.json`; путь до файла конфигурируется через `build/Props/paths.props` (свойство `MetricsThresholdsPath`) и передается агрегатору.
 
 ### HTML Dashboard UI
 - Панель действий содержит кнопки `Expand all` / `Collapse all` и компактный слайдер **Detailing**. Диапазон `[Namespace → Type → Member]` управляет максимальной глубиной видимых строк — дерево не перестраивается, а существующие строки Solution → Member повторно используются и скрываются через `data-hiddenByDetail`, поэтому дублирования метрик или символов в DOM нет.

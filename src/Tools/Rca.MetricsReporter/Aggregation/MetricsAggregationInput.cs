@@ -35,9 +35,10 @@ public sealed class MetricsAggregationInput
     public MetricsReport? Baseline { get; init; }
 
     /// <summary>
-    /// Metric thresholds.
+    /// Metric thresholds grouped by symbol level.
     /// </summary>
-    public IDictionary<MetricIdentifier, MetricThreshold> Thresholds { get; init; } = new Dictionary<MetricIdentifier, MetricThreshold>();
+    public IDictionary<MetricIdentifier, MetricThresholdDefinition> Thresholds { get; init; }
+        = new Dictionary<MetricIdentifier, MetricThresholdDefinition>();
 
     /// <summary>
     /// Paths to the key artefacts.

@@ -158,7 +158,7 @@
       <MetricsReporterSarifArgs>@(SarifMetricsFiles->' --sarif &quot;%(FullPath)&quot;', ' ')</MetricsReporterSarifArgs>
       <MetricsReporterBaselineArg Condition="Exists('$(MetricsBaselineJson)')"> --baseline &quot;$(MetricsBaselineJson)&quot;</MetricsReporterBaselineArg>
       <MetricsReporterBaselineRefArg Condition="'$(MetricsBaselineReference)' != ''"> --baseline-ref &quot;$(MetricsBaselineReference)&quot;</MetricsReporterBaselineRefArg>
-      <MetricsReporterThresholdArg> --thresholds &quot;$(MetricsThresholds)&quot;</MetricsReporterThresholdArg>
+      <MetricsReporterThresholdArg Condition="Exists('$(MetricsThresholdsPath)')"> --thresholds-file &quot;$(MetricsThresholdsPath)&quot;</MetricsReporterThresholdArg>
       <MetricsReporterExcludedMethodsArg Condition="'$(ExcludedMethodNames)' != ''"> --excluded-methods &quot;$(ExcludedMethodNames)&quot;</MetricsReporterExcludedMethodsArg>
       <MetricsReporterExcludedAssembliesArg Condition="'$(ExcludedAssemblyNames)' != ''"> --excluded-assemblies &quot;$(ExcludedAssemblyNames)&quot;</MetricsReporterExcludedAssembliesArg>
       <MetricsReporterCommand>&quot;$(MetricsReporterExe)&quot; --solution-name &quot;$(MetricsSolutionName)&quot; --metrics-dir &quot;$(RcaMetricsDir)&quot;$(MetricsReporterAltCoverArg)$(MetricsReporterRoslynArgs)$(MetricsReporterSarifArgs)$(MetricsReporterBaselineArg)$(MetricsReporterBaselineRefArg) --output-json &quot;$(MetricsReportJson)&quot; --output-html &quot;$(MetricsReportHtml)&quot;$(MetricsReporterThresholdArg)$(MetricsReporterExcludedMethodsArg)$(MetricsReporterExcludedAssembliesArg)</MetricsReporterCommand>

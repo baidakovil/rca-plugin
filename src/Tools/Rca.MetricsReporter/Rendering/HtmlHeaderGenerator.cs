@@ -47,6 +47,11 @@ internal static class HtmlHeaderGenerator
         {
             builder.AppendLine($"    <p><strong>Baseline JSON:</strong> {WebUtility.HtmlEncode(report.Metadata.Paths.Baseline)}</p>");
         }
+        var thresholdsPath = report.Metadata.Paths.Thresholds;
+        var thresholdsDisplay = string.IsNullOrWhiteSpace(thresholdsPath)
+            ? "(inline thresholds)"
+            : thresholdsPath;
+        builder.AppendLine($"    <p><strong>Thresholds JSON:</strong> {WebUtility.HtmlEncode(thresholdsDisplay)}</p>");
         
         if (!string.IsNullOrWhiteSpace(report.Metadata.ExcludedMethodNames))
         {

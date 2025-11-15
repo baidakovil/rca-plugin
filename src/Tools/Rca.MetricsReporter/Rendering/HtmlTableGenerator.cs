@@ -88,7 +88,7 @@ internal sealed class HtmlTableGenerator
         builder.AppendLine("    <tr>");
         foreach (var id in _metricOrder)
         {
-            builder.AppendLine($"      <th data-col=\"{id}\">{WebUtility.HtmlEncode(MetricDisplayNameProvider.GetDisplayName(id))}</th>");
+            builder.AppendLine($"      <th data-col=\"{id}\" data-metric-id=\"{id}\">{WebUtility.HtmlEncode(MetricDisplayNameProvider.GetDisplayName(id))}</th>");
         }
         builder.AppendLine("    </tr>");
         builder.AppendLine("  </thead>");

@@ -43,6 +43,12 @@ public sealed class MetricsReporterOptions
     public string? ThresholdsJson { get; init; }
 
     /// <summary>
+    /// Optional path to a JSON file that contains threshold definitions.
+    /// When specified, overrides <see cref="ThresholdsJson"/>.
+    /// </summary>
+    public string? ThresholdsPath { get; init; }
+
+    /// <summary>
     /// Path to an existing JSON report to load (for HTML generation only).
     /// </summary>
     public string? InputJsonPath { get; init; }

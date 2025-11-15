@@ -18,6 +18,7 @@
     <MetricsReportDir Condition="'$(MetricsReportDir)' == ''">$(RcaMetricsDir)\Report</MetricsReportDir>
     <MetricsReportJson Condition="'$(MetricsReportJson)' == ''">$(MetricsReportDir)\metrics-report.json</MetricsReportJson>
     <MetricsBaselineJson Condition="'$(MetricsBaselineJson)' == ''">$(MetricsReportDir)\metrics-baseline.json</MetricsBaselineJson>
+    <MetricsThresholdsPath Condition="'$(MetricsThresholdsPath)' == ''">$(SolutionDir)build\MetricsRules\MetricsReporterThresholds.json</MetricsThresholdsPath>
     <MetricsReportHtml Condition="'$(MetricsReportHtml)' == ''">$(MetricsReportDir)\metrics-report.html</MetricsReportHtml>
     <MetricsSolutionName Condition="'$(MetricsSolutionName)' == ''">rca-plugin</MetricsSolutionName>
     <MetricsReporterProject Condition="'$(MetricsReporterProject)' == ''">$(SolutionDir)src\Tools\Rca.MetricsReporter\Rca.MetricsReporter.csproj</MetricsReporterProject>
@@ -69,6 +70,7 @@
     <CompilerVisibleProperty Include="MetricsReportDir" />
     <CompilerVisibleProperty Include="MetricsReportJson" />
     <CompilerVisibleProperty Include="MetricsBaselineJson" />
+    <CompilerVisibleProperty Include="MetricsThresholdsPath" />
     <CompilerVisibleProperty Include="MetricsReportHtml" />
     <CompilerVisibleProperty Include="MetricsSolutionName" />
     <CompilerVisibleProperty Include="MetricsReporterProject" />

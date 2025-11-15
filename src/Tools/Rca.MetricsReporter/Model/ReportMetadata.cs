@@ -26,10 +26,16 @@ public sealed class ReportMetadata
     public ReportPaths Paths { get; init; } = new();
 
     /// <summary>
-    /// Threshold definitions for each metric.
+    /// Threshold definitions grouped by symbol level.
     /// </summary>
-    public IDictionary<MetricIdentifier, MetricThreshold> Thresholds { get; init; }
-        = new Dictionary<MetricIdentifier, MetricThreshold>();
+    public IDictionary<MetricIdentifier, IDictionary<MetricSymbolLevel, MetricThreshold>> ThresholdsByLevel { get; init; }
+        = new Dictionary<MetricIdentifier, IDictionary<MetricSymbolLevel, MetricThreshold>>();
+
+    /// <summary>
+    /// Metric descriptions sourced from the thresholds definition.
+    /// </summary>
+    public IDictionary<MetricIdentifier, string?> ThresholdDescriptions { get; init; }
+        = new Dictionary<MetricIdentifier, string?>();
 
     /// <summary>
     /// Comma-separated list of excluded method names used when generating this report.

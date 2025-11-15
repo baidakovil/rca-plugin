@@ -51,6 +51,7 @@ static MetricsReporterOptions ParseArguments(string[] args)
     string? outputJson = null;
     string? outputHtml = null;
     string? thresholds = null;
+    string? thresholdsFile = null;
     string? inputJson = null;
     string? excludedMethodNames = null;
     string? excludedAssemblyNames = null;
@@ -89,6 +90,9 @@ static MetricsReporterOptions ParseArguments(string[] args)
                 break;
             case "--thresholds":
                 thresholds = RequireValue(args, ref index, argument);
+                break;
+            case "--thresholds-file":
+                thresholdsFile = RequireValue(args, ref index, argument);
                 break;
             case "--input-json":
                 inputJson = RequireValue(args, ref index, argument);
@@ -136,6 +140,7 @@ static MetricsReporterOptions ParseArguments(string[] args)
         BaselinePath = baselinePath is null ? null : Path.GetFullPath(baselinePath),
         BaselineReference = baselineRef,
         ThresholdsJson = thresholds,
+        ThresholdsPath = thresholdsFile is null ? null : Path.GetFullPath(thresholdsFile),
         InputJsonPath = inputJson is null ? null : Path.GetFullPath(inputJson),
         OutputJsonPath = string.IsNullOrWhiteSpace(outputJson) ? string.Empty : Path.GetFullPath(outputJson),
         OutputHtmlPath = string.IsNullOrWhiteSpace(outputHtml) ? string.Empty : Path.GetFullPath(outputHtml),
@@ -173,6 +178,7 @@ static void PrintUsage()
     Console.WriteLine("  --baseline <path>       Path to baseline metrics JSON.");
     Console.WriteLine("  --baseline-ref <text>   Baseline reference label (git commit, build ID, etc.).");
     Console.WriteLine("  --thresholds <json>     JSON string with metric thresholds.");
+    Console.WriteLine("  --thresholds-file <path> Path to JSON file with symbol-level thresholds.");
     Console.WriteLine("  --input-json <path>     Path to existing metrics-report.json (generates HTML only).");
 }
 

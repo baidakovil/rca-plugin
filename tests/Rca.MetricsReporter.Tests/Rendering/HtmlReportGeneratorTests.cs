@@ -65,7 +65,8 @@ public sealed class HtmlReportGeneratorTests
                     Report = @"C:\Repo\build\Metrics\Report\metrics-report.json",
                     Html = @"C:\Repo\build\Metrics\Report\metrics-report.html"
                 },
-                Thresholds = new Dictionary<MetricIdentifier, MetricThreshold>()
+                ThresholdsByLevel = new Dictionary<MetricIdentifier, IDictionary<MetricSymbolLevel, MetricThreshold>>(),
+                ThresholdDescriptions = new Dictionary<MetricIdentifier, string?>()
             },
             Solution = new SolutionMetricsNode
             {

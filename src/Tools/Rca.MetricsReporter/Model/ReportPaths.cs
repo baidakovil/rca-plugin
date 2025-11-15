@@ -25,5 +25,11 @@ public sealed class ReportPaths
     /// Path to the generated HTML dashboard.
     /// </summary>
     public string Html { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Optional path to the thresholds definition file used for the report.
+    /// </summary>
+    public string? Thresholds { get; init; }
+        = null;
 }
 

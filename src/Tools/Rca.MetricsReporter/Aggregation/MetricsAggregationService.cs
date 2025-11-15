@@ -66,12 +66,15 @@ public sealed class MetricsAggregationService
 
         workspace.ApplyBaselineAndThresholds(input.Baseline, input.Thresholds);
 
+        var (thresholdLevels, thresholdDescriptions) = CreateMetadataThresholds(input.Thresholds);
+
         var metadata = new ReportMetadata
         {
             GeneratedAtUtc = DateTime.UtcNow,
             BaselineReference = input.BaselineReference,
             Paths = input.Paths,
-            Thresholds = new Dictionary<MetricIdentifier, MetricThreshold>(input.Thresholds),
+            ThresholdsByLevel = thresholdLevels,
+            ThresholdDescriptions = thresholdDescriptions,
             ExcludedMethodNames = _memberFilter.GetExcludedMethodNamesString(),
             ExcludedAssemblyNames = _assemblyFilter.GetExcludedAssemblyPatternsString()
         };
@@ -82,6 +85,67 @@ public sealed class MetricsAggregationService
             Solution = workspace.Solution
         };
     }
+
+    /// <summary>
+    /// Creates metadata structures from threshold definitions for report serialization.
+    /// </summary>
+    /// <param name="thresholds">The threshold definitions to process.</param>
+    /// <returns>
+    /// A tuple containing:
+    /// - Thresholds grouped by symbol level
+    /// - Metric descriptions
+    /// </returns>
+    /// <remarks>
+    /// This method transforms the detailed threshold definitions into metadata structures:
+    /// - Per-level thresholds preserve all symbol-level distinctions
+    /// - Descriptions are extracted for tooltip display in HTML reports
+    /// </remarks>
+    private static (Dictionary<MetricIdentifier, IDictionary<MetricSymbolLevel, MetricThreshold>> ThresholdsByLevel,
+        Dictionary<MetricIdentifier, string?> Descriptions) CreateMetadataThresholds(
+        IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds)
+    {
+        var perLevelResult = new Dictionary<MetricIdentifier, IDictionary<MetricSymbolLevel, MetricThreshold>>();
+        var descriptions = new Dictionary<MetricIdentifier, string?>();
+
+        foreach (var (identifier, definition) in thresholds)
+        {
+            descriptions[identifier] = definition.Description;
+            var clonedLevels = CloneThresholdLevels(definition.Levels);
+            perLevelResult[identifier] = clonedLevels;
+        }
+
+        return (perLevelResult, descriptions);
+    }
+
+    /// <summary>
+    /// Clones all threshold levels from a definition to create an independent copy.
+    /// </summary>
+    /// <param name="levels">The threshold levels to clone.</param>
+    /// <returns>A new dictionary with cloned threshold values.</returns>
+    private static Dictionary<MetricSymbolLevel, MetricThreshold> CloneThresholdLevels(
+        IDictionary<MetricSymbolLevel, MetricThreshold> levels)
+    {
+        var clonedLevels = new Dictionary<MetricSymbolLevel, MetricThreshold>();
+        foreach (var (level, threshold) in levels)
+        {
+            clonedLevels[level] = CloneThreshold(threshold);
+        }
+
+        return clonedLevels;
+    }
+
+    /// <summary>
+    /// Creates a deep copy of a threshold value.
+    /// </summary>
+    /// <param name="threshold">The threshold to clone.</param>
+    /// <returns>A new threshold instance with the same values.</returns>
+    private static MetricThreshold CloneThreshold(MetricThreshold threshold)
+        => new()
+        {
+            Warning = threshold.Warning,
+            Error = threshold.Error,
+            HigherIsBetter = threshold.HigherIsBetter
+        };
 
     private sealed class AggregationWorkspace
     {
@@ -140,86 +204,76 @@ public sealed class MetricsAggregationService
             }
         }
 
+        /// <summary>
+        /// Builds line-based indexes for members and types to enable efficient lookup by file path and line number.
+        /// </summary>
+        /// <remarks>
+        /// This method processes all members and types, filtering out excluded assemblies,
+        /// and creates sorted indexes for fast retrieval during SARIF document processing.
+        /// </remarks>
         public void BuildLineIndex()
+        {
+            IndexMembers();
+            IndexTypes();
+            SortLineIndexes();
+        }
+
+        /// <summary>
+        /// Indexes all members by their source file path and line numbers.
+        /// </summary>
+        /// <remarks>
+        /// Members from excluded assemblies are skipped. The method validates source information
+        /// and resolves assembly membership before adding to the index.
+        /// </remarks>
+        private void IndexMembers()
         {
             foreach (var member in _members.Values)
             {
-                if (member.Source?.Path is null)
+                if (!HasValidSource(member.Source))
                 {
                     continue;
                 }
 
-                if (!member.Source.StartLine.HasValue)
+                if (ShouldExcludeMember(member))
                 {
                     continue;
                 }
 
-                // Skip members from excluded assemblies
-                if (member.FullyQualifiedName is not null)
-                {
-                    var memberTypeFqn = ResolveDeclaringType(member.FullyQualifiedName);
-                    if (memberTypeFqn is not null && _types.TryGetValue(memberTypeFqn, out var memberTypeEntry))
-                    {
-                        var assemblyName = memberTypeEntry.Assembly.FullyQualifiedName;
-                        if (assemblyName is not null && (_assemblyFilter.ShouldExcludeAssembly(assemblyName) || !_assemblies.ContainsKey(assemblyName)))
-                        {
-                            continue;
-                        }
-                    }
-                    else
-                    {
-                        // If we can't resolve the assembly, try to extract it from FQN
-                        var assemblyName = ResolveAssemblyNameFromFqn(member.FullyQualifiedName);
-                        if (assemblyName is not null && (_assemblyFilter.ShouldExcludeAssembly(assemblyName) || !_assemblies.ContainsKey(assemblyName)))
-                        {
-                            continue;
-                        }
-                    }
-                }
-
-                var start = member.Source.StartLine.Value;
-                var end = member.Source.EndLine ?? start;
-                var normalizedPath = NormalizePath(member.Source.Path);
-
-                if (!_memberLineIndex.TryGetValue(normalizedPath, out var list))
-                {
-                    list = new List<IndexedNode>();
-                    _memberLineIndex[normalizedPath] = list;
-                }
-
-                list.Add(new IndexedNode(member, start, end));
-                RegisterFileAssembly(normalizedPath, member);
+                AddToMemberLineIndex(member);
             }
+        }
 
+        /// <summary>
+        /// Indexes all types by their source file path and line numbers.
+        /// </summary>
+        /// <remarks>
+        /// Types from excluded assemblies are skipped. The method validates source information
+        /// before adding to the index.
+        /// </remarks>
+        private void IndexTypes()
+        {
             foreach (var typeEntry in _types.Values)
             {
                 var type = typeEntry.Node;
-                if (type.Source?.Path is null || type.Source.StartLine is null)
+                if (!HasValidSource(type.Source))
                 {
                     continue;
                 }
 
-                // Skip types from excluded assemblies
-                var assemblyName = typeEntry.Assembly.FullyQualifiedName;
-                if (assemblyName is not null && (_assemblyFilter.ShouldExcludeAssembly(assemblyName) || !_assemblies.ContainsKey(assemblyName)))
+                if (ShouldExcludeType(typeEntry))
                 {
                     continue;
                 }
 
-                var start = type.Source.StartLine.Value;
-                var end = type.Source.EndLine ?? start;
-                var normalizedPath = NormalizePath(type.Source.Path);
-
-                if (!_typeLineIndex.TryGetValue(normalizedPath, out var list))
-                {
-                    list = new List<IndexedNode>();
-                    _typeLineIndex[normalizedPath] = list;
-                }
-
-                list.Add(new IndexedNode(type, start, end));
-                RegisterFileAssembly(normalizedPath, typeEntry.Assembly);
+                AddToTypeLineIndex(type, typeEntry);
             }
+        }
 
+        /// <summary>
+        /// Sorts all line indexes by start line number for efficient binary search.
+        /// </summary>
+        private void SortLineIndexes()
+        {
             foreach (var list in _memberLineIndex.Values)
             {
                 list.Sort(static (a, b) => a.StartLine.CompareTo(b.StartLine));
@@ -229,6 +283,137 @@ public sealed class MetricsAggregationService
             {
                 list.Sort(static (a, b) => a.StartLine.CompareTo(b.StartLine));
             }
+        }
+
+        /// <summary>
+        /// Checks if a source location has valid path and start line information.
+        /// </summary>
+        /// <param name="source">The source location to validate.</param>
+        /// <returns><see langword="true"/> if the source has a path and start line; otherwise, <see langword="false"/>.</returns>
+        private static bool HasValidSource(SourceLocation? source)
+            => source?.Path is not null && source.StartLine.HasValue;
+
+        /// <summary>
+        /// Determines if a member should be excluded from indexing based on assembly membership.
+        /// </summary>
+        /// <param name="member">The member to check.</param>
+        /// <returns><see langword="true"/> if the member should be excluded; otherwise, <see langword="false"/>.</returns>
+        /// <remarks>
+        /// A member is excluded if it belongs to an excluded assembly or if its assembly
+        /// is not present in the solution. The method attempts to resolve the assembly through
+        /// the member's declaring type, or by extracting it from the fully qualified name.
+        /// </remarks>
+        private bool ShouldExcludeMember(MemberMetricsNode member)
+        {
+            if (member.FullyQualifiedName is null)
+            {
+                return false;
+            }
+
+            var assemblyName = ResolveMemberAssemblyName(member);
+            return assemblyName is not null && ShouldExcludeAssembly(assemblyName);
+        }
+
+        /// <summary>
+        /// Resolves the assembly name for a member by checking its declaring type or extracting from FQN.
+        /// </summary>
+        /// <param name="member">The member to resolve.</param>
+        /// <returns>The assembly name if found; otherwise, <see langword="null"/>.</returns>
+        private string? ResolveMemberAssemblyName(MemberMetricsNode member)
+        {
+            var memberTypeFqn = ResolveDeclaringType(member.FullyQualifiedName!);
+            if (memberTypeFqn is not null && _types.TryGetValue(memberTypeFqn, out var memberTypeEntry))
+            {
+                return memberTypeEntry.Assembly.FullyQualifiedName;
+            }
+
+            // If we can't resolve the assembly through type, try to extract it from FQN
+            // FullyQualifiedName is guaranteed to be non-null here due to check in ShouldExcludeMember
+            return ResolveAssemblyNameFromFqn(member.FullyQualifiedName!);
+        }
+
+        /// <summary>
+        /// Determines if an assembly should be excluded from indexing.
+        /// </summary>
+        /// <param name="assemblyName">The assembly name to check.</param>
+        /// <returns><see langword="true"/> if the assembly should be excluded; otherwise, <see langword="false"/>.</returns>
+        private bool ShouldExcludeAssembly(string? assemblyName)
+        {
+            if (assemblyName is null)
+            {
+                return false;
+            }
+
+            return _assemblyFilter.ShouldExcludeAssembly(assemblyName) || !_assemblies.ContainsKey(assemblyName);
+        }
+
+        /// <summary>
+        /// Determines if a type should be excluded from indexing based on assembly membership.
+        /// </summary>
+        /// <param name="typeEntry">The type entry to check.</param>
+        /// <returns><see langword="true"/> if the type should be excluded; otherwise, <see langword="false"/>.</returns>
+        private bool ShouldExcludeType(TypeEntry typeEntry)
+        {
+            var assemblyName = typeEntry.Assembly.FullyQualifiedName;
+            return ShouldExcludeAssembly(assemblyName);
+        }
+
+        /// <summary>
+        /// Adds a member to the line index for its source file.
+        /// </summary>
+        /// <param name="member">The member to index.</param>
+        /// <remarks>
+        /// Creates the index entry if it doesn't exist, then adds the member with its line range.
+        /// Also registers the file-to-assembly mapping for SARIF processing.
+        /// </remarks>
+        private void AddToMemberLineIndex(MemberMetricsNode member)
+        {
+            var start = member.Source!.StartLine!.Value;
+            var end = member.Source.EndLine ?? start;
+            var normalizedPath = NormalizePath(member.Source.Path!);
+
+            var list = GetOrCreateIndexList(_memberLineIndex, normalizedPath);
+            list.Add(new IndexedNode(member, start, end));
+            RegisterFileAssembly(normalizedPath, member);
+        }
+
+        /// <summary>
+        /// Adds a type to the line index for its source file.
+        /// </summary>
+        /// <param name="type">The type node to index.</param>
+        /// <param name="typeEntry">The type entry containing assembly information.</param>
+        /// <remarks>
+        /// Creates the index entry if it doesn't exist, then adds the type with its line range.
+        /// Also registers the file-to-assembly mapping for SARIF processing.
+        /// </remarks>
+        private void AddToTypeLineIndex(TypeMetricsNode type, TypeEntry typeEntry)
+        {
+            var start = type.Source!.StartLine!.Value;
+            var end = type.Source.EndLine ?? start;
+            var normalizedPath = NormalizePath(type.Source.Path!);
+
+            var list = GetOrCreateIndexList(_typeLineIndex, normalizedPath);
+            list.Add(new IndexedNode(type, start, end));
+            RegisterFileAssembly(normalizedPath, typeEntry.Assembly);
+        }
+
+        /// <summary>
+        /// Gets an existing index list or creates a new one for the specified path.
+        /// </summary>
+        /// <param name="index">The dictionary containing the index.</param>
+        /// <param name="path">The normalized file path.</param>
+        /// <returns>The list of indexed nodes for the path.</returns>
+        private static List<IndexedNode> GetOrCreateIndexList(
+            Dictionary<string, List<IndexedNode>> index,
+            string path)
+        {
+            if (!index.TryGetValue(path, out var list))
+            {
+                list = new List<IndexedNode>();
+                index[path] = list;
+            }
+
+            return list;
         }
 
         public void ApplySarifDocument(ParsedMetricsDocument document)
@@ -278,7 +463,9 @@ public sealed class MetricsAggregationService
             }
         }
 
-        public void ApplyBaselineAndThresholds(MetricsReport? baseline, IDictionary<MetricIdentifier, MetricThreshold> thresholds)
+        public void ApplyBaselineAndThresholds(
+            MetricsReport? baseline,
+            IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds)
         {
             var baselineLookup = CreateBaselineLookup(baseline?.Solution);
             ApplyBaselineRecursive(Solution, baselineLookup, thresholds, Solution.Name);
@@ -1039,7 +1226,11 @@ public sealed class MetricsAggregationService
             }
         }
 
-        private void ApplyBaselineRecursive(MetricsNode node, IReadOnlyDictionary<string, MetricsNode> baselineLookup, IDictionary<MetricIdentifier, MetricThreshold> thresholds, string path)
+        private void ApplyBaselineRecursive(
+            MetricsNode node,
+            IReadOnlyDictionary<string, MetricsNode> baselineLookup,
+            IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds,
+            string path)
         {
             baselineLookup.TryGetValue(path, out var baselineNode);
 
@@ -1048,7 +1239,12 @@ public sealed class MetricsAggregationService
                 node.IsNew = baselineNode is null;
             }
 
-            node.Metrics = ApplyMetricsBaseline(node.Metrics, baselineNode?.Metrics ?? new Dictionary<MetricIdentifier, MetricValue>(), thresholds);
+            var symbolLevel = DetermineSymbolLevel(node);
+            node.Metrics = ApplyMetricsBaseline(
+                node.Metrics,
+                baselineNode?.Metrics ?? new Dictionary<MetricIdentifier, MetricValue>(),
+                thresholds,
+                symbolLevel);
 
             switch (node)
             {
@@ -1086,7 +1282,8 @@ public sealed class MetricsAggregationService
         private IDictionary<MetricIdentifier, MetricValue> ApplyMetricsBaseline(
             IDictionary<MetricIdentifier, MetricValue> metrics,
             IDictionary<MetricIdentifier, MetricValue> baselineMetrics,
-            IDictionary<MetricIdentifier, MetricThreshold> thresholds)
+            IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds,
+            MetricSymbolLevel symbolLevel)
         {
             var result = new Dictionary<MetricIdentifier, MetricValue>();
             foreach (var identifier in Enum.GetValues<MetricIdentifier>())
@@ -1099,7 +1296,7 @@ public sealed class MetricsAggregationService
                     ? value.Value - baselineValue
                     : (decimal?)null;
 
-                var status = EvaluateStatus(identifier, value, thresholds);
+                var status = EvaluateStatus(identifier, value, thresholds, symbolLevel);
 
                 result[identifier] = new MetricValue
                 {
@@ -1113,14 +1310,33 @@ public sealed class MetricsAggregationService
             return result;
         }
 
-        private static ThresholdStatus EvaluateStatus(MetricIdentifier identifier, decimal? value, IDictionary<MetricIdentifier, MetricThreshold> thresholds)
+        private static ThresholdStatus EvaluateStatus(
+            MetricIdentifier identifier,
+            decimal? value,
+            IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds,
+            MetricSymbolLevel symbolLevel)
         {
             if (!value.HasValue)
             {
                 return ThresholdStatus.NotApplicable;
             }
 
-            if (!thresholds.TryGetValue(identifier, out var threshold))
+            if (!thresholds.TryGetValue(identifier, out var definition))
+            {
+                return ThresholdStatus.NotApplicable;
+            }
+
+            var levels = definition.Levels;
+
+            if (!levels.TryGetValue(symbolLevel, out var threshold))
+            {
+                if (!levels.TryGetValue(MetricSymbolLevel.Type, out threshold))
+                {
+                    return ThresholdStatus.NotApplicable;
+                }
+            }
+
+            if (!threshold.Warning.HasValue && !threshold.Error.HasValue)
             {
                 return ThresholdStatus.NotApplicable;
             }
@@ -1130,24 +1346,24 @@ public sealed class MetricsAggregationService
 
             if (threshold.HigherIsBetter)
             {
-                if (error.HasValue && value < error)
+                if (error.HasValue && value <= error)
                 {
                     return ThresholdStatus.Error;
                 }
 
-                if (warning.HasValue && value < warning)
+                if (warning.HasValue && value <= warning)
                 {
                     return ThresholdStatus.Warning;
                 }
             }
             else
             {
-                if (error.HasValue && value > error)
+                if (error.HasValue && value >= error)
                 {
                     return ThresholdStatus.Error;
                 }
 
-                if (warning.HasValue && value > warning)
+                if (warning.HasValue && value >= warning)
                 {
                     return ThresholdStatus.Warning;
                 }
@@ -1155,6 +1371,17 @@ public sealed class MetricsAggregationService
 
             return ThresholdStatus.Success;
         }
+
+        private static MetricSymbolLevel DetermineSymbolLevel(MetricsNode node)
+            => node switch
+            {
+                SolutionMetricsNode => MetricSymbolLevel.Solution,
+                AssemblyMetricsNode => MetricSymbolLevel.Assembly,
+                NamespaceMetricsNode => MetricSymbolLevel.Namespace,
+                TypeMetricsNode => MetricSymbolLevel.Type,
+                MemberMetricsNode => MetricSymbolLevel.Member,
+                _ => MetricSymbolLevel.Member
+            };
 
         private sealed record NamespaceEntry(NamespaceMetricsNode Node, AssemblyMetricsNode Assembly);
 

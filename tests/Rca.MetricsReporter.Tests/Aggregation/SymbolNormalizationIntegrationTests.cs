@@ -33,6 +33,9 @@ public sealed class SymbolNormalizationIntegrationTests
         service = new MetricsAggregationService();
     }
 
+    private static Dictionary<MetricIdentifier, MetricThresholdDefinition> CreateEmptyThresholds()
+        => new();
+
     [Test]
     public async Task BuildReport_AltCoverAndRoslynSameMethod_MergesIntoOneEntry()
     {
@@ -66,7 +69,7 @@ public sealed class SymbolNormalizationIntegrationTests
             RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
             SarifDocuments = new List<ParsedMetricsDocument>(),
             Baseline = null,
-            Thresholds = new Dictionary<MetricIdentifier, MetricThreshold>(),
+            Thresholds = CreateEmptyThresholds(),
             Paths = new ReportPaths
             {
                 MetricsDirectory = @"C:\Test\Metrics",
@@ -139,7 +142,7 @@ public sealed class SymbolNormalizationIntegrationTests
             RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
             SarifDocuments = new List<ParsedMetricsDocument>(),
             Baseline = null,
-            Thresholds = new Dictionary<MetricIdentifier, MetricThreshold>(),
+            Thresholds = CreateEmptyThresholds(),
             Paths = new ReportPaths
             {
                 MetricsDirectory = @"C:\Test\Metrics",
@@ -206,7 +209,7 @@ public sealed class SymbolNormalizationIntegrationTests
             RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
             SarifDocuments = new List<ParsedMetricsDocument>(),
             Baseline = null,
-            Thresholds = new Dictionary<MetricIdentifier, MetricThreshold>(),
+            Thresholds = CreateEmptyThresholds(),
             Paths = new ReportPaths
             {
                 MetricsDirectory = @"C:\Test\Metrics",
@@ -273,7 +276,7 @@ public sealed class SymbolNormalizationIntegrationTests
             RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
             SarifDocuments = new List<ParsedMetricsDocument>(),
             Baseline = null,
-            Thresholds = new Dictionary<MetricIdentifier, MetricThreshold>(),
+            Thresholds = CreateEmptyThresholds(),
             Paths = new ReportPaths
             {
                 MetricsDirectory = @"C:\Test\Metrics",
@@ -340,7 +343,7 @@ public sealed class SymbolNormalizationIntegrationTests
             RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
             SarifDocuments = new List<ParsedMetricsDocument>(),
             Baseline = null,
-            Thresholds = new Dictionary<MetricIdentifier, MetricThreshold>(),
+            Thresholds = CreateEmptyThresholds(),
             Paths = new ReportPaths
             {
                 MetricsDirectory = @"C:\Test\Metrics",
@@ -408,7 +411,7 @@ public sealed class SymbolNormalizationIntegrationTests
             RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
             SarifDocuments = new List<ParsedMetricsDocument>(),
             Baseline = null,
-            Thresholds = new Dictionary<MetricIdentifier, MetricThreshold>(),
+            Thresholds = CreateEmptyThresholds(),
             Paths = new ReportPaths
             {
                 MetricsDirectory = @"C:\Test\Metrics",
@@ -476,7 +479,7 @@ public sealed class SymbolNormalizationIntegrationTests
             RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
             SarifDocuments = new List<ParsedMetricsDocument>(),
             Baseline = null,
-            Thresholds = new Dictionary<MetricIdentifier, MetricThreshold>(),
+            Thresholds = CreateEmptyThresholds(),
             Paths = new ReportPaths
             {
                 MetricsDirectory = @"C:\Test\Metrics",
@@ -544,7 +547,7 @@ public sealed class SymbolNormalizationIntegrationTests
             RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
             SarifDocuments = new List<ParsedMetricsDocument>(),
             Baseline = null,
-            Thresholds = new Dictionary<MetricIdentifier, MetricThreshold>(),
+            Thresholds = CreateEmptyThresholds(),
             Paths = new ReportPaths
             {
                 MetricsDirectory = @"C:\Test\Metrics",
@@ -612,7 +615,7 @@ public sealed class SymbolNormalizationIntegrationTests
             RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
             SarifDocuments = new List<ParsedMetricsDocument>(),
             Baseline = null,
-            Thresholds = new Dictionary<MetricIdentifier, MetricThreshold>(),
+            Thresholds = CreateEmptyThresholds(),
             Paths = new ReportPaths
             {
                 MetricsDirectory = @"C:\Test\Metrics",
