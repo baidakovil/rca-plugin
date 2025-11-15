@@ -317,14 +317,14 @@ internal static class HtmlStylesGenerator
 
     private static void AppendTooltipStyles(StringBuilder builder)
     {
-        builder.AppendLine(".metric-tooltip { position: absolute; z-index: 1200; background: rgba(28, 28, 28, 0.95); color: #f8f8f8; padding: 10px 12px; border-radius: 6px; max-width: 320px; font-size: 12px; line-height: 1.4; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25); pointer-events: none; backdrop-filter: blur(4px); }");
-        builder.AppendLine(".metric-tooltip__desc { margin: 0 0 4px 0; font-size: 12px; }");
-        builder.AppendLine(".metric-tooltip__direction { margin: 0 0 6px 0; font-size: 11px; opacity: 0.9; }");
-        builder.AppendLine(".metric-tooltip__heading { margin: 0 0 4px 0; font-size: 11px; letter-spacing: 0.02em; text-transform: uppercase; opacity: 0.85; }");
+        builder.AppendLine(".metric-tooltip { position: absolute; z-index: 1200; background: rgba(245, 245, 245, 0.98); color: #1a1a1a; padding: 10px 12px; border-radius: 6px; max-width: 320px; font-size: 12px; line-height: 1.4; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15); pointer-events: none; border: 1px solid rgba(0, 0, 0, 0.1); }");
+        builder.AppendLine(".metric-tooltip__desc { margin: 0 0 4px 0; font-size: 12px; color: #333; }");
+        builder.AppendLine(".metric-tooltip__direction { margin: 0 0 6px 0; font-size: 12px; color: #555; }");
+        builder.AppendLine(".metric-tooltip__heading { margin: 0 0 4px 0; font-size: 11px; letter-spacing: 0.02em; text-transform: uppercase; color: #222; }");
         builder.AppendLine(".metric-tooltip__list { margin: 0; padding: 0; list-style: none; }");
         builder.AppendLine(".metric-tooltip__list li { margin: 0; padding: 0; display: flex; gap: 6px; }");
-        builder.AppendLine(".metric-tooltip__list li span { color: #d2e4ff; font-variant-numeric: tabular-nums; }");
-        builder.AppendLine(".metric-tooltip strong { font-weight: 600; }");
+        builder.AppendLine(".metric-tooltip__list li span { color: #0066cc; font-variant-numeric: tabular-nums; }");
+        builder.AppendLine(".metric-tooltip strong { font-weight: 600; color: #1a1a1a; }");
         builder.AppendLine(".metric-tooltip em { font-style: italic; }");
     }
 }
