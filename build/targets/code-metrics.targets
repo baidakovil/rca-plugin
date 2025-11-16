@@ -99,6 +99,13 @@
     
     <Message Text="Coverage collected successfully to $(RcaCoverageOutputFile)" Importance="High" Condition="'$(CoverageFileCreated)' == 'true'" />
     
+    <!-- Copy coverage file to storage location to prevent coverage data from being overwritten during builds -->
+    <Copy SourceFiles="$(RcaCoverageOutputFile)" 
+          DestinationFiles="$(RcaCoverageStorageFile)" 
+          Condition="'$(CoverageFileCreated)' == 'true'" 
+          SkipUnchangedFiles="true" />
+    <Message Text="Coverage file copied to storage location: $(RcaCoverageStorageFile)" Importance="Normal" Condition="'$(CoverageFileCreated)' == 'true'" />
+    
     <!-- Recreate signal file after collection to allow continuous coverage collection -->
     <PropertyGroup>
       <CoverageHtmlDir>$(AltCoverOutputDir)\html</CoverageHtmlDir>
@@ -153,7 +160,7 @@
     </ItemGroup>
 
     <PropertyGroup Condition="'$(GenerateHtmlFromJson)' != 'true'">
-      <MetricsReporterAltCoverArg Condition="Exists('$(RcaCoverageOutputFile)')"> --altcover &quot;$(RcaCoverageOutputFile)&quot;</MetricsReporterAltCoverArg>
+      <MetricsReporterAltCoverArg Condition="Exists('$(RcaCoverageStorageFile)')"> --altcover &quot;$(RcaCoverageStorageFile)&quot;</MetricsReporterAltCoverArg>
       <MetricsReporterRoslynArgs>@(RoslynMetricsFiles->' --roslyn &quot;%(FullPath)&quot;', ' ')</MetricsReporterRoslynArgs>
       <MetricsReporterSarifArgs>@(SarifMetricsFiles->' --sarif &quot;%(FullPath)&quot;', ' ')</MetricsReporterSarifArgs>
       <MetricsReporterBaselineArg Condition="Exists('$(MetricsBaselineJson)')"> --baseline &quot;$(MetricsBaselineJson)&quot;</MetricsReporterBaselineArg>

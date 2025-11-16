@@ -44,6 +44,8 @@
     <RcaCoverageOutputFile Condition="'$(RcaCoverageOutputFile)' == ''">$(AltCoverOutputDir)\$(CoverageOutputFileName)</RcaCoverageOutputFile>
     <!-- Path to AltCover signal file-->
     <AltCoverSignalFile Condition="'$(AltCoverSignalFile)' == ''">$(AltCoverOutputDir)\$(CoverageOutputFileName).acv</AltCoverSignalFile>
+    <!-- Path to stored coverage file that won't be overwritten during builds -->
+    <RcaCoverageStorageFile Condition="'$(RcaCoverageStorageFile)' == ''">$(AltCoverOutputDir)\coverage_storage.xml</RcaCoverageStorageFile>
 
     <!-- Path to Revit API libs (RevitAPI.dll, RevitAPIUI.dll) -->
     <RcaRevitLibsPath Condition="'$(RcaRevitLibsPath)' == ''">$(SolutionDir)libs\Revit\$(RcaRevitVersion)</RcaRevitLibsPath>
@@ -80,6 +82,7 @@
     <CompilerVisibleProperty Include="MetricsBaselineReference" />
     <CompilerVisibleProperty Include="MetricsReportStoragePath" />
     <CompilerVisibleProperty Include="RcaCoverageOutputFile" />
+    <CompilerVisibleProperty Include="RcaCoverageStorageFile" />
     <CompilerVisibleProperty Include="RcaRevitLibsPath" />
     <CompilerVisibleProperty Include="RcaAddinTemplatePath" />
     <CompilerVisibleProperty Include="RcaAddinAssemblyRelativePath" />
