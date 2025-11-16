@@ -17,17 +17,17 @@ public sealed class MetricsAggregationInput
     /// <summary>
     /// AltCover/OpenCover documents.
     /// </summary>
-    public IList<ParsedMetricsDocument> AltCoverDocuments { get; init; } = new List<ParsedMetricsDocument>();
+    public IList<ParsedMetricsDocument> AltCoverDocuments { get; init; } = [];
 
     /// <summary>
     /// Roslyn code metrics documents.
     /// </summary>
-    public IList<ParsedMetricsDocument> RoslynDocuments { get; init; } = new List<ParsedMetricsDocument>();
+    public IList<ParsedMetricsDocument> RoslynDocuments { get; init; } = [];
 
     /// <summary>
     /// SARIF documents.
     /// </summary>
-    public IList<ParsedMetricsDocument> SarifDocuments { get; init; } = new List<ParsedMetricsDocument>();
+    public IList<ParsedMetricsDocument> SarifDocuments { get; init; } = [];
 
     /// <summary>
     /// Baseline report used to compute deltas. Can be <see langword="null"/>.

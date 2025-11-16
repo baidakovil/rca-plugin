@@ -22,17 +22,9 @@ public sealed class AltCoverMetricsParser : IMetricsSourceParser
     {
         ArgumentNullException.ThrowIfNull(path);
 
-        await using var stream = System.IO.File.OpenRead(path);
-        var document = await XDocument.LoadAsync(stream, LoadOptions.None, cancellationToken).ConfigureAwait(false);
-
-        var coverageSession = document.Element(XmlNamespace + "CoverageSession")
-                             ?? throw new InvalidOperationException("CoverageSession root element not found.");
-
-        var modules = coverageSession
-            .Element(XmlNamespace + "Modules")
-            ?.Elements(XmlNamespace + "Module")
-            ?? Enumerable.Empty<XElement>();
-
+        var document = await LoadXmlDocumentAsync(path, cancellationToken).ConfigureAwait(false);
+        var coverageSession = ExtractCoverageSession(document);
+        var modules = ExtractModules(coverageSession);
         var elements = modules.SelectMany(ParseModule).ToList();
 
         return new ParsedMetricsDocument
@@ -40,6 +32,43 @@ public sealed class AltCoverMetricsParser : IMetricsSourceParser
             SolutionName = string.Empty,
             Elements = elements
         };
+    }
+
+    /// <summary>
+    /// Loads an XML document from the specified file path.
+    /// </summary>
+    /// <param name="path">Path to the XML file.</param>
+    /// <param name="cancellationToken">Cancellation token for async operations.</param>
+    /// <returns>The loaded XML document.</returns>
+    private static async Task<XDocument> LoadXmlDocumentAsync(string path, CancellationToken cancellationToken)
+    {
+        await using var stream = System.IO.File.OpenRead(path);
+        return await XDocument.LoadAsync(stream, LoadOptions.None, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Extracts the CoverageSession root element from the XML document.
+    /// </summary>
+    /// <param name="document">The XML document to extract from.</param>
+    /// <returns>The CoverageSession element.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when CoverageSession root element is not found.</exception>
+    private static XElement ExtractCoverageSession(XDocument document)
+    {
+        return document.Element(XmlNamespace + "CoverageSession")
+               ?? throw new InvalidOperationException("CoverageSession root element not found.");
+    }
+
+    /// <summary>
+    /// Extracts module elements from the CoverageSession element.
+    /// </summary>
+    /// <param name="coverageSession">The CoverageSession element containing modules.</param>
+    /// <returns>Enumerable collection of Module elements.</returns>
+    private static IEnumerable<XElement> ExtractModules(XElement coverageSession)
+    {
+        return coverageSession
+            .Element(XmlNamespace + "Modules")
+            ?.Elements(XmlNamespace + "Module")
+            ?? Enumerable.Empty<XElement>();
     }
 
     private static IEnumerable<ParsedCodeElement> ParseModule(XElement module)

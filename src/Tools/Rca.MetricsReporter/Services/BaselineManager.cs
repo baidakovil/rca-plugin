@@ -2,67 +2,94 @@ namespace Rca.Tools.MetricsReporter.Services;
 
 using System;
 using System.IO;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Rca.Tools.MetricsReporter.Logging;
 
 /// <summary>
-/// Manages baseline file replacement by comparing reports and archiving old baselines.
+/// Manages baseline file operations: creating baseline from previous report and replacing baseline with new report (including archiving old baselines).
 /// </summary>
 public sealed class BaselineManager
 {
     /// <summary>
-    /// Compares two JSON files using hash comparison to determine if they differ.
+    /// Creates baseline from previous report if baseline doesn't exist.
     /// </summary>
-    /// <param name="reportPath">Path to the new metrics report JSON file.</param>
-    /// <param name="baselinePath">Path to the existing baseline JSON file.</param>
-    /// <param name="cancellationToken">Cancellation token for async operations.</param>
-    /// <returns>
-    /// <see langword="true"/> if the files differ or if baseline doesn't exist; <see langword="false"/> if files are identical.
-    /// </returns>
-    /// <remarks>
-    /// This method uses SHA256 hash comparison for fast and reliable file comparison.
-    /// If the baseline file doesn't exist, the method returns <see langword="true"/> to indicate replacement is needed.
-    /// </remarks>
-    public async Task<bool> AreFilesDifferentAsync(string reportPath, string? baselinePath, CancellationToken cancellationToken)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(reportPath);
-
-        if (!File.Exists(reportPath))
-        {
-            throw new FileNotFoundException($"Report file not found: {reportPath}", reportPath);
-        }
-
-        if (string.IsNullOrWhiteSpace(baselinePath) || !File.Exists(baselinePath))
-        {
-            // Baseline doesn't exist, so files are considered different
-            return true;
-        }
-
-        var reportHash = await ComputeFileHashAsync(reportPath, cancellationToken).ConfigureAwait(false);
-        var baselineHash = await ComputeFileHashAsync(baselinePath, cancellationToken).ConfigureAwait(false);
-
-        return !reportHash.Equals(baselineHash, StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <summary>
-    /// Replaces the baseline file by archiving the old baseline and moving the new report to baseline location.
-    /// </summary>
-    /// <param name="reportPath">Path to the new metrics report JSON file that will become the baseline.</param>
-    /// <param name="baselinePath">Path to the existing baseline JSON file that will be replaced.</param>
-    /// <param name="storagePath">Directory path where the old baseline will be archived with a timestamp.</param>
+    /// <param name="previousReportPath">Path to the previous metrics report JSON file that will become the baseline.</param>
+    /// <param name="baselinePath">Path to the baseline JSON file that will be created.</param>
     /// <param name="logger">Logger instance for recording operations.</param>
     /// <param name="cancellationToken">Cancellation token for async operations.</param>
     /// <returns>
-    /// <see langword="true"/> if baseline was replaced; <see langword="false"/> if replacement was not needed or failed.
+    /// <see langword="true"/> if baseline was created successfully; <see langword="false"/> if baseline already exists, report file doesn't exist, or operation failed.
+    /// </returns>
+    /// <remarks>
+    /// This method creates baseline from previous report only if baseline doesn't exist.
+    /// This allows new report to be generated with deltas calculated against the previous report.
+    /// </remarks>
+    public async Task<bool> CreateBaselineFromPreviousReportAsync(
+        string previousReportPath,
+        string baselinePath,
+        FileLogger logger,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(previousReportPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(baselinePath);
+        ArgumentNullException.ThrowIfNull(logger);
+
+        // Don't create baseline if it already exists
+        if (File.Exists(baselinePath))
+        {
+            logger.LogInformation($"Baseline already exists at: {baselinePath}. Skipping creation from previous report.");
+            return false;
+        }
+
+        if (!File.Exists(previousReportPath))
+        {
+            logger.LogInformation($"Previous report file not found: {previousReportPath}. Baseline will not be created.");
+            return false;
+        }
+
+        try
+        {
+            // Ensure baseline directory exists
+            var baselineDir = Path.GetDirectoryName(baselinePath);
+            if (!string.IsNullOrWhiteSpace(baselineDir) && !Directory.Exists(baselineDir))
+            {
+                Directory.CreateDirectory(baselineDir);
+                logger.LogInformation($"Created baseline directory: {baselineDir}");
+            }
+
+            // Copy previous report to baseline location
+            await CopyFileAsync(previousReportPath, baselinePath, cancellationToken).ConfigureAwait(false);
+            logger.LogInformation($"Baseline created from previous report: {baselinePath} <- {previousReportPath}");
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Failed to create baseline from previous report: {ex.Message}", ex);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Replaces the baseline file by archiving the old baseline (if exists) and copying the new report to baseline location.
+    /// </summary>
+    /// <param name="reportPath">Path to the metrics report JSON file that will become the baseline.</param>
+    /// <param name="baselinePath">Path to the baseline JSON file that will be created or replaced.</param>
+    /// <param name="storagePath">Directory path where the old baseline will be archived with a timestamp (if baseline exists).</param>
+    /// <param name="logger">Logger instance for recording operations.</param>
+    /// <param name="cancellationToken">Cancellation token for async operations.</param>
+    /// <returns>
+    /// <see langword="true"/> if baseline was created or replaced successfully; <see langword="false"/> if report file doesn't exist or operation failed.
     /// </returns>
     /// <remarks>
     /// This method performs the following steps:
-    /// 1. If old baseline exists, it is moved to storage directory with a timestamp suffix for unique filename.
-    /// 2. The new report file is copied (not moved) to the baseline location to preserve the original report.
-    /// 3. All operations are logged for traceability.
+    /// 1. Validates that the report file exists (returns false if not).
+    /// 2. If old baseline exists, it is moved to storage directory with a timestamp suffix for unique filename.
+    /// 3. The new report file is copied (not moved) to the baseline location to preserve the original report.
+    /// 4. All operations are logged for traceability.
+    /// 
+    /// Note: This method does not compare files. The report is always copied to baseline location if it exists.
     /// </remarks>
     public async Task<bool> ReplaceBaselineAsync(
         string reportPath,
@@ -108,21 +135,6 @@ public sealed class BaselineManager
             logger.LogError($"Failed to replace baseline: {ex.Message}", ex);
             return false;
         }
-    }
-
-    /// <summary>
-    /// Computes SHA256 hash of a file for fast comparison.
-    /// </summary>
-    /// <param name="filePath">Path to the file to hash.</param>
-    /// <param name="cancellationToken">Cancellation token for async operations.</param>
-    /// <returns>Hexadecimal string representation of the file hash.</returns>
-    private static async Task<string> ComputeFileHashAsync(string filePath, CancellationToken cancellationToken)
-    {
-        await using var stream = File.OpenRead(filePath);
-        using var sha256 = SHA256.Create();
-
-        var hashBytes = await sha256.ComputeHashAsync(stream, cancellationToken).ConfigureAwait(false);
-        return Convert.ToHexString(hashBytes);
     }
 
     /// <summary>

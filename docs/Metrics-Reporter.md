@@ -106,8 +106,53 @@ Metrics Reporter — консольное приложение .NET 8, объе�
   - Создает каталог отчётов (`$(MetricsDir)\Report`) и записывает JSON/HTML + лог.
 - Благодаря этому, после стандартного `dotnet build --no-incremental` в `build/Metrics/Report` автоматически появляются `metrics-report.json` и `metrics-report.html`.
 
+### Автоматическое управление Baseline
+
+Система автоматического управления baseline создает `metrics-baseline.json` из предыдущего отчета перед генерацией нового отчета, обеспечивая автоматический расчет дельт между запусками.
+
+#### Настройка
+
+В `build/Props/code-metrics.props` установите:
+```xml
+<ReplaceMetricsBaseline>true</ReplaceMetricsBaseline>
+```
+
+#### Логика работы
+
+1. **Создание baseline из предыдущего отчета (если baseline не существует)**: 
+   - Если `ReplaceMetricsBaseline=true`, путь к baseline задан, но baseline не существует, система проверяет наличие предыдущего `metrics-report.json`.
+   - Если предыдущий отчет существует, он копируется в `metrics-baseline.json` **ДО генерации нового отчета**.
+   - Это позволяет новому отчету сразу генерироваться с дельтами, рассчитанными относительно предыдущего отчета.
+
+2. **Генерация нового отчета**: Создается новый `metrics-report.json` с текущими метриками на основе baseline (если он существует или был создан на шаге 1).
+
+3. **Архивация и замена baseline**: После генерации нового отчета, если `ReplaceMetricsBaseline=true`:
+   - Если старый baseline существует, он архивируется в директорию хранения (`MetricsReportStoragePath`, по умолчанию `C:\Users\<username>\AppData\Local\RCA\Metrics`) с добавлением timestamp к имени файла (формат: `metrics-baseline-YYYYMMDD-HHMMSS.json`).
+   - Новый `metrics-report.json` копируется в `metrics-baseline.json`, подготавливая baseline для следующего цикла генерации.
+
+4. **Завершение**: После замены baseline процесс завершается. При следующем запуске baseline будет создан из этого отчета (шаг 1), а текущий baseline будет заархивирован (шаг 3).
+
+#### Важные детали
+
+- **Порядок операций**: Baseline создается из предыдущего отчета **ДО** генерации нового отчета, чтобы новый отчет сразу строился на основе предыдущего.
+- **Без сравнений**: Система не сравнивает содержимое файлов. Если предыдущий отчет существует и baseline отсутствует, он становится baseline.
+- **Автоматическое создание**: При каждом запуске, если baseline не существует, он автоматически создается из предыдущего отчета. Это означает, что baseline всегда актуален и соответствует последнему сгенерированному отчету.
+- **Условие создания baseline из предыдущего отчета**: 
+  - `ReplaceMetricsBaseline=true`
+  - Путь к baseline задан (не null и не пустой)
+  - Baseline не существует
+  - Предыдущий `metrics-report.json` существует
+- **Путь к baseline**: Должен быть задан через параметр `--baseline` или MSBuild property `MetricsBaselineJson`. MSBuild target автоматически передает путь к baseline в `Rca.MetricsReporter` когда `ReplaceMetricsBaseline=true`, даже если файл еще не существует.
+
+#### Пример использования
+
+```bash
+# Включить автоматическое управление baseline
+dotnet msbuild rca-plugin.sln /t:Build /p:ReplaceMetricsBaseline=true
+```
+
 ### Дополнительно
-- Baseline хранится вручную, обновляется копированием свежего `metrics-report.json` поверх `metrics-baseline.json`.
+- **Автоматическое управление baseline**: При включенной опции `ReplaceMetricsBaseline=true` baseline автоматически создается из предыдущего отчета перед генерацией нового отчета. Подробности см. в разделе "Автоматическое управление Baseline" выше.
 - Приложение логирует шаги в `$(MetricsDir)\Report\metrics-reporter.log` и возвращает коды: 0 — OK, 1 — parsing error, 2 — IO error, 3 — validation error.
 - Пороговые значения хранятся в `build/MetricsRules/MetricsReporterThresholds.json`; путь до файла конфигурируется через `build/Props/paths.props` (свойство `MetricsThresholdsPath`) и передается агрегатору.
 

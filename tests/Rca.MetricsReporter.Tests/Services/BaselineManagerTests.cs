@@ -46,116 +46,6 @@ public sealed class BaselineManagerTests
     }
 
     [Test]
-    public async Task AreFilesDifferentAsync_WhenFilesAreIdentical_ReturnsFalse()
-    {
-        // Arrange
-        var reportPath = Path.Combine(testDirectory!, "report.json");
-        var baselinePath = Path.Combine(testDirectory!, "baseline.json");
-        const string content = """{"test": "data"}""";
-
-        await File.WriteAllTextAsync(reportPath, content);
-        await File.WriteAllTextAsync(baselinePath, content);
-
-        // Act
-        var result = await manager.AreFilesDifferentAsync(reportPath, baselinePath, CancellationToken.None).ConfigureAwait(false);
-
-        // Assert
-        result.Should().BeFalse();
-    }
-
-    [Test]
-    public async Task AreFilesDifferentAsync_WhenFilesDiffer_ReturnsTrue()
-    {
-        // Arrange
-        var reportPath = Path.Combine(testDirectory!, "report.json");
-        var baselinePath = Path.Combine(testDirectory!, "baseline.json");
-
-        await File.WriteAllTextAsync(reportPath, """{"test": "data1"}""");
-        await File.WriteAllTextAsync(baselinePath, """{"test": "data2"}""");
-
-        // Act
-        var result = await manager.AreFilesDifferentAsync(reportPath, baselinePath, CancellationToken.None).ConfigureAwait(false);
-
-        // Assert
-        result.Should().BeTrue();
-    }
-
-    [Test]
-    public async Task AreFilesDifferentAsync_WhenBaselineDoesNotExist_ReturnsTrue()
-    {
-        // Arrange
-        var reportPath = Path.Combine(testDirectory!, "report.json");
-        var baselinePath = Path.Combine(testDirectory!, "nonexistent.json");
-
-        await File.WriteAllTextAsync(reportPath, """{"test": "data"}""");
-
-        // Act
-        var result = await manager.AreFilesDifferentAsync(reportPath, baselinePath, CancellationToken.None).ConfigureAwait(false);
-
-        // Assert
-        result.Should().BeTrue();
-    }
-
-    [Test]
-    public async Task AreFilesDifferentAsync_WhenBaselinePathIsNull_ReturnsTrue()
-    {
-        // Arrange
-        var reportPath = Path.Combine(testDirectory!, "report.json");
-
-        await File.WriteAllTextAsync(reportPath, """{"test": "data"}""");
-
-        // Act
-        var result = await manager.AreFilesDifferentAsync(reportPath, null, CancellationToken.None).ConfigureAwait(false);
-
-        // Assert
-        result.Should().BeTrue();
-    }
-
-    [Test]
-    public async Task AreFilesDifferentAsync_WhenBaselinePathIsEmpty_ReturnsTrue()
-    {
-        // Arrange
-        var reportPath = Path.Combine(testDirectory!, "report.json");
-
-        await File.WriteAllTextAsync(reportPath, """{"test": "data"}""");
-
-        // Act
-        var result = await manager.AreFilesDifferentAsync(reportPath, string.Empty, CancellationToken.None).ConfigureAwait(false);
-
-        // Assert
-        result.Should().BeTrue();
-    }
-
-    [Test]
-    public async Task AreFilesDifferentAsync_WhenReportDoesNotExist_ThrowsFileNotFoundException()
-    {
-        // Arrange
-        var reportPath = Path.Combine(testDirectory!, "nonexistent.json");
-        var baselinePath = Path.Combine(testDirectory!, "baseline.json");
-
-        // Act & Assert
-        var act = async () => await manager.AreFilesDifferentAsync(reportPath, baselinePath, CancellationToken.None).ConfigureAwait(false);
-        await act.Should().ThrowAsync<FileNotFoundException>();
-    }
-
-    [Test]
-    public async Task AreFilesDifferentAsync_WhenFilesDifferByWhitespace_ReturnsTrue()
-    {
-        // Arrange
-        var reportPath = Path.Combine(testDirectory!, "report.json");
-        var baselinePath = Path.Combine(testDirectory!, "baseline.json");
-
-        await File.WriteAllTextAsync(reportPath, """{"test":"data"}""");
-        await File.WriteAllTextAsync(baselinePath, """{"test": "data"}""");
-
-        // Act
-        var result = await manager.AreFilesDifferentAsync(reportPath, baselinePath, CancellationToken.None).ConfigureAwait(false);
-
-        // Assert
-        result.Should().BeTrue();
-    }
-
-    [Test]
     public async Task ReplaceBaselineAsync_WhenBaselineExists_ArchivesOldBaselineAndReplacesIt()
     {
         // Arrange
@@ -401,22 +291,105 @@ public sealed class BaselineManagerTests
     }
 
     [Test]
-    public async Task AreFilesDifferentAsync_WhenCancelled_ThrowsOperationCancelledException()
+    public async Task CreateBaselineFromPreviousReportAsync_WhenBaselineDoesNotExist_CreatesBaseline()
     {
         // Arrange
-        var reportPath = Path.Combine(testDirectory!, "report.json");
+        var previousReportPath = Path.Combine(testDirectory!, "report.json");
         var baselinePath = Path.Combine(testDirectory!, "baseline.json");
 
-        await File.WriteAllTextAsync(reportPath, """{"test": "data"}""");
-        await File.WriteAllTextAsync(baselinePath, """{"test": "data"}""");
+        const string reportContent = """{"previous": "data"}""";
+        await File.WriteAllTextAsync(previousReportPath, reportContent);
 
-        using var cts = new CancellationTokenSource();
-        cts.Cancel();
+        using var logger = new FileLogger(logFilePath!);
 
-        // Act & Assert
-        var act = async () => await manager.AreFilesDifferentAsync(reportPath, baselinePath, cts.Token).ConfigureAwait(false);
-        await act.Should().ThrowAsync<OperationCanceledException>();
+        // Act
+        var result = await manager.CreateBaselineFromPreviousReportAsync(previousReportPath, baselinePath, logger, CancellationToken.None).ConfigureAwait(false);
+
+        // Assert
+        result.Should().BeTrue();
+        File.Exists(baselinePath).Should().BeTrue("baseline should be created");
+        var baselineContent = await File.ReadAllTextAsync(baselinePath);
+        baselineContent.Should().Be(reportContent, "baseline should contain previous report content");
     }
 
+    [Test]
+    public async Task CreateBaselineFromPreviousReportAsync_WhenBaselineExists_ReturnsFalse()
+    {
+        // Arrange
+        var previousReportPath = Path.Combine(testDirectory!, "report.json");
+        var baselinePath = Path.Combine(testDirectory!, "baseline.json");
+
+        await File.WriteAllTextAsync(previousReportPath, """{"previous": "data"}""");
+        await File.WriteAllTextAsync(baselinePath, """{"existing": "baseline"}""");
+
+        using var logger = new FileLogger(logFilePath!);
+
+        // Act
+        var result = await manager.CreateBaselineFromPreviousReportAsync(previousReportPath, baselinePath, logger, CancellationToken.None).ConfigureAwait(false);
+
+        // Assert
+        result.Should().BeFalse("should not create baseline if it already exists");
+        var baselineContent = await File.ReadAllTextAsync(baselinePath);
+        baselineContent.Should().Be("""{"existing": "baseline"}""", "existing baseline should not be modified");
+    }
+
+    [Test]
+    public async Task CreateBaselineFromPreviousReportAsync_WhenPreviousReportDoesNotExist_ReturnsFalse()
+    {
+        // Arrange
+        var previousReportPath = Path.Combine(testDirectory!, "report.json");
+        var baselinePath = Path.Combine(testDirectory!, "baseline.json");
+
+        using var logger = new FileLogger(logFilePath!);
+
+        // Act
+        var result = await manager.CreateBaselineFromPreviousReportAsync(previousReportPath, baselinePath, logger, CancellationToken.None).ConfigureAwait(false);
+
+        // Assert
+        result.Should().BeFalse("should not create baseline if previous report doesn't exist");
+        File.Exists(baselinePath).Should().BeFalse("baseline should not be created");
+    }
+
+    [Test]
+    public async Task CreateBaselineFromPreviousReportAsync_WhenBaselineDirectoryDoesNotExist_CreatesIt()
+    {
+        // Arrange
+        var previousReportPath = Path.Combine(testDirectory!, "report.json");
+        var baselineDir = Path.Combine(testDirectory!, "subdir");
+        var baselinePath = Path.Combine(baselineDir, "baseline.json");
+
+        await File.WriteAllTextAsync(previousReportPath, """{"previous": "data"}""");
+
+        using var logger = new FileLogger(logFilePath!);
+
+        // Act
+        var result = await manager.CreateBaselineFromPreviousReportAsync(previousReportPath, baselinePath, logger, CancellationToken.None).ConfigureAwait(false);
+
+        // Assert
+        result.Should().BeTrue();
+        Directory.Exists(baselineDir).Should().BeTrue("baseline directory should be created");
+        File.Exists(baselinePath).Should().BeTrue("baseline should be created");
+    }
+
+    [Test]
+    public async Task CreateBaselineFromPreviousReportAsync_PreservesOriginalReportFile()
+    {
+        // Arrange
+        var previousReportPath = Path.Combine(testDirectory!, "report.json");
+        var baselinePath = Path.Combine(testDirectory!, "baseline.json");
+
+        const string reportContent = """{"previous": "data"}""";
+        await File.WriteAllTextAsync(previousReportPath, reportContent);
+
+        using var logger = new FileLogger(logFilePath!);
+
+        // Act
+        await manager.CreateBaselineFromPreviousReportAsync(previousReportPath, baselinePath, logger, CancellationToken.None).ConfigureAwait(false);
+
+        // Assert
+        File.Exists(previousReportPath).Should().BeTrue("original report file should still exist");
+        var originalContent = await File.ReadAllTextAsync(previousReportPath);
+        originalContent.Should().Be(reportContent, "original report content should be preserved");
+    }
 }
 
