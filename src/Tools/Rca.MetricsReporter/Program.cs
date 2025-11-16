@@ -57,6 +57,7 @@ static MetricsReporterOptions ParseArguments(string[] args)
     string? excludedAssemblyNames = null;
     bool replaceBaseline = false;
     string? baselineStoragePath = null;
+    string? coverageHtmlDir = null;
 
     for (var index = 0; index < args.Length; index++)
     {
@@ -111,6 +112,9 @@ static MetricsReporterOptions ParseArguments(string[] args)
             case "--baseline-storage-path":
                 baselineStoragePath = RequireValue(args, ref index, argument);
                 break;
+            case "--coverage-html-dir":
+                coverageHtmlDir = RequireValue(args, ref index, argument);
+                break;
             default:
                 throw new ArgumentException($"Unknown argument '{argument}'. Use --help to view usage.", argument);
         }
@@ -156,7 +160,8 @@ static MetricsReporterOptions ParseArguments(string[] args)
         ExcludedMethodNames = excludedMethodNames,
         ExcludedAssemblyNames = excludedAssemblyNames,
         ReplaceMetricsBaseline = replaceBaseline,
-        MetricsReportStoragePath = baselineStoragePath is null ? null : Path.GetFullPath(baselineStoragePath)
+        MetricsReportStoragePath = baselineStoragePath is null ? null : Path.GetFullPath(baselineStoragePath),
+        CoverageHtmlDir = coverageHtmlDir is null ? null : Path.GetFullPath(coverageHtmlDir)
     };
 }
 

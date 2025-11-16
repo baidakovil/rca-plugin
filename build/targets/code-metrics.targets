@@ -106,11 +106,6 @@
           SkipUnchangedFiles="true" />
     <Message Text="Coverage file copied to storage location: $(RcaCoverageStorageFile)" Importance="Normal" Condition="'$(CoverageFileCreated)' == 'true'" />
     
-    <!-- Recreate signal file after collection to allow continuous coverage collection -->
-    <PropertyGroup>
-      <CoverageHtmlDir>$(AltCoverOutputDir)\html</CoverageHtmlDir>
-    </PropertyGroup>
-    
     <!-- Recreate signal file to enable continuous coverage collection -->
     <WriteLinesToFile File="$(AltCoverSignalFile)" Lines="" Overwrite="true" Condition="'$(CoverageFileCreated)' == 'true'" />
     <Message Text="Signal file recreated at $(AltCoverSignalFile) for continuous coverage collection" Importance="Normal" Condition="'$(CoverageFileCreated)' == 'true'" />
@@ -170,7 +165,8 @@
       <MetricsReporterExcludedAssembliesArg Condition="'$(ExcludedAssemblyNames)' != ''"> --excluded-assemblies &quot;$(ExcludedAssemblyNames)&quot;</MetricsReporterExcludedAssembliesArg>
       <MetricsReporterReplaceBaselineArg Condition="'$(ReplaceMetricsBaseline)' == 'true'"> --replace-baseline</MetricsReporterReplaceBaselineArg>
       <MetricsReporterBaselineStoragePathArg Condition="'$(ReplaceMetricsBaseline)' == 'true' and '$(MetricsReportStoragePath)' != ''"> --baseline-storage-path &quot;$(MetricsReportStoragePath)&quot;</MetricsReporterBaselineStoragePathArg>
-      <MetricsReporterCommand>&quot;$(MetricsReporterExe)&quot; --solution-name &quot;$(MetricsSolutionName)&quot; --metrics-dir &quot;$(RcaMetricsDir)&quot;$(MetricsReporterAltCoverArg)$(MetricsReporterRoslynArgs)$(MetricsReporterSarifArgs)$(MetricsReporterBaselineArg)$(MetricsReporterBaselineRefArg) --output-json &quot;$(MetricsReportJson)&quot; --output-html &quot;$(MetricsReportHtml)&quot;$(MetricsReporterThresholdArg)$(MetricsReporterExcludedMethodsArg)$(MetricsReporterExcludedAssembliesArg)$(MetricsReporterReplaceBaselineArg)$(MetricsReporterBaselineStoragePathArg)</MetricsReporterCommand>
+      <MetricsReporterCoverageHtmlDirArg Condition="Exists('$(CoverageHtmlDir)')"> --coverage-html-dir &quot;$(CoverageHtmlDir)&quot;</MetricsReporterCoverageHtmlDirArg>
+      <MetricsReporterCommand>&quot;$(MetricsReporterExe)&quot; --solution-name &quot;$(MetricsSolutionName)&quot; --metrics-dir &quot;$(RcaMetricsDir)&quot;$(MetricsReporterAltCoverArg)$(MetricsReporterRoslynArgs)$(MetricsReporterSarifArgs)$(MetricsReporterBaselineArg)$(MetricsReporterBaselineRefArg) --output-json &quot;$(MetricsReportJson)&quot; --output-html &quot;$(MetricsReportHtml)&quot;$(MetricsReporterThresholdArg)$(MetricsReporterExcludedMethodsArg)$(MetricsReporterExcludedAssembliesArg)$(MetricsReporterReplaceBaselineArg)$(MetricsReporterBaselineStoragePathArg)$(MetricsReporterCoverageHtmlDirArg)</MetricsReporterCommand>
     </PropertyGroup>
 
     <Message Text="Generating HTML report from existing JSON: $(InputJsonFile)" Importance="High" Condition="'$(GenerateHtmlFromJson)' == 'true' and Exists('$(MetricsReporterExe)')" />

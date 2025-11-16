@@ -379,7 +379,7 @@ public sealed class MetricsReporterApplication
             await _reportWriter.WriteJsonAsync(report, options.OutputJsonPath, cancellationToken).ConfigureAwait(false);
             if (!string.IsNullOrWhiteSpace(options.OutputHtmlPath))
             {
-                var html = _htmlGenerator.Generate(report);
+                var html = _htmlGenerator.Generate(report, options.CoverageHtmlDir);
                 await _reportWriter.WriteHtmlAsync(html, options.OutputHtmlPath, cancellationToken).ConfigureAwait(false);
             }
 

@@ -41,8 +41,9 @@ public sealed class HtmlReportGenerator
     /// The layout is a minimalistic table similar to Visual Studio Code Code Metrics Results.
     /// </summary>
     /// <param name="report">The metrics report to generate HTML for.</param>
+    /// <param name="coverageHtmlDir">Optional path to HTML coverage reports directory for generating hyperlinks.</param>
     /// <returns>Complete HTML document as a string.</returns>
-    public string Generate(MetricsReport report)
+    public string Generate(MetricsReport report, string? coverageHtmlDir = null)
     {
         ArgumentNullException.ThrowIfNull(report);
 
@@ -65,7 +66,7 @@ public sealed class HtmlReportGenerator
 
         // Table section
         var tableGenerator = new HtmlTableGenerator(MetricOrder);
-        builder.Append(tableGenerator.Generate(report));
+        builder.Append(tableGenerator.Generate(report, coverageHtmlDir));
 
         var thresholdPayload = CreateThresholdPayload(report.Metadata);
         if (!string.IsNullOrEmpty(thresholdPayload))
