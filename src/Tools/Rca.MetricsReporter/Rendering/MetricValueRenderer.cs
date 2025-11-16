@@ -31,6 +31,9 @@ internal static class MetricValueRenderer
         if (value.Delta.HasValue && value.Delta.Value != 0)
         {
             var deltaText = FormatDelta(value.Delta.Value, value.Unit);
+            // WHY: JavaScript applies correct colors (delta-improving/delta-degrading) based on
+            // higherIsBetter flag from threshold data. Temporary classes are used only to mark
+            // delta elements for JavaScript processing.
             var deltaClass = value.Delta.Value >= 0 ? "delta-positive" : "delta-negative";
             builder.Append($"<sup class=\"{deltaClass}\">{WebUtility.HtmlEncode(deltaText)}</sup>");
         }

@@ -249,7 +249,7 @@ internal sealed class HtmlTableGenerator
             node.Metrics.TryGetValue(mid, out var val);
             var status = val is null ? "na" : val.Status.ToString().ToLowerInvariant();
             var hasDelta = val is not null && val.Delta.HasValue && val.Delta.Value != 0;
-            builder.AppendLine($"      <{metricTag} class=\"metric\" data-col=\"{mid}\" data-status=\"{status}\" data-has-delta=\"{(hasDelta ? "true" : "false")}\">{MetricValueRenderer.Render(val)}</{metricTag}>");
+            builder.AppendLine($"      <{metricTag} class=\"metric\" data-col=\"{mid}\" data-status=\"{status}\" data-has-delta=\"{(hasDelta ? "true" : "false")}\" data-metric-id=\"{mid}\">{MetricValueRenderer.Render(val)}</{metricTag}>");
         }
     }
 }

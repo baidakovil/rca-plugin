@@ -148,8 +148,11 @@ internal static class HtmlStylesGenerator
         builder.AppendLine(FormattableString.Invariant($".badge-new {{ background: {BadgeNewBackgroundColor}; color: {BadgeNewForegroundColor}; font-size: {CompactBadgeFontSize}; }}"));
         builder.AppendLine(FormattableString.Invariant($".status-warning {{ background: {StatusWarningBackgroundColor}; color: {StatusWarningColor}; font-size: {CompactBadgeFontSize}; padding: {CompactBadgePadding}; }}"));
         builder.AppendLine(FormattableString.Invariant($".status-error {{ background: {StatusErrorBackgroundColor}; color: {StatusErrorColor}; font-size: {CompactBadgeFontSize}; padding: {CompactBadgePadding}; }}"));
-        builder.AppendLine(FormattableString.Invariant($".delta-positive {{ color: {BadgeNewBackgroundColor}; margin-left: {DeltaSpacing}; }}"));
-        builder.AppendLine(FormattableString.Invariant($".delta-negative {{ color: {StatusErrorColor}; margin-left: {DeltaSpacing}; }}"));
+        // WHY: Delta colors signal "movement to better", not just positive/negative.
+        // Green = improving (moving to better), Red = degrading (moving to worse).
+        // Classes are applied by JavaScript based on higherIsBetter flag from threshold data.
+        builder.AppendLine(FormattableString.Invariant($".delta-improving {{ color: {BadgeNewBackgroundColor}; margin-left: {DeltaSpacing}; }}"));
+        builder.AppendLine(FormattableString.Invariant($".delta-degrading {{ color: {StatusErrorColor}; margin-left: {DeltaSpacing}; }}"));
         builder.AppendLine(".fqn { font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; color: rgba(128, 128, 128, 0.8); }");
     }
 

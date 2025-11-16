@@ -286,7 +286,8 @@ internal static class HtmlScriptGenerator
           if(metrics[i].dataset && metrics[i].dataset.hasDelta === 'true'){
             hasDelta = true;
           } else {
-            var deltaElement = metrics[i].querySelector('.delta-positive, .delta-negative');
+            // WHY: Check for both legacy temporary classes and final classes after JavaScript processing
+            var deltaElement = metrics[i].querySelector('.delta-positive, .delta-negative, .delta-improving, .delta-degrading');
             if(deltaElement){
               hasDelta = true;
             }
@@ -763,6 +764,36 @@ internal static class HtmlScriptGenerator
 
   refreshState();
 
+  // WHY: Apply correct delta colors based on higherIsBetter flag from threshold data.
+  // Delta colors should signal ""movement to better"", not just positive/negative.
+  // Green = improving (moving to better), Red = degrading (moving to worse).
+  function applyDeltaColors(){
+    if(!thresholdData || !table){
+      return;
+    }
+    var metricCells = table.querySelectorAll('.metric[data-metric-id]');
+    metricCells.forEach(function(cell){
+      var metricId = cell.dataset.metricId;
+      if(!metricId || !thresholdData[metricId]){
+        return;
+      }
+      var higherIsBetter = thresholdData[metricId].higherIsBetter;
+      if(typeof higherIsBetter !== 'boolean'){
+        return;
+      }
+      // WHY: Determine delta sign from CSS class (delta-positive/delta-negative) which is set
+      // based on the actual numeric value in MetricValueRenderer. This is more reliable than
+      // parsing text content and avoids fragility from formatting changes.
+      var deltas = cell.querySelectorAll('.delta-positive, .delta-negative');
+      deltas.forEach(function(delta){
+        var isPositive = delta.classList.contains('delta-positive');
+        var isImproving = higherIsBetter ? isPositive : !isPositive;
+        delta.classList.remove('delta-positive', 'delta-negative');
+        delta.classList.add(isImproving ? 'delta-improving' : 'delta-degrading');
+      });
+    });
+  }
+
   // Initialize all rows: expand all nodes by default, set detail level to Type (2)
   // WHY: Users expect to see expanded tree structure and Type detail level by default
   // for better overview of the metrics hierarchy
@@ -787,6 +818,9 @@ internal static class HtmlScriptGenerator
   }
   setAwarenessLevel(awarenessControl ? awarenessControl.value : '1');
   applyStateFilters();
+  
+  // Apply delta colors based on higherIsBetter flag
+  applyDeltaColors();
 
   if(detailControl){
     detailControl.addEventListener('input', handleDetailChange);
