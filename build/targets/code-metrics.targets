@@ -163,7 +163,7 @@
       <MetricsReporterAltCoverArg Condition="Exists('$(RcaCoverageStorageFile)')"> --altcover &quot;$(RcaCoverageStorageFile)&quot;</MetricsReporterAltCoverArg>
       <MetricsReporterRoslynArgs>@(RoslynMetricsFiles->' --roslyn &quot;%(FullPath)&quot;', ' ')</MetricsReporterRoslynArgs>
       <MetricsReporterSarifArgs>@(SarifMetricsFiles->' --sarif &quot;%(FullPath)&quot;', ' ')</MetricsReporterSarifArgs>
-      <MetricsReporterBaselineArg Condition="Exists('$(MetricsBaselineJson)')"> --baseline &quot;$(MetricsBaselineJson)&quot;</MetricsReporterBaselineArg>
+      <MetricsReporterBaselineArg Condition="'$(ReplaceMetricsBaseline)' == 'true' or Exists('$(MetricsBaselineJson)')"> --baseline &quot;$(MetricsBaselineJson)&quot;</MetricsReporterBaselineArg>
       <MetricsReporterBaselineRefArg Condition="'$(MetricsBaselineReference)' != ''"> --baseline-ref &quot;$(MetricsBaselineReference)&quot;</MetricsReporterBaselineRefArg>
       <MetricsReporterThresholdArg Condition="Exists('$(MetricsThresholdsPath)')"> --thresholds-file &quot;$(MetricsThresholdsPath)&quot;</MetricsReporterThresholdArg>
       <MetricsReporterExcludedMethodsArg Condition="'$(ExcludedMethodNames)' != ''"> --excluded-methods &quot;$(ExcludedMethodNames)&quot;</MetricsReporterExcludedMethodsArg>

@@ -631,9 +631,18 @@ public sealed class MetricsReporterApplication
                 return false;
             }
 
-            logger.LogInformation("New report differs from existing baseline. Proceeding with baseline replacement...");
+            // Log appropriate message based on whether baseline exists
+            var baselineExists = File.Exists(options.BaselinePath);
+            if (baselineExists)
+            {
+                logger.LogInformation("New report differs from existing baseline. Proceeding with baseline replacement...");
+            }
+            else
+            {
+                logger.LogInformation("Baseline file does not exist. Creating new baseline from current report...");
+            }
 
-            // Replace baseline: archive old one and copy new report to baseline location
+            // Replace baseline: archive old one (if exists) and copy new report to baseline location
             var replaced = await _baselineManager.ReplaceBaselineAsync(
                 options.OutputJsonPath,
                 options.BaselinePath,
@@ -643,7 +652,8 @@ public sealed class MetricsReporterApplication
 
             if (replaced)
             {
-                logger.LogInformation($"Baseline successfully replaced at: {options.BaselinePath}");
+                var action = baselineExists ? "replaced" : "created";
+                logger.LogInformation($"Baseline successfully {action} at: {options.BaselinePath}");
             }
 
             return replaced;
