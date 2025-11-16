@@ -33,7 +33,26 @@ public sealed class ThresholdsParserTests
     public void Parse_CustomOverrides_UpdatesSpecifiedMetrics()
     {
         // Arrange
-        const string customJson = "{'AltCoverSequenceCoverage':{'warning':80,'error':70,'higherIsBetter':true},'SarifCaRuleViolations':{'warning':1,'error':2,'higherIsBetter':false}}";
+        const string customJson = """
+        {
+          "metrics": [
+            {
+              "name": "AltCoverSequenceCoverage",
+              "higherIsBetter": true,
+              "symbolThresholds": {
+                "Type": { "warning": 80, "error": 70 }
+              }
+            },
+            {
+              "name": "SarifCaRuleViolations",
+              "higherIsBetter": false,
+              "symbolThresholds": {
+                "Type": { "warning": 1, "error": 2 }
+              }
+            }
+          ]
+        }
+        """;
 
         // Act
         var result = parser.Parse(customJson);
