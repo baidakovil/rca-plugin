@@ -286,7 +286,7 @@ internal static class HtmlScriptGenerator
           if(metrics[i].dataset && metrics[i].dataset.hasDelta === 'true'){
             hasDelta = true;
           } else {
-            // WHY: Check for both legacy temporary classes and final classes after JavaScript processing
+            // WHY: Check for temporary classes (before JavaScript processing) and final classes (after processing)
             var deltaElement = metrics[i].querySelector('.delta-positive, .delta-negative, .delta-improving, .delta-degrading');
             if(deltaElement){
               hasDelta = true;

@@ -154,11 +154,6 @@ internal static class HtmlStylesGenerator
         builder.AppendLine(FormattableString.Invariant($".delta-improving {{ color: {BadgeNewBackgroundColor}; margin-left: {DeltaSpacing}; }}"));
         builder.AppendLine(FormattableString.Invariant($".delta-degrading {{ color: {StatusErrorColor}; margin-left: {DeltaSpacing}; }}"));
         builder.AppendLine(".fqn { font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; color: rgba(128, 128, 128, 0.8); }");
-        // WHY: Coverage links for types should have subtle underlining to indicate they are clickable.
-        // Semi-transparent underline provides visual indication without being too prominent.
-        // Type links should be black (not blue) to match the visual style of type names.
-        builder.AppendLine(".coverage-link { text-decoration: underline; text-decoration-color: rgba(204, 0, 0, 0.3); text-underline-offset: 2px; }");
-        builder.AppendLine(".coverage-link:hover { text-decoration-color: rgba(204, 0, 0, 0.6); }");
         // WHY: Coverage links for type nodes (non-leaf) should have black semi-transparent underlining
         // to match the text color while indicating clickability.
         builder.AppendLine(".coverage-link-type { color: inherit; text-decoration: underline; text-decoration-color: rgba(0, 0, 0, 0.3); text-underline-offset: 2px; }");
