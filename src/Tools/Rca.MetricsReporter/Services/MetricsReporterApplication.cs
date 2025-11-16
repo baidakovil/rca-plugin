@@ -30,6 +30,7 @@ public sealed class MetricsReporterApplication
     private readonly MetricsAggregationService _aggregationService;
     private readonly HtmlReportGenerator _htmlGenerator = new();
     private readonly ReportWriter _reportWriter = new();
+    private readonly JsonReportLoader _jsonReportLoader = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MetricsReporterApplication"/> class.
@@ -491,6 +492,37 @@ public sealed class MetricsReporterApplication
         FileLogger logger,
         CancellationToken cancellationToken)
     {
+        var validationResult = ValidateHtmlGenerationOptions(options, logger);
+        if (validationResult != MetricsReporterExitCode.Success)
+        {
+            return validationResult;
+        }
+
+        try
+        {
+            var report = await LoadReportForHtmlGenerationAsync(options, logger, cancellationToken).ConfigureAwait(false);
+            if (report is null)
+            {
+                return MetricsReporterExitCode.ValidationError;
+            }
+
+            return await GenerateAndWriteHtmlAsync(report, options, logger, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            logger.LogError("Failed to write HTML output file.", ex);
+            return MetricsReporterExitCode.IoError;
+        }
+    }
+
+    /// <summary>
+    /// Validates options required for HTML generation from JSON.
+    /// </summary>
+    /// <param name="options">The options to validate.</param>
+    /// <param name="logger">The logger to use for error messages.</param>
+    /// <returns>The exit code indicating validation result.</returns>
+    private static MetricsReporterExitCode ValidateHtmlGenerationOptions(MetricsReporterOptions options, FileLogger logger)
+    {
         if (string.IsNullOrWhiteSpace(options.InputJsonPath))
         {
             logger.LogError("Input JSON path is required for HTML-only generation.");
@@ -503,50 +535,66 @@ public sealed class MetricsReporterApplication
             return MetricsReporterExitCode.ValidationError;
         }
 
-        if (!File.Exists(options.InputJsonPath))
-        {
-            logger.LogError($"Input JSON file not found: {options.InputJsonPath}");
-            return MetricsReporterExitCode.ValidationError;
-        }
+        return MetricsReporterExitCode.Success;
+    }
 
+    /// <summary>
+    /// Loads a metrics report from JSON for HTML generation.
+    /// </summary>
+    /// <param name="options">The options containing the JSON file path.</param>
+    /// <param name="logger">The logger to use for progress messages.</param>
+    /// <param name="cancellationToken">Cancellation token for async operations.</param>
+    /// <returns>The loaded metrics report, or <see langword="null"/> if loading failed.</returns>
+    private async Task<MetricsReport?> LoadReportForHtmlGenerationAsync(
+        MetricsReporterOptions options,
+        FileLogger logger,
+        CancellationToken cancellationToken)
+    {
         try
         {
             logger.LogInformation($"Loading metrics report from: {options.InputJsonPath}");
-            await using var stream = File.OpenRead(options.InputJsonPath);
-            var report = await JsonSerializer.DeserializeAsync<MetricsReport>(
-                stream,
-                JsonSerializerOptionsFactory.Create(),
-                cancellationToken).ConfigureAwait(false);
+            var report = await _jsonReportLoader.LoadAsync(options.InputJsonPath!, cancellationToken).ConfigureAwait(false);
 
             if (report is null)
             {
                 logger.LogError("Failed to deserialize metrics report from JSON.");
-                return MetricsReporterExitCode.ValidationError;
+                return null;
             }
 
-            logger.LogInformation("Generating HTML report...");
-            var html = _htmlGenerator.Generate(report);
-            
-            var htmlDir = Path.GetDirectoryName(options.OutputHtmlPath);
-            if (!string.IsNullOrWhiteSpace(htmlDir) && !Directory.Exists(htmlDir))
-            {
-                Directory.CreateDirectory(htmlDir);
-            }
+            return report;
+        }
+        catch (FileNotFoundException ex)
+        {
+            logger.LogError($"Input JSON file not found: {ex.Message}", ex);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Failed to load JSON report: {ex.Message}", ex);
+            return null;
+        }
+    }
 
-            await _reportWriter.WriteHtmlAsync(html, options.OutputHtmlPath, cancellationToken).ConfigureAwait(false);
-            logger.LogInformation($"HTML report generated successfully: {options.OutputHtmlPath}");
-            return MetricsReporterExitCode.Success;
-        }
-        catch (JsonException ex)
-        {
-            logger.LogError($"Failed to deserialize JSON report: {ex.Message}", ex);
-            return MetricsReporterExitCode.ValidationError;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            logger.LogError("Failed to write HTML output file.", ex);
-            return MetricsReporterExitCode.IoError;
-        }
+    /// <summary>
+    /// Generates HTML from a metrics report and writes it to disk.
+    /// </summary>
+    /// <param name="report">The metrics report to generate HTML from.</param>
+    /// <param name="options">The options containing output path.</param>
+    /// <param name="logger">The logger to use for progress messages.</param>
+    /// <param name="cancellationToken">Cancellation token for async operations.</param>
+    /// <returns>The exit code indicating success or failure.</returns>
+    private async Task<MetricsReporterExitCode> GenerateAndWriteHtmlAsync(
+        MetricsReport report,
+        MetricsReporterOptions options,
+        FileLogger logger,
+        CancellationToken cancellationToken)
+    {
+        logger.LogInformation("Generating HTML report...");
+        var html = _htmlGenerator.Generate(report);
+
+        await _reportWriter.WriteHtmlAsync(html, options.OutputHtmlPath, cancellationToken).ConfigureAwait(false);
+        logger.LogInformation($"HTML report generated successfully: {options.OutputHtmlPath}");
+        return MetricsReporterExitCode.Success;
     }
 
     /// <summary>
