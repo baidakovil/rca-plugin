@@ -24,6 +24,8 @@
     <MetricsReporterProject Condition="'$(MetricsReporterProject)' == ''">$(SolutionDir)src\Tools\Rca.MetricsReporter\Rca.MetricsReporter.csproj</MetricsReporterProject>
     <MetricsReporterExe Condition="'$(MetricsReporterExe)' == ''">$(SolutionDir)src\Tools\Rca.MetricsReporter\bin\$(Configuration)\net8.0\Rca.MetricsReporter.exe</MetricsReporterExe>
     <MetricsBaselineReference Condition="'$(MetricsBaselineReference)' == ''"></MetricsBaselineReference>
+    <!-- Directory where old baseline files are archived with timestamps -->
+    <MetricsReportStoragePath Condition="'$(MetricsReportStoragePath)' == ''">$(LOCALAPPDATA)\RCA\Metrics</MetricsReportStoragePath>
 
 
 
@@ -76,6 +78,7 @@
     <CompilerVisibleProperty Include="MetricsReporterProject" />
     <CompilerVisibleProperty Include="MetricsReporterExe" />
     <CompilerVisibleProperty Include="MetricsBaselineReference" />
+    <CompilerVisibleProperty Include="MetricsReportStoragePath" />
     <CompilerVisibleProperty Include="RcaCoverageOutputFile" />
     <CompilerVisibleProperty Include="RcaRevitLibsPath" />
     <CompilerVisibleProperty Include="RcaAddinTemplatePath" />

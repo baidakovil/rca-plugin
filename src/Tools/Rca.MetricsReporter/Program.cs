@@ -55,6 +55,8 @@ static MetricsReporterOptions ParseArguments(string[] args)
     string? inputJson = null;
     string? excludedMethodNames = null;
     string? excludedAssemblyNames = null;
+    bool replaceBaseline = false;
+    string? baselineStoragePath = null;
 
     for (var index = 0; index < args.Length; index++)
     {
@@ -103,6 +105,12 @@ static MetricsReporterOptions ParseArguments(string[] args)
             case "--excluded-assemblies":
                 excludedAssemblyNames = RequireValue(args, ref index, argument);
                 break;
+            case "--replace-baseline":
+                replaceBaseline = true;
+                break;
+            case "--baseline-storage-path":
+                baselineStoragePath = RequireValue(args, ref index, argument);
+                break;
             default:
                 throw new ArgumentException($"Unknown argument '{argument}'. Use --help to view usage.", argument);
         }
@@ -146,7 +154,9 @@ static MetricsReporterOptions ParseArguments(string[] args)
         OutputHtmlPath = string.IsNullOrWhiteSpace(outputHtml) ? string.Empty : Path.GetFullPath(outputHtml),
         LogFilePath = logFilePath,
         ExcludedMethodNames = excludedMethodNames,
-        ExcludedAssemblyNames = excludedAssemblyNames
+        ExcludedAssemblyNames = excludedAssemblyNames,
+        ReplaceMetricsBaseline = replaceBaseline,
+        MetricsReportStoragePath = baselineStoragePath is null ? null : Path.GetFullPath(baselineStoragePath)
     };
 }
 
@@ -180,5 +190,9 @@ static void PrintUsage()
     Console.WriteLine("  --thresholds <json>     JSON string with metric thresholds.");
     Console.WriteLine("  --thresholds-file <path> Path to JSON file with symbol-level thresholds.");
     Console.WriteLine("  --input-json <path>     Path to existing metrics-report.json (generates HTML only).");
+    Console.WriteLine("  --replace-baseline      Automatically replace baseline if new report differs from existing baseline.");
+    Console.WriteLine("  --baseline-storage-path <path> Directory where old baseline files are archived with timestamps.");
+    Console.WriteLine("  --excluded-methods <list> Comma-separated or semicolon-separated list of method names to exclude.");
+    Console.WriteLine("  --excluded-assemblies <list> Comma-separated or semicolon-separated list of assembly patterns to exclude.");
 }
 

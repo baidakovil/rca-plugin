@@ -90,5 +90,24 @@ public sealed class MetricsReporterOptions
     /// Examples: "Tests,Test" or "Tests;Test". If not specified, no assemblies are excluded.
     /// </remarks>
     public string? ExcludedAssemblyNames { get; init; }
+
+    /// <summary>
+    /// When <see langword="true"/>, automatically replaces the baseline file if the new report differs from the existing baseline.
+    /// </summary>
+    /// <remarks>
+    /// If enabled, the application will compare the new metrics-report.json with the existing metrics-baseline.json.
+    /// If they differ, the old baseline will be archived to <see cref="MetricsReportStoragePath"/> with a timestamp,
+    /// and the new report will become the new baseline before generating the final report with deltas.
+    /// </remarks>
+    public bool ReplaceMetricsBaseline { get; init; }
+
+    /// <summary>
+    /// Directory path where old baseline files are archived with timestamps when baseline replacement is enabled.
+    /// </summary>
+    /// <remarks>
+    /// When baseline replacement occurs, the old baseline file is moved to this directory with a timestamp suffix
+    /// to ensure unique filenames. Defaults to <c>C:\Users\&lt;username&gt;\AppData\Local\RCA\Metrics</c>.
+    /// </remarks>
+    public string? MetricsReportStoragePath { get; init; }
 }
 

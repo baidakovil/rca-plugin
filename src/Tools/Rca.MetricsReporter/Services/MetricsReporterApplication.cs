@@ -26,6 +26,7 @@ public sealed class MetricsReporterApplication
     private readonly SarifMetricsParser _sarifParser = new();
     private readonly ThresholdsParser _thresholdsParser = new();
     private readonly BaselineLoader _baselineLoader = new();
+    private readonly BaselineManager _baselineManager = new();
     private readonly MetricsAggregationService _aggregationService;
     private readonly HtmlReportGenerator _htmlGenerator = new();
     private readonly ReportWriter _reportWriter = new();
@@ -93,10 +94,39 @@ public sealed class MetricsReporterApplication
             return MetricsReporterExitCode.ValidationError;
         }
 
+        // Write initial report to output location
         var writeResult = await WriteReportsAsync(report, options, logger, cancellationToken).ConfigureAwait(false);
         if (writeResult != MetricsReporterExitCode.Success)
         {
             return writeResult;
+        }
+
+        // Handle baseline replacement if enabled
+        if (options.ReplaceMetricsBaseline && !string.IsNullOrWhiteSpace(options.BaselinePath))
+        {
+            var baselineReplaced = await HandleBaselineReplacementAsync(options, logger, cancellationToken).ConfigureAwait(false);
+            
+            // If baseline was replaced, regenerate report with new baseline for correct deltas
+            if (baselineReplaced)
+            {
+                logger.LogInformation("Regenerating report with new baseline for accurate delta calculation...");
+                var newBaseline = await _baselineLoader.LoadAsync(options.BaselinePath, cancellationToken).ConfigureAwait(false);
+                var updatedAggregationInput = BuildAggregationInput(options, documentsResult, thresholdsResult.Thresholds, newBaseline);
+                var updatedReport = BuildReportWithLogging(updatedAggregationInput, options, logger);
+                
+                if (updatedReport is null)
+                {
+                    logger.LogError("Failed to regenerate report after baseline replacement.");
+                    return MetricsReporterExitCode.ValidationError;
+                }
+
+                // Rewrite reports with updated deltas
+                writeResult = await WriteReportsAsync(updatedReport, options, logger, cancellationToken).ConfigureAwait(false);
+                if (writeResult != MetricsReporterExitCode.Success)
+                {
+                    return writeResult;
+                }
+            }
         }
 
         logger.LogInformation("Metrics Reporter completed successfully.");
@@ -516,6 +546,64 @@ public sealed class MetricsReporterApplication
         {
             logger.LogError("Failed to write HTML output file.", ex);
             return MetricsReporterExitCode.IoError;
+        }
+    }
+
+    /// <summary>
+    /// Handles baseline replacement by comparing the new report with existing baseline.
+    /// </summary>
+    /// <param name="options">The metrics reporter options containing paths and configuration.</param>
+    /// <param name="logger">Logger instance for recording operations.</param>
+    /// <param name="cancellationToken">Cancellation token for async operations.</param>
+    /// <returns>
+    /// <see langword="true"/> if baseline was replaced; <see langword="false"/> if replacement was not needed.
+    /// </returns>
+    /// <remarks>
+    /// This method compares the newly generated metrics-report.json with the existing metrics-baseline.json.
+    /// If they differ, it archives the old baseline to storage and replaces it with the new report.
+    /// </remarks>
+    private async Task<bool> HandleBaselineReplacementAsync(
+        MetricsReporterOptions options,
+        FileLogger logger,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(options.BaselinePath);
+
+        try
+        {
+            // Compare new report with existing baseline
+            var areDifferent = await _baselineManager.AreFilesDifferentAsync(
+                options.OutputJsonPath,
+                options.BaselinePath,
+                cancellationToken).ConfigureAwait(false);
+
+            if (!areDifferent)
+            {
+                logger.LogInformation("New report is identical to existing baseline. Baseline replacement skipped.");
+                return false;
+            }
+
+            logger.LogInformation("New report differs from existing baseline. Proceeding with baseline replacement...");
+
+            // Replace baseline: archive old one and copy new report to baseline location
+            var replaced = await _baselineManager.ReplaceBaselineAsync(
+                options.OutputJsonPath,
+                options.BaselinePath,
+                options.MetricsReportStoragePath,
+                logger,
+                cancellationToken).ConfigureAwait(false);
+
+            if (replaced)
+            {
+                logger.LogInformation($"Baseline successfully replaced at: {options.BaselinePath}");
+            }
+
+            return replaced;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Error during baseline replacement: {ex.Message}", ex);
+            return false;
         }
     }
 }

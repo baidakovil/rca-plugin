@@ -34,6 +34,8 @@
     <GenerateMetricsDashboard Condition="'$(GenerateMetricsDashboard)' == ''">false</GenerateMetricsDashboard>
     <!-- When true, generates HTML from existing JSON without collecting metrics -->
     <GenerateHtmlFromJson Condition="'$(GenerateHtmlFromJson)' == ''">false</GenerateHtmlFromJson>
+    <!-- Set to true to enable automatic baseline replacement when metrics-report.json differs from metrics-baseline.json -->
+    <ReplaceMetricsBaseline Condition="'$(ReplaceMetricsBaseline)' == ''">true</ReplaceMetricsBaseline>
   </PropertyGroup>
 
   <ItemGroup>
@@ -42,6 +44,7 @@
     <CompilerVisibleProperty Include="AltCoverEnabled" />
     <CompilerVisibleProperty Include="GenerateMetricsDashboard" />
     <CompilerVisibleProperty Include="GenerateHtmlFromJson" />
+    <CompilerVisibleProperty Include="ReplaceMetricsBaseline" />
   </ItemGroup>
 </Project>
 
