@@ -22,7 +22,7 @@
   <!-- Metrics.exe will use already built projects or build them if needed -->
   <Target Name="GenerateSolutionMetrics" AfterTargets="Build" Condition="'$(DesignTimeBuild)' != 'true' and '$(RoslynMetricsEnabled)' == 'true' and '$(MSBuildProjectName)' == 'Rca.MetricsReporter.Tests'">
     <MakeDir Directories="$(RoslynOutputDir)" />
-    <Exec Command="&quot;$(RoslynMetricsToolExe)&quot; /solution:&quot;$(RoslynMetricsSolutionPath)&quot; /out:&quot;$(RoslynSolutionMetricsOutputFile)&quot; /quiet" WorkingDirectory="$(RoslynMetricsToolDir)" IgnoreExitCode="false" />
+    <Exec Command='"$(RoslynMetricsToolExe)" /solution:"$(RoslynMetricsSolutionPath)" /out:"$(RoslynSolutionMetricsOutputFile)" /quiet' WorkingDirectory="$(RoslynMetricsToolDir)" IgnoreExitCode="false" />
   </Target>
 
 
@@ -42,14 +42,14 @@
     
     <PropertyGroup>
       <AltCoverInputDir>$(RuntimeDeployDir)</AltCoverInputDir>
-      <!-- Method filter to exclude constructors (ctor) and static constructors (cctor) from coverage -->
+            <!-- Method filter to exclude constructors (ctor) and static constructors (cctor) from coverage -->
       <AltCoverMethodFilter Condition="'$(AltCoverMethodFilter)' == ''">.cctor|.ctor</AltCoverMethodFilter>
     </PropertyGroup>
 
     <!-- Run AltCover instrumentation in-place -->
     <!-- Using direct command execution instead of PowerShell wrapper for better parameter handling -->
     <Message Text="Instrumenting assemblies in $(AltCoverInputDir) with AltCover" Importance="High" />
-    <Exec Command="altcover --inputDirectory=&quot;$(AltCoverInputDir)&quot; --assemblyFilter=&quot;$(RcaCoverageAssemblyFilter)&quot; --methodFilter=&quot;$(AltCoverMethodFilter)&quot; --inplace --save --report=&quot;$(RcaCoverageOutputFile)&quot;" 
+    <Exec Command='altcover --inputDirectory="$(AltCoverInputDir)" --assemblyFilter="$(RcaCoverageAssemblyFilter)" --methodFilter="$(AltCoverMethodFilter)" --inplace --save --report="$(RcaCoverageOutputFile)"' 
           ContinueOnError="false" />
     <Message Text="AltCover instrumentation completed. Signal file: $(AltCoverSignalFile)" Importance="Normal" />
     
@@ -88,7 +88,7 @@
 
     <!-- Run AltCover runner to collect coverage -->
     <Message Text="Collecting coverage from $(AltCoverRecorderDir)..." Importance="High" />    
-    <Exec Command="altcover runner --collect --recorderDirectory=&quot;$(AltCoverRecorderDir)&quot;"
+    <Exec Command='altcover runner --collect --recorderDirectory="$(AltCoverRecorderDir)"'
           ContinueOnError="false" />
     
     <!-- Check if coverage file was created successfully -->
@@ -113,7 +113,7 @@
     <!-- Generate HTML report using reportgenerator -->
     <MakeDir Directories="$(CoverageHtmlDir)" Condition="'$(CoverageFileCreated)' == 'true'" />
     <Message Text="Generating HTML coverage report in $(CoverageHtmlDir)..." Importance="High" Condition="'$(CoverageFileCreated)' == 'true'" />
-    <Exec Command="reportgenerator -reports:&quot;$(RcaCoverageOutputFile)&quot; -targetdir:&quot;$(CoverageHtmlDir)&quot; -reporttypes:Html"
+    <Exec Command='reportgenerator -reports:"$(RcaCoverageOutputFile)" -targetdir:"$(CoverageHtmlDir)" -reporttypes:Html'
           ContinueOnError="false"
           Condition="'$(CoverageFileCreated)' == 'true'" />
     <Message Text="HTML coverage report generated in $(CoverageHtmlDir)" Importance="High" Condition="'$(CoverageFileCreated)' == 'true'" />
@@ -132,7 +132,7 @@
     <PropertyGroup Condition="'$(GenerateHtmlFromJson)' == 'true'">
       <InputJsonFile Condition="'$(InputJsonFile)' == ''">$(MetricsReportJson)</InputJsonFile>
       <OutputHtmlFile Condition="'$(OutputHtmlFile)' == ''">$(MetricsReportHtml)</OutputHtmlFile>
-      <MetricsReporterCommand>&quot;$(MetricsReporterExe)&quot; --input-json &quot;$(InputJsonFile)&quot; --output-html &quot;$(OutputHtmlFile)&quot;</MetricsReporterCommand>
+      <MetricsReporterCommand>"$(MetricsReporterExe)" --input-json "$(InputJsonFile)" --output-html "$(OutputHtmlFile)"</MetricsReporterCommand>
     </PropertyGroup>
 
     <!-- Error if input JSON file not found when using GenerateHtmlFromJson mode -->
@@ -155,18 +155,18 @@
     </ItemGroup>
 
     <PropertyGroup Condition="'$(GenerateHtmlFromJson)' != 'true'">
-      <MetricsReporterAltCoverArg Condition="Exists('$(RcaCoverageStorageFile)')"> --altcover &quot;$(RcaCoverageStorageFile)&quot;</MetricsReporterAltCoverArg>
-      <MetricsReporterRoslynArgs>@(RoslynMetricsFiles->' --roslyn &quot;%(FullPath)&quot;', ' ')</MetricsReporterRoslynArgs>
-      <MetricsReporterSarifArgs>@(SarifMetricsFiles->' --sarif &quot;%(FullPath)&quot;', ' ')</MetricsReporterSarifArgs>
-      <MetricsReporterBaselineArg Condition="'$(ReplaceMetricsBaseline)' == 'true' or Exists('$(MetricsBaselineJson)')"> --baseline &quot;$(MetricsBaselineJson)&quot;</MetricsReporterBaselineArg>
-      <MetricsReporterBaselineRefArg Condition="'$(MetricsBaselineReference)' != ''"> --baseline-ref &quot;$(MetricsBaselineReference)&quot;</MetricsReporterBaselineRefArg>
-      <MetricsReporterThresholdArg Condition="Exists('$(MetricsThresholdsPath)')"> --thresholds-file &quot;$(MetricsThresholdsPath)&quot;</MetricsReporterThresholdArg>
-      <MetricsReporterExcludedMethodsArg Condition="'$(ExcludedMethodNames)' != ''"> --excluded-methods &quot;$(ExcludedMethodNames)&quot;</MetricsReporterExcludedMethodsArg>
-      <MetricsReporterExcludedAssembliesArg Condition="'$(ExcludedAssemblyNames)' != ''"> --excluded-assemblies &quot;$(ExcludedAssemblyNames)&quot;</MetricsReporterExcludedAssembliesArg>
+      <MetricsReporterAltCoverArg Condition="Exists('$(RcaCoverageStorageFile)')"> --altcover "$(RcaCoverageStorageFile)"</MetricsReporterAltCoverArg>
+      <MetricsReporterRoslynArgs>@(RoslynMetricsFiles->' --roslyn "%(FullPath)"', ' ')</MetricsReporterRoslynArgs>
+      <MetricsReporterSarifArgs>@(SarifMetricsFiles->' --sarif "%(FullPath)"', ' ')</MetricsReporterSarifArgs>
+      <MetricsReporterBaselineArg Condition="'$(ReplaceMetricsBaseline)' == 'true' or Exists('$(MetricsBaselineJson)')"> --baseline "$(MetricsBaselineJson)"</MetricsReporterBaselineArg>
+      <MetricsReporterBaselineRefArg Condition="'$(MetricsBaselineReference)' != ''"> --baseline-ref "$(MetricsBaselineReference)"</MetricsReporterBaselineRefArg>
+      <MetricsReporterThresholdArg Condition="Exists('$(MetricsThresholdsPath)')"> --thresholds-file "$(MetricsThresholdsPath)"</MetricsReporterThresholdArg>
+      <MetricsReporterExcludedMethodsArg Condition="'$(ExcludedMethodNames)' != ''"> --excluded-methods "$(ExcludedMethodNames)"</MetricsReporterExcludedMethodsArg>
+      <MetricsReporterExcludedAssembliesArg Condition="'$(ExcludedAssemblyNames)' != ''"> --excluded-assemblies "$(ExcludedAssemblyNames)"</MetricsReporterExcludedAssembliesArg>
       <MetricsReporterReplaceBaselineArg Condition="'$(ReplaceMetricsBaseline)' == 'true'"> --replace-baseline</MetricsReporterReplaceBaselineArg>
-      <MetricsReporterBaselineStoragePathArg Condition="'$(ReplaceMetricsBaseline)' == 'true' and '$(MetricsReportStoragePath)' != ''"> --baseline-storage-path &quot;$(MetricsReportStoragePath)&quot;</MetricsReporterBaselineStoragePathArg>
-      <MetricsReporterCoverageHtmlDirArg Condition="Exists('$(CoverageHtmlDir)')"> --coverage-html-dir &quot;$(CoverageHtmlDir)&quot;</MetricsReporterCoverageHtmlDirArg>
-      <MetricsReporterCommand>&quot;$(MetricsReporterExe)&quot; --solution-name &quot;$(MetricsSolutionName)&quot; --metrics-dir &quot;$(RcaMetricsDir)&quot;$(MetricsReporterAltCoverArg)$(MetricsReporterRoslynArgs)$(MetricsReporterSarifArgs)$(MetricsReporterBaselineArg)$(MetricsReporterBaselineRefArg) --output-json &quot;$(MetricsReportJson)&quot; --output-html &quot;$(MetricsReportHtml)&quot;$(MetricsReporterThresholdArg)$(MetricsReporterExcludedMethodsArg)$(MetricsReporterExcludedAssembliesArg)$(MetricsReporterReplaceBaselineArg)$(MetricsReporterBaselineStoragePathArg)$(MetricsReporterCoverageHtmlDirArg)</MetricsReporterCommand>
+      <MetricsReporterBaselineStoragePathArg Condition="'$(ReplaceMetricsBaseline)' == 'true' and '$(MetricsReportStoragePath)' != ''"> --baseline-storage-path "$(MetricsReportStoragePath)"</MetricsReporterBaselineStoragePathArg>
+      <MetricsReporterCoverageHtmlDirArg Condition="Exists('$(CoverageHtmlDir)')"> --coverage-html-dir "$(CoverageHtmlDir)"</MetricsReporterCoverageHtmlDirArg>
+      <MetricsReporterCommand>"$(MetricsReporterExe)" --solution-name "$(MetricsSolutionName)" --metrics-dir "$(RcaMetricsDir)"$(MetricsReporterAltCoverArg)$(MetricsReporterRoslynArgs)$(MetricsReporterSarifArgs)$(MetricsReporterBaselineArg)$(MetricsReporterBaselineRefArg) --output-json "$(MetricsReportJson)" --output-html "$(MetricsReportHtml)"$(MetricsReporterThresholdArg)$(MetricsReporterExcludedMethodsArg)$(MetricsReporterExcludedAssembliesArg)$(MetricsReporterReplaceBaselineArg)$(MetricsReporterBaselineStoragePathArg)$(MetricsReporterCoverageHtmlDirArg)</MetricsReporterCommand>
     </PropertyGroup>
 
     <Message Text="Generating HTML report from existing JSON: $(InputJsonFile)" Importance="High" Condition="'$(GenerateHtmlFromJson)' == 'true' and Exists('$(MetricsReporterExe)')" />
@@ -178,4 +178,5 @@
           Condition="Exists('$(MetricsReporterExe)')" />
   </Target>
 </Project>
+
 
