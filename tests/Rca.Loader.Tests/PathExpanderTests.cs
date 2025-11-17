@@ -1,7 +1,8 @@
-using NUnit.Framework;
-using Rca.Loader.Configuration;
 using System;
 using System.IO;
+using FluentAssertions;
+using NUnit.Framework;
+using Rca.Loader.Configuration;
 
 namespace Rca.Loader.Tests
 {
@@ -140,6 +141,56 @@ namespace Rca.Loader.Tests
             var expected = Path.GetFullPath(path);
 
             Assert.That(expanded, Is.EqualTo(expected));
+        }
+
+        /// <summary>
+        /// Ensures that a custom environment variable resolves to the expected normalized path.
+        /// </summary>
+        [Test, Category("Unit")]
+        public void ExpandPath_WithCustomRelativeEnvironmentVariable_ShouldNormalizeToRootedPath()
+        {
+            const string envVarName = "RCA_LOADER_TEST_CUSTOM_RELATIVE";
+            var relativeValue = @".\custom\..\custom\file.txt";
+            var expected = Path.GetFullPath(relativeValue);
+            var previousValue = Environment.GetEnvironmentVariable(envVarName);
+
+            try
+            {
+                Environment.SetEnvironmentVariable(envVarName, relativeValue);
+
+                var expanded = PathExpander.ExpandPath($"%{envVarName}%");
+
+                expanded.Should().Be(expected);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(envVarName, previousValue);
+            }
+        }
+
+        /// <summary>
+        /// Verifies that when an environment variable is missing, the literal token is preserved and still normalized.
+        /// </summary>
+        [Test, Category("Unit")]
+        public void ExpandPath_WithMissingEnvironmentVariable_ShouldTreatTokenAsLiteral()
+        {
+            const string envVarName = "RCA_LOADER_TEST_MISSING_VARIABLE";
+            var pathWithToken = $"%{envVarName}%\\temp";
+            var previousValue = Environment.GetEnvironmentVariable(envVarName);
+
+            try
+            {
+                Environment.SetEnvironmentVariable(envVarName, null); // Ensure variable is unset.
+
+                var expanded = PathExpander.ExpandPath(pathWithToken);
+                var expected = Path.GetFullPath(pathWithToken);
+
+                expanded.Should().Be(expected);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(envVarName, previousValue);
+            }
         }
     }
 }
