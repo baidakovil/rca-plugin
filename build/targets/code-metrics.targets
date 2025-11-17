@@ -44,15 +44,136 @@
       <AltCoverInputDir>$(RuntimeDeployDir)</AltCoverInputDir>
             <!-- Method filter to exclude constructors (ctor) and static constructors (cctor) from coverage -->
       <AltCoverMethodFilter Condition="'$(AltCoverMethodFilter)' == ''">.cctor|.ctor</AltCoverMethodFilter>
+      <!-- Test output configuration used for copying instrumented assemblies into unit test bin directories -->
+      <RcaTestTargetFramework Condition="'$(RcaTestTargetFramework)' == ''">net8.0-windows</RcaTestTargetFramework>
+      <!-- AltCover backup directory (removed before each run to keep instrumentation idempotent) -->
+      <AltCoverSavedDir>$(AltCoverInputDir)\__Saved</AltCoverSavedDir>
     </PropertyGroup>
 
     <!-- Run AltCover instrumentation in-place -->
     <!-- Using direct command execution instead of PowerShell wrapper for better parameter handling -->
+    <!-- Remove previous AltCover backup directory if it exists to avoid tool usage errors on repeated runs -->
+    <RemoveDir Directories="$(AltCoverSavedDir)" Condition="Exists('$(AltCoverSavedDir)')" />
+
     <Message Text="Instrumenting assemblies in $(AltCoverInputDir) with AltCover" Importance="High" />
     <Exec Command='altcover --inputDirectory="$(AltCoverInputDir)" --assemblyFilter="$(RcaCoverageAssemblyFilter)" --methodFilter="$(AltCoverMethodFilter)" --inplace --save --report="$(RcaCoverageOutputFile)"' 
           ContinueOnError="false" />
     <Message Text="AltCover instrumentation completed. Signal file: $(AltCoverSignalFile)" Importance="Normal" />
-    
+  </Target>
+
+  <!-- Copy instrumented runtime assemblies into unit test output directories after all tests are built -->
+  <!-- Anchored on Rca.Core.Tests, which in current graph builds last among test projects -->
+  <Target Name="CopyInstrumentedAssembliesToTests"
+          AfterTargets="Build"
+          Condition="'$(AltCoverEnabled)' == 'true' and '$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.Core.Tests' and '$(RuntimeDeployDir)' != '' and Exists('$(RuntimeDeployDir)')">
+
+    <PropertyGroup>
+      <!-- Ensure AltCoverInputDir is aligned with RuntimeDeployDir used during instrumentation -->
+      <AltCoverInputDir Condition="'$(AltCoverInputDir)' == ''">$(RuntimeDeployDir)</AltCoverInputDir>
+      <RcaTestTargetFramework Condition="'$(RcaTestTargetFramework)' == ''">net8.0-windows</RcaTestTargetFramework>
+
+      <!-- Rca.Contracts -->
+      <_ContractsTestBinDir>$(SolutionDir)tests\Rca.Contracts.Tests\bin\$(Configuration)\$(RcaTestTargetFramework)</_ContractsTestBinDir>
+      <_ContractsTestDll>$(_ContractsTestBinDir)\Rca.Contracts.dll</_ContractsTestDll>
+      <_ContractsTestPdb>$(_ContractsTestBinDir)\Rca.Contracts.pdb</_ContractsTestPdb>
+      <_ContractsInstrumentedDll>$(AltCoverInputDir)\Rca.Contracts.dll</_ContractsInstrumentedDll>
+
+      <!-- Rca.Core -->
+      <_CoreTestBinDir>$(SolutionDir)tests\Rca.Core.Tests\bin\$(Configuration)\$(RcaTestTargetFramework)</_CoreTestBinDir>
+      <_CoreTestDll>$(_CoreTestBinDir)\Rca.Core.dll</_CoreTestDll>
+      <_CoreTestPdb>$(_CoreTestBinDir)\Rca.Core.pdb</_CoreTestPdb>
+      <_CoreInstrumentedDll>$(AltCoverInputDir)\Rca.Core.dll</_CoreInstrumentedDll>
+
+      <!-- Rca.Loader -->
+      <_LoaderTestBinDir>$(SolutionDir)tests\Rca.Loader.Tests\bin\$(Configuration)\$(RcaTestTargetFramework)</_LoaderTestBinDir>
+      <_LoaderTestDll>$(_LoaderTestBinDir)\Rca.Loader.dll</_LoaderTestDll>
+      <_LoaderTestPdb>$(_LoaderTestBinDir)\Rca.Loader.pdb</_LoaderTestPdb>
+      <_LoaderInstrumentedDll>$(AltCoverInputDir)\Rca.Loader.dll</_LoaderInstrumentedDll>
+
+      <!-- Rca.Network -->
+      <_NetworkTestBinDir>$(SolutionDir)tests\Rca.Network.Tests\bin\$(Configuration)\$(RcaTestTargetFramework)</_NetworkTestBinDir>
+      <_NetworkTestDll>$(_NetworkTestBinDir)\Rca.Network.dll</_NetworkTestDll>
+      <_NetworkTestPdb>$(_NetworkTestBinDir)\Rca.Network.pdb</_NetworkTestPdb>
+      <_NetworkInstrumentedDll>$(AltCoverInputDir)\Rca.Network.dll</_NetworkInstrumentedDll>
+
+      <!-- Rca.UI -->
+      <_UiTestBinDir>$(SolutionDir)tests\Rca.UI.Tests\bin\$(Configuration)\$(RcaTestTargetFramework)</_UiTestBinDir>
+      <_UiTestDll>$(_UiTestBinDir)\Rca.UI.dll</_UiTestDll>
+      <_UiTestPdb>$(_UiTestBinDir)\Rca.UI.pdb</_UiTestPdb>
+      <_UiInstrumentedDll>$(AltCoverInputDir)\Rca.UI.dll</_UiInstrumentedDll>
+    </PropertyGroup>
+
+    <!-- Emit detailed warnings for unexpected states in test bin directories -->
+    <!-- PDB is required as a sanity check that the test project was built correctly -->
+    <Warning Text="AltCover: PDB file '$(_ContractsTestPdb)' for 'Rca.Contracts' not found. Skipping instrumentation copy for this test directory."
+             Condition="!Exists('$(_ContractsTestPdb)')" />
+    <Warning Text="AltCover: PDB file '$(_CoreTestPdb)' for 'Rca.Core' not found. Skipping instrumentation copy for this test directory."
+             Condition="!Exists('$(_CoreTestPdb)')" />
+    <Warning Text="AltCover: PDB file '$(_LoaderTestPdb)' for 'Rca.Loader' not found. Skipping instrumentation copy for this test directory."
+             Condition="!Exists('$(_LoaderTestPdb)')" />
+    <Warning Text="AltCover: PDB file '$(_NetworkTestPdb)' for 'Rca.Network' not found. Skipping instrumentation copy for this test directory."
+             Condition="!Exists('$(_NetworkTestPdb)')" />
+    <Warning Text="AltCover: PDB file '$(_UiTestPdb)' for 'Rca.UI' not found. Skipping instrumentation copy for this test directory."
+             Condition="!Exists('$(_UiTestPdb)')" />
+
+    <!-- When PDB exists but DLL is missing, something is off with test output -->
+    <Warning Text="AltCover: Test DLL '$(_ContractsTestDll)' for 'Rca.Contracts' not found although PDB exists. Skipping instrumentation copy for this test directory."
+             Condition="Exists('$(_ContractsTestPdb)') and !Exists('$(_ContractsTestDll)')" />
+    <Warning Text="AltCover: Test DLL '$(_CoreTestDll)' for 'Rca.Core' not found although PDB exists. Skipping instrumentation copy for this test directory."
+             Condition="Exists('$(_CoreTestPdb)') and !Exists('$(_CoreTestDll)')" />
+    <Warning Text="AltCover: Test DLL '$(_LoaderTestDll)' for 'Rca.Loader' not found although PDB exists. Skipping instrumentation copy for this test directory."
+             Condition="Exists('$(_LoaderTestPdb)') and !Exists('$(_LoaderTestDll)')" />
+    <Warning Text="AltCover: Test DLL '$(_NetworkTestDll)' for 'Rca.Network' not found although PDB exists. Skipping instrumentation copy for this test directory."
+             Condition="Exists('$(_NetworkTestPdb)') and !Exists('$(_NetworkTestDll)')" />
+    <Warning Text="AltCover: Test DLL '$(_UiTestDll)' for 'Rca.UI' not found although PDB exists. Skipping instrumentation copy for this test directory."
+             Condition="Exists('$(_UiTestPdb)') and !Exists('$(_UiTestDll)')" />
+
+    <!-- When both PDB and DLL exist but the instrumented DLL is missing in RuntimeDeployDir -->
+    <Warning Text="AltCover: Instrumented DLL '$(_ContractsInstrumentedDll)' for 'Rca.Contracts' not found in AltCover input directory. Skipping instrumentation copy for this test directory."
+             Condition="Exists('$(_ContractsTestPdb)') and Exists('$(_ContractsTestDll)') and !Exists('$(_ContractsInstrumentedDll)')" />
+    <Warning Text="AltCover: Instrumented DLL '$(_CoreInstrumentedDll)' for 'Rca.Core' not found in AltCover input directory. Skipping instrumentation copy for this test directory."
+             Condition="Exists('$(_CoreTestPdb)') and Exists('$(_CoreTestDll)') and !Exists('$(_CoreInstrumentedDll)')" />
+    <Warning Text="AltCover: Instrumented DLL '$(_LoaderInstrumentedDll)' for 'Rca.Loader' not found in AltCover input directory. Skipping instrumentation copy for this test directory."
+             Condition="Exists('$(_LoaderTestPdb)') and Exists('$(_LoaderTestDll)') and !Exists('$(_LoaderInstrumentedDll)')" />
+    <Warning Text="AltCover: Instrumented DLL '$(_NetworkInstrumentedDll)' for 'Rca.Network' not found in AltCover input directory. Skipping instrumentation copy for this test directory."
+             Condition="Exists('$(_NetworkTestPdb)') and Exists('$(_NetworkTestDll)') and !Exists('$(_NetworkInstrumentedDll)')" />
+    <Warning Text="AltCover: Instrumented DLL '$(_UiInstrumentedDll)' for 'Rca.UI' not found in AltCover input directory. Skipping instrumentation copy for this test directory."
+             Condition="Exists('$(_UiTestPdb)') and Exists('$(_UiTestDll)') and !Exists('$(_UiInstrumentedDll)')" />
+
+    <!-- Copy instrumented DLLs from RuntimeDeployDir into test bin directories (overwriting originals when present) -->
+    <Copy SourceFiles="$(_ContractsInstrumentedDll)"
+          DestinationFiles="$(_ContractsTestDll)"
+          Condition="Exists('$(_ContractsTestPdb)') and Exists('$(_ContractsTestDll)') and Exists('$(_ContractsInstrumentedDll)')" />
+    <Copy SourceFiles="$(_CoreInstrumentedDll)"
+          DestinationFiles="$(_CoreTestDll)"
+          Condition="Exists('$(_CoreTestPdb)') and Exists('$(_CoreTestDll)') and Exists('$(_CoreInstrumentedDll)')" />
+    <Copy SourceFiles="$(_LoaderInstrumentedDll)"
+          DestinationFiles="$(_LoaderTestDll)"
+          Condition="Exists('$(_LoaderTestPdb)') and Exists('$(_LoaderTestDll)') and Exists('$(_LoaderInstrumentedDll)')" />
+    <Copy SourceFiles="$(_NetworkInstrumentedDll)"
+          DestinationFiles="$(_NetworkTestDll)"
+          Condition="Exists('$(_NetworkTestPdb)') and Exists('$(_NetworkTestDll)') and Exists('$(_NetworkInstrumentedDll)')" />
+    <Copy SourceFiles="$(_UiInstrumentedDll)"
+          DestinationFiles="$(_UiTestDll)"
+          Condition="Exists('$(_UiTestPdb)') and Exists('$(_UiTestDll)') and Exists('$(_UiInstrumentedDll)')" />
+
+    <!-- Copy AltCover recorder into the same test bin directories where we replaced assemblies -->
+    <Copy SourceFiles="$(AltCoverInputDir)\AltCover.Recorder.g.dll"
+          DestinationFiles="$(_ContractsTestBinDir)\AltCover.Recorder.g.dll"
+          Condition="Exists('$(AltCoverInputDir)\AltCover.Recorder.g.dll') and Exists('$(_ContractsTestPdb)') and Exists('$(_ContractsTestDll)')" />
+    <Copy SourceFiles="$(AltCoverInputDir)\AltCover.Recorder.g.dll"
+          DestinationFiles="$(_CoreTestBinDir)\AltCover.Recorder.g.dll"
+          Condition="Exists('$(AltCoverInputDir)\AltCover.Recorder.g.dll') and Exists('$(_CoreTestPdb)') and Exists('$(_CoreTestDll)')" />
+    <Copy SourceFiles="$(AltCoverInputDir)\AltCover.Recorder.g.dll"
+          DestinationFiles="$(_LoaderTestBinDir)\AltCover.Recorder.g.dll"
+          Condition="Exists('$(AltCoverInputDir)\AltCover.Recorder.g.dll') and Exists('$(_LoaderTestPdb)') and Exists('$(_LoaderTestDll)')" />
+    <Copy SourceFiles="$(AltCoverInputDir)\AltCover.Recorder.g.dll"
+          DestinationFiles="$(_NetworkTestBinDir)\AltCover.Recorder.g.dll"
+          Condition="Exists('$(AltCoverInputDir)\AltCover.Recorder.g.dll') and Exists('$(_NetworkTestPdb)') and Exists('$(_NetworkTestDll)')" />
+    <Copy SourceFiles="$(AltCoverInputDir)\AltCover.Recorder.g.dll"
+          DestinationFiles="$(_UiTestBinDir)\AltCover.Recorder.g.dll"
+          Condition="Exists('$(AltCoverInputDir)\AltCover.Recorder.g.dll') and Exists('$(_UiTestPdb)') and Exists('$(_UiTestDll)')" />
+
   </Target>
 
   <!-- Collect coverage after tests complete. Should be invoked manually via MSBuild after tests have been executed -->
