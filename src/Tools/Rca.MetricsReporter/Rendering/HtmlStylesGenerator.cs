@@ -27,7 +27,7 @@ internal static class HtmlStylesGenerator
     private const string StatusErrorBackgroundColor = "rgba(255, 200, 200, 1)";
     private const string StatusWarningColor = "rgba(182, 111, 26, 1)";
     private const string StatusErrorColor = "rgba(217, 83, 79, 1)";
-    private const string DeltaNeutralColor = "rgba(102, 134, 158, 1)";
+    private const string DeltaNeutralColor = "rgba(140, 140, 140, 1)";
     private const string IteratorIndicatorColor = "rgba(128, 128, 128, 0.9)";
 
     private const string DefaultGap = "8px";
@@ -159,7 +159,9 @@ internal static class HtmlStylesGenerator
         builder.AppendLine(FormattableString.Invariant($".delta-neutral {{ color: {DeltaNeutralColor}; margin-left: {DeltaSpacing}; }}"));
         // WHY: Iterator/async state-machine coverage is merged back into the user method,
         // but we still want a subtle visual hint that the data originates from a nested compiler-generated type.
-        builder.AppendLine(FormattableString.Invariant($".method-state-machine {{ color: {IteratorIndicatorColor}; font-size: 11px; margin-right: 3px; vertical-align: baseline; }}"));
+        // The indicator is absolutely positioned and centered in the same 20px slot as the expander/placeholder
+        // so that member names remain aligned while the glyph does not stick to the cell border.
+        builder.AppendLine(FormattableString.Invariant($".method-state-machine {{ color: {IteratorIndicatorColor}; font-size: 13px; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; }}"));
         builder.AppendLine(".fqn { font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; color: rgba(128, 128, 128, 0.8); }");
         // WHY: Coverage links for type nodes (non-leaf) should have black semi-transparent underlining
         // to match the text color while indicating clickability.
