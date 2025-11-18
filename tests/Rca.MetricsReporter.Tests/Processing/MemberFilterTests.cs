@@ -234,4 +234,49 @@ public sealed class MemberFilterTests
         filter.ShouldExcludeMethod(".ctor").Should().BeTrue(); // Should still work with dot
         filter.ShouldExcludeMethod("MoveNext").Should().BeTrue();
     }
+
+    [Test]
+    public void FromString_WithWildcardAndExactPatterns_ExcludesExpectedMethods()
+    {
+        // Arrange
+        const string patterns = "*b__*,ctor";
+
+        // Act
+        var filter = MemberFilter.FromString(patterns);
+
+        // Assert - wildcard pattern matches any name containing 'b__'
+        filter.ShouldExcludeMethod("b__0").Should().BeTrue();
+        filter.ShouldExcludeMethod("<Method>b__1_2").Should().BeTrue();
+        filter.ShouldExcludeMethod("Someb__Helper").Should().BeTrue();
+
+        // Exact pattern matches only 'ctor', not substrings like 'OrderConstructor'
+        filter.ShouldExcludeMethod("ctor").Should().BeTrue();
+        filter.ShouldExcludeMethod(".ctor").Should().BeTrue();
+        filter.ShouldExcludeMethod("OrderConstructor").Should().BeFalse();
+
+        // Normal method should not be excluded
+        filter.ShouldExcludeMethod("DoWork").Should().BeFalse();
+    }
+
+    [Test]
+    public void FromString_WithExactClonePattern_DoesNotExcludePartialMatches()
+    {
+        // Arrange
+        const string patterns = "<Clone>$";
+
+        // Act
+        var filter = MemberFilter.FromString(patterns);
+
+        // Assert - exact name match
+        filter.ShouldExcludeMethod("<Clone>$").Should().BeTrue();
+
+        // Partial matches should not be excluded when pattern has no wildcards
+        filter.ShouldExcludeMethod("Clone").Should().BeFalse();
+        filter.ShouldExcludeMethod("My<Clone>$Helper").Should().BeFalse();
+
+        // FQN-based checks use the same underlying name matching
+        filter.ShouldExcludeMethodByFqn("Namespace.Type.<Clone>$(...)").Should().BeTrue();
+        filter.ShouldExcludeMethodByFqn("Namespace.Type.Clone(...)").Should().BeFalse();
+        filter.ShouldExcludeMethodByFqn("Namespace.Type.My<Clone>$Helper(...)").Should().BeFalse();
+    }
 }

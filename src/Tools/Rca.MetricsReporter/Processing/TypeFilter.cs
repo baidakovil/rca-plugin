@@ -8,31 +8,31 @@ using System.Linq;
 /// Filters out types from metrics reports based on name patterns.
 /// </summary>
 /// <remarks>
-/// This filter excludes types whose fully qualified names contain any of the specified exclusion patterns.
-/// The filter supports multiple exclusion patterns separated by commas or semicolons.
-/// Matching is case-sensitive and checks if the type name contains the pattern.
+/// This filter excludes types whose fully qualified names match any of the specified exclusion patterns.
+/// The filter supports multiple exclusion patterns separated by commas or semicolons and wildcard characters
+/// <c>*</c> (any sequence) and <c>?</c> (single character). Matching is case-sensitive.
 /// </remarks>
 public sealed class TypeFilter
 {
-    private readonly HashSet<string> _excludedPatterns;
+    private readonly NamePatternSet _patterns;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TypeFilter"/> class with no exclusions.
     /// </summary>
     public TypeFilter()
-        : this(new HashSet<string>(StringComparer.Ordinal))
+        : this(NamePatternSet.Empty)
     {
     }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TypeFilter"/> class with the specified exclusion patterns.
     /// </summary>
-    /// <param name="excludedPatterns">The set of patterns to exclude. Cannot be null.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="excludedPatterns"/> is null.</exception>
-    public TypeFilter(HashSet<string> excludedPatterns)
+    /// <param name="patterns">The pattern set to use for exclusions. Cannot be null.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="patterns"/> is null.</exception>
+    public TypeFilter(NamePatternSet patterns)
     {
-        ArgumentNullException.ThrowIfNull(excludedPatterns);
-        _excludedPatterns = new HashSet<string>(excludedPatterns, StringComparer.Ordinal);
+        ArgumentNullException.ThrowIfNull(patterns);
+        _patterns = patterns;
     }
 
     /// <summary>
@@ -43,8 +43,8 @@ public sealed class TypeFilter
     /// <see langword="true"/> if the type should be excluded from the report; otherwise, <see langword="false"/>.
     /// </returns>
     /// <remarks>
-    /// This method checks if the provided name contains any of the exclusion patterns.
-    /// Matching is case-sensitive. Returns <see langword="false"/> if the name is null or empty.
+    /// This method checks if the provided name matches any of the configured exclusion patterns.
+    /// Matching is case-sensitive and supports wildcard patterns. Returns <see langword="false"/> if the name is null or empty.
     /// </remarks>
     public bool ShouldExcludeType(string? typeNameOrFqn)
     {
@@ -53,7 +53,7 @@ public sealed class TypeFilter
             return false;
         }
 
-        return _excludedPatterns.Any(pattern => typeNameOrFqn.Contains(pattern, StringComparison.Ordinal));
+        return _patterns.IsMatch(typeNameOrFqn);
     }
 
     /// <summary>
@@ -68,27 +68,11 @@ public sealed class TypeFilter
     /// </returns>
     /// <remarks>
     /// This method is useful for parsing exclusion patterns from configuration files or command-line arguments.
-    /// Patterns are matched case-sensitively against fully qualified type names using substring matching.
+    /// Patterns are matched case-sensitively against fully qualified type names using wildcard matching.
     /// </remarks>
     public static TypeFilter FromString(string? excludedTypeNamePatterns)
     {
-        if (string.IsNullOrWhiteSpace(excludedTypeNamePatterns))
-        {
-            return new TypeFilter();
-        }
-
-        var patterns = new HashSet<string>(StringComparer.Ordinal);
-        var separators = new[] { ',', ';' };
-        var parts = excludedTypeNamePatterns.Split(separators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-        foreach (var part in parts)
-        {
-            if (!string.IsNullOrWhiteSpace(part))
-            {
-                patterns.Add(part);
-            }
-        }
-
+        var patterns = NamePatternSet.FromString(excludedTypeNamePatterns, plainTextIsExactMatch: false);
         return new TypeFilter(patterns);
     }
 
@@ -104,12 +88,13 @@ public sealed class TypeFilter
     /// </remarks>
     public string GetExcludedTypePatternsString()
     {
-        if (_excludedPatterns.Count == 0)
+        var rawPatterns = _patterns.RawPatterns;
+        if (rawPatterns.Count == 0)
         {
             return string.Empty;
         }
 
-        var sortedPatterns = _excludedPatterns.OrderBy(x => x, StringComparer.Ordinal);
+        var sortedPatterns = rawPatterns.OrderBy(x => x, StringComparer.Ordinal);
         return string.Join(", ", sortedPatterns);
     }
 }

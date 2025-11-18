@@ -24,10 +24,10 @@
     <RoslynMetricsSolutionPath Condition="'$(RoslynMetricsSolutionPath)' == ''">$(SolutionDir)rca-plugin.sln</RoslynMetricsSolutionPath>
     <RoslynSolutionMetricsOutputFile Condition="'$(RoslynSolutionMetricsOutputFile)' == ''">$(RoslynOutputDir)\solution-metrics.xml</RoslynSolutionMetricsOutputFile>
 
-    <!-- Comma-separated or semicolon-separated list of method names to exclude from metrics reports. -->
-    <!-- Method names are normalized (leading dots are removed). Examples: "ctor,cctor,MoveNext" or "ctor;cctor;MoveNext". -->
+    <!-- Comma-separated or semicolon-separated list of member name patterns to exclude from metrics reports. -->
+    <!-- Patterns support '*' and '?' wildcards. Plain names without wildcards are treated as exact matches. -->
     <!-- If not specified, default excluded methods are used (constructors and compiler-generated methods). -->
-    <ExcludedMethodNames Condition="'$(ExcludedMethodNames)' == ''">ctor,cctor,MoveNext,SetStateMachine,MoveNextAsync,DisposeAsync</ExcludedMethodNames>
+    <ExcludedMemberNamesPatterns Condition="'$(ExcludedMemberNamesPatterns)' == ''">*b__*,&lt;Clone&gt;$,ctor,cctor,MoveNext,SetStateMachine,MoveNextAsync,DisposeAsync</ExcludedMemberNamesPatterns>
 
     <!-- Comma-separated or semicolon-separated list of type name patterns to exclude from metrics reports. -->
     <!-- Matching is performed against fully qualified type names using substring matching (case-sensitive). -->

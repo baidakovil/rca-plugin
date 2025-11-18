@@ -308,7 +308,7 @@ public sealed class MetricsReporterApplication
         IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds,
         MetricsReport? baseline)
     {
-        var memberFilter = MemberFilter.FromString(options.ExcludedMethodNames);
+        var memberFilter = MemberFilter.FromString(options.ExcludedMemberNamesPatterns);
         var assemblyFilter = AssemblyFilter.FromString(options.ExcludedAssemblyNames);
         var typeFilter = TypeFilter.FromString(options.ExcludedTypeNamePatterns);
 
@@ -346,7 +346,7 @@ public sealed class MetricsReporterApplication
         MetricsReporterOptions options,
         FileLogger logger)
     {
-        var memberFilter = MemberFilter.FromString(options.ExcludedMethodNames);
+        var memberFilter = MemberFilter.FromString(options.ExcludedMemberNamesPatterns);
         var assemblyFilter = AssemblyFilter.FromString(options.ExcludedAssemblyNames);
         var typeFilter = TypeFilter.FromString(options.ExcludedTypeNamePatterns);
         var aggregationService = new MetricsAggregationService(memberFilter, assemblyFilter, typeFilter);

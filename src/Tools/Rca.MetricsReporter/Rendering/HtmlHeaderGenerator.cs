@@ -53,13 +53,13 @@ internal static class HtmlHeaderGenerator
             : thresholdsPath;
         builder.AppendLine($"    <p><strong>Thresholds JSON:</strong> {WebUtility.HtmlEncode(thresholdsDisplay)}</p>");
         
-        if (!string.IsNullOrWhiteSpace(report.Metadata.ExcludedMethodNames))
+        if (!string.IsNullOrWhiteSpace(report.Metadata.ExcludedMemberNamesPatterns))
         {
-            builder.AppendLine($"    <p><strong>Excluded member names:</strong> {WebUtility.HtmlEncode(report.Metadata.ExcludedMethodNames)}</p>");
+            builder.AppendLine($"    <p><strong>Excluded member name patterns:</strong> {WebUtility.HtmlEncode(report.Metadata.ExcludedMemberNamesPatterns)}</p>");
         }
         else
         {
-            builder.AppendLine("    <p><strong>Excluded member names:</strong> (none)</p>");
+            builder.AppendLine("    <p><strong>Excluded member name patterns:</strong> (none)</p>");
         }
         
         if (!string.IsNullOrWhiteSpace(report.Metadata.ExcludedAssemblyNames))

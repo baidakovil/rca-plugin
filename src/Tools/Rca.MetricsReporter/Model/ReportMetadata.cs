@@ -38,13 +38,13 @@ public sealed class ReportMetadata
         = new Dictionary<MetricIdentifier, string?>();
 
     /// <summary>
-    /// Comma-separated list of excluded method names used when generating this report.
+    /// Comma-separated list of excluded member name patterns used when generating this report.
     /// </summary>
     /// <remarks>
-    /// This property stores the list of method names that were excluded from the metrics report.
+    /// This property stores the list of member name patterns that were excluded from the metrics report.
     /// It is used for display purposes in the HTML report header.
     /// </remarks>
-    public string? ExcludedMethodNames { get; init; }
+    public string? ExcludedMemberNamesPatterns { get; init; }
 
     /// <summary>
     /// Comma-separated list of excluded assembly name patterns used when generating this report.

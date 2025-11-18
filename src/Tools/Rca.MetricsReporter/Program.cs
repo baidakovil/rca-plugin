@@ -56,6 +56,7 @@ static MetricsReporterOptions ParseArguments(string[] args)
     string? excludedMethodNames = null;
     string? excludedAssemblyNames = null;
     string? excludedTypeNamePatterns = null;
+    string? excludedMemberNamesPatterns = null;
     bool replaceBaseline = false;
     string? baselineStoragePath = null;
     string? coverageHtmlDir = null;
@@ -101,8 +102,8 @@ static MetricsReporterOptions ParseArguments(string[] args)
             case "--input-json":
                 inputJson = RequireValue(args, ref index, argument);
                 break;
-            case "--excluded-methods":
-                excludedMethodNames = RequireValue(args, ref index, argument);
+            case "--excluded-members":
+                excludedMemberNamesPatterns = RequireValue(args, ref index, argument);
                 break;
             case "--excluded-assemblies":
                 excludedAssemblyNames = RequireValue(args, ref index, argument);
@@ -161,7 +162,7 @@ static MetricsReporterOptions ParseArguments(string[] args)
         OutputJsonPath = string.IsNullOrWhiteSpace(outputJson) ? string.Empty : Path.GetFullPath(outputJson),
         OutputHtmlPath = string.IsNullOrWhiteSpace(outputHtml) ? string.Empty : Path.GetFullPath(outputHtml),
         LogFilePath = logFilePath,
-        ExcludedMethodNames = excludedMethodNames,
+        ExcludedMemberNamesPatterns = excludedMemberNamesPatterns,
         ExcludedAssemblyNames = excludedAssemblyNames,
         ExcludedTypeNamePatterns = excludedTypeNamePatterns,
         ReplaceMetricsBaseline = replaceBaseline,
@@ -202,7 +203,7 @@ static void PrintUsage()
     Console.WriteLine("  --input-json <path>     Path to existing metrics-report.json (generates HTML only).");
     Console.WriteLine("  --replace-baseline      Automatically replace baseline if new report differs from existing baseline.");
     Console.WriteLine("  --baseline-storage-path <path> Directory where old baseline files are archived with timestamps.");
-    Console.WriteLine("  --excluded-methods <list> Comma-separated or semicolon-separated list of method names to exclude.");
+    Console.WriteLine("  --excluded-members <list> Comma-separated or semicolon-separated list of member name patterns to exclude.");
     Console.WriteLine("  --excluded-assemblies <list> Comma-separated or semicolon-separated list of assembly patterns to exclude.");
     Console.WriteLine("  --excluded-types <list> Comma-separated or semicolon-separated list of type name patterns to exclude.");
 }

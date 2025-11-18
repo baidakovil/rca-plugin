@@ -9,60 +9,56 @@ using System.Linq;
 /// </summary>
 /// <remarks>
 /// This filter excludes methods that are not relevant for code quality metrics:
-/// - Constructors (.ctor, .cctor) - they are typically boilerplate and don't represent meaningful code complexity
+/// - Constructors (.ctor, .cctor) - they are typically boilerplate and don't represent meaningful code complexity.
 /// - Compiler-generated methods (MoveNext, SetStateMachine, MoveNextAsync, DisposeAsync) - these are generated
-///   by the compiler for async/await state machines and enumerators, and don't represent actual user code
+///   by the compiler for async/await state machines and enumerators, and don't represent actual user code.
 /// 
-/// The list of excluded methods can be configured via MSBuild property ExcludedMethodNames.
+/// The list of excluded methods can be configured via MSBuild property ExcludedMemberNamesPatterns.
+/// Patterns support <c>*</c> and <c>?</c> wildcards. Pattern strings without wildcards are treated
+/// as exact method names (for example, <c>ctor</c> matches only <c>ctor</c>, not <c>OrderConstructor</c>).
 /// Default values are provided if no configuration is supplied.
 /// </remarks>
 public sealed class MemberFilter
 {
     /// <summary>
-    /// Gets the default set of method names that should be excluded from metrics reports.
+    /// Gets the default set of method name patterns that should be excluded from metrics reports.
     /// </summary>
     /// <remarks>
     /// This set contains:
-    /// - "ctor" - instance constructors (normalized from ".ctor")
-    /// - "cctor" - static constructors (normalized from ".cctor")
-    /// - "MoveNext" - compiler-generated method for IEnumerator
-    /// - "SetStateMachine" - compiler-generated method for async state machines
-    /// - "MoveNextAsync" - compiler-generated method for async enumerators
-    /// - "DisposeAsync" - compiler-generated method for async disposal
+    /// - "ctor" - instance constructors (normalized from ".ctor").
+    /// - "cctor" - static constructors (normalized from ".cctor").
+    /// - "MoveNext" - compiler-generated method for IEnumerator.
+    /// - "SetStateMachine" - compiler-generated method for async state machines.
+    /// - "MoveNextAsync" - compiler-generated method for async enumerators.
+    /// - "DisposeAsync" - compiler-generated method for async disposal.
     /// </remarks>
-    private static readonly HashSet<string> DefaultExcludedMethodNames = new(StringComparer.Ordinal)
-    {
-        "ctor",
-        "cctor",
-        "MoveNext",
-        "SetStateMachine",
-        "MoveNextAsync",
-        "DisposeAsync"
-    };
+    private static readonly NamePatternSet DefaultExcludedPatterns = NamePatternSet.FromString(
+        "ctor,cctor,MoveNext,SetStateMachine,MoveNextAsync,DisposeAsync",
+        plainTextIsExactMatch: true);
 
-    private readonly HashSet<string> _excludedMethodNames;
+    private readonly NamePatternSet _patterns;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="MemberFilter"/> class with default excluded method names.
+    /// Initializes a new instance of the <see cref="MemberFilter"/> class with default excluded method patterns.
     /// </summary>
     public MemberFilter()
-        : this(DefaultExcludedMethodNames)
+        : this(DefaultExcludedPatterns)
     {
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="MemberFilter"/> class with the specified excluded method names.
+    /// Initializes a new instance of the <see cref="MemberFilter"/> class with the specified excluded method patterns.
     /// </summary>
-    /// <param name="excludedMethodNames">The set of method names to exclude. Cannot be null.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="excludedMethodNames"/> is null.</exception>
-    public MemberFilter(HashSet<string> excludedMethodNames)
+    /// <param name="patterns">The pattern set describing methods that should be excluded. Cannot be null.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="patterns"/> is null.</exception>
+    public MemberFilter(NamePatternSet patterns)
     {
-        ArgumentNullException.ThrowIfNull(excludedMethodNames);
-        _excludedMethodNames = new HashSet<string>(excludedMethodNames, StringComparer.Ordinal);
+        ArgumentNullException.ThrowIfNull(patterns);
+        _patterns = patterns;
     }
 
     /// <summary>
-    /// Determines whether a method should be excluded from metrics reports.
+    /// Determines whether a method should be excluded from metrics reports based on its simple name.
     /// </summary>
     /// <param name="methodName">The normalized method name (e.g., "ctor", "MoveNext", "DoWork").</param>
     /// <returns>
@@ -84,7 +80,7 @@ public sealed class MemberFilter
             ? methodName[1..]
             : methodName;
 
-        return _excludedMethodNames.Contains(normalizedName);
+        return _patterns.IsMatch(normalizedName);
     }
 
     /// <summary>
@@ -137,29 +133,30 @@ public sealed class MemberFilter
     }
 
     /// <summary>
-    /// Creates a <see cref="MemberFilter"/> instance from a comma-separated or semicolon-separated string of method names.
+    /// Creates a <see cref="MemberFilter"/> instance from a comma-separated or semicolon-separated string of method patterns.
     /// </summary>
-    /// <param name="excludedMethodNamesString">
-    /// A string containing method names separated by commas or semicolons (e.g., "ctor,cctor,MoveNext" or "ctor;cctor;MoveNext").
+    /// <param name="excludedMemberNamesPatterns">
+    /// A string containing method name patterns separated by commas or semicolons (e.g., "ctor,cctor,*b__*").
     /// Whitespace around names is trimmed. Empty or null string returns a filter with default excluded methods.
     /// </param>
     /// <returns>
-    /// A <see cref="MemberFilter"/> instance configured with the specified method names, or default excluded methods if the string is empty or null.
+    /// A <see cref="MemberFilter"/> instance configured with the specified patterns, or default excluded methods if the string is empty or null.
     /// </returns>
     /// <remarks>
-    /// This method is useful for parsing method names from configuration files or command-line arguments.
-    /// Method names are normalized (leading dots are removed, e.g., ".ctor" becomes "ctor").
+    /// This method is useful for parsing method patterns from configuration files or command-line arguments.
+    /// Method names are normalized when evaluated (leading dots are removed, e.g., ".ctor" becomes "ctor").
     /// </remarks>
-    public static MemberFilter FromString(string? excludedMethodNamesString)
+    public static MemberFilter FromString(string? excludedMemberNamesPatterns)
     {
-        if (string.IsNullOrWhiteSpace(excludedMethodNamesString))
+        if (string.IsNullOrWhiteSpace(excludedMemberNamesPatterns))
         {
             return new MemberFilter();
         }
 
-        var methodNames = new HashSet<string>(StringComparer.Ordinal);
+        // Normalize patterns by removing leading dots when present (e.g., ".ctor" -> "ctor").
+        var normalizedParts = new List<string>();
         var separators = new[] { ',', ';' };
-        var parts = excludedMethodNamesString.Split(separators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var parts = excludedMemberNamesPatterns.Split(separators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         foreach (var part in parts)
         {
@@ -168,35 +165,40 @@ public sealed class MemberFilter
                 continue;
             }
 
-            // Normalize method name (remove leading dot if present)
-            var normalizedName = part.StartsWith(".", StringComparison.Ordinal) ? part[1..] : part;
-            if (!string.IsNullOrWhiteSpace(normalizedName))
+            var normalized = part.StartsWith(".", StringComparison.Ordinal) ? part[1..] : part;
+            if (!string.IsNullOrWhiteSpace(normalized))
             {
-                methodNames.Add(normalizedName);
+                normalizedParts.Add(normalized);
             }
         }
 
-        return methodNames.Count == 0 ? new MemberFilter() : new MemberFilter(methodNames);
+        var normalizedString = string.Join(",", normalizedParts);
+        var patternSet = string.IsNullOrWhiteSpace(normalizedString)
+            ? DefaultExcludedPatterns
+            : NamePatternSet.FromString(normalizedString, plainTextIsExactMatch: true);
+
+        return new MemberFilter(patternSet);
     }
 
     /// <summary>
-    /// Gets a comma-separated string of excluded method names.
+    /// Gets a comma-separated string of excluded member name patterns.
     /// </summary>
     /// <returns>
-    /// A comma-separated string of excluded method names, or an empty string if no methods are excluded.
+    /// A comma-separated string of excluded member name patterns, or an empty string if no patterns are excluded.
     /// </returns>
     /// <remarks>
-    /// This method returns the list of excluded method names in a format suitable for display.
+    /// This method returns the list of excluded member name patterns in a format suitable for display.
     /// The names are sorted alphabetically for consistent output.
     /// </remarks>
-    public string GetExcludedMethodNamesString()
+    public string GetExcludedMemberNamesPatternsString()
     {
-        if (_excludedMethodNames.Count == 0)
+        var rawPatterns = _patterns.RawPatterns;
+        if (rawPatterns.Count == 0)
         {
             return string.Empty;
         }
 
-        var sortedNames = _excludedMethodNames.OrderBy(x => x, StringComparer.Ordinal);
+        var sortedNames = rawPatterns.OrderBy(x => x, StringComparer.Ordinal);
         return string.Join(", ", sortedNames);
     }
 

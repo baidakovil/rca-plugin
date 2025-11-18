@@ -89,7 +89,7 @@ public sealed class MetricsAggregationService
             Paths = input.Paths,
             ThresholdsByLevel = thresholdLevels,
             ThresholdDescriptions = thresholdDescriptions,
-            ExcludedMethodNames = _memberFilter.GetExcludedMethodNamesString(),
+            ExcludedMemberNamesPatterns = _memberFilter.GetExcludedMemberNamesPatternsString(),
             ExcludedAssemblyNames = _assemblyFilter.GetExcludedAssemblyPatternsString(),
             ExcludedTypeNamePatterns = _typeFilter.GetExcludedTypePatternsString()
         };

@@ -74,13 +74,14 @@ public sealed class MetricsReporterOptions
     public string LogFilePath { get; init; } = string.Empty;
 
     /// <summary>
-    /// Comma-separated or semicolon-separated list of method names to exclude from metrics reports.
+    /// Comma-separated or semicolon-separated list of member name patterns to exclude from metrics reports.
     /// </summary>
     /// <remarks>
-    /// Method names are normalized (leading dots are removed). Examples: "ctor,cctor,MoveNext" or "ctor;cctor;MoveNext".
+    /// Patterns support '*' and '?' wildcards. Method names are normalized when evaluated
+    /// (leading dots are removed). Plain names without wildcards are treated as exact matches.
     /// If not specified, default excluded methods are used (constructors and compiler-generated methods).
     /// </remarks>
-    public string? ExcludedMethodNames { get; init; }
+    public string? ExcludedMemberNamesPatterns { get; init; }
 
     /// <summary>
     /// Comma-separated or semicolon-separated list of assembly name patterns to exclude from metrics reports.
