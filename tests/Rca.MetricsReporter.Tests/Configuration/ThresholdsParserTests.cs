@@ -100,6 +100,29 @@ public sealed class ThresholdsParserTests
     }
 
     [Test]
+    public void Parse_PositiveDeltaNeutralFlag_IsAppliedAcrossLevels()
+    {
+        // Arrange
+        const string json = """
+        {
+          "metrics": [
+            {
+              "name": "RoslynSourceLines",
+              "higherIsBetter": false,
+              "positiveDeltaNeutral": true
+            }
+          ]
+        }
+        """;
+
+        // Act
+        var result = parser.Parse(json);
+
+        // Assert
+        result[MetricIdentifier.RoslynSourceLines].Levels[MetricSymbolLevel.Type].PositiveDeltaNeutral.Should().BeTrue();
+    }
+
+    [Test]
     public void Parse_InvalidJson_ThrowsInvalidOperationException()
     {
         // Arrange

@@ -774,13 +774,18 @@ internal static class HtmlScriptGenerator
     var metricCells = table.querySelectorAll('.metric[data-metric-id]');
     metricCells.forEach(function(cell){
       var metricId = cell.dataset.metricId;
-      if(!metricId || !thresholdData[metricId]){
+      if(!metricId){
         return;
       }
-      var higherIsBetter = thresholdData[metricId].higherIsBetter;
+      var metricInfo = thresholdData[metricId];
+      if(!metricInfo){
+        return;
+      }
+      var higherIsBetter = metricInfo.higherIsBetter;
       if(typeof higherIsBetter !== 'boolean'){
         return;
       }
+      var positiveDeltaNeutral = metricInfo.positiveDeltaNeutral === true;
       // WHY: Determine delta sign from CSS class (delta-positive/delta-negative) which is set
       // based on the actual numeric value in MetricValueRenderer. This is more reliable than
       // parsing text content and avoids fragility from formatting changes.
@@ -789,6 +794,10 @@ internal static class HtmlScriptGenerator
         var isPositive = delta.classList.contains('delta-positive');
         var isImproving = higherIsBetter ? isPositive : !isPositive;
         delta.classList.remove('delta-positive', 'delta-negative');
+        if (positiveDeltaNeutral && !higherIsBetter && isPositive){
+          delta.classList.add('delta-neutral');
+          return;
+        }
         delta.classList.add(isImproving ? 'delta-improving' : 'delta-degrading');
       });
     });

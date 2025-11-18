@@ -95,7 +95,8 @@ public sealed class ThresholdsParser
         definition = ApplyDescription(metricElement, definition);
         
         var higherIsBetter = ExtractHigherIsBetter(metricElement, definition.Levels);
-        ApplySymbolThresholds(metricElement, definition, higherIsBetter);
+        var positiveDeltaNeutral = ExtractPositiveDeltaNeutral(metricElement, definition.Levels);
+        ApplySymbolThresholds(metricElement, definition, higherIsBetter, positiveDeltaNeutral);
 
         thresholds[identifier] = definition;
     }
@@ -139,9 +140,11 @@ public sealed class ThresholdsParser
             return CloneDefinition(existing);
         }
 
+        var higherIsBetter = ExtractHigherIsBetter(thresholds, identifier);
+        var positiveDeltaNeutral = ExtractPositiveDeltaNeutral(thresholds, identifier);
         return new MetricThresholdDefinition
         {
-            Levels = CreateUniformThresholds(null, null, ExtractHigherIsBetter(thresholds, identifier))
+            Levels = CreateUniformThresholds(null, null, higherIsBetter, positiveDeltaNeutral)
         };
     }
 
@@ -180,42 +183,50 @@ public sealed class ThresholdsParser
     /// <param name="metricElement">The JSON element containing the metric definition.</param>
     /// <param name="definition">The threshold definition to update.</param>
     /// <param name="higherIsBetter">The "higher is better" preference for the thresholds.</param>
+    /// <param name="positiveDeltaNeutral">Whether positive deltas should render neutrally for this metric.</param>
     /// <remarks>
     /// Processes the "symbolThresholds" object, which contains threshold values for different
     /// symbol levels (Solution, Assembly, Namespace, Type, Member).
+    /// The method also ensures every level has consistent presentation metadata even if not explicitly listed.
     /// </remarks>
     private static void ApplySymbolThresholds(
         JsonElement metricElement,
         MetricThresholdDefinition definition,
-        bool higherIsBetter)
+        bool higherIsBetter,
+        bool positiveDeltaNeutral)
     {
-        if (!metricElement.TryGetProperty("symbolThresholds", out var symbolThresholdsElement) ||
-            symbolThresholdsElement.ValueKind != JsonValueKind.Object)
+        if (metricElement.TryGetProperty("symbolThresholds", out var symbolThresholdsElement) &&
+            symbolThresholdsElement.ValueKind == JsonValueKind.Object)
         {
-            return;
+            foreach (var property in symbolThresholdsElement.EnumerateObject())
+            {
+                if (!TryParseSymbolLevel(property.Name, out var level))
+                {
+                    continue;
+                }
+
+                if (property.Value.ValueKind != JsonValueKind.Object)
+                {
+                    continue;
+                }
+
+                var warning = ReadNullableDecimal(property.Value, "warning");
+                var error = ReadNullableDecimal(property.Value, "error");
+
+                definition.Levels[level] = CreateThreshold(warning, error, higherIsBetter, positiveDeltaNeutral);
+            }
         }
 
-        foreach (var property in symbolThresholdsElement.EnumerateObject())
+        foreach (var level in SupportedLevels)
         {
-            if (!TryParseSymbolLevel(property.Name, out var level))
+            if (definition.Levels.TryGetValue(level, out var existing))
             {
-                continue;
+                definition.Levels[level] = CreateThreshold(existing.Warning, existing.Error, higherIsBetter, positiveDeltaNeutral);
             }
-
-            if (property.Value.ValueKind != JsonValueKind.Object)
+            else
             {
-                continue;
+                definition.Levels[level] = CreateThreshold(null, null, higherIsBetter, positiveDeltaNeutral);
             }
-
-            var warning = ReadNullableDecimal(property.Value, "warning");
-            var error = ReadNullableDecimal(property.Value, "error");
-
-            definition.Levels[level] = new MetricThreshold
-            {
-                Warning = warning,
-                Error = error,
-                HigherIsBetter = higherIsBetter
-            };
         }
     }
 
@@ -304,17 +315,75 @@ public sealed class ThresholdsParser
         return true;
     }
 
+    private static bool ExtractPositiveDeltaNeutral(
+        JsonElement metricElement,
+        IDictionary<MetricSymbolLevel, MetricThreshold> levels)
+    {
+        if (metricElement.TryGetProperty("positiveDeltaNeutral", out var positiveDeltaNeutralProperty) &&
+            positiveDeltaNeutralProperty.ValueKind is JsonValueKind.True or JsonValueKind.False)
+        {
+            return positiveDeltaNeutralProperty.GetBoolean();
+        }
+
+        return ExtractPositiveDeltaNeutral(levels);
+    }
+
+    private static bool ExtractPositiveDeltaNeutral(
+        IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds,
+        MetricIdentifier identifier)
+    {
+        if (thresholds.TryGetValue(identifier, out var existing))
+        {
+            foreach (var threshold in existing.Levels.Values)
+            {
+                return threshold.PositiveDeltaNeutral;
+            }
+        }
+
+        foreach (var definition in thresholds.Values)
+        {
+            foreach (var threshold in definition.Levels.Values)
+            {
+                return threshold.PositiveDeltaNeutral;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool ExtractPositiveDeltaNeutral(
+        IDictionary<MetricSymbolLevel, MetricThreshold> levels)
+    {
+        foreach (var threshold in levels.Values)
+        {
+            return threshold.PositiveDeltaNeutral;
+        }
+
+        return false;
+    }
+
+    private static MetricThreshold CreateThreshold(
+        decimal? warning,
+        decimal? error,
+        bool higherIsBetter,
+        bool positiveDeltaNeutral)
+        => new()
+        {
+            Warning = warning,
+            Error = error,
+            HigherIsBetter = higherIsBetter,
+            PositiveDeltaNeutral = positiveDeltaNeutral
+        };
+
+    private static MetricThreshold CloneThreshold(MetricThreshold source)
+        => CreateThreshold(source.Warning, source.Error, source.HigherIsBetter, source.PositiveDeltaNeutral);
+
     private static MetricThresholdDefinition CloneDefinition(MetricThresholdDefinition source)
     {
         var cloneLevels = new Dictionary<MetricSymbolLevel, MetricThreshold>();
         foreach (var (level, threshold) in source.Levels)
         {
-            cloneLevels[level] = new MetricThreshold
-            {
-                Warning = threshold.Warning,
-                Error = threshold.Error,
-                HigherIsBetter = threshold.HigherIsBetter
-            };
+            cloneLevels[level] = CloneThreshold(threshold);
         }
 
         return new MetricThresholdDefinition
@@ -336,8 +405,8 @@ public sealed class ThresholdsParser
             [MetricIdentifier.RoslynCyclomaticComplexity] = new MetricThresholdDefinition { Levels = CreateUniformThresholds(12, 25, false) },
             [MetricIdentifier.RoslynClassCoupling] = new MetricThresholdDefinition { Levels = CreateUniformThresholds(50, 80, false) },
             [MetricIdentifier.RoslynDepthOfInheritance] = new MetricThresholdDefinition { Levels = CreateUniformThresholds(5, 8, false) },
-            [MetricIdentifier.RoslynSourceLines] = new MetricThresholdDefinition { Levels = CreateUniformThresholds(null, null, false) },
-            [MetricIdentifier.RoslynExecutableLines] = new MetricThresholdDefinition { Levels = CreateUniformThresholds(null, null, false) },
+            [MetricIdentifier.RoslynSourceLines] = new MetricThresholdDefinition { Levels = CreateUniformThresholds(null, null, false, true) },
+            [MetricIdentifier.RoslynExecutableLines] = new MetricThresholdDefinition { Levels = CreateUniformThresholds(null, null, false, true) },
             [MetricIdentifier.SarifCaRuleViolations] = new MetricThresholdDefinition { Levels = CreateUniformThresholds(5, 10, false) },
             [MetricIdentifier.SarifIdeRuleViolations] = new MetricThresholdDefinition { Levels = CreateUniformThresholds(10, 20, false) }
         };
@@ -346,17 +415,13 @@ public sealed class ThresholdsParser
     private static Dictionary<MetricSymbolLevel, MetricThreshold> CreateUniformThresholds(
         decimal? warning,
         decimal? error,
-        bool higherIsBetter)
+        bool higherIsBetter,
+        bool positiveDeltaNeutral = false)
     {
         var result = new Dictionary<MetricSymbolLevel, MetricThreshold>();
         foreach (var level in SupportedLevels)
         {
-            result[level] = new MetricThreshold
-            {
-                Warning = warning,
-                Error = error,
-                HigherIsBetter = higherIsBetter
-            };
+            result[level] = CreateThreshold(warning, error, higherIsBetter, positiveDeltaNeutral);
         }
 
         return result;

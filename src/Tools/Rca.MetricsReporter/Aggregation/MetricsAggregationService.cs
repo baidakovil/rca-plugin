@@ -144,7 +144,8 @@ public sealed class MetricsAggregationService
         {
             Warning = threshold.Warning,
             Error = threshold.Error,
-            HigherIsBetter = threshold.HigherIsBetter
+            HigherIsBetter = threshold.HigherIsBetter,
+            PositiveDeltaNeutral = threshold.PositiveDeltaNeutral
         };
 
     private sealed class AggregationWorkspace

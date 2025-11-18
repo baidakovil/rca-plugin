@@ -206,6 +206,7 @@
       "name": "RoslynSourceLines",
       "description": "Roslyn source lines metric. Uses for informational purposes only.",
       "higherIsBetter": false,
+      "positiveDeltaNeutral": true,
       "symbolThresholds": {
         "Assembly": {
           "warning": null,
@@ -229,6 +230,7 @@
       "name": "RoslynExecutableLines",
       "description": "Roslyn executable lines metric. Thresholds are chosen as a average of common suggestions.",
       "higherIsBetter": false,
+      "positiveDeltaNeutral": true,
       "symbolThresholds": {
         "Assembly": {
           "warning": null,

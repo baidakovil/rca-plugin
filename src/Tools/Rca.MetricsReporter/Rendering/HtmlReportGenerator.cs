@@ -126,12 +126,14 @@ public sealed class HtmlReportGenerator
             metadata.ThresholdDescriptions.TryGetValue(identifier, out var description);
 
             var higherIsBetter = ExtractHigherIsBetterPreference(levels);
+            var positiveDeltaNeutral = ExtractPositiveDeltaNeutralPreference(levels);
             var levelEntries = BuildLevelEntries(levels);
 
             payload[key] = new
             {
                 description,
                 higherIsBetter,
+                positiveDeltaNeutral,
                 levels = levelEntries
             };
         }
@@ -152,6 +154,16 @@ public sealed class HtmlReportGenerator
         }
 
         return true;
+    }
+
+    private static bool ExtractPositiveDeltaNeutralPreference(IDictionary<MetricSymbolLevel, MetricThreshold> levels)
+    {
+        foreach (var threshold in levels.Values)
+        {
+            return threshold.PositiveDeltaNeutral;
+        }
+
+        return false;
     }
 
     /// <summary>

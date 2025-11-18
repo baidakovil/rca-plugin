@@ -146,7 +146,8 @@
       "properties": {
         "warning": { "type": ["number", "null"] },
         "error": { "type": ["number", "null"] },
-        "higherIsBetter": { "type": "boolean" }
+        "higherIsBetter": { "type": "boolean" },
+        "positiveDeltaNeutral": { "type": "boolean" }
       },
       "required": ["higherIsBetter"],
       "additionalProperties": false

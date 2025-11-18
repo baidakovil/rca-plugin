@@ -58,12 +58,17 @@ internal static class ThresholdTestFactory
         };
     }
 
-    public static MetricThreshold CreateThreshold(decimal? warning, decimal? error, bool higherIsBetter)
+    public static MetricThreshold CreateThreshold(
+        decimal? warning,
+        decimal? error,
+        bool higherIsBetter,
+        bool positiveDeltaNeutral = false)
         => new()
         {
             Warning = warning,
             Error = error,
-            HigherIsBetter = higherIsBetter
+            HigherIsBetter = higherIsBetter,
+            PositiveDeltaNeutral = positiveDeltaNeutral
         };
 }
 
