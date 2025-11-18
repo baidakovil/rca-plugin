@@ -9,9 +9,12 @@
     <SarifMetricsEnabled Condition="'$(SarifMetricsEnabled)' == ''">true</SarifMetricsEnabled>
     <!-- Set to true to enable AltCover metrics collection -->
     <AltCoverEnabled Condition="'$(AltCoverEnabled)' == ''">true</AltCoverEnabled>
-    <!-- Assembly filter for AltCover instrumentation -->
-    <!-- Only instrument assemblies matching this pattern -->
+    <!-- Assembly filter for AltCover instrumentation (which assemblies to instrument) -->
     <RcaCoverageAssemblyFilter Condition="'$(RcaCoverageAssemblyFilter)' == ''">Rca.*.dll</RcaCoverageAssemblyFilter>
+    <!-- Method filter for AltCover instrumentation (which methods to exclude from coverage, e.g. constructors) -->
+    <AltCoverMethodFilter Condition="'$(AltCoverMethodFilter)' == ''">.cctor|.ctor</AltCoverMethodFilter>
+    <!-- Target framework of test projects whose binaries participate in AltCover-based metrics -->
+    <RcaTestTargetFramework Condition="'$(RcaTestTargetFramework)' == ''">net8.0-windows</RcaTestTargetFramework>
 
     <!-- Directory that contains Metrics.exe and its dependencies. -->
     <RoslynMetricsToolDir Condition="'$(RoslynMetricsToolDir)' == ''">$(SolutionDir)build\Resources\Metrics\win-arm64</RoslynMetricsToolDir>
@@ -46,6 +49,26 @@
     <CompilerVisibleProperty Include="GenerateMetricsDashboard" />
     <CompilerVisibleProperty Include="GenerateHtmlFromJson" />
     <CompilerVisibleProperty Include="ReplaceMetricsBaseline" />
+  </ItemGroup>
+
+  <!-- Test assemblies that should receive instrumented runtime binaries for AltCover coverage -->
+  <!-- Identity = runtime assembly name prefix (e.g. Rca.Core), metadata TestProjectName = test project folder name -->
+  <ItemGroup>
+    <AltCoverInstrumentedTestAssembly Include="Rca.Contracts">
+      <TestProjectName>Rca.Contracts.Tests</TestProjectName>
+    </AltCoverInstrumentedTestAssembly>
+    <AltCoverInstrumentedTestAssembly Include="Rca.Core">
+      <TestProjectName>Rca.Core.Tests</TestProjectName>
+    </AltCoverInstrumentedTestAssembly>
+    <AltCoverInstrumentedTestAssembly Include="Rca.Loader">
+      <TestProjectName>Rca.Loader.Tests</TestProjectName>
+    </AltCoverInstrumentedTestAssembly>
+    <AltCoverInstrumentedTestAssembly Include="Rca.Network">
+      <TestProjectName>Rca.Network.Tests</TestProjectName>
+    </AltCoverInstrumentedTestAssembly>
+    <AltCoverInstrumentedTestAssembly Include="Rca.UI">
+      <TestProjectName>Rca.UI.Tests</TestProjectName>
+    </AltCoverInstrumentedTestAssembly>
   </ItemGroup>
 </Project>
 
