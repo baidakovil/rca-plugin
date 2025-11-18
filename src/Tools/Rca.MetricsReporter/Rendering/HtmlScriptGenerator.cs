@@ -642,6 +642,7 @@ internal static class HtmlScriptGenerator
     if(detailControl){
       detailControl.setAttribute('aria-valuenow', value);
     }
+    expandAllNodes();
     applyDetailLevel(level.maxDepth);
     applyStateFilters();
   }
@@ -737,6 +738,15 @@ internal static class HtmlScriptGenerator
   function collapseDescendants(parentId){
     getDescendantRows(parentId).forEach(function(descendant){
       setExpanderState(descendant, false);
+    });
+  }
+
+  function expandAllNodes(){
+    // WHY: Detail level changes imply the user wants to inspect leaves, so keep the hierarchy fully expanded.
+    state.rows.forEach(function(row){
+      if(row.dataset.hasChildren === 'true'){
+        setExpanderState(row, true);
+      }
     });
   }
 
@@ -915,11 +925,7 @@ internal static class HtmlScriptGenerator
   var expandBtn = document.getElementById('expand-all');
   if(expandBtn){
     expandBtn.addEventListener('click', function(){
-      state.rows.forEach(function(row){
-        if(row.dataset.hasChildren === 'true'){
-          setExpanderState(row, true);
-        }
-      });
+      expandAllNodes();
       applyDetailLevel(currentDetail.maxDepth);
     });
   }
