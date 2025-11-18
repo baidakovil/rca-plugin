@@ -13,12 +13,13 @@ public sealed class MetricsAggregationService
 {
     private readonly MemberFilter _memberFilter;
     private readonly AssemblyFilter _assemblyFilter;
+    private readonly TypeFilter _typeFilter;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MetricsAggregationService"/> class with default filters.
     /// </summary>
     public MetricsAggregationService()
-        : this(new MemberFilter(), new AssemblyFilter())
+        : this(new MemberFilter(), new AssemblyFilter(), new TypeFilter())
     {
     }
 
@@ -27,13 +28,16 @@ public sealed class MetricsAggregationService
     /// </summary>
     /// <param name="memberFilter">The member filter to use for excluding methods. Cannot be null.</param>
     /// <param name="assemblyFilter">The assembly filter to use for excluding assemblies. Cannot be null.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="memberFilter"/> or <paramref name="assemblyFilter"/> is null.</exception>
-    public MetricsAggregationService(MemberFilter memberFilter, AssemblyFilter assemblyFilter)
+    /// <param name="typeFilter">The type filter to use for excluding types. Cannot be null.</param>
+    /// <exception cref="ArgumentNullException">Thrown when any of the filters are null.</exception>
+    public MetricsAggregationService(MemberFilter memberFilter, AssemblyFilter assemblyFilter, TypeFilter typeFilter)
     {
         ArgumentNullException.ThrowIfNull(memberFilter);
         ArgumentNullException.ThrowIfNull(assemblyFilter);
+        ArgumentNullException.ThrowIfNull(typeFilter);
         _memberFilter = memberFilter;
         _assemblyFilter = assemblyFilter;
+        _typeFilter = typeFilter;
     }
 
     /// <summary>
@@ -45,7 +49,7 @@ public sealed class MetricsAggregationService
     {
         ArgumentNullException.ThrowIfNull(input);
 
-        var workspace = new AggregationWorkspace(input.SolutionName, _memberFilter, _assemblyFilter);
+        var workspace = new AggregationWorkspace(input.SolutionName, _memberFilter, _assemblyFilter, _typeFilter);
 
         foreach (var document in input.AltCoverDocuments)
         {
@@ -81,7 +85,8 @@ public sealed class MetricsAggregationService
             ThresholdsByLevel = thresholdLevels,
             ThresholdDescriptions = thresholdDescriptions,
             ExcludedMethodNames = _memberFilter.GetExcludedMethodNamesString(),
-            ExcludedAssemblyNames = _assemblyFilter.GetExcludedAssemblyPatternsString()
+            ExcludedAssemblyNames = _assemblyFilter.GetExcludedAssemblyPatternsString(),
+            ExcludedTypeNamePatterns = _typeFilter.GetExcludedTypePatternsString()
         };
 
         return new MetricsReport
@@ -166,8 +171,9 @@ public sealed class MetricsAggregationService
         private readonly Dictionary<string, AssemblyMetricsNode> _fileAssemblyMap = new(StringComparer.OrdinalIgnoreCase);
         private readonly MemberFilter _memberFilter;
         private readonly AssemblyFilter _assemblyFilter;
+        private readonly TypeFilter _typeFilter;
 
-        public AggregationWorkspace(string solutionName, MemberFilter memberFilter, AssemblyFilter assemblyFilter)
+        public AggregationWorkspace(string solutionName, MemberFilter memberFilter, AssemblyFilter assemblyFilter, TypeFilter typeFilter)
         {
             Solution = new SolutionMetricsNode
             {
@@ -177,6 +183,7 @@ public sealed class MetricsAggregationService
             };
             _memberFilter = memberFilter;
             _assemblyFilter = assemblyFilter;
+            _typeFilter = typeFilter;
         }
 
         public SolutionMetricsNode Solution { get; }
@@ -787,6 +794,12 @@ public sealed class MetricsAggregationService
             var typeFqn = element.FullyQualifiedName ?? element.Name;
             var assemblyName = ResolveAssemblyForType(element);
             
+            // Filter out types based on configured type name patterns
+            if (_typeFilter.ShouldExcludeType(typeFqn) || _typeFilter.ShouldExcludeType(element.Name))
+            {
+                return;
+            }
+            
             // Filter out types for excluded assemblies
             if (_assemblyFilter.ShouldExcludeAssembly(assemblyName))
             {
@@ -830,6 +843,12 @@ public sealed class MetricsAggregationService
             var typeFqn = element.ParentFullyQualifiedName ?? ResolveDeclaringType(memberFqn);
 
             if (typeFqn is null)
+            {
+                return;
+            }
+
+            // Filter out members belonging to excluded types
+            if (_typeFilter.ShouldExcludeType(typeFqn))
             {
                 return;
             }

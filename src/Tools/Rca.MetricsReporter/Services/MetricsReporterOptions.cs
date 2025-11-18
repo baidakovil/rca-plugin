@@ -92,6 +92,15 @@ public sealed class MetricsReporterOptions
     public string? ExcludedAssemblyNames { get; init; }
 
     /// <summary>
+    /// Comma-separated or semicolon-separated list of type name patterns to exclude from metrics reports.
+    /// </summary>
+    /// <remarks>
+    /// Patterns are matched against fully qualified type names using substring matching (case-sensitive).
+    /// Examples: "&lt;&gt;c,__DisplayClass". If not specified, no types are excluded via this filter.
+    /// </remarks>
+    public string? ExcludedTypeNamePatterns { get; init; }
+
+    /// <summary>
     /// When <see langword="true"/>, automatically replaces the baseline file if the new report differs from the existing baseline.
     /// </summary>
     /// <remarks>

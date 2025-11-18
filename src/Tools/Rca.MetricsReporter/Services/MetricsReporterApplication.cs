@@ -46,7 +46,7 @@ public sealed class MetricsReporterApplication
     /// <param name="memberFilter">The member filter to use for excluding methods.</param>
     public MetricsReporterApplication(MemberFilter memberFilter)
     {
-        _aggregationService = new MetricsAggregationService(memberFilter, new AssemblyFilter());
+        _aggregationService = new MetricsAggregationService(memberFilter, new AssemblyFilter(), new TypeFilter());
     }
 
     /// <summary>
@@ -310,6 +310,7 @@ public sealed class MetricsReporterApplication
     {
         var memberFilter = MemberFilter.FromString(options.ExcludedMethodNames);
         var assemblyFilter = AssemblyFilter.FromString(options.ExcludedAssemblyNames);
+        var typeFilter = TypeFilter.FromString(options.ExcludedTypeNamePatterns);
 
         return new MetricsAggregationInput
         {
@@ -347,7 +348,8 @@ public sealed class MetricsReporterApplication
     {
         var memberFilter = MemberFilter.FromString(options.ExcludedMethodNames);
         var assemblyFilter = AssemblyFilter.FromString(options.ExcludedAssemblyNames);
-        var aggregationService = new MetricsAggregationService(memberFilter, assemblyFilter);
+        var typeFilter = TypeFilter.FromString(options.ExcludedTypeNamePatterns);
+        var aggregationService = new MetricsAggregationService(memberFilter, assemblyFilter, typeFilter);
 
         try
         {

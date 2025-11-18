@@ -55,6 +55,7 @@ static MetricsReporterOptions ParseArguments(string[] args)
     string? inputJson = null;
     string? excludedMethodNames = null;
     string? excludedAssemblyNames = null;
+    string? excludedTypeNamePatterns = null;
     bool replaceBaseline = false;
     string? baselineStoragePath = null;
     string? coverageHtmlDir = null;
@@ -105,6 +106,9 @@ static MetricsReporterOptions ParseArguments(string[] args)
                 break;
             case "--excluded-assemblies":
                 excludedAssemblyNames = RequireValue(args, ref index, argument);
+                break;
+            case "--excluded-types":
+                excludedTypeNamePatterns = RequireValue(args, ref index, argument);
                 break;
             case "--replace-baseline":
                 replaceBaseline = true;
@@ -159,6 +163,7 @@ static MetricsReporterOptions ParseArguments(string[] args)
         LogFilePath = logFilePath,
         ExcludedMethodNames = excludedMethodNames,
         ExcludedAssemblyNames = excludedAssemblyNames,
+        ExcludedTypeNamePatterns = excludedTypeNamePatterns,
         ReplaceMetricsBaseline = replaceBaseline,
         MetricsReportStoragePath = baselineStoragePath is null ? null : Path.GetFullPath(baselineStoragePath),
         CoverageHtmlDir = coverageHtmlDir is null ? null : Path.GetFullPath(coverageHtmlDir)
@@ -199,5 +204,6 @@ static void PrintUsage()
     Console.WriteLine("  --baseline-storage-path <path> Directory where old baseline files are archived with timestamps.");
     Console.WriteLine("  --excluded-methods <list> Comma-separated or semicolon-separated list of method names to exclude.");
     Console.WriteLine("  --excluded-assemblies <list> Comma-separated or semicolon-separated list of assembly patterns to exclude.");
+    Console.WriteLine("  --excluded-types <list> Comma-separated or semicolon-separated list of type name patterns to exclude.");
 }
 

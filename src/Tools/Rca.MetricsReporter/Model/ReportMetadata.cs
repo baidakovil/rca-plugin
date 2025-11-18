@@ -54,5 +54,14 @@ public sealed class ReportMetadata
     /// It is used for display purposes in the HTML report header.
     /// </remarks>
     public string? ExcludedAssemblyNames { get; init; }
+
+    /// <summary>
+    /// Comma-separated list of type name patterns that were excluded from the metrics report.
+    /// </summary>
+    /// <remarks>
+    /// Patterns are matched against fully qualified type names using substring matching.
+    /// This property is used for display purposes in the HTML report header.
+    /// </remarks>
+    public string? ExcludedTypeNamePatterns { get; init; }
 }
 

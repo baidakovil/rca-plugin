@@ -70,6 +70,15 @@ internal static class HtmlHeaderGenerator
         {
             builder.AppendLine("    <p><strong>Excluded assembly names:</strong> (none)</p>");
         }
+        
+        if (!string.IsNullOrWhiteSpace(report.Metadata.ExcludedTypeNamePatterns))
+        {
+            builder.AppendLine($"    <p><strong>Excluded type name patterns:</strong> {WebUtility.HtmlEncode(report.Metadata.ExcludedTypeNamePatterns)}</p>");
+        }
+        else
+        {
+            builder.AppendLine("    <p><strong>Excluded type name patterns:</strong> (none)</p>");
+        }
 
         var stats = CalculateStats(report);
         builder.AppendLine("    <div class=\"meta-stats\">");

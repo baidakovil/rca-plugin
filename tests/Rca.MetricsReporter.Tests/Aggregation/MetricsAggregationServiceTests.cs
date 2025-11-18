@@ -579,7 +579,7 @@ public sealed class MetricsAggregationServiceTests
         const string excludedTypeFqn = "Rca.UI.Tests.RcaDockablePanelViewModelTests";
 
         var assemblyFilter = AssemblyFilter.FromString("Tests");
-        var serviceWithFilter = new MetricsAggregationService(new MemberFilter(), assemblyFilter);
+        var serviceWithFilter = new MetricsAggregationService(new MemberFilter(), assemblyFilter, new TypeFilter());
 
         var roslynDocument = new ParsedMetricsDocument
         {

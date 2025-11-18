@@ -29,6 +29,11 @@
     <!-- If not specified, default excluded methods are used (constructors and compiler-generated methods). -->
     <ExcludedMethodNames Condition="'$(ExcludedMethodNames)' == ''">ctor,cctor,MoveNext,SetStateMachine,MoveNextAsync,DisposeAsync</ExcludedMethodNames>
 
+    <!-- Comma-separated or semicolon-separated list of type name patterns to exclude from metrics reports. -->
+    <!-- Matching is performed against fully qualified type names using substring matching (case-sensitive). -->
+    <!-- Example: to exclude all compiler-generated types like Namespace.Type+&lt;&gt;c, specify patterns such as "&lt;&gt;c,__DisplayClass". -->
+    <ExcludedTypeNamePatterns Condition="'$(ExcludedTypeNamePatterns)' == ''">&lt;&gt;c,&lt;-ctor&gt;</ExcludedTypeNamePatterns>
+
     <!-- Comma-separated or semicolon-separated list of assembly name patterns to exclude from metrics reports. -->
     <!-- Assembly names containing any of the specified patterns will be excluded. Matching is case-insensitive. -->
     <!-- Examples: "Tests,Test" or "Tests;Test". If not specified, no assemblies are excluded. -->
