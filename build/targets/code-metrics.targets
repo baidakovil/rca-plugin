@@ -22,9 +22,10 @@
   <!-- Metrics.exe will use already built projects or build them if needed -->
   <Target Name="GenerateSolutionMetrics" AfterTargets="Build" Condition="'$(DesignTimeBuild)' != 'true' and '$(RoslynMetricsEnabled)' == 'true' and '$(MSBuildProjectName)' == 'Rca.MetricsReporter.Tests'">
     <MakeDir Directories="$(RoslynOutputDir)" />
-    <Exec Command='"$(RoslynMetricsToolExe)" /solution:"$(RoslynMetricsSolutionPath)" /out:"$(RoslynSolutionMetricsOutputFile)" /quiet' WorkingDirectory="$(RoslynMetricsToolDir)" IgnoreExitCode="false" />
+    <Exec Command='"$(RoslynMetricsToolExe)" /solution:"$(RoslynMetricsSolutionPath)" /out:"$(RoslynSolutionMetricsOutputFile)" /quiet'
+          WorkingDirectory="$(RoslynMetricsToolDir)"
+          IgnoreExitCode="false" />
   </Target>
-
 
   <!-- Intermediate gate that waits for deployment targets to complete -->
   <Target Name="WaitForAllDeployments"
@@ -39,10 +40,9 @@
   <Target Name="InstrumentDeployedAssemblies"
           AfterTargets="WaitForAllDeployments"
           Condition="'$(AltCoverEnabled)' == 'true' and '$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.Runtime' and '$(RuntimeDeployDir)' != '' and Exists('$(RuntimeDeployDir)')">
-    
     <PropertyGroup>
       <AltCoverInputDir>$(RuntimeDeployDir)</AltCoverInputDir>
-            <!-- Method filter to exclude constructors (ctor) and static constructors (cctor) from coverage -->
+      <!-- Method filter to exclude constructors (ctor) and static constructors (cctor) from coverage -->
       <AltCoverMethodFilter Condition="'$(AltCoverMethodFilter)' == ''">.cctor|.ctor</AltCoverMethodFilter>
       <!-- Test output configuration used for copying instrumented assemblies into unit test bin directories -->
       <RcaTestTargetFramework Condition="'$(RcaTestTargetFramework)' == ''">net8.0-windows</RcaTestTargetFramework>
@@ -66,7 +66,6 @@
   <Target Name="CopyInstrumentedAssembliesToTests"
           AfterTargets="Build"
           Condition="'$(AltCoverEnabled)' == 'true' and '$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.Core.Tests' and '$(RuntimeDeployDir)' != '' and Exists('$(RuntimeDeployDir)')">
-
     <PropertyGroup>
       <!-- Ensure AltCoverInputDir is aligned with RuntimeDeployDir used during instrumentation -->
       <AltCoverInputDir Condition="'$(AltCoverInputDir)' == ''">$(RuntimeDeployDir)</AltCoverInputDir>
@@ -181,31 +180,22 @@
   <!-- Or any project : dotnet msbuild src/Rca.Runtime/Rca.Runtime.csproj /t:CollectCoverage /p:AltCoverEnabled=true -->
   <!-- Condition ensures it only runs once and not during design-time builds -->
   <Target Name="CollectCoverage" Condition="'$(AltCoverEnabled)' == 'true' and '$(DesignTimeBuild)' != 'true'">
-    
     <!-- Determine AltCoverRecorderDir from RuntimeDeployDir, or from timestamp file if not set -->
     <PropertyGroup>
       <AltCoverRecorderDir Condition="'$(RuntimeDeployDir)' != ''">$(RuntimeDeployDir)</AltCoverRecorderDir>
       <AltCoverRecorderDir Condition="'$(RuntimeDeployDir)' == '' and Exists('$(RcaTimestampFile)')">$(RcaRevitAddinsDir)\$([System.IO.File]::ReadAllText('$(RcaTimestampFile)').Trim())</AltCoverRecorderDir>
     </PropertyGroup>
 
-
-
     <!-- Validate that we have a valid recorder directory -->
     <Error Text="Cannot determine recorder directory for coverage collection. RuntimeDeployDir is not set and timestamp file is missing or empty." 
            Condition="'$(AltCoverRecorderDir)' == ''" />
     
-    <!-- Check if signal file exists before removing it -->
-    <PropertyGroup>
-      <SignalFileExists Condition="'$(AltCoverSignalFile)' != '' and Exists('$(AltCoverSignalFile)')">true</SignalFileExists>
-      <SignalFileExists Condition="'$(AltCoverSignalFile)' == '' or !Exists('$(AltCoverSignalFile)')">false</SignalFileExists>
-    </PropertyGroup>
-
     <!-- Warn if signal file is missing -->
     <Warning Text="AltCover signal file not found at $(AltCoverSignalFile). Coverage collection may be incomplete." 
-             Condition="'$(SignalFileExists)' == 'false' and '$(AltCoverSignalFile)' != ''" />
+             Condition="'$(AltCoverSignalFile)' != '' and !Exists('$(AltCoverSignalFile)')" />
 
     <!-- Remove signal file if it exists -->
-    <Delete Files="$(AltCoverSignalFile)" Condition="'$(SignalFileExists)' == 'true'" />
+    <Delete Files="$(AltCoverSignalFile)" Condition="'$(AltCoverSignalFile)' != '' and Exists('$(AltCoverSignalFile)')" />
 
     <!-- Run AltCover runner to collect coverage -->
     <Message Text="Collecting coverage from $(AltCoverRecorderDir)..." Importance="High" />    
