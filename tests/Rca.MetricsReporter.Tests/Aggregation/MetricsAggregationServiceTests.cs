@@ -614,6 +614,295 @@ public sealed class MetricsAggregationServiceTests
         assembly.Namespaces.Should().BeEmpty("namespaces from excluded assemblies must be removed");
     }
 
+    [Test]
+    public void BuildReport_IteratorTypeCoverage_IsTransferredToMethodAndTypeIsHidden()
+    {
+        // Arrange
+        const string assemblyName = "Sample.Assembly";
+        const string namespaceFqn = "Sample.Namespace";
+        const string typeFqn = "Sample.Namespace.SampleType";
+        const string iteratorTypeFqn = "Sample.Namespace.SampleType+<DoWork>d__1";
+        const string memberFqn = typeFqn + ".DoWork(...)";
+
+        var filePath = @"C:\Repo\Sample.cs";
+
+        var altCoverDocument = new ParsedMetricsDocument
+        {
+            Elements = new List<ParsedCodeElement>
+            {
+                new(CodeElementKind.Assembly, assemblyName, assemblyName),
+                new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
+                {
+                    ParentFullyQualifiedName = assemblyName
+                },
+                new(CodeElementKind.Type, "SampleType", typeFqn)
+                {
+                    ParentFullyQualifiedName = namespaceFqn
+                },
+                // Iterator state-machine type with real coverage
+                new(CodeElementKind.Type, "Sample.Namespace.SampleType+<DoWork>d__1", iteratorTypeFqn)
+                {
+                    ParentFullyQualifiedName = assemblyName,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.AltCoverSequenceCoverage] = Metric(80, "percent"),
+                        [MetricIdentifier.AltCoverBranchCoverage] = Metric(60, "percent")
+                    }
+                },
+                // User method with zero AltCover coverage
+                new(CodeElementKind.Member, "DoWork", memberFqn)
+                {
+                    ParentFullyQualifiedName = typeFqn,
+                    Source = new SourceLocation { Path = filePath, StartLine = 10, EndLine = 20 },
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.AltCoverSequenceCoverage] = Metric(0, "percent"),
+                        [MetricIdentifier.AltCoverBranchCoverage] = Metric(0, "percent")
+                    }
+                }
+            }
+        };
+
+        var input = new MetricsAggregationInput
+        {
+            SolutionName = "SampleSolution",
+            AltCoverDocuments = new List<ParsedMetricsDocument> { altCoverDocument },
+            RoslynDocuments = new List<ParsedMetricsDocument>(),
+            SarifDocuments = new List<ParsedMetricsDocument>(),
+            Baseline = null,
+            Thresholds = thresholds,
+            Paths = new ReportPaths()
+        };
+
+        // Act
+        var report = service.BuildReport(input);
+
+        // Assert
+        var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+        var @namespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == namespaceFqn).Subject;
+        var type = @namespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
+
+        // Iterator type should be hidden from the type list
+        @namespace.Types.Should().NotContain(t => t.FullyQualifiedName == iteratorTypeFqn);
+
+        // Method should receive iterator coverage and be marked accordingly
+        var method = type.Members.Should().ContainSingle(m => m.FullyQualifiedName == memberFqn).Subject;
+        method.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(80);
+        method.Metrics[MetricIdentifier.AltCoverBranchCoverage].Value.Should().Be(60);
+        method.IncludesIteratorStateMachineCoverage.Should().BeTrue();
+    }
+
+    [Test]
+    public void BuildReport_IteratorType_NoMatchingMethod_KeepsTypeUnchanged()
+    {
+        // Arrange
+        const string assemblyName = "Sample.Assembly";
+        const string namespaceFqn = "Sample.Namespace";
+        const string typeFqn = "Sample.Namespace.SampleType";
+        const string iteratorTypeFqn = "Sample.Namespace.SampleType+<Missing>d__1";
+
+        var altCoverDocument = new ParsedMetricsDocument
+        {
+            Elements = new List<ParsedCodeElement>
+            {
+                new(CodeElementKind.Assembly, assemblyName, assemblyName),
+                new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
+                {
+                    ParentFullyQualifiedName = assemblyName
+                },
+                new(CodeElementKind.Type, "SampleType", typeFqn)
+                {
+                    ParentFullyQualifiedName = namespaceFqn
+                },
+                new(CodeElementKind.Type, "Sample.Namespace.SampleType+<Missing>d__1", iteratorTypeFqn)
+                {
+                    ParentFullyQualifiedName = assemblyName,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.AltCoverSequenceCoverage] = Metric(50, "percent"),
+                        [MetricIdentifier.AltCoverBranchCoverage] = Metric(40, "percent")
+                    }
+                }
+            }
+        };
+
+        var input = new MetricsAggregationInput
+        {
+            SolutionName = "SampleSolution",
+            AltCoverDocuments = new List<ParsedMetricsDocument> { altCoverDocument },
+            RoslynDocuments = new List<ParsedMetricsDocument>(),
+            SarifDocuments = new List<ParsedMetricsDocument>(),
+            Baseline = null,
+            Thresholds = thresholds,
+            Paths = new ReportPaths()
+        };
+
+        // Act
+        var report = service.BuildReport(input);
+
+        // Assert
+        var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+        var @namespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == namespaceFqn).Subject;
+
+        // Iterator type should remain because no matching method exists
+        @namespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == iteratorTypeFqn);
+    }
+
+    [Test]
+    public void BuildReport_IteratorType_MethodAlreadyHasCoverage_DoesNotOverrideOrHideType()
+    {
+        // Arrange
+        const string assemblyName = "Sample.Assembly";
+        const string namespaceFqn = "Sample.Namespace";
+        const string typeFqn = "Sample.Namespace.SampleType";
+        const string iteratorTypeFqn = "Sample.Namespace.SampleType+<DoWork>d__1";
+        const string memberFqn = typeFqn + ".DoWork(...)";
+
+        var filePath = @"C:\Repo\Sample.cs";
+
+        var altCoverDocument = new ParsedMetricsDocument
+        {
+            Elements = new List<ParsedCodeElement>
+            {
+                new(CodeElementKind.Assembly, assemblyName, assemblyName),
+                new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
+                {
+                    ParentFullyQualifiedName = assemblyName
+                },
+                new(CodeElementKind.Type, "SampleType", typeFqn)
+                {
+                    ParentFullyQualifiedName = namespaceFqn
+                },
+                // Iterator state-machine type with coverage
+                new(CodeElementKind.Type, "Sample.Namespace.SampleType+<DoWork>d__1", iteratorTypeFqn)
+                {
+                    ParentFullyQualifiedName = assemblyName,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.AltCoverSequenceCoverage] = Metric(80, "percent"),
+                        [MetricIdentifier.AltCoverBranchCoverage] = Metric(60, "percent")
+                    }
+                },
+                // User method already has non-zero coverage
+                new(CodeElementKind.Member, "DoWork", memberFqn)
+                {
+                    ParentFullyQualifiedName = typeFqn,
+                    Source = new SourceLocation { Path = filePath, StartLine = 10, EndLine = 20 },
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.AltCoverSequenceCoverage] = Metric(10, "percent"),
+                        [MetricIdentifier.AltCoverBranchCoverage] = Metric(5, "percent")
+                    }
+                }
+            }
+        };
+
+        var input = new MetricsAggregationInput
+        {
+            SolutionName = "SampleSolution",
+            AltCoverDocuments = new List<ParsedMetricsDocument> { altCoverDocument },
+            RoslynDocuments = new List<ParsedMetricsDocument>(),
+            SarifDocuments = new List<ParsedMetricsDocument>(),
+            Baseline = null,
+            Thresholds = thresholds,
+            Paths = new ReportPaths()
+        };
+
+        // Act
+        var report = service.BuildReport(input);
+
+        // Assert
+        var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+        var @namespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == namespaceFqn).Subject;
+        var type = @namespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
+
+        // Iterator type should remain because method already had non-zero coverage
+        @namespace.Types.Should().Contain(t => t.FullyQualifiedName == iteratorTypeFqn);
+
+        var method = type.Members.Should().ContainSingle(m => m.FullyQualifiedName == memberFqn).Subject;
+        method.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(10);
+        method.Metrics[MetricIdentifier.AltCoverBranchCoverage].Value.Should().Be(5);
+        method.IncludesIteratorStateMachineCoverage.Should().BeFalse();
+    }
+
+    [Test]
+    public void BuildReport_IteratorTypeAndMethodBothZeroCoverage_HidesIteratorTypeAsNoise()
+    {
+        // Arrange
+        const string assemblyName = "Sample.Assembly";
+        const string namespaceFqn = "Sample.Namespace";
+        const string typeFqn = "Sample.Namespace.SampleType";
+        const string iteratorTypeFqn = "Sample.Namespace.SampleType+<DoWork>d__1";
+        const string memberFqn = typeFqn + ".DoWork(...)";
+
+        var filePath = @"C:\Repo\Sample.cs";
+
+        var altCoverDocument = new ParsedMetricsDocument
+        {
+            Elements = new List<ParsedCodeElement>
+            {
+                new(CodeElementKind.Assembly, assemblyName, assemblyName),
+                new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
+                {
+                    ParentFullyQualifiedName = assemblyName
+                },
+                new(CodeElementKind.Type, "SampleType", typeFqn)
+                {
+                    ParentFullyQualifiedName = namespaceFqn
+                },
+                // Iterator state-machine type with zero coverage
+                new(CodeElementKind.Type, "Sample.Namespace.SampleType+<DoWork>d__1", iteratorTypeFqn)
+                {
+                    ParentFullyQualifiedName = assemblyName,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.AltCoverSequenceCoverage] = Metric(0, "percent"),
+                        [MetricIdentifier.AltCoverBranchCoverage] = Metric(0, "percent")
+                    }
+                },
+                // User method also with zero coverage
+                new(CodeElementKind.Member, "DoWork", memberFqn)
+                {
+                    ParentFullyQualifiedName = typeFqn,
+                    Source = new SourceLocation { Path = filePath, StartLine = 10, EndLine = 20 },
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.AltCoverSequenceCoverage] = Metric(0, "percent"),
+                        [MetricIdentifier.AltCoverBranchCoverage] = Metric(0, "percent")
+                    }
+                }
+            }
+        };
+
+        var input = new MetricsAggregationInput
+        {
+            SolutionName = "SampleSolution",
+            AltCoverDocuments = new List<ParsedMetricsDocument> { altCoverDocument },
+            RoslynDocuments = new List<ParsedMetricsDocument>(),
+            SarifDocuments = new List<ParsedMetricsDocument>(),
+            Baseline = null,
+            Thresholds = thresholds,
+            Paths = new ReportPaths()
+        };
+
+        // Act
+        var report = service.BuildReport(input);
+
+        // Assert
+        var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+        var @namespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == namespaceFqn).Subject;
+        var type = @namespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
+
+        // Iterator type should be removed as non-informative noise
+        @namespace.Types.Should().NotContain(t => t.FullyQualifiedName == iteratorTypeFqn);
+
+        // Method remains with zero coverage and without iterator flag
+        var method = type.Members.Should().ContainSingle(m => m.FullyQualifiedName == memberFqn).Subject;
+        method.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(0);
+        method.Metrics[MetricIdentifier.AltCoverBranchCoverage].Value.Should().Be(0);
+        method.IncludesIteratorStateMachineCoverage.Should().BeFalse();
+    }
+
     private static MetricValue Metric(decimal value, string unit)
         => new()
         {

@@ -28,6 +28,7 @@ internal static class HtmlStylesGenerator
     private const string StatusWarningColor = "rgba(182, 111, 26, 1)";
     private const string StatusErrorColor = "rgba(217, 83, 79, 1)";
     private const string DeltaNeutralColor = "rgba(102, 134, 158, 1)";
+    private const string IteratorIndicatorColor = "rgba(128, 128, 128, 0.9)";
 
     private const string DefaultGap = "8px";
     private const string ControlBlockGap = "16px";
@@ -156,6 +157,9 @@ internal static class HtmlStylesGenerator
         builder.AppendLine(FormattableString.Invariant($".delta-degrading {{ color: {StatusErrorColor}; margin-left: {DeltaSpacing}; }}"));
         // WHY: Some higher-is-worse metrics (like line counts) treat positive deltas as expected growth, so we keep them neutral.
         builder.AppendLine(FormattableString.Invariant($".delta-neutral {{ color: {DeltaNeutralColor}; margin-left: {DeltaSpacing}; }}"));
+        // WHY: Iterator/async state-machine coverage is merged back into the user method,
+        // but we still want a subtle visual hint that the data originates from a nested compiler-generated type.
+        builder.AppendLine(FormattableString.Invariant($".method-state-machine {{ color: {IteratorIndicatorColor}; font-size: 11px; margin-right: 3px; vertical-align: baseline; }}"));
         builder.AppendLine(".fqn { font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; color: rgba(128, 128, 128, 0.8); }");
         // WHY: Coverage links for type nodes (non-leaf) should have black semi-transparent underlining
         // to match the text color while indicating clickability.

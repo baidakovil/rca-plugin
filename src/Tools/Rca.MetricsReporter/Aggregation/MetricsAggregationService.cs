@@ -64,6 +64,11 @@ public sealed class MetricsAggregationService
             workspace.ApplySarifDocument(document);
         }
 
+        // Reconcile iterator state-machine coverage so that methods like X(...)
+        // receive coverage from compiler-generated nested types <X>d__N before
+        // baseline deltas and thresholds are applied.
+        workspace.ReconcileIteratorStateMachineMetrics();
+
         workspace.ApplyBaselineAndThresholds(input.Baseline, input.Thresholds);
 
         var (thresholdLevels, thresholdDescriptions) = CreateMetadataThresholds(input.Thresholds);
@@ -470,6 +475,260 @@ public sealed class MetricsAggregationService
         {
             var baselineLookup = CreateBaselineLookup(baseline?.Solution);
             ApplyBaselineRecursive(Solution, baselineLookup, thresholds, Solution.Name);
+        }
+
+        /// <summary>
+        /// Reconciles coverage for compiler-generated iterator state machine types
+        /// (for example, nested types with names following the pattern <c>SomeType+&lt;X&gt;d__N</c>)
+        /// by transferring their AltCover coverage back to the corresponding user-defined
+        /// method <c>X(...)</c> on <c>SomeType</c>.
+        /// </summary>
+        /// <remarks>
+        /// The reconciliation is applied conservatively:
+        /// <list type="bullet">
+        /// <item>
+        /// <description>
+        /// If the target method <c>X(...)</c> cannot be found on the outer type,
+        /// the iterator type is left untouched.
+        /// </description>
+        /// </item>
+        /// <item>
+        /// <description>
+        /// If the target method already has non-zero AltCover sequence or branch coverage,
+        /// no transfer is performed to avoid overwriting existing data.
+        /// </description>
+        /// </item>
+        /// <item>
+        /// <description>
+        /// Only when coverage is successfully transferred is the iterator type removed
+        /// from the hierarchy so that it does not appear in the HTML report.
+        /// </description>
+        /// </item>
+        /// </list>
+        /// The method also marks the affected member with
+        /// <see cref="MemberMetricsNode.IncludesIteratorStateMachineCoverage"/> so that
+        /// the HTML renderer can annotate it with a neutral indicator glyph.
+        /// </remarks>
+        public void ReconcileIteratorStateMachineMetrics()
+        {
+            if (_types.Count == 0)
+            {
+                return;
+            }
+
+            var iteratorTypeKeys = new List<string>();
+            foreach (var key in _types.Keys)
+            {
+                if (TryExtractIteratorInfo(key, out _, out _))
+                {
+                    iteratorTypeKeys.Add(key);
+                }
+            }
+
+            if (iteratorTypeKeys.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var iteratorTypeKey in iteratorTypeKeys)
+            {
+                if (!_types.TryGetValue(iteratorTypeKey, out var iteratorTypeEntry))
+                {
+                    continue;
+                }
+
+                if (!TryExtractIteratorInfo(iteratorTypeKey, out var outerTypeFqn, out var methodName))
+                {
+                    continue;
+                }
+
+                if (!_types.TryGetValue(outerTypeFqn, out var outerTypeEntry))
+                {
+                    // Outer type not found – keep iterator type as-is.
+                    continue;
+                }
+
+                var targetMember = FindMethodOnType(outerTypeEntry.Node, methodName);
+                if (targetMember is null)
+                {
+                    // No matching method – keep iterator type as-is.
+                    continue;
+                }
+
+                var methodHasCoverage = HasNonZeroAltCoverCoverage(targetMember.Metrics);
+                var iteratorHasCoverage = HasNonZeroAltCoverCoverage(iteratorTypeEntry.Node.Metrics);
+
+                if (methodHasCoverage && iteratorHasCoverage)
+                {
+                    // Both method and iterator have coverage – keep them separate to avoid
+                    // overriding or double-counting.
+                    continue;
+                }
+
+                if (!methodHasCoverage && !iteratorHasCoverage)
+                {
+                    // Neither method nor iterator carry useful coverage – treat the iterator
+                    // type as non-informative noise and hide it from the report.
+                    RemoveIteratorTypeFromHierarchy(iteratorTypeKey, iteratorTypeEntry);
+                    continue;
+                }
+
+                if (!methodHasCoverage && iteratorHasCoverage)
+                {
+                    // Iterator type carries the real coverage – transfer it to the method
+                    // and hide the compiler-generated type.
+                    TransferIteratorCoverage(iteratorTypeEntry.Node, targetMember);
+                    RemoveIteratorTypeFromHierarchy(iteratorTypeKey, iteratorTypeEntry);
+                }
+
+                // When method already has coverage and iterator does not, we keep the iterator
+                // type as-is because it may still be useful for low-level diagnostics.
+            }
+        }
+
+        private static bool TryExtractIteratorInfo(string typeFqn, out string outerTypeFqn, out string methodName)
+        {
+            outerTypeFqn = string.Empty;
+            methodName = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(typeFqn))
+            {
+                return false;
+            }
+
+            var plusIndex = typeFqn.LastIndexOf('+');
+            if (plusIndex <= 0 || plusIndex >= typeFqn.Length - 1)
+            {
+                return false;
+            }
+
+            var nestedPart = typeFqn[(plusIndex + 1)..];
+            // Expected pattern: <MethodName>d__N
+            if (!nestedPart.StartsWith('<') || nestedPart.IndexOf('>') is var closeIndex && closeIndex <= 1)
+            {
+                return false;
+            }
+
+            var endOfName = nestedPart.IndexOf('>');
+            if (endOfName <= 1 || endOfName >= nestedPart.Length - 1)
+            {
+                return false;
+            }
+
+            var suffix = nestedPart[(endOfName + 1)..];
+            if (!suffix.StartsWith("d__"))
+            {
+                return false;
+            }
+
+            // Ensure suffix after d__ is numeric to avoid false positives.
+            var numberPart = suffix["d__".Length..];
+            if (numberPart.Length == 0 || !int.TryParse(numberPart, out _))
+            {
+                return false;
+            }
+
+            outerTypeFqn = typeFqn[..plusIndex];
+            methodName = nestedPart[1..endOfName];
+            return !string.IsNullOrWhiteSpace(outerTypeFqn) && !string.IsNullOrWhiteSpace(methodName);
+        }
+
+        private static MemberMetricsNode? FindMethodOnType(TypeMetricsNode typeNode, string methodName)
+        {
+            foreach (var member in typeNode.Members)
+            {
+                if (string.IsNullOrWhiteSpace(member.FullyQualifiedName))
+                {
+                    continue;
+                }
+
+                var extractedName = SymbolNormalizer.ExtractMethodName(member.FullyQualifiedName);
+                if (string.Equals(extractedName, methodName, StringComparison.Ordinal))
+                {
+                    return member;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool HasNonZeroAltCoverCoverage(IDictionary<MetricIdentifier, MetricValue> metrics)
+        {
+            if (metrics.TryGetValue(MetricIdentifier.AltCoverSequenceCoverage, out var seq) &&
+                seq.Value.HasValue && seq.Value.Value != 0)
+            {
+                return true;
+            }
+
+            if (metrics.TryGetValue(MetricIdentifier.AltCoverBranchCoverage, out var br) &&
+                br.Value.HasValue && br.Value.Value != 0)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private static void TransferIteratorCoverage(TypeMetricsNode iteratorType, MemberMetricsNode targetMember)
+        {
+            // Move primary AltCover coverage metrics from the iterator type to the method,
+            // but only when the method currently has no meaningful coverage.
+            CopyAltCoverMetricIfPresent(iteratorType, targetMember, MetricIdentifier.AltCoverSequenceCoverage);
+            CopyAltCoverMetricIfPresent(iteratorType, targetMember, MetricIdentifier.AltCoverBranchCoverage);
+            CopyAltCoverMetricIfPresent(iteratorType, targetMember, MetricIdentifier.AltCoverCyclomaticComplexity);
+            CopyAltCoverMetricIfPresent(iteratorType, targetMember, MetricIdentifier.AltCoverNPathComplexity);
+
+            targetMember.IncludesIteratorStateMachineCoverage = true;
+        }
+
+        private static void CopyAltCoverMetricIfPresent(
+            TypeMetricsNode sourceType,
+            MemberMetricsNode targetMember,
+            MetricIdentifier identifier)
+        {
+            if (!sourceType.Metrics.TryGetValue(identifier, out var sourceValue) ||
+                !sourceValue.Value.HasValue)
+            {
+                return;
+            }
+
+            if (targetMember.Metrics.TryGetValue(identifier, out var existing) &&
+                existing.Value.HasValue && existing.Value.Value != 0)
+            {
+                // Target already has a non-zero value; keep it.
+                return;
+            }
+
+            targetMember.Metrics[identifier] = new MetricValue
+            {
+                Value = sourceValue.Value,
+                Unit = sourceValue.Unit,
+                Status = sourceValue.Status,
+                Delta = sourceValue.Delta
+            };
+        }
+
+        private void RemoveIteratorTypeFromHierarchy(string iteratorTypeKey, TypeEntry iteratorTypeEntry)
+        {
+            // Remove from type lookup
+            _types.Remove(iteratorTypeKey);
+
+            var iteratorTypeNode = iteratorTypeEntry.Node;
+            var assembly = iteratorTypeEntry.Assembly;
+
+            // Remove from namespace.Types collection
+            foreach (var ns in assembly.Namespaces)
+            {
+                if (ns.Types.Contains(iteratorTypeNode))
+                {
+                    ns.Types.Remove(iteratorTypeNode);
+                    break;
+                }
+            }
+
+            // No need to modify _typeLineIndex or _memberLineIndex here because
+            // they are only used during SARIF application which runs before
+            // iterator reconciliation.
         }
 
         private void MergeAssembly(ParsedCodeElement element)

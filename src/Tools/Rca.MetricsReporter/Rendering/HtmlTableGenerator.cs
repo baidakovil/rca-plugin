@@ -201,9 +201,15 @@ internal sealed class HtmlTableGenerator
             coverageLink = _coverageLinkBuilder.BuildLink(node, assemblyName);
         }
         
-        if (!isNodeRow && node is MemberMetricsNode)
+        if (!isNodeRow && node is MemberMetricsNode memberNode)
         {
             // For member rows, wrap name in a span with red color class
+            // and show a subtle indicator when coverage includes iterator state machine data.
+            if (memberNode.IncludesIteratorStateMachineCoverage)
+            {
+                builder.Append("<span class=\"method-state-machine\" title=\"Includes coverage from compiler-generated iterator state machine\">⊃</span>");
+            }
+
             builder.Append("<span class=\"name-text item-name\">" + nameText + "</span>");
         }
         else if (isNodeRow && node is TypeMetricsNode)
