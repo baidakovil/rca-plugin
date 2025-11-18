@@ -36,53 +36,51 @@ internal static class HtmlHeaderGenerator
         var localTime = report.Metadata.GeneratedAtUtc.ToLocalTime();
         builder.AppendLine($"  <p class=\"meta-summary\"><strong>Generated at:</strong> {localTime:yyyy-MM-dd HH:mm:ss}<span class=\"meta-toggle\"> ▶</span></p>");
         
+        var excludedAssemblyNames = string.IsNullOrWhiteSpace(report.Metadata.ExcludedAssemblyNames)
+            ? "(none)"
+            : WebUtility.HtmlEncode(report.Metadata.ExcludedAssemblyNames);
+        var excludedTypePatterns = string.IsNullOrWhiteSpace(report.Metadata.ExcludedTypeNamePatterns)
+            ? "(none)"
+            : WebUtility.HtmlEncode(report.Metadata.ExcludedTypeNamePatterns);
+        var excludedMemberPatterns = string.IsNullOrWhiteSpace(report.Metadata.ExcludedMemberNamesPatterns)
+            ? "(none)"
+            : WebUtility.HtmlEncode(report.Metadata.ExcludedMemberNamesPatterns);
+
         builder.AppendLine("  <div class=\"meta-details\" style=\"display: none;\">");
         if (!string.IsNullOrWhiteSpace(report.Metadata.BaselineReference))
         {
             builder.AppendLine($"    <p><strong>Baseline:</strong> {WebUtility.HtmlEncode(report.Metadata.BaselineReference)}</p>");
         }
 
-        builder.AppendLine($"    <p><strong>Metrics JSON:</strong> {WebUtility.HtmlEncode(report.Metadata.Paths.Report)}</p>");
-        if (!string.IsNullOrWhiteSpace(report.Metadata.Paths.Baseline))
-        {
-            builder.AppendLine($"    <p><strong>Baseline JSON:</strong> {WebUtility.HtmlEncode(report.Metadata.Paths.Baseline)}</p>");
-        }
         var thresholdsPath = report.Metadata.Paths.Thresholds;
         var thresholdsDisplay = string.IsNullOrWhiteSpace(thresholdsPath)
             ? "(inline thresholds)"
             : thresholdsPath;
-        builder.AppendLine($"    <p><strong>Thresholds JSON:</strong> {WebUtility.HtmlEncode(thresholdsDisplay)}</p>");
-        
-        if (!string.IsNullOrWhiteSpace(report.Metadata.ExcludedMemberNamesPatterns))
+
+        builder.AppendLine("    <div class=\"meta-section\">");
+        builder.AppendLine("      <p class=\"section-title\">Paths</p>");
+        builder.AppendLine($"      <p><strong>Metrics JSON:</strong> {WebUtility.HtmlEncode(report.Metadata.Paths.Report)}</p>");
+        if (!string.IsNullOrWhiteSpace(report.Metadata.Paths.Baseline))
         {
-            builder.AppendLine($"    <p><strong>Excluded member name patterns:</strong> {WebUtility.HtmlEncode(report.Metadata.ExcludedMemberNamesPatterns)}</p>");
+            builder.AppendLine($"      <p><strong>Baseline JSON:</strong> {WebUtility.HtmlEncode(report.Metadata.Paths.Baseline)}</p>");
         }
-        else
-        {
-            builder.AppendLine("    <p><strong>Excluded member name patterns:</strong> (none)</p>");
-        }
-        
-        if (!string.IsNullOrWhiteSpace(report.Metadata.ExcludedAssemblyNames))
-        {
-            builder.AppendLine($"    <p><strong>Excluded assembly names:</strong> {WebUtility.HtmlEncode(report.Metadata.ExcludedAssemblyNames)}</p>");
-        }
-        else
-        {
-            builder.AppendLine("    <p><strong>Excluded assembly names:</strong> (none)</p>");
-        }
-        
-        if (!string.IsNullOrWhiteSpace(report.Metadata.ExcludedTypeNamePatterns))
-        {
-            builder.AppendLine($"    <p><strong>Excluded type name patterns:</strong> {WebUtility.HtmlEncode(report.Metadata.ExcludedTypeNamePatterns)}</p>");
-        }
-        else
-        {
-            builder.AppendLine("    <p><strong>Excluded type name patterns:</strong> (none)</p>");
-        }
+        builder.AppendLine($"      <p><strong>Thresholds JSON:</strong> {WebUtility.HtmlEncode(thresholdsDisplay)}</p>");
+        builder.AppendLine("    </div>");
+
+        // builder.AppendLine("    <div class=\"meta-section-divider\" aria-hidden=\"true\"></div>");
+
+        builder.AppendLine("    <div class=\"meta-section\">");
+        builder.AppendLine("      <p class=\"section-title\">Excluded from report</p>");
+        builder.AppendLine($"      <p><strong>Assemblies:</strong> {excludedAssemblyNames}</p>");
+        builder.AppendLine($"      <p><strong>Types:</strong> {excludedTypePatterns}</p>");
+        builder.AppendLine($"      <p><strong>Members:</strong> {excludedMemberPatterns}</p>");
+        builder.AppendLine("    </div>");
+
+        // builder.AppendLine("    <div class=\"meta-section-divider\" aria-hidden=\"true\"></div>");
 
         var stats = CalculateStats(report);
-        builder.AppendLine("    <div class=\"meta-stats\">");
-        builder.AppendLine("      <p><strong>Stats:</strong></p>");
+        builder.AppendLine("    <div class=\"meta-section\">");
+        builder.AppendLine("      <p class=\"section-title\">Stats</p>");
         builder.AppendLine($"      <p><strong>{FormatCount(stats.Total)}</strong> overall symbols (rows)</p>");
         builder.AppendLine($"      <p><strong>{FormatCount(stats.NoMetric)}</strong> no-metric symbols ({FormatPercent(stats.NoMetric, stats.Total)}{FormatDelta(stats.NoMetric, stats.BaselineNoMetric, stats.Total, stats.BaselineTotal)})</p>");
         builder.AppendLine($"      <p><strong>{FormatCount(stats.Clear)}</strong> clear symbols ({FormatPercent(stats.Clear, stats.Total)}{FormatDelta(stats.Clear, stats.BaselineClear, stats.Total, stats.BaselineTotal)})</p>");

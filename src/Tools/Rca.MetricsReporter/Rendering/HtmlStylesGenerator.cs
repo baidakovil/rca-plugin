@@ -332,7 +332,10 @@ internal static class HtmlStylesGenerator
         builder.AppendLine(".meta-summary:hover { opacity: 0.7; }");
         builder.AppendLine(".meta-toggle { display: inline-block; transition: transform 0.2s ease; margin-left: 4px; }");
         builder.AppendLine(".meta-summary.expanded .meta-toggle { transform: rotate(90deg); }");
-        builder.AppendLine(".meta-details { margin-top: 8px; }");
+        builder.AppendLine(".meta-details { margin-top: 8px; margin-bottom: 20px; }");
+        builder.AppendLine(".meta-section { background: rgb(245, 245, 245); border: 1px solid rgba(0, 0, 0, 0.12); border-radius: 10px; padding: 8px 12px; margin: 10px 0 4px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05); }");
+        builder.AppendLine(".meta-section .section-title { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(0, 0, 0, 0.65); margin-bottom: 6px; }");
+        //builder.AppendLine(".meta-section-divider { width: 32%; height: 1px; margin: 10px auto; background: rgba(0, 0, 0, 0.18); border-radius: 999px; }");
     }
 
     private static void AppendTooltipStyles(StringBuilder builder)
