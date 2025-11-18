@@ -53,7 +53,6 @@ static MetricsReporterOptions ParseArguments(string[] args)
     string? thresholds = null;
     string? thresholdsFile = null;
     string? inputJson = null;
-    string? excludedMethodNames = null;
     string? excludedAssemblyNames = null;
     string? excludedTypeNamePatterns = null;
     string? excludedMemberNamesPatterns = null;

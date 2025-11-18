@@ -1035,33 +1035,6 @@ public sealed class MetricsAggregationService
             };
         }
 
-        private static void CopyAltCoverMetricIfPresent(
-            TypeMetricsNode sourceType,
-            MemberMetricsNode targetMember,
-            MetricIdentifier identifier)
-        {
-            if (!sourceType.Metrics.TryGetValue(identifier, out var sourceValue) ||
-                !sourceValue.Value.HasValue)
-            {
-                return;
-            }
-
-            if (targetMember.Metrics.TryGetValue(identifier, out var existing) &&
-                existing.Value.HasValue && existing.Value.Value != 0)
-            {
-                // Target already has a non-zero value; keep it.
-                return;
-            }
-
-            targetMember.Metrics[identifier] = new MetricValue
-            {
-                Value = sourceValue.Value,
-                Unit = sourceValue.Unit,
-                Status = sourceValue.Status,
-                Delta = sourceValue.Delta
-            };
-        }
-
         private void RemoveIteratorTypeFromHierarchy(string iteratorTypeKey, TypeEntry iteratorTypeEntry)
         {
             // Remove from type lookup
