@@ -73,6 +73,11 @@ public sealed class MetricsAggregationService
         // baseline deltas and thresholds are applied.
         workspace.ReconcileIteratorStateMachineMetrics();
 
+        // Reconcile coverage for plain nested plus-types (e.g., Root+Leaf or Root+Inner+Leaf)
+        // by transferring coverage into corresponding dot types (Namespace.Root.Leaf, Namespace.Root.Inner.Leaf)
+        // when there is no conflicting coverage on the target types/members.
+        workspace.ReconcilePlainNestedTypeMetrics();
+
         workspace.ApplyBaselineAndThresholds(input.Baseline, input.Thresholds);
 
         var (thresholdLevels, thresholdDescriptions) = CreateMetadataThresholds(input.Thresholds);
@@ -593,6 +598,109 @@ public sealed class MetricsAggregationService
             }
         }
 
+        /// <summary>
+        /// Reconciles coverage for plain nested plus-types (for example,
+        /// <c>Namespace.Root+Leaf</c> or <c>Namespace.Root+Inner+Leaf</c>)
+        /// by transferring their AltCover coverage into corresponding dot types
+        /// (<c>Namespace.Root.Leaf</c>, <c>Namespace.Root.Inner.Leaf</c>)
+        /// when there is no conflicting coverage on the target types or members.
+        /// </summary>
+        /// <remarks>
+        /// The reconciliation is conservative:
+        /// <list type="bullet">
+        /// <item>
+        /// <description>If no matching dot type exists, the nested plus-type is left unchanged.</description>
+        /// </item>
+        /// <item>
+        /// <description>
+        /// If both the plus-type and the dot type have non-zero AltCover coverage,
+        /// the transfer is cancelled to avoid mixing independent metrics.
+        /// </description>
+        /// </item>
+        /// <item>
+        /// <description>
+        /// If any pair of corresponding methods on the plus-type and dot type both
+        /// have non-zero AltCover coverage, the transfer is cancelled for the whole type.
+        /// </description>
+        /// </item>
+        /// <item>
+        /// <description>
+        /// When transfer succeeds, methods on the dot type that receive coverage are
+        /// marked with <see cref="MemberMetricsNode.IncludesIteratorStateMachineCoverage"/>
+        /// so that the HTML renderer can annotate them with a neutral indicator glyph.
+        /// </description>
+        /// </item>
+        /// </list>
+        /// </remarks>
+        public void ReconcilePlainNestedTypeMetrics()
+        {
+            if (_types.Count == 0)
+            {
+                return;
+            }
+
+            var candidateTypeKeys = new List<string>();
+            foreach (var key in _types.Keys)
+            {
+                if (TryParsePlainNestedPlusType(key, out _, out _, out _))
+                {
+                    candidateTypeKeys.Add(key);
+                }
+            }
+
+            if (candidateTypeKeys.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var plusTypeKey in candidateTypeKeys)
+            {
+                if (!_types.TryGetValue(plusTypeKey, out var plusTypeEntry))
+                {
+                    continue;
+                }
+
+                if (!TryParsePlainNestedPlusType(plusTypeKey, out var namespaceFqn, out var segments, out var dotTypeFqn))
+                {
+                    continue;
+                }
+
+                if (!_types.TryGetValue(dotTypeFqn, out var dotTypeEntry))
+                {
+                    // Dot type does not exist – keep the plus-type as-is.
+                    continue;
+                }
+
+                // Type-level coverage conflict check
+                var plusTypeHasCoverage = HasNonZeroAltCoverCoverage(plusTypeEntry.Node.Metrics);
+                var dotTypeHasCoverage = HasNonZeroAltCoverCoverage(dotTypeEntry.Node.Metrics);
+                if (plusTypeHasCoverage && dotTypeHasCoverage)
+                {
+                    // Both types have coverage – avoid mixing.
+                    continue;
+                }
+
+                // Method-level conflict detection
+                if (HasMethodCoverageConflict(plusTypeEntry.Node, dotTypeEntry.Node))
+                {
+                    // At least one method has coverage on both sides – cancel transfer.
+                    continue;
+                }
+
+                // Transfer type-level coverage when only plus-type has AltCover coverage.
+                if (plusTypeHasCoverage && !dotTypeHasCoverage)
+                {
+                    TransferTypeAltCoverCoverage(plusTypeEntry.Node, dotTypeEntry.Node);
+                }
+
+                // Transfer method-level coverage and create missing methods when necessary.
+                TransferMethodCoverageFromPlusType(plusTypeEntry.Node, dotTypeEntry.Node, plusTypeKey, dotTypeFqn);
+
+                // Remove the reconciled plus-type from the hierarchy.
+                RemoveIteratorTypeFromHierarchy(plusTypeKey, plusTypeEntry);
+            }
+        }
+
         private static bool TryExtractIteratorInfo(string typeFqn, out string outerTypeFqn, out string methodName)
         {
             outerTypeFqn = string.Empty;
@@ -680,12 +788,251 @@ public sealed class MetricsAggregationService
         {
             // Move primary AltCover coverage metrics from the iterator type to the method,
             // but only when the method currently has no meaningful coverage.
-            CopyAltCoverMetricIfPresent(iteratorType, targetMember, MetricIdentifier.AltCoverSequenceCoverage);
-            CopyAltCoverMetricIfPresent(iteratorType, targetMember, MetricIdentifier.AltCoverBranchCoverage);
-            CopyAltCoverMetricIfPresent(iteratorType, targetMember, MetricIdentifier.AltCoverCyclomaticComplexity);
-            CopyAltCoverMetricIfPresent(iteratorType, targetMember, MetricIdentifier.AltCoverNPathComplexity);
+            CopyAltCoverMetricIfPresent(iteratorType.Metrics, targetMember.Metrics, MetricIdentifier.AltCoverSequenceCoverage);
+            CopyAltCoverMetricIfPresent(iteratorType.Metrics, targetMember.Metrics, MetricIdentifier.AltCoverBranchCoverage);
+            CopyAltCoverMetricIfPresent(iteratorType.Metrics, targetMember.Metrics, MetricIdentifier.AltCoverCyclomaticComplexity);
+            CopyAltCoverMetricIfPresent(iteratorType.Metrics, targetMember.Metrics, MetricIdentifier.AltCoverNPathComplexity);
 
             targetMember.IncludesIteratorStateMachineCoverage = true;
+        }
+
+        private static bool TryParsePlainNestedPlusType(
+            string typeFqn,
+            out string namespaceFqn,
+            out string[] segments,
+            out string dotTypeFqn)
+        {
+            namespaceFqn = ResolveNamespaceName(typeFqn);
+            dotTypeFqn = string.Empty;
+            segments = Array.Empty<string>();
+
+            if (string.IsNullOrWhiteSpace(typeFqn))
+            {
+                return false;
+            }
+
+            // Extract the part after the namespace: Root+Leaf or Root+Inner+Leaf
+            var nsPrefix = string.IsNullOrWhiteSpace(namespaceFqn) || namespaceFqn == "<global>"
+                ? string.Empty
+                : namespaceFqn + ".";
+
+            if (!typeFqn.StartsWith(nsPrefix, StringComparison.Ordinal) || typeFqn.Length <= nsPrefix.Length)
+            {
+                return false;
+            }
+
+            var typePart = typeFqn[nsPrefix.Length..];
+            if (!typePart.Contains('+', StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            segments = typePart.Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (segments.Length < 2)
+            {
+                return false;
+            }
+
+            // Reject compiler-generated patterns: any segment containing '<', '>' or "__"
+            foreach (var segment in segments)
+            {
+                if (segment.Contains('<', StringComparison.Ordinal) ||
+                    segment.Contains('>', StringComparison.Ordinal) ||
+                    segment.Contains("__", StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+
+            var leafName = segments[^1];
+            var parentSegments = segments[..^1];
+            var dotNamespace = namespaceFqn == "<global>"
+                ? string.Join('.', parentSegments)
+                : string.IsNullOrWhiteSpace(namespaceFqn)
+                    ? string.Join('.', parentSegments)
+                    : namespaceFqn + "." + string.Join('.', parentSegments);
+
+            dotTypeFqn = string.IsNullOrWhiteSpace(dotNamespace)
+                ? leafName
+                : dotNamespace + "." + leafName;
+
+            return true;
+        }
+
+        private static bool HasMethodCoverageConflict(TypeMetricsNode plusType, TypeMetricsNode dotType)
+        {
+            if (plusType.Members.Count == 0 || dotType.Members.Count == 0)
+            {
+                return false;
+            }
+
+            var dotMethods = BuildMethodMapByName(dotType);
+
+            foreach (var plusMember in plusType.Members)
+            {
+                var name = ExtractMethodKey(plusMember);
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    continue;
+                }
+
+                if (!dotMethods.TryGetValue(name, out var dotMember))
+                {
+                    continue;
+                }
+
+                var plusHasCoverage = HasNonZeroAltCoverCoverage(plusMember.Metrics);
+                var dotHasCoverage = HasNonZeroAltCoverCoverage(dotMember.Metrics);
+
+                if (plusHasCoverage && dotHasCoverage)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static Dictionary<string, MemberMetricsNode> BuildMethodMapByName(TypeMetricsNode typeNode)
+        {
+            var result = new Dictionary<string, MemberMetricsNode>(StringComparer.Ordinal);
+            foreach (var member in typeNode.Members)
+            {
+                var name = ExtractMethodKey(member);
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    continue;
+                }
+
+                if (!result.ContainsKey(name))
+                {
+                    result[name] = member;
+                }
+            }
+
+            return result;
+        }
+
+        private static string? ExtractMethodKey(MemberMetricsNode member)
+        {
+            if (!string.IsNullOrWhiteSpace(member.FullyQualifiedName))
+            {
+                return SymbolNormalizer.ExtractMethodName(member.FullyQualifiedName);
+            }
+
+            return SymbolNormalizer.ExtractMethodName(member.Name);
+        }
+
+        private static void TransferTypeAltCoverCoverage(TypeMetricsNode sourceType, TypeMetricsNode targetType)
+        {
+            CopyAltCoverMetricIfPresent(sourceType.Metrics, targetType.Metrics, MetricIdentifier.AltCoverSequenceCoverage);
+            CopyAltCoverMetricIfPresent(sourceType.Metrics, targetType.Metrics, MetricIdentifier.AltCoverBranchCoverage);
+            CopyAltCoverMetricIfPresent(sourceType.Metrics, targetType.Metrics, MetricIdentifier.AltCoverCyclomaticComplexity);
+            CopyAltCoverMetricIfPresent(sourceType.Metrics, targetType.Metrics, MetricIdentifier.AltCoverNPathComplexity);
+        }
+
+        private void TransferMethodCoverageFromPlusType(
+            TypeMetricsNode plusType,
+            TypeMetricsNode dotType,
+            string plusTypeFqn,
+            string dotTypeFqn)
+        {
+            var dotMethodsByName = BuildMethodMapByName(dotType);
+
+            foreach (var plusMember in plusType.Members)
+            {
+                var methodName = ExtractMethodKey(plusMember);
+                if (string.IsNullOrWhiteSpace(methodName))
+                {
+                    continue;
+                }
+
+                var plusHasCoverage = HasNonZeroAltCoverCoverage(plusMember.Metrics);
+                if (!plusHasCoverage)
+                {
+                    continue;
+                }
+
+                dotMethodsByName.TryGetValue(methodName, out var dotMember);
+                var dotHasCoverage = dotMember is not null && HasNonZeroAltCoverCoverage(dotMember.Metrics);
+
+                if (dotHasCoverage)
+                {
+                    // We already filtered out conflicts; this case should be rare but safe to skip.
+                    continue;
+                }
+
+                if (dotMember is null)
+                {
+                    var memberFqn = BuildDotMemberFqn(plusMember.FullyQualifiedName, plusTypeFqn, dotTypeFqn, methodName);
+
+                    dotMember = new MemberMetricsNode
+                    {
+                        Name = ExtractMemberDisplayName(memberFqn, methodName),
+                        FullyQualifiedName = memberFqn,
+                        Metrics = new Dictionary<MetricIdentifier, MetricValue>()
+                    };
+                    dotType.Members.Add(dotMember);
+                    if (!string.IsNullOrWhiteSpace(memberFqn))
+                    {
+                        _members[memberFqn] = dotMember;
+                    }
+                }
+
+                // Copy AltCover metrics from plus-member to dot-member.
+                CopyAltCoverMetricIfPresent(plusMember.Metrics, dotMember.Metrics, MetricIdentifier.AltCoverSequenceCoverage);
+                CopyAltCoverMetricIfPresent(plusMember.Metrics, dotMember.Metrics, MetricIdentifier.AltCoverBranchCoverage);
+                CopyAltCoverMetricIfPresent(plusMember.Metrics, dotMember.Metrics, MetricIdentifier.AltCoverCyclomaticComplexity);
+                CopyAltCoverMetricIfPresent(plusMember.Metrics, dotMember.Metrics, MetricIdentifier.AltCoverNPathComplexity);
+
+                dotMember.IncludesIteratorStateMachineCoverage = true;
+            }
+        }
+
+        private static string BuildDotMemberFqn(
+            string? plusMemberFqn,
+            string plusTypeFqn,
+            string dotTypeFqn,
+            string methodName)
+        {
+            if (!string.IsNullOrWhiteSpace(plusMemberFqn) &&
+                plusMemberFqn.StartsWith(plusTypeFqn, StringComparison.Ordinal) &&
+                plusMemberFqn.Length > plusTypeFqn.Length)
+            {
+                // Replace the type prefix while preserving the normalized method signature suffix "(...)".
+                return dotTypeFqn + plusMemberFqn[plusTypeFqn.Length..];
+            }
+
+            // Fallback: build a minimal normalized FQN with ellipsis-style parameters.
+            return dotTypeFqn + "." + methodName + "(...)";
+        }
+
+        private static void CopyAltCoverMetricIfPresent(
+            IDictionary<MetricIdentifier, MetricValue> sourceMetrics,
+            IDictionary<MetricIdentifier, MetricValue> targetMetrics,
+            MetricIdentifier identifier)
+        {
+            if (!sourceMetrics.TryGetValue(identifier, out var sourceValue) ||
+                !sourceValue.Value.HasValue)
+            {
+                return;
+            }
+
+            if (targetMetrics.TryGetValue(identifier, out var existing) &&
+                existing.Value.HasValue &&
+                existing.Value.Value != 0)
+            {
+                // Target already has a non-zero value; keep it.
+                return;
+            }
+
+            targetMetrics[identifier] = new MetricValue
+            {
+                Value = sourceValue.Value,
+                Unit = sourceValue.Unit,
+                Status = sourceValue.Status,
+                Delta = sourceValue.Delta
+            };
         }
 
         private static void CopyAltCoverMetricIfPresent(

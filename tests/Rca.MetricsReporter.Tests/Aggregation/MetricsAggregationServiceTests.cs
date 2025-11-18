@@ -826,6 +826,157 @@ public sealed class MetricsAggregationServiceTests
     }
 
     [Test]
+    public void BuildReport_PlainNestedPlusTypeCoverage_IsTransferredToDotTypeAndTypeIsHidden()
+    {
+        // Arrange
+        const string assemblyName = "Sample.Assembly";
+        const string namespaceFqn = "Sample.Namespace.Logging";
+        const string plusTypeFqn = "Sample.Namespace.Logging.LoaderLog+LoaderInternalLogger";
+        const string dotNamespaceFqn = "Sample.Namespace.Logging.LoaderLog";
+        const string dotTypeFqn = "Sample.Namespace.Logging.LoaderLog.LoaderInternalLogger";
+
+        const string plusInnerTypeFqn = "Sample.Namespace.Logging.LoaderLog+LoaderInternalLogger+NullScope";
+        const string dotInnerNamespaceFqn = "Sample.Namespace.Logging.LoaderLog.LoaderInternalLogger";
+        const string dotInnerTypeFqn = "Sample.Namespace.Logging.LoaderLog.LoaderInternalLogger.NullScope";
+
+        const string filePath = @"C:\Repo\Logging.cs";
+
+        var altCoverDocument = new ParsedMetricsDocument
+        {
+            Elements = new List<ParsedCodeElement>
+            {
+                new(CodeElementKind.Assembly, assemblyName, assemblyName),
+                new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
+                {
+                    ParentFullyQualifiedName = assemblyName
+                },
+                // Dot types without coverage
+                new(CodeElementKind.Type, "LoaderLog", dotNamespaceFqn)
+                {
+                    ParentFullyQualifiedName = namespaceFqn,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>()
+                },
+                new(CodeElementKind.Type, "LoaderInternalLogger", dotTypeFqn)
+                {
+                    ParentFullyQualifiedName = dotNamespaceFqn,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>()
+                },
+                new(CodeElementKind.Type, "NullScope", dotInnerTypeFqn)
+                {
+                    ParentFullyQualifiedName = dotInnerNamespaceFqn,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>()
+                },
+                // Plus type with coverage and methods
+                new(CodeElementKind.Type, "Sample.Namespace.Logging.LoaderLog+LoaderInternalLogger", plusTypeFqn)
+                {
+                    ParentFullyQualifiedName = assemblyName,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.AltCoverSequenceCoverage] = Metric(75, "percent"),
+                        [MetricIdentifier.AltCoverBranchCoverage] = Metric(50, "percent")
+                    }
+                },
+                new(CodeElementKind.Member, "BeginScope", plusTypeFqn + ".BeginScope(...)")
+                {
+                    ParentFullyQualifiedName = plusTypeFqn,
+                    Source = new SourceLocation { Path = filePath, StartLine = 10, EndLine = 20 },
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.AltCoverSequenceCoverage] = Metric(80, "percent")
+                    }
+                },
+                new(CodeElementKind.Member, "IsEnabled", plusTypeFqn + ".IsEnabled(...)")
+                {
+                    ParentFullyQualifiedName = plusTypeFqn,
+                    Source = new SourceLocation { Path = filePath, StartLine = 21, EndLine = 30 },
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.AltCoverSequenceCoverage] = Metric(60, "percent")
+                    }
+                },
+                new(CodeElementKind.Member, "Log", plusTypeFqn + ".Log(...)")
+                {
+                    ParentFullyQualifiedName = plusTypeFqn,
+                    Source = new SourceLocation { Path = filePath, StartLine = 31, EndLine = 40 },
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.AltCoverSequenceCoverage] = Metric(90, "percent")
+                    }
+                },
+                // Inner plus type without coverage but with a method
+                new(CodeElementKind.Type, "Sample.Namespace.Logging.LoaderLog+LoaderInternalLogger+NullScope", plusInnerTypeFqn)
+                {
+                    ParentFullyQualifiedName = assemblyName,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.AltCoverSequenceCoverage] = Metric(0, "percent"),
+                        [MetricIdentifier.AltCoverBranchCoverage] = Metric(0, "percent")
+                    }
+                },
+                new(CodeElementKind.Member, "Dispose", plusInnerTypeFqn + ".Dispose(...)")
+                {
+                    ParentFullyQualifiedName = plusInnerTypeFqn,
+                    Source = new SourceLocation { Path = filePath, StartLine = 41, EndLine = 45 },
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.AltCoverSequenceCoverage] = Metric(50, "percent")
+                    }
+                }
+            }
+        };
+
+        var input = new MetricsAggregationInput
+        {
+            SolutionName = "SampleSolution",
+            AltCoverDocuments = new List<ParsedMetricsDocument> { altCoverDocument },
+            RoslynDocuments = new List<ParsedMetricsDocument>(),
+            SarifDocuments = new List<ParsedMetricsDocument>(),
+            Baseline = null,
+            Thresholds = thresholds,
+            Paths = new ReportPaths()
+        };
+
+        // Act
+        var report = service.BuildReport(input);
+
+        // Assert
+        var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+        var rootNamespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == namespaceFqn).Subject;
+
+        // Plus types should be removed
+        rootNamespace.Types.Should().NotContain(t => t.FullyQualifiedName == plusTypeFqn);
+        rootNamespace.Types.Should().NotContain(t => t.FullyQualifiedName == plusInnerTypeFqn);
+
+        // Dot types should be present
+        var loaderLogNamespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == dotNamespaceFqn).Subject;
+        var loaderInternalLoggerNamespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == dotInnerNamespaceFqn).Subject;
+
+        var loaderInternalLoggerType = loaderLogNamespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == dotTypeFqn).Subject;
+        var nullScopeType = loaderInternalLoggerNamespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == dotInnerTypeFqn).Subject;
+
+        // Type-level coverage transferred
+        loaderInternalLoggerType.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(75);
+        loaderInternalLoggerType.Metrics[MetricIdentifier.AltCoverBranchCoverage].Value.Should().Be(50);
+
+        // Method-level coverage transferred and flagged
+        var beginScope = loaderInternalLoggerType.Members.Should().ContainSingle(m => m.Name == "BeginScope").Subject;
+        beginScope.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(80);
+        beginScope.IncludesIteratorStateMachineCoverage.Should().BeTrue();
+
+        var isEnabled = loaderInternalLoggerType.Members.Should().ContainSingle(m => m.Name == "IsEnabled").Subject;
+        isEnabled.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(60);
+        isEnabled.IncludesIteratorStateMachineCoverage.Should().BeTrue();
+
+        var log = loaderInternalLoggerType.Members.Should().ContainSingle(m => m.Name == "Log").Subject;
+        log.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(90);
+        log.IncludesIteratorStateMachineCoverage.Should().BeTrue();
+
+        var dispose = nullScopeType.Members.Should().ContainSingle(m => m.Name == "Dispose").Subject;
+        dispose.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(50);
+        dispose.IncludesIteratorStateMachineCoverage.Should().BeTrue();
+    }
+
+    [Test]
     public void BuildReport_IteratorTypeAndMethodBothZeroCoverage_HidesIteratorTypeAsNoise()
     {
         // Arrange
