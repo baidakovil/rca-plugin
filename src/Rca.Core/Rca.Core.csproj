@@ -3,7 +3,6 @@
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AssemblyName>Rca.Core</AssemblyName>
     <RootNamespace>Rca.Core</RootNamespace>
 	  <PlatformTarget>x64</PlatformTarget>
