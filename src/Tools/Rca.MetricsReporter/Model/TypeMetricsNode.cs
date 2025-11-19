@@ -7,16 +7,16 @@ using System.Collections.Generic;
 /// </summary>
 public sealed class TypeMetricsNode : MetricsNode
 {
-    /// <summary>
-    /// Initialises a type node.
-    /// </summary>
-    public TypeMetricsNode()
-        => Kind = CodeElementKind.Type;
+  /// <summary>
+  /// Initialises a type node.
+  /// </summary>
+  public TypeMetricsNode()
+      => Kind = CodeElementKind.Type;
 
-    /// <summary>
-    /// Members that belong to the type.
-    /// </summary>
-    public IList<MemberMetricsNode> Members { get; init; }
-        = new List<MemberMetricsNode>();
+  /// <summary>
+  /// Members that belong to the type.
+  /// </summary>
+  public IList<MemberMetricsNode> Members { get; init; }
+      = new List<MemberMetricsNode>();
 }
 

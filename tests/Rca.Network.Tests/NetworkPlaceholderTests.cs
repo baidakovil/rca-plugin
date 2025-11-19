@@ -3,17 +3,17 @@ using FluentAssertions;
 
 namespace Rca.Network.Tests
 {
-    [TestFixture]
-    public class NetworkPlaceholderTests
+  [TestFixture]
+  public class NetworkPlaceholderTests
+  {
+    [Test, Category("Unit"), Category("Smoke")]
+    public void IsReady_Always_True()
     {
-        [Test, Category("Unit"), Category("Smoke")]
-        public void IsReady_Always_True()
-        {
-            // Act
-            var ready = NetworkPlaceholder.IsReady;
+      // Act
+      var ready = NetworkPlaceholder.IsReady;
 
-            // Assert
-            ready.Should().BeTrue();
-        }
+      // Assert
+      ready.Should().BeTrue();
     }
+  }
 }

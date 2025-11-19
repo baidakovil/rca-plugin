@@ -6,27 +6,27 @@ using Rca.Contracts.Services;
 
 namespace Rca.Core.Services
 {
-    /// <summary>
-    /// Implementation of INotificationService using Revit TaskDialog.
-    /// </summary>
-    public class RevitNotificationService : INotificationService
+  /// <summary>
+  /// Implementation of INotificationService using Revit TaskDialog.
+  /// </summary>
+  public class RevitNotificationService : INotificationService
+  {
+    /// <inheritdoc />
+    public void ShowError(string message, string? title = null)
     {
-        /// <inheritdoc />
-        public void ShowError(string message, string? title = null)
-        {
-            TaskDialog.Show(title ?? $"{RcaConfiguration.ErrorDialogTitle} Error", message);
-        }
-
-        /// <inheritdoc />
-        public void ShowInfo(string message, string? title = null)
-        {
-            TaskDialog.Show(title ?? RcaConfiguration.ErrorDialogTitle, message);
-        }
-
-        /// <inheritdoc />
-        public void ShowWarning(string message, string? title = null)
-        {
-            TaskDialog.Show(title ?? $"{RcaConfiguration.ErrorDialogTitle} Warning", message);
-        }
+      TaskDialog.Show(title ?? $"{RcaConfiguration.ErrorDialogTitle} Error", message);
     }
+
+    /// <inheritdoc />
+    public void ShowInfo(string message, string? title = null)
+    {
+      TaskDialog.Show(title ?? RcaConfiguration.ErrorDialogTitle, message);
+    }
+
+    /// <inheritdoc />
+    public void ShowWarning(string message, string? title = null)
+    {
+      TaskDialog.Show(title ?? $"{RcaConfiguration.ErrorDialogTitle} Warning", message);
+    }
+  }
 }

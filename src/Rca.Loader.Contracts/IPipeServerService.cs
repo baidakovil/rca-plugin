@@ -3,24 +3,24 @@ using System.Threading.Tasks;
 
 namespace Rca.Loader.Contracts
 {
+  /// <summary>
+  /// Interface for pipe server communication service.
+  /// </summary>
+  public interface IPipeServerService
+  {
     /// <summary>
-    /// Interface for pipe server communication service.
+    /// Gets whether the pipe server is currently running.
     /// </summary>
-    public interface IPipeServerService
-    {
-        /// <summary>
-        /// Gets whether the pipe server is currently running.
-        /// </summary>
-        bool IsRunning { get; }
+    bool IsRunning { get; }
 
-        /// <summary>
-        /// Starts the pipe server.
-        /// </summary>
-        void Start();
+    /// <summary>
+    /// Starts the pipe server.
+    /// </summary>
+    void Start();
 
-        /// <summary>
-        /// Stops the pipe server.
-        /// </summary>
-        void Stop();
-    }
+    /// <summary>
+    /// Stops the pipe server.
+    /// </summary>
+    void Stop();
+  }
 }

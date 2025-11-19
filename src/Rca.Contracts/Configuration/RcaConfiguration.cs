@@ -4,14 +4,14 @@ using System.IO;
 
 namespace Rca.Contracts.Configuration
 {
+  /// <summary>
+  /// Centralized configuration constants for the RCA plugin.
+  /// </summary>
+  public static class RcaConfiguration
+  {
     /// <summary>
-    /// Centralized configuration constants for the RCA plugin.
+    /// Error dialog title prefix.
     /// </summary>
-    public static class RcaConfiguration
-    {
-        /// <summary>
-        /// Error dialog title prefix.
-        /// </summary>
-        public const string ErrorDialogTitle = "RCA";
-    }
+    public const string ErrorDialogTitle = "RCA";
+  }
 }

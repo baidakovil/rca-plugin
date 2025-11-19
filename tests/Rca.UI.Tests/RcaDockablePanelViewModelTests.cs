@@ -8,37 +8,37 @@ using System.Threading.Tasks;
 
 namespace Rca.UI.Tests
 {
-    [TestFixture]
-    public class RcaDockablePanelViewModelTests
+  [TestFixture]
+  public class RcaDockablePanelViewModelTests
+  {
+    [Test, Category("Unit")]
+    public async Task ExecutePythonCommand_WithInput_CallsServiceAndClearsInput()
     {
-        [Test, Category("Unit")]
-        public async Task ExecutePythonCommand_WithInput_CallsServiceAndClearsInput()
-        {
-            // Arrange
-            var python = Substitute.For<IPythonExecutionService>();
-            const string script = "some code";
-            const string result = "ok";
-            python.ExecuteSync(script).Returns(result);
+      // Arrange
+      var python = Substitute.For<IPythonExecutionService>();
+      const string script = "some code";
+      const string result = "ok";
+      python.ExecuteSync(script).Returns(result);
 
-            // Revit context provider returns null to avoid Revit dependency in unit tests
-            Func<object?> nullContextProvider = () => null;
+      // Revit context provider returns null to avoid Revit dependency in unit tests
+      Func<object?> nullContextProvider = () => null;
 
-            var vm = new RcaDockablePanelViewModel(
-                nullContextProvider,
-                python);
+      var vm = new RcaDockablePanelViewModel(
+          nullContextProvider,
+          python);
 
-            vm.InputText = script;
+      vm.InputText = script;
 
-            // Act
-            ((RelayCommand)vm.ExecutePythonCommand).Execute(null);
+      // Act
+      ((RelayCommand)vm.ExecutePythonCommand).Execute(null);
 
-            // Wait a bit for the async operation to complete
-            await Task.Delay(100);
+      // Wait a bit for the async operation to complete
+      await Task.Delay(100);
 
-            // Assert
-            python.Received(1).ExecuteSync(script);
-            vm.OutputText.Should().Be(result);
-            vm.InputText.Should().BeEmpty();
-        }
+      // Assert
+      python.Received(1).ExecuteSync(script);
+      vm.OutputText.Should().Be(result);
+      vm.InputText.Should().BeEmpty();
     }
+  }
 }

@@ -13,35 +13,35 @@ using Rca.MetricsReporter.Tests.TestHelpers;
 [Category("Unit")]
 public sealed class MetricsAggregationServiceTests
 {
-    private MetricsAggregationService service = null!;
-    private Dictionary<MetricIdentifier, MetricThresholdDefinition> thresholds = null!;
+  private MetricsAggregationService service = null!;
+  private Dictionary<MetricIdentifier, MetricThresholdDefinition> thresholds = null!;
 
-    [SetUp]
-    public void SetUp()
+  [SetUp]
+  public void SetUp()
+  {
+    service = new MetricsAggregationService();
+    thresholds = new Dictionary<MetricIdentifier, MetricThresholdDefinition>
     {
-        service = new MetricsAggregationService();
-        thresholds = new Dictionary<MetricIdentifier, MetricThresholdDefinition>
-        {
-            [MetricIdentifier.RoslynMaintainabilityIndex] = ThresholdTestFactory.CreateDefinition(65, 40, true),
-            [MetricIdentifier.AltCoverSequenceCoverage] = ThresholdTestFactory.CreateDefinition(70, 50, true),
-            [MetricIdentifier.SarifCaRuleViolations] = ThresholdTestFactory.CreateDefinition(1, 2, false)
-        };
-    }
+      [MetricIdentifier.RoslynMaintainabilityIndex] = ThresholdTestFactory.CreateDefinition(65, 40, true),
+      [MetricIdentifier.AltCoverSequenceCoverage] = ThresholdTestFactory.CreateDefinition(70, 50, true),
+      [MetricIdentifier.SarifCaRuleViolations] = ThresholdTestFactory.CreateDefinition(1, 2, false)
+    };
+  }
 
-    [Test]
-    public void BuildReport_MergesSourcesAndCalculatesDeltas()
+  [Test]
+  public void BuildReport_MergesSourcesAndCalculatesDeltas()
+  {
+    const string assemblyName = "Sample.Assembly";
+    const string namespaceFqn = "Sample.Namespace";
+    const string typeFqn = "Sample.Namespace.SampleType";
+    // Use normalized FQN format (with ...) to match what the normalization produces
+    const string memberFqn = "Sample.Namespace.SampleType.DoWork(...)";
+    const string filePath = @"C:\Repo\Sample.cs";
+
+    var roslynDocument = new ParsedMetricsDocument
     {
-        const string assemblyName = "Sample.Assembly";
-        const string namespaceFqn = "Sample.Namespace";
-        const string typeFqn = "Sample.Namespace.SampleType";
-        // Use normalized FQN format (with ...) to match what the normalization produces
-        const string memberFqn = "Sample.Namespace.SampleType.DoWork(...)";
-        const string filePath = @"C:\Repo\Sample.cs";
-
-        var roslynDocument = new ParsedMetricsDocument
-        {
-            SolutionName = "SampleSolution",
-            Elements = new List<ParsedCodeElement>
+      SolutionName = "SampleSolution",
+      Elements = new List<ParsedCodeElement>
             {
                 new(CodeElementKind.Assembly, assemblyName, assemblyName)
                 {
@@ -78,11 +78,11 @@ public sealed class MetricsAggregationServiceTests
                     }
                 }
             }
-        };
+    };
 
-        var altCoverDocument = new ParsedMetricsDocument
-        {
-            Elements = new List<ParsedCodeElement>
+    var altCoverDocument = new ParsedMetricsDocument
+    {
+      Elements = new List<ParsedCodeElement>
             {
                 new(CodeElementKind.Assembly, assemblyName, assemblyName),
                 new(CodeElementKind.Type, "Sample.Namespace.SampleType", typeFqn)
@@ -100,11 +100,11 @@ public sealed class MetricsAggregationServiceTests
                     }
                 }
             }
-        };
+    };
 
-        var sarifDocument = new ParsedMetricsDocument
-        {
-            Elements = new List<ParsedCodeElement>
+    var sarifDocument = new ParsedMetricsDocument
+    {
+      Elements = new List<ParsedCodeElement>
             {
                 new(CodeElementKind.Member, "CA1000", null)
                 {
@@ -115,62 +115,62 @@ public sealed class MetricsAggregationServiceTests
                     }
                 }
             }
-        };
+    };
 
-        var baselineReport = CreateBaselineReport(assemblyName, namespaceFqn, typeFqn, memberFqn, 75);
+    var baselineReport = CreateBaselineReport(assemblyName, namespaceFqn, typeFqn, memberFqn, 75);
 
-        var input = new MetricsAggregationInput
-        {
-            SolutionName = "SampleSolution",
-            AltCoverDocuments = new List<ParsedMetricsDocument> { altCoverDocument },
-            RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
-            SarifDocuments = new List<ParsedMetricsDocument> { sarifDocument },
-            Baseline = baselineReport,
-            Thresholds = thresholds,
-            Paths = new ReportPaths
-            {
-                MetricsDirectory = @"C:\Repo\build\Metrics",
-                Baseline = @"C:\Repo\build\Metrics\Report\metrics-baseline.json",
-                Report = @"C:\Repo\build\Metrics\Report\metrics-report.json",
-                Html = @"C:\Repo\build\Metrics\Report\metrics-report.html"
-            }
-        };
-
-        var report = service.BuildReport(input);
-
-        var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
-        assembly.IsNew.Should().BeFalse();
-
-        var type = assembly.Namespaces.Should().ContainSingle().Subject.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
-        var existingMember = type.Members.Should().ContainSingle(m => m.FullyQualifiedName == memberFqn).Subject;
-        var newMember = type.Members.Should().ContainSingle(m => m.FullyQualifiedName!.EndsWith("NewWork(...)")).Subject;
-
-        existingMember.IsNew.Should().BeFalse();
-        existingMember.Metrics[MetricIdentifier.RoslynMaintainabilityIndex].Value.Should().Be(80);
-        existingMember.Metrics[MetricIdentifier.RoslynMaintainabilityIndex].Delta.Should().Be(5);
-        existingMember.Metrics[MetricIdentifier.RoslynMaintainabilityIndex].Status.Should().Be(ThresholdStatus.Success);
-        existingMember.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(95);
-        existingMember.Metrics[MetricIdentifier.SarifCaRuleViolations].Value.Should().Be(1);
-
-        newMember.IsNew.Should().BeTrue();
-        newMember.Metrics[MetricIdentifier.RoslynMaintainabilityIndex].Value.Should().Be(55);
-        newMember.Metrics[MetricIdentifier.RoslynMaintainabilityIndex].Delta.Should().BeNull();
-        newMember.Metrics[MetricIdentifier.RoslynMaintainabilityIndex].Status.Should().Be(ThresholdStatus.Warning);
-    }
-
-    [Test]
-    public void BuildReport_SarifAssemblyValueEqualWarning_ProducesWarning()
+    var input = new MetricsAggregationInput
     {
-        // Arrange
-        const string assemblyName = "Inclusive.Assembly";
+      SolutionName = "SampleSolution",
+      AltCoverDocuments = new List<ParsedMetricsDocument> { altCoverDocument },
+      RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
+      SarifDocuments = new List<ParsedMetricsDocument> { sarifDocument },
+      Baseline = baselineReport,
+      Thresholds = thresholds,
+      Paths = new ReportPaths
+      {
+        MetricsDirectory = @"C:\Repo\build\Metrics",
+        Baseline = @"C:\Repo\build\Metrics\Report\metrics-baseline.json",
+        Report = @"C:\Repo\build\Metrics\Report\metrics-report.json",
+        Html = @"C:\Repo\build\Metrics\Report\metrics-report.html"
+      }
+    };
 
-        var serviceUnderTest = new MetricsAggregationService();
-        var thresholds = ThresholdTestFactory.CreateUniformThresholds(
-            (MetricIdentifier.SarifCaRuleViolations, 1m, 2m, false));
+    var report = service.BuildReport(input);
 
-        var roslynDocument = new ParsedMetricsDocument
-        {
-            Elements = new List<ParsedCodeElement>
+    var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+    assembly.IsNew.Should().BeFalse();
+
+    var type = assembly.Namespaces.Should().ContainSingle().Subject.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
+    var existingMember = type.Members.Should().ContainSingle(m => m.FullyQualifiedName == memberFqn).Subject;
+    var newMember = type.Members.Should().ContainSingle(m => m.FullyQualifiedName!.EndsWith("NewWork(...)")).Subject;
+
+    existingMember.IsNew.Should().BeFalse();
+    existingMember.Metrics[MetricIdentifier.RoslynMaintainabilityIndex].Value.Should().Be(80);
+    existingMember.Metrics[MetricIdentifier.RoslynMaintainabilityIndex].Delta.Should().Be(5);
+    existingMember.Metrics[MetricIdentifier.RoslynMaintainabilityIndex].Status.Should().Be(ThresholdStatus.Success);
+    existingMember.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(95);
+    existingMember.Metrics[MetricIdentifier.SarifCaRuleViolations].Value.Should().Be(1);
+
+    newMember.IsNew.Should().BeTrue();
+    newMember.Metrics[MetricIdentifier.RoslynMaintainabilityIndex].Value.Should().Be(55);
+    newMember.Metrics[MetricIdentifier.RoslynMaintainabilityIndex].Delta.Should().BeNull();
+    newMember.Metrics[MetricIdentifier.RoslynMaintainabilityIndex].Status.Should().Be(ThresholdStatus.Warning);
+  }
+
+  [Test]
+  public void BuildReport_SarifAssemblyValueEqualWarning_ProducesWarning()
+  {
+    // Arrange
+    const string assemblyName = "Inclusive.Assembly";
+
+    var serviceUnderTest = new MetricsAggregationService();
+    var thresholds = ThresholdTestFactory.CreateUniformThresholds(
+        (MetricIdentifier.SarifCaRuleViolations, 1m, 2m, false));
+
+    var roslynDocument = new ParsedMetricsDocument
+    {
+      Elements = new List<ParsedCodeElement>
             {
                 new(CodeElementKind.Assembly, assemblyName, assemblyName)
                 {
@@ -180,41 +180,41 @@ public sealed class MetricsAggregationServiceTests
                     }
                 }
             }
-        };
+    };
 
-        var input = new MetricsAggregationInput
-        {
-            SolutionName = "InclusiveSolution",
-            SarifDocuments = new List<ParsedMetricsDocument>(),
-            AltCoverDocuments = new List<ParsedMetricsDocument>(),
-            RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
-            Thresholds = thresholds,
-            Paths = new ReportPaths()
-        };
-
-        // Act
-        var report = serviceUnderTest.BuildReport(input);
-
-        // Assert
-        var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
-        assembly.Metrics[MetricIdentifier.SarifCaRuleViolations].Status.Should().Be(ThresholdStatus.Warning);
-    }
-
-    [Test]
-    public void BuildReport_MaintainabilityValueEqualWarning_ProducesWarning()
+    var input = new MetricsAggregationInput
     {
-        // Arrange
-        const string assemblyName = "Inclusive.Assembly";
-        const string namespaceName = "Inclusive.Namespace";
-        const string typeFqn = "Inclusive.Namespace.SampleType";
+      SolutionName = "InclusiveSolution",
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      AltCoverDocuments = new List<ParsedMetricsDocument>(),
+      RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
 
-        var serviceUnderTest = new MetricsAggregationService();
-        var thresholds = ThresholdTestFactory.CreateUniformThresholds(
-            (MetricIdentifier.RoslynMaintainabilityIndex, 65m, 40m, true));
+    // Act
+    var report = serviceUnderTest.BuildReport(input);
 
-        var roslynDocument = new ParsedMetricsDocument
-        {
-            Elements = new List<ParsedCodeElement>
+    // Assert
+    var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+    assembly.Metrics[MetricIdentifier.SarifCaRuleViolations].Status.Should().Be(ThresholdStatus.Warning);
+  }
+
+  [Test]
+  public void BuildReport_MaintainabilityValueEqualWarning_ProducesWarning()
+  {
+    // Arrange
+    const string assemblyName = "Inclusive.Assembly";
+    const string namespaceName = "Inclusive.Namespace";
+    const string typeFqn = "Inclusive.Namespace.SampleType";
+
+    var serviceUnderTest = new MetricsAggregationService();
+    var thresholds = ThresholdTestFactory.CreateUniformThresholds(
+        (MetricIdentifier.RoslynMaintainabilityIndex, 65m, 40m, true));
+
+    var roslynDocument = new ParsedMetricsDocument
+    {
+      Elements = new List<ParsedCodeElement>
             {
                 new(CodeElementKind.Assembly, assemblyName, assemblyName),
                 new(CodeElementKind.Namespace, namespaceName, namespaceName)
@@ -230,41 +230,41 @@ public sealed class MetricsAggregationServiceTests
                     }
                 }
             }
-        };
+    };
 
-        var input = new MetricsAggregationInput
-        {
-            SolutionName = "InclusiveSolution",
-            RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
-            AltCoverDocuments = new List<ParsedMetricsDocument>(),
-            SarifDocuments = new List<ParsedMetricsDocument>(),
-            Thresholds = thresholds,
-            Paths = new ReportPaths()
-        };
-
-        // Act
-        var report = serviceUnderTest.BuildReport(input);
-
-        // Assert
-        var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
-        var @namespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == namespaceName).Subject;
-        var type = @namespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
-        type.Metrics[MetricIdentifier.RoslynMaintainabilityIndex].Status.Should().Be(ThresholdStatus.Warning);
-    }
-
-    [Test]
-    public void BuildReport_ExcludesConstructorMethods_FromAltCover()
+    var input = new MetricsAggregationInput
     {
-        // Arrange
-        const string assemblyName = "Sample.Assembly";
-        const string typeFqn = "Sample.Namespace.SampleType";
-        const string constructorFqn = "Sample.Namespace.SampleType..ctor(...)";
-        const string staticConstructorFqn = "Sample.Namespace.SampleType..cctor(...)";
-        const string normalMethodFqn = "Sample.Namespace.SampleType.DoWork(...)";
+      SolutionName = "InclusiveSolution",
+      RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
+      AltCoverDocuments = new List<ParsedMetricsDocument>(),
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
 
-        var altCoverDocument = new ParsedMetricsDocument
-        {
-            Elements = new List<ParsedCodeElement>
+    // Act
+    var report = serviceUnderTest.BuildReport(input);
+
+    // Assert
+    var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+    var @namespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == namespaceName).Subject;
+    var type = @namespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
+    type.Metrics[MetricIdentifier.RoslynMaintainabilityIndex].Status.Should().Be(ThresholdStatus.Warning);
+  }
+
+  [Test]
+  public void BuildReport_ExcludesConstructorMethods_FromAltCover()
+  {
+    // Arrange
+    const string assemblyName = "Sample.Assembly";
+    const string typeFqn = "Sample.Namespace.SampleType";
+    const string constructorFqn = "Sample.Namespace.SampleType..ctor(...)";
+    const string staticConstructorFqn = "Sample.Namespace.SampleType..cctor(...)";
+    const string normalMethodFqn = "Sample.Namespace.SampleType.DoWork(...)";
+
+    var altCoverDocument = new ParsedMetricsDocument
+    {
+      Elements = new List<ParsedCodeElement>
             {
                 new(CodeElementKind.Assembly, assemblyName, assemblyName),
                 new(CodeElementKind.Type, "Sample.Namespace.SampleType", typeFqn)
@@ -296,48 +296,48 @@ public sealed class MetricsAggregationServiceTests
                     }
                 }
             }
-        };
+    };
 
-        var input = new MetricsAggregationInput
-        {
-            SolutionName = "SampleSolution",
-            AltCoverDocuments = new List<ParsedMetricsDocument> { altCoverDocument },
-            RoslynDocuments = new List<ParsedMetricsDocument>(),
-            SarifDocuments = new List<ParsedMetricsDocument>(),
-            Baseline = null,
-            Thresholds = thresholds,
-            Paths = new ReportPaths()
-        };
-
-        // Act
-        var report = service.BuildReport(input);
-
-        // Assert
-        var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
-        var type = assembly.Namespaces.Should().ContainSingle().Subject.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
-        
-        // Constructors should be excluded
-        type.Members.Should().NotContain(m => m.FullyQualifiedName == constructorFqn);
-        type.Members.Should().NotContain(m => m.FullyQualifiedName == staticConstructorFqn);
-        
-        // Normal method should be included
-        type.Members.Should().ContainSingle(m => m.FullyQualifiedName == normalMethodFqn);
-    }
-
-    [Test]
-    public void BuildReport_ExcludesConstructorMethods_FromRoslyn()
+    var input = new MetricsAggregationInput
     {
-        // Arrange
-        const string assemblyName = "Sample.Assembly";
-        const string namespaceFqn = "Sample.Namespace";
-        const string typeFqn = "Sample.Namespace.SampleType";
-        // Roslyn format: constructor name matches type name
-        const string constructorFqn = "Sample.Namespace.SampleType.SampleType(...)";
-        const string normalMethodFqn = "Sample.Namespace.SampleType.DoWork(...)";
+      SolutionName = "SampleSolution",
+      AltCoverDocuments = new List<ParsedMetricsDocument> { altCoverDocument },
+      RoslynDocuments = new List<ParsedMetricsDocument>(),
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      Baseline = null,
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
 
-        var roslynDocument = new ParsedMetricsDocument
-        {
-            Elements = new List<ParsedCodeElement>
+    // Act
+    var report = service.BuildReport(input);
+
+    // Assert
+    var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+    var type = assembly.Namespaces.Should().ContainSingle().Subject.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
+
+    // Constructors should be excluded
+    type.Members.Should().NotContain(m => m.FullyQualifiedName == constructorFqn);
+    type.Members.Should().NotContain(m => m.FullyQualifiedName == staticConstructorFqn);
+
+    // Normal method should be included
+    type.Members.Should().ContainSingle(m => m.FullyQualifiedName == normalMethodFqn);
+  }
+
+  [Test]
+  public void BuildReport_ExcludesConstructorMethods_FromRoslyn()
+  {
+    // Arrange
+    const string assemblyName = "Sample.Assembly";
+    const string namespaceFqn = "Sample.Namespace";
+    const string typeFqn = "Sample.Namespace.SampleType";
+    // Roslyn format: constructor name matches type name
+    const string constructorFqn = "Sample.Namespace.SampleType.SampleType(...)";
+    const string normalMethodFqn = "Sample.Namespace.SampleType.DoWork(...)";
+
+    var roslynDocument = new ParsedMetricsDocument
+    {
+      Elements = new List<ParsedCodeElement>
             {
                 new(CodeElementKind.Assembly, assemblyName, assemblyName),
                 new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
@@ -365,49 +365,49 @@ public sealed class MetricsAggregationServiceTests
                     }
                 }
             }
-        };
+    };
 
-        var input = new MetricsAggregationInput
-        {
-            SolutionName = "SampleSolution",
-            AltCoverDocuments = new List<ParsedMetricsDocument>(),
-            RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
-            SarifDocuments = new List<ParsedMetricsDocument>(),
-            Baseline = null,
-            Thresholds = thresholds,
-            Paths = new ReportPaths()
-        };
-
-        // Act
-        var report = service.BuildReport(input);
-
-        // Assert
-        var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
-        var type = assembly.Namespaces.Should().ContainSingle().Subject.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
-        
-        // Constructor should be excluded
-        type.Members.Should().NotContain(m => m.FullyQualifiedName == constructorFqn);
-        
-        // Normal method should be included
-        type.Members.Should().ContainSingle(m => m.FullyQualifiedName == normalMethodFqn);
-    }
-
-    [Test]
-    public void BuildReport_ExcludesCompilerGeneratedMethods()
+    var input = new MetricsAggregationInput
     {
-        // Arrange
-        const string assemblyName = "Sample.Assembly";
-        const string namespaceFqn = "Sample.Namespace";
-        const string typeFqn = "Sample.Namespace.SampleType";
-        const string moveNextFqn = "Sample.Namespace.SampleType.MoveNext(...)";
-        const string setStateMachineFqn = "Sample.Namespace.SampleType.SetStateMachine(...)";
-        const string moveNextAsyncFqn = "Sample.Namespace.SampleType.MoveNextAsync(...)";
-        const string disposeAsyncFqn = "Sample.Namespace.SampleType.DisposeAsync(...)";
-        const string normalMethodFqn = "Sample.Namespace.SampleType.DoWork(...)";
+      SolutionName = "SampleSolution",
+      AltCoverDocuments = new List<ParsedMetricsDocument>(),
+      RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      Baseline = null,
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
 
-        var roslynDocument = new ParsedMetricsDocument
-        {
-            Elements = new List<ParsedCodeElement>
+    // Act
+    var report = service.BuildReport(input);
+
+    // Assert
+    var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+    var type = assembly.Namespaces.Should().ContainSingle().Subject.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
+
+    // Constructor should be excluded
+    type.Members.Should().NotContain(m => m.FullyQualifiedName == constructorFqn);
+
+    // Normal method should be included
+    type.Members.Should().ContainSingle(m => m.FullyQualifiedName == normalMethodFqn);
+  }
+
+  [Test]
+  public void BuildReport_ExcludesCompilerGeneratedMethods()
+  {
+    // Arrange
+    const string assemblyName = "Sample.Assembly";
+    const string namespaceFqn = "Sample.Namespace";
+    const string typeFqn = "Sample.Namespace.SampleType";
+    const string moveNextFqn = "Sample.Namespace.SampleType.MoveNext(...)";
+    const string setStateMachineFqn = "Sample.Namespace.SampleType.SetStateMachine(...)";
+    const string moveNextAsyncFqn = "Sample.Namespace.SampleType.MoveNextAsync(...)";
+    const string disposeAsyncFqn = "Sample.Namespace.SampleType.DisposeAsync(...)";
+    const string normalMethodFqn = "Sample.Namespace.SampleType.DoWork(...)";
+
+    var roslynDocument = new ParsedMetricsDocument
+    {
+      Elements = new List<ParsedCodeElement>
             {
                 new(CodeElementKind.Assembly, assemblyName, assemblyName),
                 new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
@@ -459,49 +459,49 @@ public sealed class MetricsAggregationServiceTests
                     }
                 }
             }
-        };
+    };
 
-        var input = new MetricsAggregationInput
-        {
-            SolutionName = "SampleSolution",
-            AltCoverDocuments = new List<ParsedMetricsDocument>(),
-            RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
-            SarifDocuments = new List<ParsedMetricsDocument>(),
-            Baseline = null,
-            Thresholds = thresholds,
-            Paths = new ReportPaths()
-        };
-
-        // Act
-        var report = service.BuildReport(input);
-
-        // Assert
-        var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
-        var type = assembly.Namespaces.Should().ContainSingle().Subject.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
-        
-        // Compiler-generated methods should be excluded
-        type.Members.Should().NotContain(m => m.FullyQualifiedName == moveNextFqn);
-        type.Members.Should().NotContain(m => m.FullyQualifiedName == setStateMachineFqn);
-        type.Members.Should().NotContain(m => m.FullyQualifiedName == moveNextAsyncFqn);
-        type.Members.Should().NotContain(m => m.FullyQualifiedName == disposeAsyncFqn);
-        
-        // Normal method should be included
-        type.Members.Should().ContainSingle(m => m.FullyQualifiedName == normalMethodFqn);
-    }
-
-    [Test]
-    public void BuildReport_ExcludedMethods_NotInJsonOutput()
+    var input = new MetricsAggregationInput
     {
-        // Arrange
-        const string assemblyName = "Sample.Assembly";
-        const string typeFqn = "Sample.Namespace.SampleType";
-        const string constructorFqn = "Sample.Namespace.SampleType..ctor(...)";
-        const string moveNextFqn = "Sample.Namespace.SampleType.MoveNext(...)";
-        const string normalMethodFqn = "Sample.Namespace.SampleType.DoWork(...)";
+      SolutionName = "SampleSolution",
+      AltCoverDocuments = new List<ParsedMetricsDocument>(),
+      RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      Baseline = null,
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
 
-        var roslynDocument = new ParsedMetricsDocument
-        {
-            Elements = new List<ParsedCodeElement>
+    // Act
+    var report = service.BuildReport(input);
+
+    // Assert
+    var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+    var type = assembly.Namespaces.Should().ContainSingle().Subject.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
+
+    // Compiler-generated methods should be excluded
+    type.Members.Should().NotContain(m => m.FullyQualifiedName == moveNextFqn);
+    type.Members.Should().NotContain(m => m.FullyQualifiedName == setStateMachineFqn);
+    type.Members.Should().NotContain(m => m.FullyQualifiedName == moveNextAsyncFqn);
+    type.Members.Should().NotContain(m => m.FullyQualifiedName == disposeAsyncFqn);
+
+    // Normal method should be included
+    type.Members.Should().ContainSingle(m => m.FullyQualifiedName == normalMethodFqn);
+  }
+
+  [Test]
+  public void BuildReport_ExcludedMethods_NotInJsonOutput()
+  {
+    // Arrange
+    const string assemblyName = "Sample.Assembly";
+    const string typeFqn = "Sample.Namespace.SampleType";
+    const string constructorFqn = "Sample.Namespace.SampleType..ctor(...)";
+    const string moveNextFqn = "Sample.Namespace.SampleType.MoveNext(...)";
+    const string normalMethodFqn = "Sample.Namespace.SampleType.DoWork(...)";
+
+    var roslynDocument = new ParsedMetricsDocument
+    {
+      Elements = new List<ParsedCodeElement>
             {
                 new(CodeElementKind.Assembly, assemblyName, assemblyName),
                 new(CodeElementKind.Namespace, "Sample.Namespace", "Sample.Namespace")
@@ -537,54 +537,54 @@ public sealed class MetricsAggregationServiceTests
                     }
                 }
             }
-        };
+    };
 
-        var input = new MetricsAggregationInput
-        {
-            SolutionName = "SampleSolution",
-            AltCoverDocuments = new List<ParsedMetricsDocument>(),
-            RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
-            SarifDocuments = new List<ParsedMetricsDocument>(),
-            Baseline = null,
-            Thresholds = thresholds,
-            Paths = new ReportPaths()
-        };
-
-        // Act
-        var report = service.BuildReport(input);
-
-        // Assert - Verify that excluded methods are not in the report structure
-        // (which means they won't be in JSON either)
-        var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
-        var type = assembly.Namespaces.Should().ContainSingle().Subject.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
-        
-        // Excluded methods should not be in members list
-        type.Members.Should().NotContain(m => m.FullyQualifiedName == constructorFqn);
-        type.Members.Should().NotContain(m => m.FullyQualifiedName == moveNextFqn);
-        
-        // Normal method should be included
-        type.Members.Should().ContainSingle(m => m.FullyQualifiedName == normalMethodFqn);
-        
-        // Verify that only the normal method is present
-        type.Members.Should().HaveCount(1);
-        type.Members[0].FullyQualifiedName.Should().Be(normalMethodFqn);
-    }
-
-    [Test]
-    public void BuildReport_ExcludedAssemblies_AreNotAddedToSolution()
+    var input = new MetricsAggregationInput
     {
-        // Arrange
-        const string includedAssembly = "Rca.Network";
-        const string excludedNamespace = "Rca.UI.Tests";
-        const string excludedTypeFqn = "Rca.UI.Tests.RcaDockablePanelViewModelTests";
+      SolutionName = "SampleSolution",
+      AltCoverDocuments = new List<ParsedMetricsDocument>(),
+      RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      Baseline = null,
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
 
-        var assemblyFilter = AssemblyFilter.FromString("Tests");
-        var serviceWithFilter = new MetricsAggregationService(new MemberFilter(), assemblyFilter, new TypeFilter());
+    // Act
+    var report = service.BuildReport(input);
 
-        var roslynDocument = new ParsedMetricsDocument
-        {
-            SolutionName = "SampleSolution",
-            Elements = new List<ParsedCodeElement>
+    // Assert - Verify that excluded methods are not in the report structure
+    // (which means they won't be in JSON either)
+    var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+    var type = assembly.Namespaces.Should().ContainSingle().Subject.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
+
+    // Excluded methods should not be in members list
+    type.Members.Should().NotContain(m => m.FullyQualifiedName == constructorFqn);
+    type.Members.Should().NotContain(m => m.FullyQualifiedName == moveNextFqn);
+
+    // Normal method should be included
+    type.Members.Should().ContainSingle(m => m.FullyQualifiedName == normalMethodFqn);
+
+    // Verify that only the normal method is present
+    type.Members.Should().HaveCount(1);
+    type.Members[0].FullyQualifiedName.Should().Be(normalMethodFqn);
+  }
+
+  [Test]
+  public void BuildReport_ExcludedAssemblies_AreNotAddedToSolution()
+  {
+    // Arrange
+    const string includedAssembly = "Rca.Network";
+    const string excludedNamespace = "Rca.UI.Tests";
+    const string excludedTypeFqn = "Rca.UI.Tests.RcaDockablePanelViewModelTests";
+
+    var assemblyFilter = AssemblyFilter.FromString("Tests");
+    var serviceWithFilter = new MetricsAggregationService(new MemberFilter(), assemblyFilter, new TypeFilter());
+
+    var roslynDocument = new ParsedMetricsDocument
+    {
+      SolutionName = "SampleSolution",
+      Elements = new List<ParsedCodeElement>
             {
                 new(CodeElementKind.Assembly, includedAssembly, includedAssembly),
                 new(CodeElementKind.Namespace, excludedNamespace, excludedNamespace),
@@ -593,42 +593,42 @@ public sealed class MetricsAggregationServiceTests
                     ParentFullyQualifiedName = excludedNamespace
                 }
             }
-        };
+    };
 
-        var input = new MetricsAggregationInput
-        {
-            SolutionName = "SampleSolution",
-            AltCoverDocuments = new List<ParsedMetricsDocument>(),
-            RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
-            SarifDocuments = new List<ParsedMetricsDocument>(),
-            Baseline = null,
-            Thresholds = thresholds,
-            Paths = new ReportPaths()
-        };
-
-        // Act
-        var report = serviceWithFilter.BuildReport(input);
-
-        // Assert
-        var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == includedAssembly).Subject;
-        assembly.Namespaces.Should().BeEmpty("namespaces from excluded assemblies must be removed");
-    }
-
-    [Test]
-    public void BuildReport_IteratorTypeCoverage_IsTransferredToMethodAndTypeIsHidden()
+    var input = new MetricsAggregationInput
     {
-        // Arrange
-        const string assemblyName = "Sample.Assembly";
-        const string namespaceFqn = "Sample.Namespace";
-        const string typeFqn = "Sample.Namespace.SampleType";
-        const string iteratorTypeFqn = "Sample.Namespace.SampleType+<DoWork>d__1";
-        const string memberFqn = typeFqn + ".DoWork(...)";
+      SolutionName = "SampleSolution",
+      AltCoverDocuments = new List<ParsedMetricsDocument>(),
+      RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      Baseline = null,
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
 
-        var filePath = @"C:\Repo\Sample.cs";
+    // Act
+    var report = serviceWithFilter.BuildReport(input);
 
-        var altCoverDocument = new ParsedMetricsDocument
-        {
-            Elements = new List<ParsedCodeElement>
+    // Assert
+    var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == includedAssembly).Subject;
+    assembly.Namespaces.Should().BeEmpty("namespaces from excluded assemblies must be removed");
+  }
+
+  [Test]
+  public void BuildReport_IteratorTypeCoverage_IsTransferredToMethodAndTypeIsHidden()
+  {
+    // Arrange
+    const string assemblyName = "Sample.Assembly";
+    const string namespaceFqn = "Sample.Namespace";
+    const string typeFqn = "Sample.Namespace.SampleType";
+    const string iteratorTypeFqn = "Sample.Namespace.SampleType+<DoWork>d__1";
+    const string memberFqn = typeFqn + ".DoWork(...)";
+
+    var filePath = @"C:\Repo\Sample.cs";
+
+    var altCoverDocument = new ParsedMetricsDocument
+    {
+      Elements = new List<ParsedCodeElement>
             {
                 new(CodeElementKind.Assembly, assemblyName, assemblyName),
                 new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
@@ -661,49 +661,49 @@ public sealed class MetricsAggregationServiceTests
                     }
                 }
             }
-        };
+    };
 
-        var input = new MetricsAggregationInput
-        {
-            SolutionName = "SampleSolution",
-            AltCoverDocuments = new List<ParsedMetricsDocument> { altCoverDocument },
-            RoslynDocuments = new List<ParsedMetricsDocument>(),
-            SarifDocuments = new List<ParsedMetricsDocument>(),
-            Baseline = null,
-            Thresholds = thresholds,
-            Paths = new ReportPaths()
-        };
-
-        // Act
-        var report = service.BuildReport(input);
-
-        // Assert
-        var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
-        var @namespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == namespaceFqn).Subject;
-        var type = @namespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
-
-        // Iterator type should be hidden from the type list
-        @namespace.Types.Should().NotContain(t => t.FullyQualifiedName == iteratorTypeFqn);
-
-        // Method should receive iterator coverage and be marked accordingly
-        var method = type.Members.Should().ContainSingle(m => m.FullyQualifiedName == memberFqn).Subject;
-        method.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(80);
-        method.Metrics[MetricIdentifier.AltCoverBranchCoverage].Value.Should().Be(60);
-        method.IncludesIteratorStateMachineCoverage.Should().BeTrue();
-    }
-
-    [Test]
-    public void BuildReport_IteratorType_NoMatchingMethod_KeepsTypeUnchanged()
+    var input = new MetricsAggregationInput
     {
-        // Arrange
-        const string assemblyName = "Sample.Assembly";
-        const string namespaceFqn = "Sample.Namespace";
-        const string typeFqn = "Sample.Namespace.SampleType";
-        const string iteratorTypeFqn = "Sample.Namespace.SampleType+<Missing>d__1";
+      SolutionName = "SampleSolution",
+      AltCoverDocuments = new List<ParsedMetricsDocument> { altCoverDocument },
+      RoslynDocuments = new List<ParsedMetricsDocument>(),
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      Baseline = null,
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
 
-        var altCoverDocument = new ParsedMetricsDocument
-        {
-            Elements = new List<ParsedCodeElement>
+    // Act
+    var report = service.BuildReport(input);
+
+    // Assert
+    var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+    var @namespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == namespaceFqn).Subject;
+    var type = @namespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
+
+    // Iterator type should be hidden from the type list
+    @namespace.Types.Should().NotContain(t => t.FullyQualifiedName == iteratorTypeFqn);
+
+    // Method should receive iterator coverage and be marked accordingly
+    var method = type.Members.Should().ContainSingle(m => m.FullyQualifiedName == memberFqn).Subject;
+    method.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(80);
+    method.Metrics[MetricIdentifier.AltCoverBranchCoverage].Value.Should().Be(60);
+    method.IncludesIteratorStateMachineCoverage.Should().BeTrue();
+  }
+
+  [Test]
+  public void BuildReport_IteratorType_NoMatchingMethod_KeepsTypeUnchanged()
+  {
+    // Arrange
+    const string assemblyName = "Sample.Assembly";
+    const string namespaceFqn = "Sample.Namespace";
+    const string typeFqn = "Sample.Namespace.SampleType";
+    const string iteratorTypeFqn = "Sample.Namespace.SampleType+<Missing>d__1";
+
+    var altCoverDocument = new ParsedMetricsDocument
+    {
+      Elements = new List<ParsedCodeElement>
             {
                 new(CodeElementKind.Assembly, assemblyName, assemblyName),
                 new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
@@ -724,45 +724,45 @@ public sealed class MetricsAggregationServiceTests
                     }
                 }
             }
-        };
+    };
 
-        var input = new MetricsAggregationInput
-        {
-            SolutionName = "SampleSolution",
-            AltCoverDocuments = new List<ParsedMetricsDocument> { altCoverDocument },
-            RoslynDocuments = new List<ParsedMetricsDocument>(),
-            SarifDocuments = new List<ParsedMetricsDocument>(),
-            Baseline = null,
-            Thresholds = thresholds,
-            Paths = new ReportPaths()
-        };
-
-        // Act
-        var report = service.BuildReport(input);
-
-        // Assert
-        var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
-        var @namespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == namespaceFqn).Subject;
-
-        // Iterator type should remain because no matching method exists
-        @namespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == iteratorTypeFqn);
-    }
-
-    [Test]
-    public void BuildReport_IteratorType_MethodAlreadyHasCoverage_DoesNotOverrideOrHideType()
+    var input = new MetricsAggregationInput
     {
-        // Arrange
-        const string assemblyName = "Sample.Assembly";
-        const string namespaceFqn = "Sample.Namespace";
-        const string typeFqn = "Sample.Namespace.SampleType";
-        const string iteratorTypeFqn = "Sample.Namespace.SampleType+<DoWork>d__1";
-        const string memberFqn = typeFqn + ".DoWork(...)";
+      SolutionName = "SampleSolution",
+      AltCoverDocuments = new List<ParsedMetricsDocument> { altCoverDocument },
+      RoslynDocuments = new List<ParsedMetricsDocument>(),
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      Baseline = null,
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
 
-        var filePath = @"C:\Repo\Sample.cs";
+    // Act
+    var report = service.BuildReport(input);
 
-        var altCoverDocument = new ParsedMetricsDocument
-        {
-            Elements = new List<ParsedCodeElement>
+    // Assert
+    var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+    var @namespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == namespaceFqn).Subject;
+
+    // Iterator type should remain because no matching method exists
+    @namespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == iteratorTypeFqn);
+  }
+
+  [Test]
+  public void BuildReport_IteratorType_MethodAlreadyHasCoverage_DoesNotOverrideOrHideType()
+  {
+    // Arrange
+    const string assemblyName = "Sample.Assembly";
+    const string namespaceFqn = "Sample.Namespace";
+    const string typeFqn = "Sample.Namespace.SampleType";
+    const string iteratorTypeFqn = "Sample.Namespace.SampleType+<DoWork>d__1";
+    const string memberFqn = typeFqn + ".DoWork(...)";
+
+    var filePath = @"C:\Repo\Sample.cs";
+
+    var altCoverDocument = new ParsedMetricsDocument
+    {
+      Elements = new List<ParsedCodeElement>
             {
                 new(CodeElementKind.Assembly, assemblyName, assemblyName),
                 new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
@@ -795,55 +795,55 @@ public sealed class MetricsAggregationServiceTests
                     }
                 }
             }
-        };
+    };
 
-        var input = new MetricsAggregationInput
-        {
-            SolutionName = "SampleSolution",
-            AltCoverDocuments = new List<ParsedMetricsDocument> { altCoverDocument },
-            RoslynDocuments = new List<ParsedMetricsDocument>(),
-            SarifDocuments = new List<ParsedMetricsDocument>(),
-            Baseline = null,
-            Thresholds = thresholds,
-            Paths = new ReportPaths()
-        };
-
-        // Act
-        var report = service.BuildReport(input);
-
-        // Assert
-        var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
-        var @namespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == namespaceFqn).Subject;
-        var type = @namespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
-
-        // Iterator type should remain because method already had non-zero coverage
-        @namespace.Types.Should().Contain(t => t.FullyQualifiedName == iteratorTypeFqn);
-
-        var method = type.Members.Should().ContainSingle(m => m.FullyQualifiedName == memberFqn).Subject;
-        method.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(10);
-        method.Metrics[MetricIdentifier.AltCoverBranchCoverage].Value.Should().Be(5);
-        method.IncludesIteratorStateMachineCoverage.Should().BeFalse();
-    }
-
-    [Test]
-    public void BuildReport_PlainNestedPlusTypeCoverage_IsTransferredToDotTypeAndTypeIsHidden()
+    var input = new MetricsAggregationInput
     {
-        // Arrange
-        const string assemblyName = "Sample.Assembly";
-        const string namespaceFqn = "Sample.Namespace.Logging";
-        const string plusTypeFqn = "Sample.Namespace.Logging.LoaderLog+LoaderInternalLogger";
-        const string dotNamespaceFqn = "Sample.Namespace.Logging.LoaderLog";
-        const string dotTypeFqn = "Sample.Namespace.Logging.LoaderLog.LoaderInternalLogger";
+      SolutionName = "SampleSolution",
+      AltCoverDocuments = new List<ParsedMetricsDocument> { altCoverDocument },
+      RoslynDocuments = new List<ParsedMetricsDocument>(),
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      Baseline = null,
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
 
-        const string plusInnerTypeFqn = "Sample.Namespace.Logging.LoaderLog+LoaderInternalLogger+NullScope";
-        const string dotInnerNamespaceFqn = "Sample.Namespace.Logging.LoaderLog.LoaderInternalLogger";
-        const string dotInnerTypeFqn = "Sample.Namespace.Logging.LoaderLog.LoaderInternalLogger.NullScope";
+    // Act
+    var report = service.BuildReport(input);
 
-        const string filePath = @"C:\Repo\Logging.cs";
+    // Assert
+    var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+    var @namespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == namespaceFqn).Subject;
+    var type = @namespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
 
-        var altCoverDocument = new ParsedMetricsDocument
-        {
-            Elements = new List<ParsedCodeElement>
+    // Iterator type should remain because method already had non-zero coverage
+    @namespace.Types.Should().Contain(t => t.FullyQualifiedName == iteratorTypeFqn);
+
+    var method = type.Members.Should().ContainSingle(m => m.FullyQualifiedName == memberFqn).Subject;
+    method.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(10);
+    method.Metrics[MetricIdentifier.AltCoverBranchCoverage].Value.Should().Be(5);
+    method.IncludesIteratorStateMachineCoverage.Should().BeFalse();
+  }
+
+  [Test]
+  public void BuildReport_PlainNestedPlusTypeCoverage_IsTransferredToDotTypeAndTypeIsHidden()
+  {
+    // Arrange
+    const string assemblyName = "Sample.Assembly";
+    const string namespaceFqn = "Sample.Namespace.Logging";
+    const string plusTypeFqn = "Sample.Namespace.Logging.LoaderLog+LoaderInternalLogger";
+    const string dotNamespaceFqn = "Sample.Namespace.Logging.LoaderLog";
+    const string dotTypeFqn = "Sample.Namespace.Logging.LoaderLog.LoaderInternalLogger";
+
+    const string plusInnerTypeFqn = "Sample.Namespace.Logging.LoaderLog+LoaderInternalLogger+NullScope";
+    const string dotInnerNamespaceFqn = "Sample.Namespace.Logging.LoaderLog.LoaderInternalLogger";
+    const string dotInnerTypeFqn = "Sample.Namespace.Logging.LoaderLog.LoaderInternalLogger.NullScope";
+
+    const string filePath = @"C:\Repo\Logging.cs";
+
+    var altCoverDocument = new ParsedMetricsDocument
+    {
+      Elements = new List<ParsedCodeElement>
             {
                 new(CodeElementKind.Assembly, assemblyName, assemblyName),
                 new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
@@ -923,74 +923,74 @@ public sealed class MetricsAggregationServiceTests
                     }
                 }
             }
-        };
+    };
 
-        var input = new MetricsAggregationInput
-        {
-            SolutionName = "SampleSolution",
-            AltCoverDocuments = new List<ParsedMetricsDocument> { altCoverDocument },
-            RoslynDocuments = new List<ParsedMetricsDocument>(),
-            SarifDocuments = new List<ParsedMetricsDocument>(),
-            Baseline = null,
-            Thresholds = thresholds,
-            Paths = new ReportPaths()
-        };
-
-        // Act
-        var report = service.BuildReport(input);
-
-        // Assert
-        var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
-        var rootNamespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == namespaceFqn).Subject;
-
-        // Plus types should be removed
-        rootNamespace.Types.Should().NotContain(t => t.FullyQualifiedName == plusTypeFqn);
-        rootNamespace.Types.Should().NotContain(t => t.FullyQualifiedName == plusInnerTypeFqn);
-
-        // Dot types should be present
-        var loaderLogNamespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == dotNamespaceFqn).Subject;
-        var loaderInternalLoggerNamespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == dotInnerNamespaceFqn).Subject;
-
-        var loaderInternalLoggerType = loaderLogNamespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == dotTypeFqn).Subject;
-        var nullScopeType = loaderInternalLoggerNamespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == dotInnerTypeFqn).Subject;
-
-        // Type-level coverage transferred
-        loaderInternalLoggerType.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(75);
-        loaderInternalLoggerType.Metrics[MetricIdentifier.AltCoverBranchCoverage].Value.Should().Be(50);
-
-        // Method-level coverage transferred and flagged
-        var beginScope = loaderInternalLoggerType.Members.Should().ContainSingle(m => m.Name == "BeginScope").Subject;
-        beginScope.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(80);
-        beginScope.IncludesIteratorStateMachineCoverage.Should().BeTrue();
-
-        var isEnabled = loaderInternalLoggerType.Members.Should().ContainSingle(m => m.Name == "IsEnabled").Subject;
-        isEnabled.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(60);
-        isEnabled.IncludesIteratorStateMachineCoverage.Should().BeTrue();
-
-        var log = loaderInternalLoggerType.Members.Should().ContainSingle(m => m.Name == "Log").Subject;
-        log.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(90);
-        log.IncludesIteratorStateMachineCoverage.Should().BeTrue();
-
-        var dispose = nullScopeType.Members.Should().ContainSingle(m => m.Name == "Dispose").Subject;
-        dispose.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(50);
-        dispose.IncludesIteratorStateMachineCoverage.Should().BeTrue();
-    }
-
-    [Test]
-    public void BuildReport_IteratorTypeAndMethodBothZeroCoverage_HidesIteratorTypeAsNoise()
+    var input = new MetricsAggregationInput
     {
-        // Arrange
-        const string assemblyName = "Sample.Assembly";
-        const string namespaceFqn = "Sample.Namespace";
-        const string typeFqn = "Sample.Namespace.SampleType";
-        const string iteratorTypeFqn = "Sample.Namespace.SampleType+<DoWork>d__1";
-        const string memberFqn = typeFqn + ".DoWork(...)";
+      SolutionName = "SampleSolution",
+      AltCoverDocuments = new List<ParsedMetricsDocument> { altCoverDocument },
+      RoslynDocuments = new List<ParsedMetricsDocument>(),
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      Baseline = null,
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
 
-        var filePath = @"C:\Repo\Sample.cs";
+    // Act
+    var report = service.BuildReport(input);
 
-        var altCoverDocument = new ParsedMetricsDocument
-        {
-            Elements = new List<ParsedCodeElement>
+    // Assert
+    var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+    var rootNamespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == namespaceFqn).Subject;
+
+    // Plus types should be removed
+    rootNamespace.Types.Should().NotContain(t => t.FullyQualifiedName == plusTypeFqn);
+    rootNamespace.Types.Should().NotContain(t => t.FullyQualifiedName == plusInnerTypeFqn);
+
+    // Dot types should be present
+    var loaderLogNamespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == dotNamespaceFqn).Subject;
+    var loaderInternalLoggerNamespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == dotInnerNamespaceFqn).Subject;
+
+    var loaderInternalLoggerType = loaderLogNamespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == dotTypeFqn).Subject;
+    var nullScopeType = loaderInternalLoggerNamespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == dotInnerTypeFqn).Subject;
+
+    // Type-level coverage transferred
+    loaderInternalLoggerType.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(75);
+    loaderInternalLoggerType.Metrics[MetricIdentifier.AltCoverBranchCoverage].Value.Should().Be(50);
+
+    // Method-level coverage transferred and flagged
+    var beginScope = loaderInternalLoggerType.Members.Should().ContainSingle(m => m.Name == "BeginScope").Subject;
+    beginScope.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(80);
+    beginScope.IncludesIteratorStateMachineCoverage.Should().BeTrue();
+
+    var isEnabled = loaderInternalLoggerType.Members.Should().ContainSingle(m => m.Name == "IsEnabled").Subject;
+    isEnabled.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(60);
+    isEnabled.IncludesIteratorStateMachineCoverage.Should().BeTrue();
+
+    var log = loaderInternalLoggerType.Members.Should().ContainSingle(m => m.Name == "Log").Subject;
+    log.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(90);
+    log.IncludesIteratorStateMachineCoverage.Should().BeTrue();
+
+    var dispose = nullScopeType.Members.Should().ContainSingle(m => m.Name == "Dispose").Subject;
+    dispose.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(50);
+    dispose.IncludesIteratorStateMachineCoverage.Should().BeTrue();
+  }
+
+  [Test]
+  public void BuildReport_IteratorTypeAndMethodBothZeroCoverage_HidesIteratorTypeAsNoise()
+  {
+    // Arrange
+    const string assemblyName = "Sample.Assembly";
+    const string namespaceFqn = "Sample.Namespace";
+    const string typeFqn = "Sample.Namespace.SampleType";
+    const string iteratorTypeFqn = "Sample.Namespace.SampleType+<DoWork>d__1";
+    const string memberFqn = typeFqn + ".DoWork(...)";
+
+    var filePath = @"C:\Repo\Sample.cs";
+
+    var altCoverDocument = new ParsedMetricsDocument
+    {
+      Elements = new List<ParsedCodeElement>
             {
                 new(CodeElementKind.Assembly, assemblyName, assemblyName),
                 new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
@@ -1023,99 +1023,99 @@ public sealed class MetricsAggregationServiceTests
                     }
                 }
             }
-        };
+    };
 
-        var input = new MetricsAggregationInput
-        {
-            SolutionName = "SampleSolution",
-            AltCoverDocuments = new List<ParsedMetricsDocument> { altCoverDocument },
-            RoslynDocuments = new List<ParsedMetricsDocument>(),
-            SarifDocuments = new List<ParsedMetricsDocument>(),
-            Baseline = null,
-            Thresholds = thresholds,
-            Paths = new ReportPaths()
-        };
-
-        // Act
-        var report = service.BuildReport(input);
-
-        // Assert
-        var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
-        var @namespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == namespaceFqn).Subject;
-        var type = @namespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
-
-        // Iterator type should be removed as non-informative noise
-        @namespace.Types.Should().NotContain(t => t.FullyQualifiedName == iteratorTypeFqn);
-
-        // Method remains with zero coverage and without iterator flag
-        var method = type.Members.Should().ContainSingle(m => m.FullyQualifiedName == memberFqn).Subject;
-        method.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(0);
-        method.Metrics[MetricIdentifier.AltCoverBranchCoverage].Value.Should().Be(0);
-        method.IncludesIteratorStateMachineCoverage.Should().BeFalse();
-    }
-
-    private static MetricValue Metric(decimal value, string unit)
-        => new()
-        {
-            Value = value,
-            Unit = unit,
-            Status = ThresholdStatus.NotApplicable
-        };
-
-    private static MetricsReport CreateBaselineReport(string assemblyName, string namespaceFqn, string typeFqn, string memberFqn, decimal maintainability)
+    var input = new MetricsAggregationInput
     {
-        var member = new MemberMetricsNode
-        {
-            Name = "DoWork",
-            FullyQualifiedName = memberFqn,
-            Metrics = new Dictionary<MetricIdentifier, MetricValue>
-            {
-                [MetricIdentifier.RoslynMaintainabilityIndex] = new MetricValue
-                {
-                    Value = maintainability,
-                    Unit = "score",
-                    Status = ThresholdStatus.NotApplicable
-                }
-            }
-        };
+      SolutionName = "SampleSolution",
+      AltCoverDocuments = new List<ParsedMetricsDocument> { altCoverDocument },
+      RoslynDocuments = new List<ParsedMetricsDocument>(),
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      Baseline = null,
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
 
-        var type = new TypeMetricsNode
-        {
-            Name = "SampleType",
-            FullyQualifiedName = typeFqn,
-            Metrics = new Dictionary<MetricIdentifier, MetricValue>(),
-            Members = new List<MemberMetricsNode> { member }
-        };
+    // Act
+    var report = service.BuildReport(input);
 
-        var @namespace = new NamespaceMetricsNode
-        {
-            Name = namespaceFqn,
-            FullyQualifiedName = namespaceFqn,
-            Metrics = new Dictionary<MetricIdentifier, MetricValue>(),
-            Types = new List<TypeMetricsNode> { type }
-        };
+    // Assert
+    var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+    var @namespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == namespaceFqn).Subject;
+    var type = @namespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
 
-        var assembly = new AssemblyMetricsNode
-        {
-            Name = assemblyName,
-            FullyQualifiedName = assemblyName,
-            Metrics = new Dictionary<MetricIdentifier, MetricValue>(),
-            Namespaces = new List<NamespaceMetricsNode> { @namespace }
-        };
+    // Iterator type should be removed as non-informative noise
+    @namespace.Types.Should().NotContain(t => t.FullyQualifiedName == iteratorTypeFqn);
 
-        var solution = new SolutionMetricsNode
-        {
-            Name = "SampleSolution",
-            FullyQualifiedName = "SampleSolution",
-            Metrics = new Dictionary<MetricIdentifier, MetricValue>(),
-            Assemblies = new List<AssemblyMetricsNode> { assembly }
-        };
+    // Method remains with zero coverage and without iterator flag
+    var method = type.Members.Should().ContainSingle(m => m.FullyQualifiedName == memberFqn).Subject;
+    method.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(0);
+    method.Metrics[MetricIdentifier.AltCoverBranchCoverage].Value.Should().Be(0);
+    method.IncludesIteratorStateMachineCoverage.Should().BeFalse();
+  }
 
-        return new MetricsReport
+  private static MetricValue Metric(decimal value, string unit)
+      => new()
+      {
+        Value = value,
+        Unit = unit,
+        Status = ThresholdStatus.NotApplicable
+      };
+
+  private static MetricsReport CreateBaselineReport(string assemblyName, string namespaceFqn, string typeFqn, string memberFqn, decimal maintainability)
+  {
+    var member = new MemberMetricsNode
+    {
+      Name = "DoWork",
+      FullyQualifiedName = memberFqn,
+      Metrics = new Dictionary<MetricIdentifier, MetricValue>
+      {
+        [MetricIdentifier.RoslynMaintainabilityIndex] = new MetricValue
         {
-            Metadata = new ReportMetadata(),
-            Solution = solution
-        };
-    }
+          Value = maintainability,
+          Unit = "score",
+          Status = ThresholdStatus.NotApplicable
+        }
+      }
+    };
+
+    var type = new TypeMetricsNode
+    {
+      Name = "SampleType",
+      FullyQualifiedName = typeFqn,
+      Metrics = new Dictionary<MetricIdentifier, MetricValue>(),
+      Members = new List<MemberMetricsNode> { member }
+    };
+
+    var @namespace = new NamespaceMetricsNode
+    {
+      Name = namespaceFqn,
+      FullyQualifiedName = namespaceFqn,
+      Metrics = new Dictionary<MetricIdentifier, MetricValue>(),
+      Types = new List<TypeMetricsNode> { type }
+    };
+
+    var assembly = new AssemblyMetricsNode
+    {
+      Name = assemblyName,
+      FullyQualifiedName = assemblyName,
+      Metrics = new Dictionary<MetricIdentifier, MetricValue>(),
+      Namespaces = new List<NamespaceMetricsNode> { @namespace }
+    };
+
+    var solution = new SolutionMetricsNode
+    {
+      Name = "SampleSolution",
+      FullyQualifiedName = "SampleSolution",
+      Metrics = new Dictionary<MetricIdentifier, MetricValue>(),
+      Assemblies = new List<AssemblyMetricsNode> { assembly }
+    };
+
+    return new MetricsReport
+    {
+      Metadata = new ReportMetadata(),
+      Solution = solution
+    };
+  }
 }
 

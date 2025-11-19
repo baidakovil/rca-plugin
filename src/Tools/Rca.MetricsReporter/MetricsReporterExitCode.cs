@@ -5,24 +5,24 @@ namespace Rca.Tools.MetricsReporter;
 /// </summary>
 public enum MetricsReporterExitCode
 {
-    /// <summary>
-    /// Execution completed successfully.
-    /// </summary>
-    Success = 0,
+  /// <summary>
+  /// Execution completed successfully.
+  /// </summary>
+  Success = 0,
 
-    /// <summary>
-    /// Parsing error in one of the input files.
-    /// </summary>
-    ParsingError = 1,
+  /// <summary>
+  /// Parsing error in one of the input files.
+  /// </summary>
+  ParsingError = 1,
 
-    /// <summary>
-    /// Input/output error.
-    /// </summary>
-    IoError = 2,
+  /// <summary>
+  /// Input/output error.
+  /// </summary>
+  IoError = 2,
 
-    /// <summary>
-    /// Validation error or inconsistent data.
-    /// </summary>
-    ValidationError = 3
+  /// <summary>
+  /// Validation error or inconsistent data.
+  /// </summary>
+  ValidationError = 3
 }
 

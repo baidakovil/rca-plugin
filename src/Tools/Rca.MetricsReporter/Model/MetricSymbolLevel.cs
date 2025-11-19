@@ -8,30 +8,30 @@ using System.Text.Json.Serialization;
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum MetricSymbolLevel
 {
-    /// <summary>
-    /// The entire solution aggregate.
-    /// </summary>
-    Solution,
+  /// <summary>
+  /// The entire solution aggregate.
+  /// </summary>
+  Solution,
 
-    /// <summary>
-    /// A compiled assembly within the solution.
-    /// </summary>
-    Assembly,
+  /// <summary>
+  /// A compiled assembly within the solution.
+  /// </summary>
+  Assembly,
 
-    /// <summary>
-    /// A namespace within an assembly.
-    /// </summary>
-    Namespace,
+  /// <summary>
+  /// A namespace within an assembly.
+  /// </summary>
+  Namespace,
 
-    /// <summary>
-    /// A type (class, struct, record, interface, etc.).
-    /// </summary>
-    Type,
+  /// <summary>
+  /// A type (class, struct, record, interface, etc.).
+  /// </summary>
+  Type,
 
-    /// <summary>
-    /// A member (method, property, field, event) within a type.
-    /// </summary>
-    Member
+  /// <summary>
+  /// A member (method, property, field, event) within a type.
+  /// </summary>
+  Member
 }
 
 

@@ -6,12 +6,12 @@ namespace Rca.Tools.MetricsReporter.Rendering;
 /// </summary>
 internal static class HtmlScriptGenerator
 {
-    /// <summary>
-    /// Generates the complete JavaScript code for the metrics report.
-    /// </summary>
-    /// <returns>The JavaScript code as a string.</returns>
-    public static string Generate()
-        => @"(function(){
+  /// <summary>
+  /// Generates the complete JavaScript code for the metrics report.
+  /// </summary>
+  /// <returns>The JavaScript code as a string.</returns>
+  public static string Generate()
+      => @"(function(){
   var table = document.getElementById('metrics-table');
   if(!table) return;
 

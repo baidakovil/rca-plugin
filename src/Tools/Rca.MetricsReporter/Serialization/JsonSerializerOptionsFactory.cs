@@ -8,19 +8,19 @@ using System.Text.Json.Serialization;
 /// </summary>
 public static class JsonSerializerOptionsFactory
 {
-    /// <summary>
-    /// Returns JSON serialisation options with camel case naming and enum support.
-    /// </summary>
-    public static JsonSerializerOptions Create()
+  /// <summary>
+  /// Returns JSON serialisation options with camel case naming and enum support.
+  /// </summary>
+  public static JsonSerializerOptions Create()
+  {
+    var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
     {
-        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
-        {
-            WriteIndented = true,
-            PropertyNameCaseInsensitive = true
-        };
+      WriteIndented = true,
+      PropertyNameCaseInsensitive = true
+    };
 
-        options.Converters.Add(new JsonStringEnumConverter());
-        return options;
-    }
+    options.Converters.Add(new JsonStringEnumConverter());
+    return options;
+  }
 }
 

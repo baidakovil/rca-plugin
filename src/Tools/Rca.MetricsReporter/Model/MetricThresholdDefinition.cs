@@ -7,17 +7,17 @@ using System.Collections.Generic;
 /// </summary>
 public sealed class MetricThresholdDefinition
 {
-    /// <summary>
-    /// Human-readable description of the metric purpose.
-    /// </summary>
-    public string? Description { get; init; }
-        = null;
+  /// <summary>
+  /// Human-readable description of the metric purpose.
+  /// </summary>
+  public string? Description { get; init; }
+      = null;
 
-    /// <summary>
-    /// Threshold values grouped by symbol level.
-    /// </summary>
-    public IDictionary<MetricSymbolLevel, MetricThreshold> Levels { get; init; }
-        = new Dictionary<MetricSymbolLevel, MetricThreshold>();
+  /// <summary>
+  /// Threshold values grouped by symbol level.
+  /// </summary>
+  public IDictionary<MetricSymbolLevel, MetricThreshold> Levels { get; init; }
+      = new Dictionary<MetricSymbolLevel, MetricThreshold>();
 }
 
 

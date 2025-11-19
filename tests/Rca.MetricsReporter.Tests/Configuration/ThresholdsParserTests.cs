@@ -9,31 +9,31 @@ using Rca.Tools.MetricsReporter.Model;
 [Category("Unit")]
 public sealed class ThresholdsParserTests
 {
-    private ThresholdsParser parser = null!;
+  private ThresholdsParser parser = null!;
 
-    [SetUp]
-    public void SetUp()
-    {
-        parser = new ThresholdsParser();
-    }
+  [SetUp]
+  public void SetUp()
+  {
+    parser = new ThresholdsParser();
+  }
 
-    [Test]
-    public void Parse_NullInput_ProducesDefaultThresholds()
-    {
-        // Act
-        var result = parser.Parse(null);
+  [Test]
+  public void Parse_NullInput_ProducesDefaultThresholds()
+  {
+    // Act
+    var result = parser.Parse(null);
 
-        // Assert
-        result.Should().HaveCount(Enum.GetValues<MetricIdentifier>().Length);
-        result[MetricIdentifier.AltCoverSequenceCoverage].Levels[MetricSymbolLevel.Type].HigherIsBetter.Should().BeTrue();
-        result[MetricIdentifier.SarifCaRuleViolations].Levels[MetricSymbolLevel.Type].HigherIsBetter.Should().BeFalse();
-    }
+    // Assert
+    result.Should().HaveCount(Enum.GetValues<MetricIdentifier>().Length);
+    result[MetricIdentifier.AltCoverSequenceCoverage].Levels[MetricSymbolLevel.Type].HigherIsBetter.Should().BeTrue();
+    result[MetricIdentifier.SarifCaRuleViolations].Levels[MetricSymbolLevel.Type].HigherIsBetter.Should().BeFalse();
+  }
 
-    [Test]
-    public void Parse_CustomOverrides_UpdatesSpecifiedMetrics()
-    {
-        // Arrange
-        const string customJson = """
+  [Test]
+  public void Parse_CustomOverrides_UpdatesSpecifiedMetrics()
+  {
+    // Arrange
+    const string customJson = """
         {
           "metrics": [
             {
@@ -54,21 +54,21 @@ public sealed class ThresholdsParserTests
         }
         """;
 
-        // Act
-        var result = parser.Parse(customJson);
+    // Act
+    var result = parser.Parse(customJson);
 
-        // Assert
-        result[MetricIdentifier.AltCoverSequenceCoverage].Levels[MetricSymbolLevel.Type].Warning.Should().Be(80);
-        result[MetricIdentifier.AltCoverSequenceCoverage].Levels[MetricSymbolLevel.Type].Error.Should().Be(70);
-        result[MetricIdentifier.SarifCaRuleViolations].Levels[MetricSymbolLevel.Type].Warning.Should().Be(1);
-        result[MetricIdentifier.SarifCaRuleViolations].Levels[MetricSymbolLevel.Type].Error.Should().Be(2);
-    }
+    // Assert
+    result[MetricIdentifier.AltCoverSequenceCoverage].Levels[MetricSymbolLevel.Type].Warning.Should().Be(80);
+    result[MetricIdentifier.AltCoverSequenceCoverage].Levels[MetricSymbolLevel.Type].Error.Should().Be(70);
+    result[MetricIdentifier.SarifCaRuleViolations].Levels[MetricSymbolLevel.Type].Warning.Should().Be(1);
+    result[MetricIdentifier.SarifCaRuleViolations].Levels[MetricSymbolLevel.Type].Error.Should().Be(2);
+  }
 
-    [Test]
-    public void Parse_SymbolAwareFormat_UpdatesSpecificLevels()
-    {
-        // Arrange
-        const string json = """
+  [Test]
+  public void Parse_SymbolAwareFormat_UpdatesSpecificLevels()
+  {
+    // Arrange
+    const string json = """
         {
           "metrics": [
             {
@@ -84,26 +84,26 @@ public sealed class ThresholdsParserTests
         }
         """;
 
-        // Act
-        var result = parser.Parse(json);
+    // Act
+    var result = parser.Parse(json);
 
-        // Assert
-        var definition = result[MetricIdentifier.RoslynDepthOfInheritance];
-        definition.Description.Should().Be("Avoid excessive inheritance depth.");
-        definition.Levels[MetricSymbolLevel.Type].Warning.Should().Be(5);
-        definition.Levels[MetricSymbolLevel.Type].Error.Should().Be(7);
-        definition.Levels[MetricSymbolLevel.Type].HigherIsBetter.Should().BeFalse();
+    // Assert
+    var definition = result[MetricIdentifier.RoslynDepthOfInheritance];
+    definition.Description.Should().Be("Avoid excessive inheritance depth.");
+    definition.Levels[MetricSymbolLevel.Type].Warning.Should().Be(5);
+    definition.Levels[MetricSymbolLevel.Type].Error.Should().Be(7);
+    definition.Levels[MetricSymbolLevel.Type].HigherIsBetter.Should().BeFalse();
 
-        definition.Levels[MetricSymbolLevel.Member].Warning.Should().BeNull();
-        definition.Levels[MetricSymbolLevel.Member].Error.Should().BeNull();
-        definition.Levels[MetricSymbolLevel.Member].HigherIsBetter.Should().BeFalse();
-    }
+    definition.Levels[MetricSymbolLevel.Member].Warning.Should().BeNull();
+    definition.Levels[MetricSymbolLevel.Member].Error.Should().BeNull();
+    definition.Levels[MetricSymbolLevel.Member].HigherIsBetter.Should().BeFalse();
+  }
 
-    [Test]
-    public void Parse_PositiveDeltaNeutralFlag_IsAppliedAcrossLevels()
-    {
-        // Arrange
-        const string json = """
+  [Test]
+  public void Parse_PositiveDeltaNeutralFlag_IsAppliedAcrossLevels()
+  {
+    // Arrange
+    const string json = """
         {
           "metrics": [
             {
@@ -115,24 +115,24 @@ public sealed class ThresholdsParserTests
         }
         """;
 
-        // Act
-        var result = parser.Parse(json);
+    // Act
+    var result = parser.Parse(json);
 
-        // Assert
-        result[MetricIdentifier.RoslynSourceLines].Levels[MetricSymbolLevel.Type].PositiveDeltaNeutral.Should().BeTrue();
-    }
+    // Assert
+    result[MetricIdentifier.RoslynSourceLines].Levels[MetricSymbolLevel.Type].PositiveDeltaNeutral.Should().BeTrue();
+  }
 
-    [Test]
-    public void Parse_InvalidJson_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        const string invalidJson = "{'AltCoverSequenceCoverage':{'warning':}";
+  [Test]
+  public void Parse_InvalidJson_ThrowsInvalidOperationException()
+  {
+    // Arrange
+    const string invalidJson = "{'AltCoverSequenceCoverage':{'warning':}";
 
-        // Act
-        var act = () => parser.Parse(invalidJson);
+    // Act
+    var act = () => parser.Parse(invalidJson);
 
-        // Assert
-        act.Should().Throw<InvalidOperationException>();
-    }
+    // Assert
+    act.Should().Throw<InvalidOperationException>();
+  }
 }
 

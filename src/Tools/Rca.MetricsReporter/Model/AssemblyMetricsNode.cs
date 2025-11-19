@@ -7,16 +7,16 @@ using System.Collections.Generic;
 /// </summary>
 public sealed class AssemblyMetricsNode : MetricsNode
 {
-    /// <summary>
-    /// Initialises a new assembly node.
-    /// </summary>
-    public AssemblyMetricsNode()
-        => Kind = CodeElementKind.Assembly;
+  /// <summary>
+  /// Initialises a new assembly node.
+  /// </summary>
+  public AssemblyMetricsNode()
+      => Kind = CodeElementKind.Assembly;
 
-    /// <summary>
-    /// Namespaces contained inside the assembly.
-    /// </summary>
-    public IList<NamespaceMetricsNode> Namespaces { get; init; }
-        = new List<NamespaceMetricsNode>();
+  /// <summary>
+  /// Namespaces contained inside the assembly.
+  /// </summary>
+  public IList<NamespaceMetricsNode> Namespaces { get; init; }
+      = new List<NamespaceMetricsNode>();
 }
 

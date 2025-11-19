@@ -8,64 +8,64 @@ using System.Text.Json.Serialization;
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum MetricIdentifier
 {
-    /// <summary>
-    /// AltCover sequence coverage percentage.
-    /// </summary>
-    AltCoverSequenceCoverage,
+  /// <summary>
+  /// AltCover sequence coverage percentage.
+  /// </summary>
+  AltCoverSequenceCoverage,
 
-    /// <summary>
-    /// AltCover branch coverage percentage.
-    /// </summary>
-    AltCoverBranchCoverage,
+  /// <summary>
+  /// AltCover branch coverage percentage.
+  /// </summary>
+  AltCoverBranchCoverage,
 
-    /// <summary>
-    /// AltCover/OpenCover cyclomatic complexity.
-    /// </summary>
-    AltCoverCyclomaticComplexity,
+  /// <summary>
+  /// AltCover/OpenCover cyclomatic complexity.
+  /// </summary>
+  AltCoverCyclomaticComplexity,
 
-    /// <summary>
-    /// AltCover/OpenCover NPath complexity.
-    /// </summary>
-    AltCoverNPathComplexity,
+  /// <summary>
+  /// AltCover/OpenCover NPath complexity.
+  /// </summary>
+  AltCoverNPathComplexity,
 
-    /// <summary>
-    /// Maintainability index reported by Microsoft.CodeAnalysis.Metrics.
-    /// </summary>
-    RoslynMaintainabilityIndex,
+  /// <summary>
+  /// Maintainability index reported by Microsoft.CodeAnalysis.Metrics.
+  /// </summary>
+  RoslynMaintainabilityIndex,
 
-    /// <summary>
-    /// Cyclomatic complexity reported by Microsoft.CodeAnalysis.Metrics.
-    /// </summary>
-    RoslynCyclomaticComplexity,
+  /// <summary>
+  /// Cyclomatic complexity reported by Microsoft.CodeAnalysis.Metrics.
+  /// </summary>
+  RoslynCyclomaticComplexity,
 
-    /// <summary>
-    /// Class coupling reported by Microsoft.CodeAnalysis.Metrics.
-    /// </summary>
-    RoslynClassCoupling,
+  /// <summary>
+  /// Class coupling reported by Microsoft.CodeAnalysis.Metrics.
+  /// </summary>
+  RoslynClassCoupling,
 
-    /// <summary>
-    /// Depth of inheritance reported by Microsoft.CodeAnalysis.Metrics.
-    /// </summary>
-    RoslynDepthOfInheritance,
+  /// <summary>
+  /// Depth of inheritance reported by Microsoft.CodeAnalysis.Metrics.
+  /// </summary>
+  RoslynDepthOfInheritance,
 
-    /// <summary>
-    /// Source lines of code reported by Microsoft.CodeAnalysis.Metrics.
-    /// </summary>
-    RoslynSourceLines,
+  /// <summary>
+  /// Source lines of code reported by Microsoft.CodeAnalysis.Metrics.
+  /// </summary>
+  RoslynSourceLines,
 
-    /// <summary>
-    /// Executable lines of code reported by Microsoft.CodeAnalysis.Metrics.
-    /// </summary>
-    RoslynExecutableLines,
+  /// <summary>
+  /// Executable lines of code reported by Microsoft.CodeAnalysis.Metrics.
+  /// </summary>
+  RoslynExecutableLines,
 
-    /// <summary>
-    /// Count of analyzer violations that start with the CA prefix (SARIF).
-    /// </summary>
-    SarifCaRuleViolations,
+  /// <summary>
+  /// Count of analyzer violations that start with the CA prefix (SARIF).
+  /// </summary>
+  SarifCaRuleViolations,
 
-    /// <summary>
-    /// Count of analyzer violations that start with the IDE prefix (SARIF).
-    /// </summary>
-    SarifIdeRuleViolations,
+  /// <summary>
+  /// Count of analyzer violations that start with the IDE prefix (SARIF).
+  /// </summary>
+  SarifIdeRuleViolations,
 }
 

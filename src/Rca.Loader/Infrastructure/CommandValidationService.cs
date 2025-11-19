@@ -7,183 +7,183 @@ using Rca.Loader.Testing;
 
 namespace Rca.Loader.Infrastructure
 {
+  /// <summary>
+  /// Service for validating pipe commands and their payloads.
+  /// </summary>
+  public class CommandValidationService
+  {
     /// <summary>
-    /// Service for validating pipe commands and their payloads.
+    /// Validates a pipe command and its payload.
     /// </summary>
-    public class CommandValidationService
+    /// <param name="command">The command to validate.</param>
+    /// <param name="validationError">The validation error message if validation fails.</param>
+    /// <returns>True if the command is valid, otherwise false.</returns>
+    public bool ValidateCommand(PipeCommand command, out string validationError)
     {
-        /// <summary>
-        /// Validates a pipe command and its payload.
-        /// </summary>
-        /// <param name="command">The command to validate.</param>
-        /// <param name="validationError">The validation error message if validation fails.</param>
-        /// <returns>True if the command is valid, otherwise false.</returns>
-        public bool ValidateCommand(PipeCommand command, out string validationError)
+      if (command == null)
+      {
+        validationError = "Command cannot be null";
+        return false;
+      }
+
+      if (string.IsNullOrWhiteSpace(command.Command))
+      {
+        validationError = "Command name cannot be empty";
+        return false;
+      }
+
+      return command.Command.ToUpperInvariant() switch
+      {
+        PipeCommands.Reload => ValidateReloadCommand(command, out validationError),
+        PipeCommands.Status => ValidateStatusCommand(command, out validationError),
+        PipeCommands.RunTests => ValidateRunTestsCommand(command, out validationError),
+        PipeCommands.TestInit => ValidateTestInitCommand(command, out validationError),
+        PipeCommands.ReloadRuntime => ValidateReloadRuntimeCommand(command, out validationError),
+        PipeCommands.BuildCompleted => ValidateBuildCompletedCommand(command, out validationError),
+        _ => CreateUnknownCommandError(command.Command, out validationError)
+      };
+    }
+
+    private static bool ValidateReloadCommand(PipeCommand command, out string validationError)
+    {
+      if (string.IsNullOrWhiteSpace(command.Payload))
+      {
+        validationError = "Reload command requires a valid folder path";
+        return false;
+      }
+
+      validationError = string.Empty;
+      return true;
+    }
+
+    private static bool ValidateStatusCommand(PipeCommand command, out string validationError)
+    {
+      // Status command doesn't require a payload
+      validationError = string.Empty;
+      return true;
+    }
+
+    private static bool ValidateRunTestsCommand(PipeCommand command, out string validationError)
+    {
+      if (string.IsNullOrWhiteSpace(command.Payload))
+      {
+        validationError = "RunTests command requires a test execution payload";
+        return false;
+      }
+
+      try
+      {
+        // Validate against test adapter payload format
+        var payload = JsonSerializer.Deserialize<TestAdapterPayload>(command.Payload);
+        if (payload == null)
         {
-            if (command == null)
-            {
-                validationError = "Command cannot be null";
-                return false;
-            }
-
-            if (string.IsNullOrWhiteSpace(command.Command))
-            {
-                validationError = "Command name cannot be empty";
-                return false;
-            }
-
-            return command.Command.ToUpperInvariant() switch
-            {
-                PipeCommands.Reload => ValidateReloadCommand(command, out validationError),
-                PipeCommands.Status => ValidateStatusCommand(command, out validationError),
-                PipeCommands.RunTests => ValidateRunTestsCommand(command, out validationError),
-                PipeCommands.TestInit => ValidateTestInitCommand(command, out validationError),
-                PipeCommands.ReloadRuntime => ValidateReloadRuntimeCommand(command, out validationError),
-                PipeCommands.BuildCompleted => ValidateBuildCompletedCommand(command, out validationError),
-                _ => CreateUnknownCommandError(command.Command, out validationError)
-            };
+          validationError = "Invalid test execution payload format";
+          return false;
         }
 
-        private static bool ValidateReloadCommand(PipeCommand command, out string validationError)
+        if (string.IsNullOrWhiteSpace(payload.AssemblyPath))
         {
-            if (string.IsNullOrWhiteSpace(command.Payload))
-            {
-                validationError = "Reload command requires a valid folder path";
-                return false;
-            }
-
-            validationError = string.Empty;
-            return true;
+          validationError = "Test execution payload must specify an assembly path";
+          return false;
         }
 
-        private static bool ValidateStatusCommand(PipeCommand command, out string validationError)
+        if (payload.Tests == null || payload.Tests.Count == 0)
         {
-            // Status command doesn't require a payload
-            validationError = string.Empty;
-            return true;
+          validationError = "Test execution payload must contain at least one test";
+          return false;
         }
+      }
+      catch (JsonException)
+      {
+        validationError = "Test execution payload is not valid JSON";
+        return false;
+      }
 
-        private static bool ValidateRunTestsCommand(PipeCommand command, out string validationError)
-        {
-            if (string.IsNullOrWhiteSpace(command.Payload))
-            {
-                validationError = "RunTests command requires a test execution payload";
-                return false;
-            }
+      validationError = string.Empty;
+      return true;
+    }
 
-            try
-            {
-                // Validate against test adapter payload format
-                var payload = JsonSerializer.Deserialize<TestAdapterPayload>(command.Payload);
-                if (payload == null)
-                {
-                    validationError = "Invalid test execution payload format";
-                    return false;
-                }
+    private static bool ValidateTestInitCommand(PipeCommand command, out string validationError)
+    {
+      // TestInit command doesn't require a payload
+      validationError = string.Empty;
+      return true;
+    }
 
-                if (string.IsNullOrWhiteSpace(payload.AssemblyPath))
-                {
-                    validationError = "Test execution payload must specify an assembly path";
-                    return false;
-                }
+    private static bool ValidateReloadRuntimeCommand(PipeCommand command, out string validationError)
+    {
+      // New flow: payload is optional and ignored; accept empty payload
+      validationError = string.Empty;
+      return true;
+    }
 
-                if (payload.Tests == null || payload.Tests.Count == 0)
-                {
-                    validationError = "Test execution payload must contain at least one test";
-                    return false;
-                }
-            }
-            catch (JsonException)
-            {
-                validationError = "Test execution payload is not valid JSON";
-                return false;
-            }
+    private static bool ValidateBuildCompletedCommand(PipeCommand command, out string validationError)
+    {
+      // BUILD_COMPLETED doesn't require a payload - MSBuild just sends a signal
+      validationError = string.Empty;
+      return true;
+    }
 
-            validationError = string.Empty;
-            return true;
-        }
-
-        private static bool ValidateTestInitCommand(PipeCommand command, out string validationError)
-        {
-            // TestInit command doesn't require a payload
-            validationError = string.Empty;
-            return true;
-        }
-        
-        private static bool ValidateReloadRuntimeCommand(PipeCommand command, out string validationError)
-        {
-            // New flow: payload is optional and ignored; accept empty payload
-            validationError = string.Empty;
-            return true;
-        }
-
-        private static bool ValidateBuildCompletedCommand(PipeCommand command, out string validationError)
-        {
-            // BUILD_COMPLETED doesn't require a payload - MSBuild just sends a signal
-            validationError = string.Empty;
-            return true;
-        }
-
-        private static bool CreateUnknownCommandError(string commandName, out string validationError)
-        {
-            validationError = $"Unknown command: {commandName}";
-            return false;
-        }
-        
-        /// <summary>
-        /// Test execution payload from the test adapter (for validation only).
-        /// </summary>
-        private class TestAdapterPayload
-        {
-            public string AssemblyPath { get; set; } = string.Empty;
-            public List<TestAdapterRequest> Tests { get; set; } = new();
-        }
-        
-        /// <summary>
-        /// Test request from the test adapter (for validation only).
-        /// </summary>
-        private class TestAdapterRequest
-        {
-            public string FullyQualifiedName { get; set; } = string.Empty;
-            public string DisplayName { get; set; } = string.Empty;
-        }
+    private static bool CreateUnknownCommandError(string commandName, out string validationError)
+    {
+      validationError = $"Unknown command: {commandName}";
+      return false;
     }
 
     /// <summary>
-    /// Constants for pipe command names.
+    /// Test execution payload from the test adapter (for validation only).
     /// </summary>
-    public static class PipeCommands
+    private class TestAdapterPayload
     {
-        /// <summary>
-        /// Command to reload the runtime from a specified path.
-        /// </summary>
-        public const string Reload = "RELOAD";
-
-        /// <summary>
-        /// Command to get the current runtime status.
-        /// </summary>
-        public const string Status = "STATUS";
-
-        /// <summary>
-        /// Command to run tests in the Revit context.
-        /// </summary>
-        public const string RunTests = "RUN_TESTS";
-
-        /// <summary>
-        /// Command to initialize the test execution environment.
-        /// </summary>
-        public const string TestInit = "TEST_INIT";
-        
-        /// <summary>
-        /// Command to reload the runtime and update assembly status.
-        /// </summary>
-        public const string ReloadRuntime = "RELOAD_RUNTIME";
-        
-        /// <summary>
-        /// Command sent by MSBuild to notify that a new build is available.
-        /// Addin should check for updates and prompt user if needed.
-        /// Payload is optional and ignored - addin finds latest folder automatically.
-        /// </summary>
-        public const string BuildCompleted = "BUILD_COMPLETED";
+      public string AssemblyPath { get; set; } = string.Empty;
+      public List<TestAdapterRequest> Tests { get; set; } = new();
     }
+
+    /// <summary>
+    /// Test request from the test adapter (for validation only).
+    /// </summary>
+    private class TestAdapterRequest
+    {
+      public string FullyQualifiedName { get; set; } = string.Empty;
+      public string DisplayName { get; set; } = string.Empty;
+    }
+  }
+
+  /// <summary>
+  /// Constants for pipe command names.
+  /// </summary>
+  public static class PipeCommands
+  {
+    /// <summary>
+    /// Command to reload the runtime from a specified path.
+    /// </summary>
+    public const string Reload = "RELOAD";
+
+    /// <summary>
+    /// Command to get the current runtime status.
+    /// </summary>
+    public const string Status = "STATUS";
+
+    /// <summary>
+    /// Command to run tests in the Revit context.
+    /// </summary>
+    public const string RunTests = "RUN_TESTS";
+
+    /// <summary>
+    /// Command to initialize the test execution environment.
+    /// </summary>
+    public const string TestInit = "TEST_INIT";
+
+    /// <summary>
+    /// Command to reload the runtime and update assembly status.
+    /// </summary>
+    public const string ReloadRuntime = "RELOAD_RUNTIME";
+
+    /// <summary>
+    /// Command sent by MSBuild to notify that a new build is available.
+    /// Addin should check for updates and prompt user if needed.
+    /// Payload is optional and ignored - addin finds latest folder automatically.
+    /// </summary>
+    public const string BuildCompleted = "BUILD_COMPLETED";
+  }
 }

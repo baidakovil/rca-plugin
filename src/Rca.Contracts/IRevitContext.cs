@@ -1,13 +1,13 @@
 namespace Rca.Contracts
 {
+  /// <summary>
+  /// Interface for Revit context abstraction.
+  /// </summary>
+  public interface IRevitContext
+  {
     /// <summary>
-    /// Interface for Revit context abstraction.
+    /// Gets or sets the current UI application.
     /// </summary>
-    public interface IRevitContext
-    {
-        /// <summary>
-        /// Gets or sets the current UI application.
-        /// </summary>
-        object CurrentUIApplication { get; set; }
-    }
+    object CurrentUIApplication { get; set; }
+  }
 }

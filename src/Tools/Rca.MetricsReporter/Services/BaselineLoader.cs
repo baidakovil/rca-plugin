@@ -13,26 +13,26 @@ using Rca.Tools.MetricsReporter.Serialization;
 /// </summary>
 public sealed class BaselineLoader
 {
-    /// <summary>
-    /// Loads the baseline report asynchronously.
-    /// </summary>
-    /// <param name="path">Baseline file path. May be <see langword="null"/>.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Baseline report or <see langword="null"/> when the file does not exist.</returns>
-    public async Task<MetricsReport?> LoadAsync(string? path, CancellationToken cancellationToken)
+  /// <summary>
+  /// Loads the baseline report asynchronously.
+  /// </summary>
+  /// <param name="path">Baseline file path. May be <see langword="null"/>.</param>
+  /// <param name="cancellationToken">Cancellation token.</param>
+  /// <returns>Baseline report or <see langword="null"/> when the file does not exist.</returns>
+  public async Task<MetricsReport?> LoadAsync(string? path, CancellationToken cancellationToken)
+  {
+    if (string.IsNullOrWhiteSpace(path))
     {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return null;
-        }
-
-        if (!File.Exists(path))
-        {
-            return null;
-        }
-
-        await using var stream = File.OpenRead(path);
-        return await JsonSerializer.DeserializeAsync<MetricsReport>(stream, JsonSerializerOptionsFactory.Create(), cancellationToken).ConfigureAwait(false);
+      return null;
     }
+
+    if (!File.Exists(path))
+    {
+      return null;
+    }
+
+    await using var stream = File.OpenRead(path);
+    return await JsonSerializer.DeserializeAsync<MetricsReport>(stream, JsonSerializerOptionsFactory.Create(), cancellationToken).ConfigureAwait(false);
+  }
 }
 

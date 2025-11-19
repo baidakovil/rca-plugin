@@ -14,320 +14,320 @@ using Rca.Tools.MetricsReporter.Rendering;
 [Category("Unit")]
 public sealed class CoverageLinkBuilderTests
 {
-    private string _tempDirectory = null!;
+  private string _tempDirectory = null!;
 
-    [SetUp]
-    public void SetUp()
+  [SetUp]
+  public void SetUp()
+  {
+    _tempDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(_tempDirectory);
+  }
+
+  [TearDown]
+  public void TearDown()
+  {
+    if (Directory.Exists(_tempDirectory))
     {
-        _tempDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(_tempDirectory);
+      Directory.Delete(_tempDirectory, recursive: true);
     }
+  }
 
-    [TearDown]
-    public void TearDown()
+  [Test]
+  public void BuildLink_TypeNodeWithExistingFile_ReturnsFileUrl()
+  {
+    // Arrange
+    var typeNode = new TypeMetricsNode
     {
-        if (Directory.Exists(_tempDirectory))
-        {
-            Directory.Delete(_tempDirectory, recursive: true);
-        }
-    }
+      Name = "SampleType",
+      FullyQualifiedName = "Sample.Namespace.SampleType"
+    };
+    var assemblyName = "Sample.Assembly";
+    var htmlFileName = $"{assemblyName}_{typeNode.Name}.html";
+    var htmlFilePath = Path.Combine(_tempDirectory, htmlFileName);
+    File.WriteAllText(htmlFilePath, "<html></html>");
 
-    [Test]
-    public void BuildLink_TypeNodeWithExistingFile_ReturnsFileUrl()
+    var builder = new CoverageLinkBuilder(_tempDirectory);
+
+    // Act
+    var result = builder.BuildLink(typeNode, assemblyName);
+
+    // Assert
+    result.Should().NotBeNull();
+    result.Should().Contain("file://");
+    result.Should().Contain(htmlFileName);
+  }
+
+  [Test]
+  public void BuildLink_TypeNodeWithNonExistingFile_ReturnsNull()
+  {
+    // Arrange
+    var typeNode = new TypeMetricsNode
     {
-        // Arrange
-        var typeNode = new TypeMetricsNode
-        {
-            Name = "SampleType",
-            FullyQualifiedName = "Sample.Namespace.SampleType"
-        };
-        var assemblyName = "Sample.Assembly";
-        var htmlFileName = $"{assemblyName}_{typeNode.Name}.html";
-        var htmlFilePath = Path.Combine(_tempDirectory, htmlFileName);
-        File.WriteAllText(htmlFilePath, "<html></html>");
+      Name = "SampleType",
+      FullyQualifiedName = "Sample.Namespace.SampleType"
+    };
+    var assemblyName = "Sample.Assembly";
+    // File does not exist
 
-        var builder = new CoverageLinkBuilder(_tempDirectory);
+    var builder = new CoverageLinkBuilder(_tempDirectory);
 
-        // Act
-        var result = builder.BuildLink(typeNode, assemblyName);
+    // Act
+    var result = builder.BuildLink(typeNode, assemblyName);
 
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().Contain("file://");
-        result.Should().Contain(htmlFileName);
-    }
+    // Assert
+    result.Should().BeNull();
+  }
 
-    [Test]
-    public void BuildLink_TypeNodeWithNonExistingFile_ReturnsNull()
+  [Test]
+  public void BuildLink_MemberNode_ReturnsNull()
+  {
+    // Arrange
+    var memberNode = new MemberMetricsNode
     {
-        // Arrange
-        var typeNode = new TypeMetricsNode
-        {
-            Name = "SampleType",
-            FullyQualifiedName = "Sample.Namespace.SampleType"
-        };
-        var assemblyName = "Sample.Assembly";
-        // File does not exist
+      Name = "DoWork",
+      FullyQualifiedName = "Sample.Namespace.SampleType.DoWork()"
+    };
+    var assemblyName = "Sample.Assembly";
 
-        var builder = new CoverageLinkBuilder(_tempDirectory);
+    var builder = new CoverageLinkBuilder(_tempDirectory);
 
-        // Act
-        var result = builder.BuildLink(typeNode, assemblyName);
+    // Act
+    var result = builder.BuildLink(memberNode, assemblyName);
 
-        // Assert
-        result.Should().BeNull();
-    }
+    // Assert
+    result.Should().BeNull();
+  }
 
-    [Test]
-    public void BuildLink_MemberNode_ReturnsNull()
+  [Test]
+  public void BuildLink_AssemblyNode_ReturnsNull()
+  {
+    // Arrange
+    var assemblyNode = new AssemblyMetricsNode
     {
-        // Arrange
-        var memberNode = new MemberMetricsNode
-        {
-            Name = "DoWork",
-            FullyQualifiedName = "Sample.Namespace.SampleType.DoWork()"
-        };
-        var assemblyName = "Sample.Assembly";
+      Name = "Sample.Assembly",
+      FullyQualifiedName = "Sample.Assembly"
+    };
 
-        var builder = new CoverageLinkBuilder(_tempDirectory);
+    var builder = new CoverageLinkBuilder(_tempDirectory);
 
-        // Act
-        var result = builder.BuildLink(memberNode, assemblyName);
+    // Act
+    var result = builder.BuildLink(assemblyNode, assemblyNode.Name);
 
-        // Assert
-        result.Should().BeNull();
-    }
+    // Assert
+    result.Should().BeNull();
+  }
 
-    [Test]
-    public void BuildLink_AssemblyNode_ReturnsNull()
+  [Test]
+  public void BuildLink_NamespaceNode_ReturnsNull()
+  {
+    // Arrange
+    var namespaceNode = new NamespaceMetricsNode
     {
-        // Arrange
-        var assemblyNode = new AssemblyMetricsNode
-        {
-            Name = "Sample.Assembly",
-            FullyQualifiedName = "Sample.Assembly"
-        };
+      Name = "Sample.Namespace",
+      FullyQualifiedName = "Sample.Namespace"
+    };
+    var assemblyName = "Sample.Assembly";
 
-        var builder = new CoverageLinkBuilder(_tempDirectory);
+    var builder = new CoverageLinkBuilder(_tempDirectory);
 
-        // Act
-        var result = builder.BuildLink(assemblyNode, assemblyNode.Name);
+    // Act
+    var result = builder.BuildLink(namespaceNode, assemblyName);
 
-        // Assert
-        result.Should().BeNull();
-    }
+    // Assert
+    result.Should().BeNull();
+  }
 
-    [Test]
-    public void BuildLink_NamespaceNode_ReturnsNull()
+  [Test]
+  public void BuildLink_NullCoverageHtmlDir_ReturnsNull()
+  {
+    // Arrange
+    var typeNode = new TypeMetricsNode
     {
-        // Arrange
-        var namespaceNode = new NamespaceMetricsNode
-        {
-            Name = "Sample.Namespace",
-            FullyQualifiedName = "Sample.Namespace"
-        };
-        var assemblyName = "Sample.Assembly";
+      Name = "SampleType",
+      FullyQualifiedName = "Sample.Namespace.SampleType"
+    };
+    var assemblyName = "Sample.Assembly";
 
-        var builder = new CoverageLinkBuilder(_tempDirectory);
+    var builder = new CoverageLinkBuilder(null);
 
-        // Act
-        var result = builder.BuildLink(namespaceNode, assemblyName);
+    // Act
+    var result = builder.BuildLink(typeNode, assemblyName);
 
-        // Assert
-        result.Should().BeNull();
-    }
+    // Assert
+    result.Should().BeNull();
+  }
 
-    [Test]
-    public void BuildLink_NullCoverageHtmlDir_ReturnsNull()
+  [Test]
+  public void BuildLink_EmptyCoverageHtmlDir_ReturnsNull()
+  {
+    // Arrange
+    var typeNode = new TypeMetricsNode
     {
-        // Arrange
-        var typeNode = new TypeMetricsNode
-        {
-            Name = "SampleType",
-            FullyQualifiedName = "Sample.Namespace.SampleType"
-        };
-        var assemblyName = "Sample.Assembly";
+      Name = "SampleType",
+      FullyQualifiedName = "Sample.Namespace.SampleType"
+    };
+    var assemblyName = "Sample.Assembly";
 
-        var builder = new CoverageLinkBuilder(null);
+    var builder = new CoverageLinkBuilder(string.Empty);
 
-        // Act
-        var result = builder.BuildLink(typeNode, assemblyName);
+    // Act
+    var result = builder.BuildLink(typeNode, assemblyName);
 
-        // Assert
-        result.Should().BeNull();
-    }
+    // Assert
+    result.Should().BeNull();
+  }
 
-    [Test]
-    public void BuildLink_EmptyCoverageHtmlDir_ReturnsNull()
+  [Test]
+  public void BuildLink_NonExistentDirectory_ReturnsNull()
+  {
+    // Arrange
+    var nonExistentDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    var typeNode = new TypeMetricsNode
     {
-        // Arrange
-        var typeNode = new TypeMetricsNode
-        {
-            Name = "SampleType",
-            FullyQualifiedName = "Sample.Namespace.SampleType"
-        };
-        var assemblyName = "Sample.Assembly";
+      Name = "SampleType",
+      FullyQualifiedName = "Sample.Namespace.SampleType"
+    };
+    var assemblyName = "Sample.Assembly";
 
-        var builder = new CoverageLinkBuilder(string.Empty);
+    var builder = new CoverageLinkBuilder(nonExistentDir);
 
-        // Act
-        var result = builder.BuildLink(typeNode, assemblyName);
+    // Act
+    var result = builder.BuildLink(typeNode, assemblyName);
 
-        // Assert
-        result.Should().BeNull();
-    }
+    // Assert
+    result.Should().BeNull();
+  }
 
-    [Test]
-    public void BuildLink_NonExistentDirectory_ReturnsNull()
+  [Test]
+  public void BuildLink_NullAssemblyName_ReturnsNull()
+  {
+    // Arrange
+    var typeNode = new TypeMetricsNode
     {
-        // Arrange
-        var nonExistentDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        var typeNode = new TypeMetricsNode
-        {
-            Name = "SampleType",
-            FullyQualifiedName = "Sample.Namespace.SampleType"
-        };
-        var assemblyName = "Sample.Assembly";
+      Name = "SampleType",
+      FullyQualifiedName = "Sample.Namespace.SampleType"
+    };
 
-        var builder = new CoverageLinkBuilder(nonExistentDir);
+    var builder = new CoverageLinkBuilder(_tempDirectory);
 
-        // Act
-        var result = builder.BuildLink(typeNode, assemblyName);
+    // Act
+    var result = builder.BuildLink(typeNode, null);
 
-        // Assert
-        result.Should().BeNull();
-    }
+    // Assert
+    result.Should().BeNull();
+  }
 
-    [Test]
-    public void BuildLink_NullAssemblyName_ReturnsNull()
+  [Test]
+  public void BuildLink_EmptyAssemblyName_ReturnsNull()
+  {
+    // Arrange
+    var typeNode = new TypeMetricsNode
     {
-        // Arrange
-        var typeNode = new TypeMetricsNode
-        {
-            Name = "SampleType",
-            FullyQualifiedName = "Sample.Namespace.SampleType"
-        };
+      Name = "SampleType",
+      FullyQualifiedName = "Sample.Namespace.SampleType"
+    };
 
-        var builder = new CoverageLinkBuilder(_tempDirectory);
+    var builder = new CoverageLinkBuilder(_tempDirectory);
 
-        // Act
-        var result = builder.BuildLink(typeNode, null);
+    // Act
+    var result = builder.BuildLink(typeNode, string.Empty);
 
-        // Assert
-        result.Should().BeNull();
-    }
+    // Assert
+    result.Should().BeNull();
+  }
 
-    [Test]
-    public void BuildLink_EmptyAssemblyName_ReturnsNull()
+  [Test]
+  public void BuildLink_EmptyTypeName_ReturnsNull()
+  {
+    // Arrange
+    var typeNode = new TypeMetricsNode
     {
-        // Arrange
-        var typeNode = new TypeMetricsNode
-        {
-            Name = "SampleType",
-            FullyQualifiedName = "Sample.Namespace.SampleType"
-        };
+      Name = string.Empty,
+      FullyQualifiedName = "Sample.Namespace"
+    };
+    var assemblyName = "Sample.Assembly";
 
-        var builder = new CoverageLinkBuilder(_tempDirectory);
+    var builder = new CoverageLinkBuilder(_tempDirectory);
 
-        // Act
-        var result = builder.BuildLink(typeNode, string.Empty);
+    // Act
+    var result = builder.BuildLink(typeNode, assemblyName);
 
-        // Assert
-        result.Should().BeNull();
-    }
+    // Assert
+    result.Should().BeNull();
+  }
 
-    [Test]
-    public void BuildLink_EmptyTypeName_ReturnsNull()
+  [Test]
+  public void BuildLink_UrlIsHtmlEncoded()
+  {
+    // Arrange
+    var typeNode = new TypeMetricsNode
     {
-        // Arrange
-        var typeNode = new TypeMetricsNode
-        {
-            Name = string.Empty,
-            FullyQualifiedName = "Sample.Namespace"
-        };
-        var assemblyName = "Sample.Assembly";
+      Name = "SampleType",
+      FullyQualifiedName = "Sample.Namespace.SampleType"
+    };
+    var assemblyName = "Sample.Assembly";
+    var htmlFileName = $"{assemblyName}_{typeNode.Name}.html";
+    var htmlFilePath = Path.Combine(_tempDirectory, htmlFileName);
+    File.WriteAllText(htmlFilePath, "<html></html>");
 
-        var builder = new CoverageLinkBuilder(_tempDirectory);
+    var builder = new CoverageLinkBuilder(_tempDirectory);
 
-        // Act
-        var result = builder.BuildLink(typeNode, assemblyName);
+    // Act
+    var result = builder.BuildLink(typeNode, assemblyName);
 
-        // Assert
-        result.Should().BeNull();
-    }
+    // Assert
+    result.Should().NotBeNull();
+    // File:// URLs should be properly encoded
+    result.Should().NotContain(" ");
+  }
 
-    [Test]
-    public void BuildLink_UrlIsHtmlEncoded()
+  [Test]
+  public void BuildLink_WithSpecialCharactersInNames_BuildsCorrectFilename()
+  {
+    // Arrange
+    var typeNode = new TypeMetricsNode
     {
-        // Arrange
-        var typeNode = new TypeMetricsNode
-        {
-            Name = "SampleType",
-            FullyQualifiedName = "Sample.Namespace.SampleType"
-        };
-        var assemblyName = "Sample.Assembly";
-        var htmlFileName = $"{assemblyName}_{typeNode.Name}.html";
-        var htmlFilePath = Path.Combine(_tempDirectory, htmlFileName);
-        File.WriteAllText(htmlFilePath, "<html></html>");
+      Name = "GenericType`1",
+      FullyQualifiedName = "Sample.Namespace.GenericType`1"
+    };
+    var assemblyName = "Sample.Assembly";
+    var htmlFileName = $"{assemblyName}_{typeNode.Name}.html";
+    var htmlFilePath = Path.Combine(_tempDirectory, htmlFileName);
+    File.WriteAllText(htmlFilePath, "<html></html>");
 
-        var builder = new CoverageLinkBuilder(_tempDirectory);
+    var builder = new CoverageLinkBuilder(_tempDirectory);
 
-        // Act
-        var result = builder.BuildLink(typeNode, assemblyName);
+    // Act
+    var result = builder.BuildLink(typeNode, assemblyName);
 
-        // Assert
-        result.Should().NotBeNull();
-        // File:// URLs should be properly encoded
-        result.Should().NotContain(" ");
-    }
+    // Assert
+    result.Should().NotBeNull();
+    // File:// URLs are HTML encoded, so we check for the encoded version
+    result.Should().Contain(htmlFileName.Replace("`", "%60"));
+  }
 
-    [Test]
-    public void BuildLink_WithSpecialCharactersInNames_BuildsCorrectFilename()
+  [Test]
+  public void BuildLink_VerifyCorrectNamingConvention()
+  {
+    // Arrange
+    var typeNode = new TypeMetricsNode
     {
-        // Arrange
-        var typeNode = new TypeMetricsNode
-        {
-            Name = "GenericType`1",
-            FullyQualifiedName = "Sample.Namespace.GenericType`1"
-        };
-        var assemblyName = "Sample.Assembly";
-        var htmlFileName = $"{assemblyName}_{typeNode.Name}.html";
-        var htmlFilePath = Path.Combine(_tempDirectory, htmlFileName);
-        File.WriteAllText(htmlFilePath, "<html></html>");
+      Name = "PipeResponseFactory",
+      FullyQualifiedName = "Rca.Loader.Infrastructure.PipeResponseFactory"
+    };
+    var assemblyName = "Rca.Loader";
+    var expectedFileName = "Rca.Loader_PipeResponseFactory.html";
+    var htmlFilePath = Path.Combine(_tempDirectory, expectedFileName);
+    File.WriteAllText(htmlFilePath, "<html></html>");
 
-        var builder = new CoverageLinkBuilder(_tempDirectory);
+    var builder = new CoverageLinkBuilder(_tempDirectory);
 
-        // Act
-        var result = builder.BuildLink(typeNode, assemblyName);
+    // Act
+    var result = builder.BuildLink(typeNode, assemblyName);
 
-        // Assert
-        result.Should().NotBeNull();
-        // File:// URLs are HTML encoded, so we check for the encoded version
-        result.Should().Contain(htmlFileName.Replace("`", "%60"));
-    }
-
-    [Test]
-    public void BuildLink_VerifyCorrectNamingConvention()
-    {
-        // Arrange
-        var typeNode = new TypeMetricsNode
-        {
-            Name = "PipeResponseFactory",
-            FullyQualifiedName = "Rca.Loader.Infrastructure.PipeResponseFactory"
-        };
-        var assemblyName = "Rca.Loader";
-        var expectedFileName = "Rca.Loader_PipeResponseFactory.html";
-        var htmlFilePath = Path.Combine(_tempDirectory, expectedFileName);
-        File.WriteAllText(htmlFilePath, "<html></html>");
-
-        var builder = new CoverageLinkBuilder(_tempDirectory);
-
-        // Act
-        var result = builder.BuildLink(typeNode, assemblyName);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().Contain(expectedFileName);
-    }
+    // Assert
+    result.Should().NotBeNull();
+    result.Should().Contain(expectedFileName);
+  }
 }
 

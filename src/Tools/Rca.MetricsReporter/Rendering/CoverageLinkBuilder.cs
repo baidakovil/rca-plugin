@@ -15,72 +15,72 @@ using Rca.Tools.MetricsReporter.Model;
 /// </remarks>
 internal sealed class CoverageLinkBuilder
 {
-    private readonly string? _coverageHtmlDir;
+  private readonly string? _coverageHtmlDir;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CoverageLinkBuilder"/> class.
-    /// </summary>
-    /// <param name="coverageHtmlDir">Path to HTML coverage reports directory. Can be <see langword="null"/>.</param>
-    public CoverageLinkBuilder(string? coverageHtmlDir)
+  /// <summary>
+  /// Initializes a new instance of the <see cref="CoverageLinkBuilder"/> class.
+  /// </summary>
+  /// <param name="coverageHtmlDir">Path to HTML coverage reports directory. Can be <see langword="null"/>.</param>
+  public CoverageLinkBuilder(string? coverageHtmlDir)
+  {
+    _coverageHtmlDir = coverageHtmlDir;
+  }
+
+  /// <summary>
+  /// Builds a coverage HTML link for a type node if the coverage HTML file exists.
+  /// </summary>
+  /// <param name="node">The type node to build a link for.</param>
+  /// <param name="assemblyName">The assembly name containing the type.</param>
+  /// <returns>
+  /// A file:// URL to the coverage HTML file, or <see langword="null"/> if the file doesn't exist
+  /// or CoverageHtmlDir is not specified or the node is not a type.
+  /// </returns>
+  /// <remarks>
+  /// Only creates links for <see cref="TypeMetricsNode"/>, not for members or assembly/namespace nodes.
+  /// The type name is taken from <paramref name="node"/>.Name.
+  /// The HTML filename is constructed as {assemblyName}_{typeName}.html.
+  /// </remarks>
+  public string? BuildLink(MetricsNode node, string? assemblyName)
+  {
+    // Only create links for types
+    if (node is not TypeMetricsNode)
     {
-        _coverageHtmlDir = coverageHtmlDir;
+      return null;
     }
 
-    /// <summary>
-    /// Builds a coverage HTML link for a type node if the coverage HTML file exists.
-    /// </summary>
-    /// <param name="node">The type node to build a link for.</param>
-    /// <param name="assemblyName">The assembly name containing the type.</param>
-    /// <returns>
-    /// A file:// URL to the coverage HTML file, or <see langword="null"/> if the file doesn't exist
-    /// or CoverageHtmlDir is not specified or the node is not a type.
-    /// </returns>
-    /// <remarks>
-    /// Only creates links for <see cref="TypeMetricsNode"/>, not for members or assembly/namespace nodes.
-    /// The type name is taken from <paramref name="node"/>.Name.
-    /// The HTML filename is constructed as {assemblyName}_{typeName}.html.
-    /// </remarks>
-    public string? BuildLink(MetricsNode node, string? assemblyName)
+    // CoverageHtmlDir must be specified and exist
+    if (string.IsNullOrWhiteSpace(_coverageHtmlDir) || !Directory.Exists(_coverageHtmlDir))
     {
-        // Only create links for types
-        if (node is not TypeMetricsNode)
-        {
-            return null;
-        }
-
-        // CoverageHtmlDir must be specified and exist
-        if (string.IsNullOrWhiteSpace(_coverageHtmlDir) || !Directory.Exists(_coverageHtmlDir))
-        {
-            return null;
-        }
-
-        // Assembly name is required
-        if (string.IsNullOrWhiteSpace(assemblyName))
-        {
-            return null;
-        }
-
-        // Use node.Name as type name
-        var typeName = node.Name;
-        if (string.IsNullOrWhiteSpace(typeName))
-        {
-            return null;
-        }
-
-        // Build HTML filename: {Assembly}_{Type}.html
-        // Example: "Rca.Loader_PipeResponseFactory.html"
-        var htmlFileName = $"{assemblyName}_{typeName}.html";
-        var htmlFilePath = Path.Combine(_coverageHtmlDir, htmlFileName);
-
-        // Only create link if HTML file exists
-        if (!File.Exists(htmlFilePath))
-        {
-            return null;
-        }
-
-        // Convert to file:// URL format
-        var fileUri = new Uri(htmlFilePath);
-        return WebUtility.HtmlEncode(fileUri.AbsoluteUri);
+      return null;
     }
+
+    // Assembly name is required
+    if (string.IsNullOrWhiteSpace(assemblyName))
+    {
+      return null;
+    }
+
+    // Use node.Name as type name
+    var typeName = node.Name;
+    if (string.IsNullOrWhiteSpace(typeName))
+    {
+      return null;
+    }
+
+    // Build HTML filename: {Assembly}_{Type}.html
+    // Example: "Rca.Loader_PipeResponseFactory.html"
+    var htmlFileName = $"{assemblyName}_{typeName}.html";
+    var htmlFilePath = Path.Combine(_coverageHtmlDir, htmlFileName);
+
+    // Only create link if HTML file exists
+    if (!File.Exists(htmlFilePath))
+    {
+      return null;
+    }
+
+    // Convert to file:// URL format
+    var fileUri = new Uri(htmlFilePath);
+    return WebUtility.HtmlEncode(fileUri.AbsoluteUri);
+  }
 }
 

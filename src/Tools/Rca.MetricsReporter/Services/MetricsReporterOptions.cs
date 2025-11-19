@@ -7,127 +7,127 @@ using System.Collections.Generic;
 /// </summary>
 public sealed class MetricsReporterOptions
 {
-    /// <summary>
-    /// Solution name displayed in the report.
-    /// </summary>
-    public string SolutionName { get; init; } = "Solution";
+  /// <summary>
+  /// Solution name displayed in the report.
+  /// </summary>
+  public string SolutionName { get; init; } = "Solution";
 
-    /// <summary>
-    /// Path to the AltCover/OpenCover coverage.xml file.
-    /// </summary>
-    public string? AltCoverPath { get; init; }
+  /// <summary>
+  /// Path to the AltCover/OpenCover coverage.xml file.
+  /// </summary>
+  public string? AltCoverPath { get; init; }
 
-    /// <summary>
-    /// Paths to Roslyn code metrics XML reports.
-    /// </summary>
-    public IReadOnlyCollection<string> RoslynPaths { get; init; } = new List<string>();
+  /// <summary>
+  /// Paths to Roslyn code metrics XML reports.
+  /// </summary>
+  public IReadOnlyCollection<string> RoslynPaths { get; init; } = new List<string>();
 
-    /// <summary>
-    /// Paths to SARIF files.
-    /// </summary>
-    public IReadOnlyCollection<string> SarifPaths { get; init; } = new List<string>();
+  /// <summary>
+  /// Paths to SARIF files.
+  /// </summary>
+  public IReadOnlyCollection<string> SarifPaths { get; init; } = new List<string>();
 
-    /// <summary>
-    /// Path to the baseline JSON file.
-    /// </summary>
-    public string? BaselinePath { get; init; }
+  /// <summary>
+  /// Path to the baseline JSON file.
+  /// </summary>
+  public string? BaselinePath { get; init; }
 
-    /// <summary>
-    /// Optional textual descriptor for the baseline (commit hash, build identifier, etc.).
-    /// </summary>
-    public string? BaselineReference { get; init; }
+  /// <summary>
+  /// Optional textual descriptor for the baseline (commit hash, build identifier, etc.).
+  /// </summary>
+  public string? BaselineReference { get; init; }
 
-    /// <summary>
-    /// Threshold values encoded as JSON.
-    /// </summary>
-    public string? ThresholdsJson { get; init; }
+  /// <summary>
+  /// Threshold values encoded as JSON.
+  /// </summary>
+  public string? ThresholdsJson { get; init; }
 
-    /// <summary>
-    /// Optional path to a JSON file that contains threshold definitions.
-    /// When specified, overrides <see cref="ThresholdsJson"/>.
-    /// </summary>
-    public string? ThresholdsPath { get; init; }
+  /// <summary>
+  /// Optional path to a JSON file that contains threshold definitions.
+  /// When specified, overrides <see cref="ThresholdsJson"/>.
+  /// </summary>
+  public string? ThresholdsPath { get; init; }
 
-    /// <summary>
-    /// Path to an existing JSON report to load (for HTML generation only).
-    /// </summary>
-    public string? InputJsonPath { get; init; }
+  /// <summary>
+  /// Path to an existing JSON report to load (for HTML generation only).
+  /// </summary>
+  public string? InputJsonPath { get; init; }
 
-    /// <summary>
-    /// Path to the generated JSON report.
-    /// </summary>
-    public string OutputJsonPath { get; init; } = string.Empty;
+  /// <summary>
+  /// Path to the generated JSON report.
+  /// </summary>
+  public string OutputJsonPath { get; init; } = string.Empty;
 
-    /// <summary>
-    /// Path to the generated HTML report.
-    /// </summary>
-    public string OutputHtmlPath { get; init; } = string.Empty;
+  /// <summary>
+  /// Path to the generated HTML report.
+  /// </summary>
+  public string OutputHtmlPath { get; init; } = string.Empty;
 
-    /// <summary>
-    /// Metrics directory (MetricsDir).
-    /// </summary>
-    public string MetricsDirectory { get; init; } = string.Empty;
+  /// <summary>
+  /// Metrics directory (MetricsDir).
+  /// </summary>
+  public string MetricsDirectory { get; init; } = string.Empty;
 
-    /// <summary>
-    /// Path to the metrics reporter log file.
-    /// </summary>
-    public string LogFilePath { get; init; } = string.Empty;
+  /// <summary>
+  /// Path to the metrics reporter log file.
+  /// </summary>
+  public string LogFilePath { get; init; } = string.Empty;
 
-    /// <summary>
-    /// Comma-separated or semicolon-separated list of member name patterns to exclude from metrics reports.
-    /// </summary>
-    /// <remarks>
-    /// Patterns support '*' and '?' wildcards. Method names are normalized when evaluated
-    /// (leading dots are removed). Plain names without wildcards are treated as exact matches.
-    /// If not specified, default excluded methods are used (constructors and compiler-generated methods).
-    /// </remarks>
-    public string? ExcludedMemberNamesPatterns { get; init; }
+  /// <summary>
+  /// Comma-separated or semicolon-separated list of member name patterns to exclude from metrics reports.
+  /// </summary>
+  /// <remarks>
+  /// Patterns support '*' and '?' wildcards. Method names are normalized when evaluated
+  /// (leading dots are removed). Plain names without wildcards are treated as exact matches.
+  /// If not specified, default excluded methods are used (constructors and compiler-generated methods).
+  /// </remarks>
+  public string? ExcludedMemberNamesPatterns { get; init; }
 
-    /// <summary>
-    /// Comma-separated or semicolon-separated list of assembly name patterns to exclude from metrics reports.
-    /// </summary>
-    /// <remarks>
-    /// Assembly names containing any of the specified patterns will be excluded. Matching is case-insensitive.
-    /// Examples: "Tests,Test" or "Tests;Test". If not specified, no assemblies are excluded.
-    /// </remarks>
-    public string? ExcludedAssemblyNames { get; init; }
+  /// <summary>
+  /// Comma-separated or semicolon-separated list of assembly name patterns to exclude from metrics reports.
+  /// </summary>
+  /// <remarks>
+  /// Assembly names containing any of the specified patterns will be excluded. Matching is case-insensitive.
+  /// Examples: "Tests,Test" or "Tests;Test". If not specified, no assemblies are excluded.
+  /// </remarks>
+  public string? ExcludedAssemblyNames { get; init; }
 
-    /// <summary>
-    /// Comma-separated or semicolon-separated list of type name patterns to exclude from metrics reports.
-    /// </summary>
-    /// <remarks>
-    /// Patterns are matched against fully qualified type names using substring matching (case-sensitive).
-    /// Examples: "&lt;&gt;c,__DisplayClass". If not specified, no types are excluded via this filter.
-    /// </remarks>
-    public string? ExcludedTypeNamePatterns { get; init; }
+  /// <summary>
+  /// Comma-separated or semicolon-separated list of type name patterns to exclude from metrics reports.
+  /// </summary>
+  /// <remarks>
+  /// Patterns are matched against fully qualified type names using substring matching (case-sensitive).
+  /// Examples: "&lt;&gt;c,__DisplayClass". If not specified, no types are excluded via this filter.
+  /// </remarks>
+  public string? ExcludedTypeNamePatterns { get; init; }
 
-    /// <summary>
-    /// When <see langword="true"/>, automatically replaces the baseline file if the new report differs from the existing baseline.
-    /// </summary>
-    /// <remarks>
-    /// If enabled, the application will compare the new metrics-report.json with the existing metrics-baseline.json.
-    /// If they differ, the old baseline will be archived to <see cref="MetricsReportStoragePath"/> with a timestamp,
-    /// and the new report will become the new baseline before generating the final report with deltas.
-    /// </remarks>
-    public bool ReplaceMetricsBaseline { get; init; }
+  /// <summary>
+  /// When <see langword="true"/>, automatically replaces the baseline file if the new report differs from the existing baseline.
+  /// </summary>
+  /// <remarks>
+  /// If enabled, the application will compare the new metrics-report.json with the existing metrics-baseline.json.
+  /// If they differ, the old baseline will be archived to <see cref="MetricsReportStoragePath"/> with a timestamp,
+  /// and the new report will become the new baseline before generating the final report with deltas.
+  /// </remarks>
+  public bool ReplaceMetricsBaseline { get; init; }
 
-    /// <summary>
-    /// Directory path where old baseline files are archived with timestamps when baseline replacement is enabled.
-    /// </summary>
-    /// <remarks>
-    /// When baseline replacement occurs, the old baseline file is moved to this directory with a timestamp suffix
-    /// to ensure unique filenames. Defaults to <c>C:\Users\&lt;username&gt;\AppData\Local\RCA\Metrics</c>.
-    /// </remarks>
-    public string? MetricsReportStoragePath { get; init; }
+  /// <summary>
+  /// Directory path where old baseline files are archived with timestamps when baseline replacement is enabled.
+  /// </summary>
+  /// <remarks>
+  /// When baseline replacement occurs, the old baseline file is moved to this directory with a timestamp suffix
+  /// to ensure unique filenames. Defaults to <c>C:\Users\&lt;username&gt;\AppData\Local\RCA\Metrics</c>.
+  /// </remarks>
+  public string? MetricsReportStoragePath { get; init; }
 
-    /// <summary>
-    /// Directory path to HTML coverage reports generated by reportgenerator.
-    /// Used to generate hyperlinks from metrics report to coverage HTML files.
-    /// </summary>
-    /// <remarks>
-    /// If specified, member nodes in the HTML report will include links to corresponding
-    /// coverage HTML files in this directory. Links are only created if the target HTML file exists.
-    /// </remarks>
-    public string? CoverageHtmlDir { get; init; }
+  /// <summary>
+  /// Directory path to HTML coverage reports generated by reportgenerator.
+  /// Used to generate hyperlinks from metrics report to coverage HTML files.
+  /// </summary>
+  /// <remarks>
+  /// If specified, member nodes in the HTML report will include links to corresponding
+  /// coverage HTML files in this directory. Links are only created if the target HTML file exists.
+  /// </remarks>
+  public string? CoverageHtmlDir { get; init; }
 }
 

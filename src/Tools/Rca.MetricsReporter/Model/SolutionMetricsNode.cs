@@ -7,16 +7,16 @@ using System.Collections.Generic;
 /// </summary>
 public sealed class SolutionMetricsNode : MetricsNode
 {
-    /// <summary>
-    /// Initialises the solution node.
-    /// </summary>
-    public SolutionMetricsNode()
-        => Kind = CodeElementKind.Solution;
+  /// <summary>
+  /// Initialises the solution node.
+  /// </summary>
+  public SolutionMetricsNode()
+      => Kind = CodeElementKind.Solution;
 
-    /// <summary>
-    /// Assemblies included in the report.
-    /// </summary>
-    public IList<AssemblyMetricsNode> Assemblies { get; init; }
-        = new List<AssemblyMetricsNode>();
+  /// <summary>
+  /// Assemblies included in the report.
+  /// </summary>
+  public IList<AssemblyMetricsNode> Assemblies { get; init; }
+      = new List<AssemblyMetricsNode>();
 }
 
