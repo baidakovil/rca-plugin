@@ -50,23 +50,3 @@ indent_size = 2
 [{bin,obj}/**]
 insert_final_newline = false
 trim_trailing_whitespace = false
-
-# Exclude specific files from auto-formatting to prevent constant git diffs
-# These files have trailing newline issues that cause conflicts between Git and formatters
-# By explicitly setting these to match git state, we prevent formatters from modifying them
-[src/Tools/Rca.MetricsReporter/Rendering/HtmlHeaderGenerator.cs]
-# Prevent formatter from adding/removing trailing newlines - keep file as-is in git
-trim_trailing_whitespace = false
-insert_final_newline = false
-
-[src/Tools/Rca.MetricsReporter/Rendering/MetricDisplayNameProvider.cs]
-trim_trailing_whitespace = false
-insert_final_newline = false
-
-[src/Tools/Rca.MetricsReporter/Rendering/MetricValueRenderer.cs]
-trim_trailing_whitespace = false
-insert_final_newline = false
-
-[src/Tools/Rca.MetricsReporter/Rendering/NodeKindProvider.cs]
-trim_trailing_whitespace = false
-insert_final_newline = false
