@@ -55,6 +55,41 @@ internal static class HtmlScriptGenerator
     thresholdData = null;
   }
 
+  var preferencesStorageBaseKey = 'rcaMetricsReport.preferences';
+  var preferencesLocationKey = (typeof window !== 'undefined' && window.location && window.location.pathname)
+    ? window.location.pathname
+    : 'report';
+  var preferencesStorageKey = preferencesStorageBaseKey + ':' + preferencesLocationKey;
+  function readPreferences(){
+    try{
+      if(typeof window === 'undefined' || typeof window.localStorage === 'undefined'){
+        return null;
+      }
+      var serialized = window.localStorage.getItem(preferencesStorageKey);
+      if(!serialized){
+        return null;
+      }
+      return JSON.parse(serialized);
+    }catch(_){
+      return null;
+    }
+  }
+  function writePreferences(value){
+    if(!value){
+      return;
+    }
+    try{
+      if(typeof window === 'undefined' || typeof window.localStorage === 'undefined'){
+        return;
+      }
+      window.localStorage.setItem(preferencesStorageKey, JSON.stringify(value));
+    }catch(_){
+      // Ignore storage errors (e.g. private mode)
+    }
+  }
+  var savedPreferences = readPreferences();
+  var isRestoringPreferences = savedPreferences !== null;
+
   function escapeHtml(value){
     if(value === null || value === undefined){
       return '';
@@ -535,8 +570,8 @@ internal static class HtmlScriptGenerator
   var newFilterControl = document.getElementById('filter-new');
   var changesFilterControl = document.getElementById('filter-changes');
   var stateFilter = {
-    onlyNew: false,
-    onlyChanges: false
+    onlyNew: savedPreferences ? savedPreferences.filterNew === true : false,
+    onlyChanges: savedPreferences ? savedPreferences.filterChanges === true : false
   };
 
   function isRowHidden(row){
@@ -652,6 +687,7 @@ internal static class HtmlScriptGenerator
     }
     applyDetailLevel(level.maxDepth);
     applyStateFilters();
+    persistPreferences();
   }
 
   function handleDetailChange(event){
@@ -699,6 +735,7 @@ internal static class HtmlScriptGenerator
     if(awarenessLabel && currentAwareness){
       awarenessLabel.textContent = currentAwareness.label;
     }
+    persistPreferences();
   }
 
   function handleAwarenessChange(){
@@ -835,13 +872,23 @@ internal static class HtmlScriptGenerator
     row.dataset.hiddenByAwareness = row.dataset.hiddenByAwareness === undefined ? 'false' : row.dataset.hiddenByAwareness;
   });
 
-  if(detailControl && !detailControl.value){
-    detailControl.value = '2';
+  if(detailControl){
+    if(savedPreferences && savedPreferences.detailLevel){
+      detailControl.value = savedPreferences.detailLevel;
+    }
+    if(!detailControl.value){
+      detailControl.value = '2';
+    }
   }
   setDetailLevel(detailControl ? detailControl.value : '2', { expandAll: true });
 
-  if(awarenessControl && !awarenessControl.value){
-    awarenessControl.value = '1';
+  if(awarenessControl){
+    if(savedPreferences && savedPreferences.awarenessLevel){
+      awarenessControl.value = savedPreferences.awarenessLevel;
+    }
+    if(!awarenessControl.value){
+      awarenessControl.value = '1';
+    }
   }
   setAwarenessLevel(awarenessControl ? awarenessControl.value : '1');
   applyStateFilters();
@@ -981,6 +1028,37 @@ internal static class HtmlScriptGenerator
   var filterClear = document.getElementById('filter-clear');
   var currentFilter = '';
 
+  function gatherPreferences(){
+    var filterText = '';
+    if(filterInput && typeof filterInput.value === 'string'){
+      filterText = filterInput.value;
+    }
+    return {
+      detailLevel: detailControl ? detailControl.value : '2',
+      awarenessLevel: currentAwarenessKey,
+      filterText: filterText,
+      filterNew: stateFilter.onlyNew === true,
+      filterChanges: stateFilter.onlyChanges === true
+    };
+  }
+
+  function persistPreferences(){
+    if(isRestoringPreferences){
+      return;
+    }
+    writePreferences(gatherPreferences());
+  }
+
+  if(newFilterControl){
+    newFilterControl.checked = stateFilter.onlyNew;
+  }
+  if(changesFilterControl){
+    changesFilterControl.checked = stateFilter.onlyChanges;
+  }
+  if(filterInput && savedPreferences && typeof savedPreferences.filterText === 'string'){
+    filterInput.value = savedPreferences.filterText;
+  }
+
   function updateFilterClearVisibility(){
     if(filterClear){
       filterClear.style.display = currentFilter.length > 0 ? '' : 'none';
@@ -1033,6 +1111,7 @@ internal static class HtmlScriptGenerator
 
     // Reapply detail level which will now respect the filter
     applyStateFilters();
+    persistPreferences();
   }
 
   if(filterInput){
@@ -1058,6 +1137,11 @@ internal static class HtmlScriptGenerator
       }
     });
   }
+
+  if(filterInput){
+    applyFilter(filterInput.value || '');
+  }
+  isRestoringPreferences = false;
 
   function applyStateFilters(){
     var requireNew = stateFilter.onlyNew;
@@ -1098,6 +1182,7 @@ internal static class HtmlScriptGenerator
     }
     stateFilter.onlyNew = newFilterControl.checked;
     applyStateFilters();
+    persistPreferences();
   }
 
   function handleChangesFilterChange(){
@@ -1106,6 +1191,7 @@ internal static class HtmlScriptGenerator
     }
     stateFilter.onlyChanges = changesFilterControl.checked;
     applyStateFilters();
+    persistPreferences();
   }
 
   if(newFilterControl){
