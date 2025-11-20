@@ -291,10 +291,15 @@ internal static class HtmlStylesGenerator
   private static void AppendSymbolColumnStyles(StringBuilder builder)
   {
     builder.AppendLine($"th[data-col='symbol'], td.symbol, th.symbol {{ width: {SymbolColumnWidth.ToString(InvariantCulture)}px; box-sizing: border-box; }}");
-    builder.AppendLine($".symbol {{ position: relative; width: {SymbolColumnWidth.ToString(InvariantCulture)}px; white-space: nowrap; overflow: hidden; box-sizing: border-box; line-height: inherit; }}");
+    builder.AppendLine(FormattableString.Invariant($".symbol {{ position: relative; width: {SymbolColumnWidth.ToString(InvariantCulture)}px; white-space: nowrap; overflow: hidden; box-sizing: border-box; line-height: inherit; padding-right: 48px; }}"));
     builder.AppendLine(".metrics thead th:not([data-col='symbol']), .metrics td.metric, .metrics th.metric { width: auto; }");
-    builder.AppendLine(FormattableString.Invariant($".symbol .name-text {{ display: inline-block; vertical-align: middle; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }}"));
+    builder.AppendLine(FormattableString.Invariant($".symbol .name-text {{ display: inline-block; vertical-align: middle; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; padding-right: 40px; }}"));
     builder.AppendLine(FormattableString.Invariant($".metrics tr[data-role='member'] .symbol .name-text {{ margin-left: {ExpanderWidth.ToString(InvariantCulture)}px; }}"));
+    builder.AppendLine(".symbol .row-action-icons { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); display: flex; gap: 4px; opacity: 0; transition: opacity 0.18s ease; transition-delay: 0s; }");
+    builder.AppendLine("tr.node-row:hover .row-action-icons, tr.node-row:focus-within .row-action-icons { opacity: 1; transition-delay: 0.25s; }");
+    builder.AppendLine(".row-action-icon { min-width: 16px; border: none; background: transparent; color: rgba(96, 96, 96, 0.25); font-size: 12px; line-height: 1; padding: 0 2px; cursor: pointer; text-align: center; }");
+    builder.AppendLine(".row-action-icon:focus-visible { outline: none; }");
+    builder.AppendLine(".row-action-icon:hover { color: rgba(30, 30, 30, 0.5); }");
   }
 
   private static void AppendExpanderStyles(StringBuilder builder)

@@ -102,6 +102,33 @@ internal static class HtmlScriptGenerator
       .replace(/'/g, '&#39;');
   }
 
+  function copyTextToClipboard(value){
+    if(!value){
+      return;
+    }
+    try{
+      if(navigator && navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(value);
+        return;
+      }
+    }catch(_){
+      // ignore clipboard access errors
+    }
+    var textarea = document.createElement('textarea');
+    textarea.value = value;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'absolute';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try{
+      document.execCommand('copy');
+    }catch(_){
+      // ignore failures
+    }
+    document.body.removeChild(textarea);
+  }
+
   function formatThresholdValue(value){
     if(value === null || value === undefined){
       return '—';
@@ -919,6 +946,13 @@ internal static class HtmlScriptGenerator
   }
 
   table.addEventListener('click', function(e){
+    var actionButton = e.target.closest && e.target.closest('.row-action-icon');
+    if(actionButton){
+      e.stopPropagation();
+      e.preventDefault();
+      handleRowActionButton(actionButton);
+      return;
+    }
     var btn = e.target.closest('.expander');
     if(btn){
       e.stopPropagation();
@@ -1112,6 +1146,37 @@ internal static class HtmlScriptGenerator
     // Reapply detail level which will now respect the filter
     applyStateFilters();
     persistPreferences();
+  }
+
+  function handleRowActionButton(button){
+    if(!button){
+      return;
+    }
+    var action = button.dataset.action;
+    if(!action){
+      return;
+    }
+    var row = button.closest('tr.node-row');
+    if(!row){
+      return;
+    }
+    var fqn = (row.dataset.fqn || '').trim();
+    if(!fqn){
+      return;
+    }
+    if(action === 'copy'){
+      copyTextToClipboard(fqn);
+      return;
+    }
+    if(action === 'filter'){
+      if(filterInput){
+        filterInput.value = '';
+        applyFilter('');
+        filterInput.value = fqn;
+        applyFilter(fqn);
+        filterInput.focus();
+      }
+    }
   }
 
   if(filterInput){

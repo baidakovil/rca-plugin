@@ -211,6 +211,7 @@ internal sealed class HtmlTableGenerator
     }
 
     RenderNodeName(builder, node, nameText, coverageLink, isNodeRow);
+    AppendRowActionIcons(builder);
 
     builder.AppendLine($"</{symbolTag}>");
   }
@@ -255,6 +256,18 @@ internal sealed class HtmlTableGenerator
     {
       builder.Append(" <span class=\"badge badge-new\">NEW</span>");
     }
+  }
+
+  private static void AppendRowActionIcons(StringBuilder builder)
+  {
+    builder.AppendLine("      <span class=\"row-action-icons\" aria-hidden=\"true\">");
+    builder.AppendLine("        <button type=\"button\" class=\"row-action-icon\" data-action=\"copy\" aria-label=\"Copy symbol name\" title=\"Copy fully qualified symbol name\">");
+    builder.AppendLine("          C");
+    builder.AppendLine("        </button>");
+    builder.AppendLine("        <button type=\"button\" class=\"row-action-icon\" data-action=\"filter\" aria-label=\"Filter by this symbol\" title=\"Set filter to this symbol\">");
+    builder.AppendLine("          F");
+    builder.AppendLine("        </button>");
+    builder.AppendLine("      </span>");
   }
 
   private void RenderChildren(
