@@ -338,6 +338,8 @@ internal static class HtmlStylesGenerator
     builder.AppendLine(".meta-summary:hover { opacity: 0.7; }");
     builder.AppendLine(".meta-toggle { display: inline-block; transition: transform 0.2s ease; margin-left: 4px; }");
     builder.AppendLine(".meta-summary.expanded .meta-toggle { transform: rotate(90deg); }");
+    builder.AppendLine(".meta-details { max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.25s ease, opacity 0.15s ease; }");
+    builder.AppendLine(".meta-details.expanded { max-height: 1200px; opacity: 1; }");
     builder.AppendLine(".hotkeys-summary { background: rgba(255, 255, 255, 0.92); font-size: inherit; line-height: 1.3; font-weight: 400; }");
     builder.AppendLine(".hotkeys-summary p { margin: 2px 0; display: flex; flex-wrap: wrap; gap: 12px; }");
     builder.AppendLine(".hotkey-pair { display: inline-flex; align-items: center; gap: 6px; }");

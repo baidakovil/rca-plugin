@@ -1453,14 +1453,27 @@ internal static class HtmlScriptGenerator
   var metaSummary = document.querySelector('.meta-summary');
   var metaDetails = document.querySelector('.meta-details');
   if(metaSummary && metaDetails){
+    var safeTransitionEnd = function(){
+      if(!metaDetails.classList.contains('expanded')){
+        metaDetails.style.display = 'none';
+      }
+    };
     metaSummary.addEventListener('click', function(){
       var isExpanded = metaSummary.classList.contains('expanded');
-      if(isExpanded){
-        metaSummary.classList.remove('expanded');
-        metaDetails.style.display = 'none';
+      var willExpand = metaDetails ? !isExpanded : false;
+      metaSummary.classList.toggle('expanded', willExpand);
+      if(willExpand){
+        metaDetails.style.display = 'block';
+        requestAnimationFrame(function(){
+          metaDetails.classList.add('expanded');
+        });
       } else {
-        metaSummary.classList.add('expanded');
-        metaDetails.style.display = '';
+        metaDetails.classList.remove('expanded');
+        metaDetails.addEventListener('transitionend', function handler(event){
+          if(event.propertyName === 'max-height' || event.propertyName === 'opacity'){
+            safeTransitionEnd();
+          }
+        }, { once: true });
       }
     });
   }

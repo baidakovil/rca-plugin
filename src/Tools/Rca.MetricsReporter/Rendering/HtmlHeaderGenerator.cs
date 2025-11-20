@@ -89,8 +89,7 @@ internal static class HtmlHeaderGenerator
     builder.AppendLine("    </div>");
     builder.AppendLine("    <div class=\"meta-section hotkeys-summary\">");
     builder.AppendLine("      <p class=\"section-title\">Hotkeys</p>");
-    builder.AppendLine("      <p><span class=\"hotkey-pair\"><strong>New</strong> N</span><span class=\"hotkey-pair\"><strong>Changes</strong> C</span><span class=\"hotkey-pair\"><strong>Detail</strong> ↑ D ↓ S</span><span class=\"hotkey-pair\"><strong>Awareness</strong> ↑ A ↓ Z</span></p>");
-    builder.AppendLine("      <p><span class=\"hotkey-pair\"><strong>Focus on Filter</strong> F</span><span class=\"hotkey-pair\"><strong>Apply Filter</strong> Enter</span><span class=\"hotkey-pair\"><strong>Clear Filter</strong> X</span><span class=\"hotkey-pair\"><strong>Expand/Collapse</strong> ↑ E ↓ R</span></p>");
+    builder.AppendLine("      <p><span class=\"hotkey-pair\"><strong>Filter to New</strong> N</span><span class=\"hotkey-pair\"><strong>Filter to Changes</strong> C</span><span class=\"hotkey-pair\"><strong>Detail</strong> ↑ D ↓ S</span><span class=\"hotkey-pair\"><strong>Awareness</strong> ↑ A ↓ Z</span><span class=\"hotkey-pair\"><strong>Focus on Filter</strong> F</span><span class=\"hotkey-pair\"><strong>Apply Filter</strong> Enter</span><span class=\"hotkey-pair\"><strong>Clear Filter</strong> X</span><span class=\"hotkey-pair\"><strong>Expand/Collapse</strong> ↑ E ↓ R</span></p>");
     builder.AppendLine("    </div>");
     builder.AppendLine("  </div>");
     builder.AppendLine("</section>");
