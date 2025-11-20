@@ -337,6 +337,10 @@ internal static class HtmlStylesGenerator
     builder.AppendLine(".meta-summary:hover { opacity: 0.7; }");
     builder.AppendLine(".meta-toggle { display: inline-block; transition: transform 0.2s ease; margin-left: 4px; }");
     builder.AppendLine(".meta-summary.expanded .meta-toggle { transform: rotate(90deg); }");
+    builder.AppendLine(".hotkeys-summary { background: rgba(255, 255, 255, 0.92); font-size: inherit; line-height: 1.3; font-weight: 400; }");
+    builder.AppendLine(".hotkeys-summary p { margin: 2px 0; display: flex; flex-wrap: wrap; gap: 12px; }");
+    builder.AppendLine(".hotkey-pair { display: inline-flex; align-items: center; gap: 6px; }");
+    builder.AppendLine(".hotkey-pair + .hotkey-pair::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: rgba(0, 0, 0, 0.25); display: inline-block; margin: 0 12px; }");
     builder.AppendLine(".meta-details { margin-top: 8px; margin-bottom: 20px; }");
     builder.AppendLine(".meta-section { background: rgb(245, 245, 245); border: 1px solid rgba(0, 0, 0, 0.12); border-radius: 10px; padding: 8px 12px; margin: 10px 0 4px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05); }");
     builder.AppendLine(".meta-section .section-title { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(0, 0, 0, 0.65); margin-bottom: 6px; }");

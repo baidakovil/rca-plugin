@@ -702,6 +702,7 @@ internal static class HtmlScriptGenerator
       detailLabel.textContent = level.label;
     }
     if(detailControl){
+      detailControl.value = value;
       detailControl.setAttribute('aria-valuenow', value);
     }
     var expandAllRequested = options && (
@@ -1093,6 +1094,16 @@ internal static class HtmlScriptGenerator
     filterInput.value = savedPreferences.filterText;
   }
 
+  if(filterInput){
+    filterInput.addEventListener('keydown', function(event){
+      if(event.key === 'Enter'){
+        event.preventDefault();
+        applyFilter(filterInput.value || '');
+        filterInput.blur();
+      }
+    });
+  }
+
   function updateFilterClearVisibility(){
     if(filterClear){
       filterClear.style.display = currentFilter.length > 0 ? '' : 'none';
@@ -1208,6 +1219,176 @@ internal static class HtmlScriptGenerator
     applyFilter(filterInput.value || '');
   }
   isRestoringPreferences = false;
+
+  function focusFilterInput(){
+    if(!filterInput){
+      return;
+    }
+    filterInput.focus();
+    if(typeof filterInput.select === 'function'){
+      filterInput.select();
+    }
+    updateFilterClearVisibility();
+  }
+
+  function clearFilterValue(){
+    if(filterClear && filterClear.offsetParent !== null){
+      filterClear.click();
+      return;
+    }
+    if(filterInput){
+      filterInput.value = '';
+    }
+    applyFilter('');
+  }
+
+  function changeDetailLevelBy(delta){
+    var fallbackDetail = currentDetail && typeof currentDetail.maxDepth !== 'undefined'
+      ? currentDetail.maxDepth
+      : 2;
+    var current = detailControl ? parseInt(detailControl.value, 10) : parseInt(fallbackDetail, 10);
+    if(isNaN(current)){
+      current = 2;
+    }
+    var next = Math.max(1, Math.min(3, current + delta));
+    if(next === current){
+      return;
+    }
+    setDetailLevel(next.toString(), {});
+  }
+
+  function changeAwarenessBy(delta){
+    var current = parseInt(currentAwarenessKey, 10);
+    if(isNaN(current)){
+      current = 1;
+    }
+    var next = Math.max(1, Math.min(3, current + delta));
+    if(next === current){
+      return;
+    }
+    setAwarenessLevel(next.toString());
+  }
+
+  function toggleNewFilter(){
+    if(!newFilterControl){
+      return;
+    }
+    newFilterControl.checked = !newFilterControl.checked;
+    handleNewFilterChange();
+  }
+
+  function toggleChangesFilter(){
+    if(!changesFilterControl){
+      return;
+    }
+    changesFilterControl.checked = !changesFilterControl.checked;
+    handleChangesFilterChange();
+  }
+
+  function applyExpandAll(){
+    if(expandBtn){
+      expandBtn.click();
+      return;
+    }
+    expandAllNodes();
+  }
+
+  function applyCollapseAll(){
+    if(collapseBtn){
+      collapseBtn.click();
+      return;
+    }
+    state.rows.forEach(function(row){
+      if(row.dataset.hasChildren === 'true'){
+        setExpanderState(row, false);
+      }
+    });
+    applyDetailLevel(currentDetail.maxDepth);
+  }
+
+  function isInputFocused(){
+    var active = document.activeElement;
+    if(!active || active === document.body){
+      return false;
+    }
+    var tag = active.tagName;
+    if(tag === 'INPUT' || tag === 'TEXTAREA' || active.isContentEditable){
+      return true;
+    }
+    if(active.closest && active.closest('.row-action-icons')){
+      return true;
+    }
+    return false;
+  }
+
+  function normalizeHotkeyKey(rawKey){
+    if(!rawKey){
+      return '';
+    }
+    var key = rawKey.toLowerCase();
+    var map = {
+      'т': 'n',
+      'с': 'c',
+      'а': 'f',
+      'ч': 'x',
+      'ф': 'a',
+      'я': 'z',
+      'у': 'e',
+      'к': 'r',
+      'в': 'd',
+      'ы': 's'
+    };
+    return map[key] || key;
+  }
+
+  function handleHotkey(event){
+    if(event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey){
+      return;
+    }
+    if(isInputFocused()){
+      return;
+    }
+    var key = normalizeHotkeyKey(event.key);
+    switch(key){
+      case 'n':
+        toggleNewFilter();
+        break;
+      case 'c':
+        toggleChangesFilter();
+        break;
+      case 'a':
+        changeAwarenessBy(1);
+        break;
+      case 'z':
+        changeAwarenessBy(-1);
+        break;
+      case 'd':
+        changeDetailLevelBy(1);
+        break;
+      case 's':
+        changeDetailLevelBy(-1);
+        break;
+      case 'f':
+        focusFilterInput();
+        break;
+      case 'x':
+        clearFilterValue();
+        focusFilterInput();
+        break;
+      case 'e':
+        applyExpandAll();
+        break;
+      case 'r':
+        applyCollapseAll();
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  window.addEventListener('keydown', handleHotkey, true);
 
   function applyStateFilters(){
     var requireNew = stateFilter.onlyNew;
