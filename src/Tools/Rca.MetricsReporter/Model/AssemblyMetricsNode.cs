@@ -16,7 +16,6 @@ public sealed class AssemblyMetricsNode : MetricsNode
   /// <summary>
   /// Namespaces contained inside the assembly.
   /// </summary>
-  public IList<NamespaceMetricsNode> Namespaces { get; init; }
-      = new List<NamespaceMetricsNode>();
+  public IList<NamespaceMetricsNode> Namespaces { get; init; } = [];
 }
 

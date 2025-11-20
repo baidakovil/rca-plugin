@@ -24,7 +24,7 @@ public sealed class NamePatternSet
   /// <summary>
   /// Gets an empty pattern set that never matches.
   /// </summary>
-  public static NamePatternSet Empty { get; } = new(new List<Pattern>());
+  public static NamePatternSet Empty { get; } = new(new());
 
   /// <summary>
   /// Gets the raw pattern strings as provided by the user.
@@ -51,7 +51,7 @@ public sealed class NamePatternSet
         new[] { ',', ';' },
         StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-    var patterns = new List<Pattern>();
+    List<Pattern> patterns = [];
     foreach (var part in parts)
     {
       if (string.IsNullOrWhiteSpace(part))

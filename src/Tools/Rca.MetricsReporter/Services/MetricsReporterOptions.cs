@@ -20,12 +20,12 @@ public sealed class MetricsReporterOptions
   /// <summary>
   /// Paths to Roslyn code metrics XML reports.
   /// </summary>
-  public IReadOnlyCollection<string> RoslynPaths { get; init; } = new List<string>();
+  public IReadOnlyCollection<string> RoslynPaths { get; init; } = [];
 
   /// <summary>
   /// Paths to SARIF files.
   /// </summary>
-  public IReadOnlyCollection<string> SarifPaths { get; init; } = new List<string>();
+  public IReadOnlyCollection<string> SarifPaths { get; init; } = [];
 
   /// <summary>
   /// Path to the baseline JSON file.

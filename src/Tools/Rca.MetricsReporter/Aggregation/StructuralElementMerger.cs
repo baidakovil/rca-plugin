@@ -277,7 +277,7 @@ internal sealed class StructuralElementMerger
 
     if (!_namespaceIndex.TryGetValue(namespaceFqn, out var list))
     {
-      list = new List<NamespaceEntry>();
+      list = [];
       _namespaceIndex[namespaceFqn] = list;
     }
 

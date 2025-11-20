@@ -15,6 +15,6 @@ public sealed class ParsedMetricsDocument
   /// <summary>
   /// Code elements discovered in the source.
   /// </summary>
-  public IList<ParsedCodeElement> Elements { get; init; } = new List<ParsedCodeElement>();
+  public IList<ParsedCodeElement> Elements { get; init; } = [];
 }
 

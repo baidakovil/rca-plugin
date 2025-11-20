@@ -82,7 +82,7 @@ internal sealed class LineIndex
   {
     if (!index.TryGetValue(path, out var list))
     {
-      list = new List<IndexedNode>();
+      list = [];
       index[path] = list;
     }
 

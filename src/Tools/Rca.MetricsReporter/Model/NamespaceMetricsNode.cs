@@ -16,7 +16,6 @@ public sealed class NamespaceMetricsNode : MetricsNode
   /// <summary>
   /// Collection of types that belong to the namespace.
   /// </summary>
-  public IList<TypeMetricsNode> Types { get; init; }
-      = new List<TypeMetricsNode>();
+  public IList<TypeMetricsNode> Types { get; init; } = [];
 }
 

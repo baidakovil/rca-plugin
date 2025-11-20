@@ -16,7 +16,6 @@ public sealed class SolutionMetricsNode : MetricsNode
   /// <summary>
   /// Assemblies included in the report.
   /// </summary>
-  public IList<AssemblyMetricsNode> Assemblies { get; init; }
-      = new List<AssemblyMetricsNode>();
+  public IList<AssemblyMetricsNode> Assemblies { get; init; } = [];
 }
 

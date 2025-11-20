@@ -16,7 +16,6 @@ public sealed class TypeMetricsNode : MetricsNode
   /// <summary>
   /// Members that belong to the type.
   /// </summary>
-  public IList<MemberMetricsNode> Members { get; init; }
-      = new List<MemberMetricsNode>();
+  public IList<MemberMetricsNode> Members { get; init; } = [];
 }
 
