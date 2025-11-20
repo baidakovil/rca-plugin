@@ -1109,6 +1109,7 @@ internal static class HtmlScriptGenerator
         row.dataset.hiddenByFilter = 'false';
       });
       applyStateFilters();
+    persistPreferences();
       return;
     }
 
