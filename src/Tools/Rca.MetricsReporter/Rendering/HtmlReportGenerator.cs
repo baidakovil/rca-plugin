@@ -43,7 +43,7 @@ public sealed class HtmlReportGenerator
   /// <param name="report">The metrics report to generate HTML for.</param>
   /// <param name="coverageHtmlDir">Optional path to HTML coverage reports directory for generating hyperlinks.</param>
   /// <returns>Complete HTML document as a string.</returns>
-  public string Generate(MetricsReport report, string? coverageHtmlDir = null)
+  public static string Generate(MetricsReport report, string? coverageHtmlDir = null)
   {
     ArgumentNullException.ThrowIfNull(report);
 

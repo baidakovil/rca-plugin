@@ -34,7 +34,7 @@ public sealed class ThresholdsParser
   /// Each metric object should have "name", optional "description", and optional "symbolThresholds".
   /// </remarks>
   /// <exception cref="InvalidOperationException">Thrown when JSON parsing fails or format is invalid.</exception>
-  public IDictionary<MetricIdentifier, MetricThresholdDefinition> Parse(string? input)
+  public static IDictionary<MetricIdentifier, MetricThresholdDefinition> Parse(string? input)
   {
     var thresholds = CreateDefaults();
 

@@ -11,7 +11,7 @@ internal sealed class LineIndexBuilder
   /// <summary>
   /// Builds the line indexes for members and types, using the provided lookup for filtering.
   /// </summary>
-  public void Build(
+  public static void Build(
       LineIndex lineIndex,
       IEnumerable<MemberMetricsNode> members,
       IEnumerable<TypeEntry> types,

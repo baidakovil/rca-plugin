@@ -15,7 +15,7 @@ internal sealed class IteratorCoverageReconciler
   /// </summary>
   /// <param name="types">The shared type lookup.</param>
   /// <param name="removeIteratorType">Delegate used to drop reconciled iterator types.</param>
-  public void Reconcile(
+  public static void Reconcile(
       IDictionary<string, TypeEntry> types,
       Action<string, TypeEntry> removeIteratorType)
   {

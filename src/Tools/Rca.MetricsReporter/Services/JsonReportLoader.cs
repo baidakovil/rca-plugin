@@ -21,7 +21,7 @@ public sealed class JsonReportLoader
   /// <returns>The loaded metrics report, or <see langword="null"/> if deserialization failed.</returns>
   /// <exception cref="FileNotFoundException">Thrown when the JSON file does not exist.</exception>
   /// <exception cref="JsonException">Thrown when the JSON content is invalid.</exception>
-  public async Task<MetricsReport?> LoadAsync(string jsonPath, CancellationToken cancellationToken)
+  public static async Task<MetricsReport?> LoadAsync(string jsonPath, CancellationToken cancellationToken)
   {
     ArgumentException.ThrowIfNullOrWhiteSpace(jsonPath);
 

@@ -16,7 +16,7 @@ internal sealed class PlainNestedTypeCoverageReconciler
   /// <param name="types">The shared type lookup dictionary.</param>
   /// <param name="members">The shared member lookup dictionary.</param>
   /// <param name="removeIteratorType">Delegate invoked to drop reconciled types.</param>
-  public void Reconcile(
+  public static void Reconcile(
       IDictionary<string, TypeEntry> types,
       IDictionary<string, MemberMetricsNode> members,
       Action<string, TypeEntry> removeIteratorType)

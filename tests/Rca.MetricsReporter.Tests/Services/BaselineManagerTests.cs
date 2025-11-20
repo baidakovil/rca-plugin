@@ -16,14 +16,12 @@ using Rca.Tools.MetricsReporter.Services;
 [Category("Unit")]
 public sealed class BaselineManagerTests
 {
-  private BaselineManager manager = null!;
   private string? testDirectory;
   private string? logFilePath;
 
   [SetUp]
   public void SetUp()
   {
-    manager = new BaselineManager();
     testDirectory = Path.Combine(Path.GetTempPath(), "RCA_BaselineManagerTests", Guid.NewGuid().ToString());
     Directory.CreateDirectory(testDirectory);
     logFilePath = Path.Combine(testDirectory, "test.log");
@@ -62,7 +60,7 @@ public sealed class BaselineManagerTests
     using var logger = new FileLogger(logFilePath!);
 
     // Act
-    var result = await manager.ReplaceBaselineAsync(reportPath, baselinePath, storagePath, logger, CancellationToken.None).ConfigureAwait(false);
+    var result = await BaselineManager.ReplaceBaselineAsync(reportPath, baselinePath, storagePath, logger, CancellationToken.None).ConfigureAwait(false);
 
     // Assert
     result.Should().BeTrue();
@@ -93,7 +91,7 @@ public sealed class BaselineManagerTests
     using var logger = new FileLogger(logFilePath!);
 
     // Act
-    var result = await manager.ReplaceBaselineAsync(reportPath, baselinePath, storagePath, logger, CancellationToken.None).ConfigureAwait(false);
+    var result = await BaselineManager.ReplaceBaselineAsync(reportPath, baselinePath, storagePath, logger, CancellationToken.None).ConfigureAwait(false);
 
     // Assert
     result.Should().BeTrue();
@@ -125,7 +123,7 @@ public sealed class BaselineManagerTests
     using var logger = new FileLogger(logFilePath!);
 
     // Act
-    var result = await manager.ReplaceBaselineAsync(reportPath, baselinePath, null, logger, CancellationToken.None).ConfigureAwait(false);
+    var result = await BaselineManager.ReplaceBaselineAsync(reportPath, baselinePath, null, logger, CancellationToken.None).ConfigureAwait(false);
 
     // Assert
     result.Should().BeTrue();
@@ -150,7 +148,7 @@ public sealed class BaselineManagerTests
     using var logger = new FileLogger(logFilePath!);
 
     // Act
-    var result = await manager.ReplaceBaselineAsync(reportPath, baselinePath, string.Empty, logger, CancellationToken.None).ConfigureAwait(false);
+    var result = await BaselineManager.ReplaceBaselineAsync(reportPath, baselinePath, string.Empty, logger, CancellationToken.None).ConfigureAwait(false);
 
     // Assert
     result.Should().BeTrue();
@@ -171,7 +169,7 @@ public sealed class BaselineManagerTests
     using var logger = new FileLogger(logFilePath!);
 
     // Act
-    await manager.ReplaceBaselineAsync(reportPath, baselinePath, storagePath, logger, CancellationToken.None).ConfigureAwait(false);
+    await BaselineManager.ReplaceBaselineAsync(reportPath, baselinePath, storagePath, logger, CancellationToken.None).ConfigureAwait(false);
 
     // Assert
     var archivedFiles = Directory.GetFiles(storagePath, "baseline-*.json");
@@ -195,7 +193,7 @@ public sealed class BaselineManagerTests
     using var logger = new FileLogger(logFilePath!);
 
     // Act
-    var result = await manager.ReplaceBaselineAsync(reportPath, baselinePath, storagePath, logger, CancellationToken.None).ConfigureAwait(false);
+    var result = await BaselineManager.ReplaceBaselineAsync(reportPath, baselinePath, storagePath, logger, CancellationToken.None).ConfigureAwait(false);
 
     // Assert
     result.Should().BeTrue();
@@ -215,7 +213,7 @@ public sealed class BaselineManagerTests
     using var logger = new FileLogger(logFilePath!);
 
     // Act
-    var result = await manager.ReplaceBaselineAsync(reportPath, baselinePath, storagePath, logger, CancellationToken.None).ConfigureAwait(false);
+    var result = await BaselineManager.ReplaceBaselineAsync(reportPath, baselinePath, storagePath, logger, CancellationToken.None).ConfigureAwait(false);
 
     // Assert
     result.Should().BeTrue();
@@ -233,7 +231,7 @@ public sealed class BaselineManagerTests
     using var logger = new FileLogger(logFilePath!);
 
     // Act
-    var result = await manager.ReplaceBaselineAsync(reportPath, baselinePath, storagePath, logger, CancellationToken.None).ConfigureAwait(false);
+    var result = await BaselineManager.ReplaceBaselineAsync(reportPath, baselinePath, storagePath, logger, CancellationToken.None).ConfigureAwait(false);
 
     // Assert
     result.Should().BeFalse("should return false when report file does not exist");
@@ -254,7 +252,7 @@ public sealed class BaselineManagerTests
     using var logger = new FileLogger(logFilePath!);
 
     // Act
-    await manager.ReplaceBaselineAsync(reportPath, baselinePath, storagePath, logger, CancellationToken.None).ConfigureAwait(false);
+    await BaselineManager.ReplaceBaselineAsync(reportPath, baselinePath, storagePath, logger, CancellationToken.None).ConfigureAwait(false);
 
     // Assert
     File.Exists(reportPath).Should().BeTrue("original report file should still exist");
@@ -277,10 +275,10 @@ public sealed class BaselineManagerTests
     using var logger = new FileLogger(logFilePath!);
 
     // Act - Replace baseline twice with a small delay to ensure different timestamps
-    await manager.ReplaceBaselineAsync(reportPath1, baselinePath, storagePath, logger, CancellationToken.None).ConfigureAwait(false);
+    await BaselineManager.ReplaceBaselineAsync(reportPath1, baselinePath, storagePath, logger, CancellationToken.None).ConfigureAwait(false);
     await Task.Delay(1100); // Wait more than 1 second to ensure timestamp difference
     await File.WriteAllTextAsync(reportPath2, """{"v2": "data"}""");
-    await manager.ReplaceBaselineAsync(reportPath2, baselinePath, storagePath, logger, CancellationToken.None).ConfigureAwait(false);
+    await BaselineManager.ReplaceBaselineAsync(reportPath2, baselinePath, storagePath, logger, CancellationToken.None).ConfigureAwait(false);
 
     // Assert
     var archivedFiles = Directory.GetFiles(storagePath, "baseline-*.json");
@@ -303,7 +301,7 @@ public sealed class BaselineManagerTests
     using var logger = new FileLogger(logFilePath!);
 
     // Act
-    var result = await manager.CreateBaselineFromPreviousReportAsync(previousReportPath, baselinePath, logger, CancellationToken.None).ConfigureAwait(false);
+    var result = await BaselineManager.CreateBaselineFromPreviousReportAsync(previousReportPath, baselinePath, logger, CancellationToken.None).ConfigureAwait(false);
 
     // Assert
     result.Should().BeTrue();
@@ -325,7 +323,7 @@ public sealed class BaselineManagerTests
     using var logger = new FileLogger(logFilePath!);
 
     // Act
-    var result = await manager.CreateBaselineFromPreviousReportAsync(previousReportPath, baselinePath, logger, CancellationToken.None).ConfigureAwait(false);
+    var result = await BaselineManager.CreateBaselineFromPreviousReportAsync(previousReportPath, baselinePath, logger, CancellationToken.None).ConfigureAwait(false);
 
     // Assert
     result.Should().BeFalse("should not create baseline if it already exists");
@@ -343,7 +341,7 @@ public sealed class BaselineManagerTests
     using var logger = new FileLogger(logFilePath!);
 
     // Act
-    var result = await manager.CreateBaselineFromPreviousReportAsync(previousReportPath, baselinePath, logger, CancellationToken.None).ConfigureAwait(false);
+    var result = await BaselineManager.CreateBaselineFromPreviousReportAsync(previousReportPath, baselinePath, logger, CancellationToken.None).ConfigureAwait(false);
 
     // Assert
     result.Should().BeFalse("should not create baseline if previous report doesn't exist");
@@ -363,7 +361,7 @@ public sealed class BaselineManagerTests
     using var logger = new FileLogger(logFilePath!);
 
     // Act
-    var result = await manager.CreateBaselineFromPreviousReportAsync(previousReportPath, baselinePath, logger, CancellationToken.None).ConfigureAwait(false);
+    var result = await BaselineManager.CreateBaselineFromPreviousReportAsync(previousReportPath, baselinePath, logger, CancellationToken.None).ConfigureAwait(false);
 
     // Assert
     result.Should().BeTrue();
@@ -384,7 +382,7 @@ public sealed class BaselineManagerTests
     using var logger = new FileLogger(logFilePath!);
 
     // Act
-    await manager.CreateBaselineFromPreviousReportAsync(previousReportPath, baselinePath, logger, CancellationToken.None).ConfigureAwait(false);
+    await BaselineManager.CreateBaselineFromPreviousReportAsync(previousReportPath, baselinePath, logger, CancellationToken.None).ConfigureAwait(false);
 
     // Assert
     File.Exists(previousReportPath).Should().BeTrue("original report file should still exist");

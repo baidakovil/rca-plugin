@@ -19,7 +19,7 @@ public sealed class BaselineLoader
   /// <param name="path">Baseline file path. May be <see langword="null"/>.</param>
   /// <param name="cancellationToken">Cancellation token.</param>
   /// <returns>Baseline report or <see langword="null"/> when the file does not exist.</returns>
-  public async Task<MetricsReport?> LoadAsync(string? path, CancellationToken cancellationToken)
+  public static async Task<MetricsReport?> LoadAsync(string? path, CancellationToken cancellationToken)
   {
     if (string.IsNullOrWhiteSpace(path))
     {

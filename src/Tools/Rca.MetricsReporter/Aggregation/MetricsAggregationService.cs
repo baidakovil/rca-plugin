@@ -241,7 +241,6 @@ public sealed class MetricsAggregationService
   {
     private readonly AggregationWorkspaceState _state;
     private readonly AggregationWorkspaceLookup _lookup;
-    private readonly LineIndexBuilder _lineIndexBuilder;
 
     public AggregationLineIndexProcessor(
         AggregationWorkspaceState state,
@@ -255,11 +254,10 @@ public sealed class MetricsAggregationService
           _state.NamespaceIndex,
           _state.Types,
           assemblyFilter);
-      _lineIndexBuilder = new LineIndexBuilder();
     }
 
     public void BuildLineIndex()
-        => _lineIndexBuilder.Build(_state.LineIndex, _state.Members.Values, _state.Types.Values, _lookup);
+        => LineIndexBuilder.Build(_state.LineIndex, _state.Members.Values, _state.Types.Values, _lookup);
   }
 
   private sealed class AggregationSarifProcessor : IAggregationSarifProcessor
@@ -304,21 +302,17 @@ public sealed class MetricsAggregationService
   private sealed class AggregationReconciliationProcessor : IAggregationReconciliationProcessor
   {
     private readonly AggregationWorkspaceState _state;
-    private readonly IteratorCoverageReconciler _iteratorReconciler;
-    private readonly PlainNestedTypeCoverageReconciler _plainNestedTypeCoverageReconciler;
 
     public AggregationReconciliationProcessor(AggregationWorkspaceState state)
     {
       _state = state ?? throw new ArgumentNullException(nameof(state));
-      _iteratorReconciler = new IteratorCoverageReconciler();
-      _plainNestedTypeCoverageReconciler = new PlainNestedTypeCoverageReconciler();
     }
 
     public void ReconcileIteratorStateMachineMetrics()
-        => _iteratorReconciler.Reconcile(_state.Types, RemoveIteratorTypeFromHierarchy);
+        => IteratorCoverageReconciler.Reconcile(_state.Types, RemoveIteratorTypeFromHierarchy);
 
     public void ReconcilePlainNestedTypeMetrics()
-        => _plainNestedTypeCoverageReconciler.Reconcile(
+        => PlainNestedTypeCoverageReconciler.Reconcile(
             _state.Types,
             _state.Members,
             RemoveIteratorTypeFromHierarchy);

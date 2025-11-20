@@ -25,7 +25,7 @@ public sealed class BaselineManager
   /// This method creates baseline from previous report only if baseline doesn't exist.
   /// This allows new report to be generated with deltas calculated against the previous report.
   /// </remarks>
-  public async Task<bool> CreateBaselineFromPreviousReportAsync(
+  public static async Task<bool> CreateBaselineFromPreviousReportAsync(
       string previousReportPath,
       string baselinePath,
       FileLogger logger,
@@ -91,7 +91,7 @@ public sealed class BaselineManager
   /// 
   /// Note: This method does not compare files. The report is always copied to baseline location if it exists.
   /// </remarks>
-  public async Task<bool> ReplaceBaselineAsync(
+  public static async Task<bool> ReplaceBaselineAsync(
       string reportPath,
       string baselinePath,
       string? storagePath,

@@ -24,13 +24,7 @@ public sealed class MetricsReporterApplication
   private readonly AltCoverMetricsParser _altCoverParser = new();
   private readonly RoslynMetricsParser _roslynParser = new();
   private readonly SarifMetricsParser _sarifParser = new();
-  private readonly ThresholdsParser _thresholdsParser = new();
-  private readonly BaselineLoader _baselineLoader = new();
-  private readonly BaselineManager _baselineManager = new();
   private readonly MetricsAggregationService _aggregationService;
-  private readonly HtmlReportGenerator _htmlGenerator = new();
-  private readonly ReportWriter _reportWriter = new();
-  private readonly JsonReportLoader _jsonReportLoader = new();
 
   /// <summary>
   /// Initializes a new instance of the <see cref="MetricsReporterApplication"/> class.
@@ -87,7 +81,7 @@ public sealed class MetricsReporterApplication
       if (File.Exists(options.OutputJsonPath))
       {
         logger.LogInformation("Baseline does not exist. Creating baseline from previous report...");
-        await _baselineManager.CreateBaselineFromPreviousReportAsync(
+        await BaselineManager.CreateBaselineFromPreviousReportAsync(
             options.OutputJsonPath,
             options.BaselinePath,
             logger,
@@ -99,7 +93,7 @@ public sealed class MetricsReporterApplication
       }
     }
 
-    var baseline = await _baselineLoader.LoadAsync(options.BaselinePath, cancellationToken).ConfigureAwait(false);
+    var baseline = await BaselineLoader.LoadAsync(options.BaselinePath, cancellationToken).ConfigureAwait(false);
 
     var documentsResult = await ParseAllDocumentsAsync(options, logger, cancellationToken).ConfigureAwait(false);
     if (documentsResult.ExitCode != MetricsReporterExitCode.Success)
@@ -125,7 +119,7 @@ public sealed class MetricsReporterApplication
     // This archives the old baseline (if exists) and prepares baseline for the next generation cycle
     if (options.ReplaceMetricsBaseline && !string.IsNullOrWhiteSpace(options.BaselinePath))
     {
-      await _baselineManager.ReplaceBaselineAsync(
+      await BaselineManager.ReplaceBaselineAsync(
           options.OutputJsonPath,
           options.BaselinePath,
           options.MetricsReportStoragePath,
@@ -378,11 +372,11 @@ public sealed class MetricsReporterApplication
   {
     try
     {
-      await _reportWriter.WriteJsonAsync(report, options.OutputJsonPath, cancellationToken).ConfigureAwait(false);
+      await ReportWriter.WriteJsonAsync(report, options.OutputJsonPath, cancellationToken).ConfigureAwait(false);
       if (!string.IsNullOrWhiteSpace(options.OutputHtmlPath))
       {
-        var html = _htmlGenerator.Generate(report, options.CoverageHtmlDir);
-        await _reportWriter.WriteHtmlAsync(html, options.OutputHtmlPath, cancellationToken).ConfigureAwait(false);
+        var html = HtmlReportGenerator.Generate(report, options.CoverageHtmlDir);
+        await ReportWriter.WriteHtmlAsync(html, options.OutputHtmlPath, cancellationToken).ConfigureAwait(false);
       }
 
       return MetricsReporterExitCode.Success;
@@ -468,7 +462,7 @@ public sealed class MetricsReporterApplication
       payload = options.ThresholdsJson;
     }
 
-    return _thresholdsParser.Parse(payload);
+    return ThresholdsParser.Parse(payload);
   }
 
   private static async Task<ParsedMetricsDocument?> ParseSafeAsync(
@@ -558,7 +552,7 @@ public sealed class MetricsReporterApplication
     try
     {
       logger.LogInformation($"Loading metrics report from: {options.InputJsonPath}");
-      var report = await _jsonReportLoader.LoadAsync(options.InputJsonPath!, cancellationToken).ConfigureAwait(false);
+      var report = await JsonReportLoader.LoadAsync(options.InputJsonPath!, cancellationToken).ConfigureAwait(false);
 
       if (report is null)
       {
@@ -595,9 +589,9 @@ public sealed class MetricsReporterApplication
       CancellationToken cancellationToken)
   {
     logger.LogInformation("Generating HTML report...");
-    var html = _htmlGenerator.Generate(report);
+    var html = HtmlReportGenerator.Generate(report);
 
-    await _reportWriter.WriteHtmlAsync(html, options.OutputHtmlPath, cancellationToken).ConfigureAwait(false);
+    await ReportWriter.WriteHtmlAsync(html, options.OutputHtmlPath, cancellationToken).ConfigureAwait(false);
     logger.LogInformation($"HTML report generated successfully: {options.OutputHtmlPath}");
     return MetricsReporterExitCode.Success;
   }

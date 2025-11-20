@@ -181,7 +181,7 @@ internal sealed class HtmlTableGenerator
         $"data-id=\"{thisId}\" data-level=\"{level}\" data-parent=\"{parentId ?? string.Empty}\" data-has-children=\"{hasChildren.ToString().ToLowerInvariant()}\" data-role=\"{role}\" data-is-new=\"{(isNew ? "true" : "false")}\"{fqnAttribute}>");
   }
 
-  private void AppendSymbolCell(
+  private static void AppendSymbolCell(
       StringBuilder builder,
       MetricsNode node,
       string symbolTag,

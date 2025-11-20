@@ -114,7 +114,7 @@ internal sealed class BaselineEvaluator
     }
   }
 
-  private IDictionary<MetricIdentifier, MetricValue> ApplyMetricsBaseline(
+  private static IDictionary<MetricIdentifier, MetricValue> ApplyMetricsBaseline(
       IDictionary<MetricIdentifier, MetricValue> metrics,
       IDictionary<MetricIdentifier, MetricValue> baselineMetrics,
       IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds,

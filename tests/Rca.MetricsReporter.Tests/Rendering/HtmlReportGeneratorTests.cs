@@ -78,9 +78,7 @@ public sealed class HtmlReportGeneratorTests
       }
     };
 
-    var generator = new HtmlReportGenerator();
-
-    var html = generator.Generate(report);
+    var html = HtmlReportGenerator.Generate(report);
 
     html.Should().Contain("SampleSolution");
     html.Should().Contain("badge-new");
@@ -149,10 +147,8 @@ public sealed class HtmlReportGeneratorTests
       var htmlFilePath = Path.Combine(tempDir, htmlFileName);
       File.WriteAllText(htmlFilePath, "<html></html>");
 
-      var generator = new HtmlReportGenerator();
-
       // Act
-      var html = generator.Generate(report, tempDir);
+      var html = HtmlReportGenerator.Generate(report, tempDir);
 
       // Assert
       html.Should().Contain("SampleType");
@@ -226,10 +222,8 @@ public sealed class HtmlReportGeneratorTests
       };
 
       // Do NOT create coverage HTML file
-      var generator = new HtmlReportGenerator();
-
       // Act
-      var html = generator.Generate(report, tempDir);
+      var html = HtmlReportGenerator.Generate(report, tempDir);
 
       // Assert
       html.Should().Contain("SampleType");
@@ -297,10 +291,8 @@ public sealed class HtmlReportGeneratorTests
       }
     };
 
-    var generator = new HtmlReportGenerator();
-
     // Act
-    var html = generator.Generate(report, null);
+    var html = HtmlReportGenerator.Generate(report, null);
 
     // Assert
     html.Should().Contain("SampleType");

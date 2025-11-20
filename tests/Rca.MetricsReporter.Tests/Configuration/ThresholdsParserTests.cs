@@ -9,19 +9,11 @@ using Rca.Tools.MetricsReporter.Model;
 [Category("Unit")]
 public sealed class ThresholdsParserTests
 {
-  private ThresholdsParser parser = null!;
-
-  [SetUp]
-  public void SetUp()
-  {
-    parser = new ThresholdsParser();
-  }
-
   [Test]
   public void Parse_NullInput_ProducesDefaultThresholds()
   {
     // Act
-    var result = parser.Parse(null);
+    var result = ThresholdsParser.Parse(null);
 
     // Assert
     result.Should().HaveCount(Enum.GetValues<MetricIdentifier>().Length);
@@ -55,7 +47,7 @@ public sealed class ThresholdsParserTests
         """;
 
     // Act
-    var result = parser.Parse(customJson);
+    var result = ThresholdsParser.Parse(customJson);
 
     // Assert
     result[MetricIdentifier.AltCoverSequenceCoverage].Levels[MetricSymbolLevel.Type].Warning.Should().Be(80);
@@ -85,7 +77,7 @@ public sealed class ThresholdsParserTests
         """;
 
     // Act
-    var result = parser.Parse(json);
+    var result = ThresholdsParser.Parse(json);
 
     // Assert
     var definition = result[MetricIdentifier.RoslynDepthOfInheritance];
@@ -116,7 +108,7 @@ public sealed class ThresholdsParserTests
         """;
 
     // Act
-    var result = parser.Parse(json);
+    var result = ThresholdsParser.Parse(json);
 
     // Assert
     result[MetricIdentifier.RoslynSourceLines].Levels[MetricSymbolLevel.Type].PositiveDeltaNeutral.Should().BeTrue();
@@ -129,7 +121,7 @@ public sealed class ThresholdsParserTests
     const string invalidJson = "{'AltCoverSequenceCoverage':{'warning':}";
 
     // Act
-    var act = () => parser.Parse(invalidJson);
+    var act = () => ThresholdsParser.Parse(invalidJson);
 
     // Assert
     act.Should().Throw<InvalidOperationException>();

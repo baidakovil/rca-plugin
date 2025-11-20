@@ -17,7 +17,7 @@ public sealed class ReportWriter
   /// <summary>
   /// Writes the JSON report to disk.
   /// </summary>
-  public async Task WriteJsonAsync(MetricsReport report, string path, CancellationToken cancellationToken)
+  public static async Task WriteJsonAsync(MetricsReport report, string path, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(report);
     ArgumentException.ThrowIfNullOrWhiteSpace(path);
@@ -31,7 +31,7 @@ public sealed class ReportWriter
   /// <summary>
   /// Writes the HTML representation of the report to disk.
   /// </summary>
-  public async Task WriteHtmlAsync(string html, string path, CancellationToken cancellationToken)
+  public static async Task WriteHtmlAsync(string html, string path, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(html);
     ArgumentException.ThrowIfNullOrWhiteSpace(path);
