@@ -633,7 +633,7 @@ internal static class HtmlScriptGenerator
     updateStripedClasses();
   }
 
-  function setDetailLevel(value){
+  function setDetailLevel(value, options){
     var level = detailLevels[value] || detailLevels['2'];
     currentDetail = level;
     if(detailLabel){
@@ -642,17 +642,25 @@ internal static class HtmlScriptGenerator
     if(detailControl){
       detailControl.setAttribute('aria-valuenow', value);
     }
-    expandAllNodes();
+    var expandAllRequested = options && (
+      (options.expandAll === true)
+      || (options.ctrlKey === true)
+      || (options.shiftKey === true));
+
+    if(expandAllRequested){
+      expandAllNodes();
+    }
     applyDetailLevel(level.maxDepth);
     applyStateFilters();
   }
 
-  function handleDetailChange(){
+  function handleDetailChange(event){
     if(!detailControl){
       return;
     }
     var value = detailControl.value || '2';
-    setDetailLevel(value);
+    var expandWithModifier = event ? (event.ctrlKey || event.shiftKey) : false;
+    setDetailLevel(value, { expandAll: expandWithModifier });
   }
 
   function applyAwarenessLevel(levelKey){
@@ -679,7 +687,7 @@ internal static class HtmlScriptGenerator
     updateRowVisibility();
   }
 
-  function setAwarenessLevel(value){
+  function setAwarenessLevel(value, options){
     var key = awarenessLevels[value] ? value : '1';
     applyAwarenessLevel(key);
     if(awarenessControl){
@@ -732,7 +740,7 @@ internal static class HtmlScriptGenerator
     if(control.value !== snappedText){
       control.value = snappedText;
     }
-    setter(snappedText);
+    setter(snappedText, event);
   }
 
   function collapseDescendants(parentId){
@@ -742,7 +750,7 @@ internal static class HtmlScriptGenerator
   }
 
   function expandAllNodes(){
-    // WHY: Detail level changes imply the user wants to inspect leaves, so keep the hierarchy fully expanded.
+    // WHY: Expanding the hierarchy is only done when explicitly requested (modifiers or initialization).
     state.rows.forEach(function(row){
       if(row.dataset.hasChildren === 'true'){
         setExpanderState(row, true);
@@ -830,7 +838,7 @@ internal static class HtmlScriptGenerator
   if(detailControl && !detailControl.value){
     detailControl.value = '2';
   }
-  setDetailLevel(detailControl ? detailControl.value : '2');
+  setDetailLevel(detailControl ? detailControl.value : '2', { expandAll: true });
 
   if(awarenessControl && !awarenessControl.value){
     awarenessControl.value = '1';

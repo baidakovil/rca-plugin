@@ -1,4 +1,4 @@
-# CodeMetricsConfig.txt - Strict thresholds for AI-driven development
+# CodeMetricsConfigStrong.txt - Strict thresholds for AI-driven development
 
 
 # ==============================================
