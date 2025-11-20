@@ -66,44 +66,13 @@ public sealed class MetricsAggregationService
 
   private sealed class AggregationWorkspace
   {
-    private readonly AggregationWorkspaceCore _core;
-
-    public AggregationWorkspace(string solutionName, MemberFilter memberFilter, AssemblyFilter assemblyFilter, TypeFilter typeFilter)
-    {
-      _core = new AggregationWorkspaceCore(solutionName, memberFilter, assemblyFilter, typeFilter);
-    }
-
-    public SolutionMetricsNode Solution => _core.Solution;
-
-    public void MergeStructuralElements(ParsedMetricsDocument document) => _core.MergeStructuralElements(document);
-
-    public void ProcessDocuments(MetricsAggregationInput input) => _core.ProcessDocuments(input);
-
-    public void BuildLineIndex() => _core.BuildLineIndex();
-
-    public void PrepareReport(MetricsAggregationInput input) => _core.PrepareReport(input);
-
-    public void ApplySarifDocument(ParsedMetricsDocument document) => _core.ApplySarifDocument(document);
-
-    public void ApplyBaselineAndThresholds(
-        MetricsReport? baseline,
-        IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds)
-        => _core.ApplyBaselineAndThresholds(baseline, thresholds);
-
-    public void ReconcileIteratorStateMachineMetrics() => _core.ReconcileIteratorStateMachineMetrics();
-
-    public void ReconcilePlainNestedTypeMetrics() => _core.ReconcilePlainNestedTypeMetrics();
-  }
-
-  private sealed class AggregationWorkspaceCore
-  {
     private readonly AggregationWorkspaceState _state;
     private readonly AggregationWorkspaceWorkflow _workflow;
 
-    public AggregationWorkspaceCore(string solutionName, MemberFilter memberFilter, AssemblyFilter assemblyFilter, TypeFilter typeFilter)
+    public AggregationWorkspace(string solutionName, MemberFilter memberFilter, AssemblyFilter assemblyFilter, TypeFilter typeFilter)
     {
       _state = new AggregationWorkspaceState(solutionName);
-      _workflow = new AggregationWorkspaceWorkflow(_state, memberFilter, assemblyFilter, typeFilter);
+      _workflow = CreateWorkflow(_state, memberFilter, assemblyFilter, typeFilter);
     }
 
     public SolutionMetricsNode Solution => _state.Solution;
@@ -112,18 +81,41 @@ public sealed class MetricsAggregationService
 
     public void ProcessDocuments(MetricsAggregationInput input) => _workflow.ProcessDocuments(input);
 
-    public void PrepareReport(MetricsAggregationInput input) => _workflow.PrepareReport(input);
-
     public void BuildLineIndex() => _workflow.BuildLineIndex();
+
+    public void PrepareReport(MetricsAggregationInput input) => _workflow.PrepareReport(input);
 
     public void ApplySarifDocument(ParsedMetricsDocument document) => _workflow.ApplySarifDocument(document);
 
-    public void ApplyBaselineAndThresholds(MetricsReport? baseline, IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds)
+    public void ApplyBaselineAndThresholds(
+        MetricsReport? baseline,
+        IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds)
         => _workflow.ApplyBaselineAndThresholds(baseline, thresholds);
 
     public void ReconcileIteratorStateMachineMetrics() => _workflow.ReconcileIteratorStateMachineMetrics();
 
     public void ReconcilePlainNestedTypeMetrics() => _workflow.ReconcilePlainNestedTypeMetrics();
+
+    private static AggregationWorkspaceWorkflow CreateWorkflow(
+        AggregationWorkspaceState state,
+        MemberFilter memberFilter,
+        AssemblyFilter assemblyFilter,
+        TypeFilter typeFilter)
+    {
+      var documentProcessor = new AggregationDocumentProcessor(state, memberFilter, assemblyFilter, typeFilter);
+      var lineIndexProcessor = new AggregationLineIndexProcessor(state, assemblyFilter);
+      var sarifProcessor = new AggregationSarifProcessor(state, assemblyFilter);
+      var baselineProcessor = new AggregationBaselineAndThresholdProcessor(state);
+      var reconciliationProcessor = new AggregationReconciliationProcessor(state);
+
+      return new AggregationWorkspaceWorkflow(
+          state,
+          documentProcessor,
+          lineIndexProcessor,
+          sarifProcessor,
+          baselineProcessor,
+          reconciliationProcessor);
+    }
   }
 
   private sealed class AggregationWorkspaceState
@@ -159,53 +151,60 @@ public sealed class MetricsAggregationService
     public LineIndex LineIndex { get; }
   }
 
-  private sealed class AggregationWorkspaceWorkflow
+  private interface IAggregationDocumentProcessor
   {
-    private readonly AggregationWorkspaceState _state;
-    private readonly MemberFilter _memberFilter;
-    private readonly AssemblyFilter _assemblyFilter;
-    private readonly TypeFilter _typeFilter;
-    private readonly BaselineEvaluator _baselineEvaluator;
-    private readonly IteratorCoverageReconciler _iteratorReconciler;
-    private readonly PlainNestedTypeCoverageReconciler _plainNestedTypeCoverageReconciler;
-    private readonly StructuralElementMerger _structuralMerger;
-    private readonly AggregationWorkspaceLookup _lookup;
-    private readonly SarifMetricsApplier _sarifApplier;
-    private readonly LineIndexBuilder _lineIndexBuilder;
+    void MergeStructuralElements(ParsedMetricsDocument document);
+  }
 
-    public AggregationWorkspaceWorkflow(
+  private interface IAggregationLineIndexProcessor
+  {
+    void BuildLineIndex();
+  }
+
+  private interface IAggregationSarifProcessor
+  {
+    void ApplySarifDocument(ParsedMetricsDocument document);
+  }
+
+  private interface IAggregationBaselineAndThresholdProcessor
+  {
+    void ApplyBaselineAndThresholds(
+        MetricsReport? baseline,
+        IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds);
+  }
+
+  private interface IAggregationReconciliationProcessor
+  {
+    void ReconcileIteratorStateMachineMetrics();
+
+    void ReconcilePlainNestedTypeMetrics();
+  }
+
+  private sealed class AggregationDocumentProcessor : IAggregationDocumentProcessor
+  {
+    private readonly StructuralElementMerger _structuralMerger;
+
+    public AggregationDocumentProcessor(
         AggregationWorkspaceState state,
         MemberFilter memberFilter,
         AssemblyFilter assemblyFilter,
         TypeFilter typeFilter)
     {
-      _state = state ?? throw new ArgumentNullException(nameof(state));
-      _memberFilter = memberFilter;
-      _assemblyFilter = assemblyFilter;
-      _typeFilter = typeFilter;
-      _baselineEvaluator = new BaselineEvaluator();
-      _iteratorReconciler = new IteratorCoverageReconciler();
-      _plainNestedTypeCoverageReconciler = new PlainNestedTypeCoverageReconciler();
+      ArgumentNullException.ThrowIfNull(state);
+      ArgumentNullException.ThrowIfNull(memberFilter);
+      ArgumentNullException.ThrowIfNull(assemblyFilter);
+      ArgumentNullException.ThrowIfNull(typeFilter);
+
       _structuralMerger = new StructuralElementMerger(
-          _state.Solution,
-          _state.Assemblies,
-          _state.Namespaces,
-          _state.NamespaceIndex,
-          _state.Types,
-          _state.Members,
-          _memberFilter,
-          _assemblyFilter,
-          _typeFilter);
-      _lookup = new AggregationWorkspaceLookup(
-          _state.Assemblies,
-          _state.NamespaceIndex,
-          _state.Types,
-          _assemblyFilter);
-      _sarifApplier = new SarifMetricsApplier(
-          _state.LineIndex,
-          _assemblyFilter,
-          (node, identifier, value) => MergeMetric(node, identifier, value, aggregate: true));
-      _lineIndexBuilder = new LineIndexBuilder();
+          state.Solution,
+          state.Assemblies,
+          state.Namespaces,
+          state.NamespaceIndex,
+          state.Types,
+          state.Members,
+          memberFilter,
+          assemblyFilter,
+          typeFilter);
     }
 
     public void MergeStructuralElements(ParsedMetricsDocument document)
@@ -236,49 +235,84 @@ public sealed class MetricsAggregationService
         }
       }
     }
+  }
 
-    public void ProcessDocuments(MetricsAggregationInput input)
+  private sealed class AggregationLineIndexProcessor : IAggregationLineIndexProcessor
+  {
+    private readonly AggregationWorkspaceState _state;
+    private readonly AggregationWorkspaceLookup _lookup;
+    private readonly LineIndexBuilder _lineIndexBuilder;
+
+    public AggregationLineIndexProcessor(
+        AggregationWorkspaceState state,
+        AssemblyFilter assemblyFilter)
     {
-      ArgumentNullException.ThrowIfNull(input);
+      _state = state ?? throw new ArgumentNullException(nameof(state));
+      ArgumentNullException.ThrowIfNull(assemblyFilter);
 
-      foreach (var document in input.AltCoverDocuments)
-      {
-        MergeStructuralElements(document);
-      }
-
-      foreach (var document in input.RoslynDocuments)
-      {
-        MergeStructuralElements(document);
-      }
-
-      BuildLineIndex();
-
-      foreach (var document in input.SarifDocuments)
-      {
-        ApplySarifDocument(document);
-      }
-    }
-
-    public void PrepareReport(MetricsAggregationInput input)
-    {
-      ArgumentNullException.ThrowIfNull(input);
-
-      ProcessDocuments(input);
-      ReconcileIteratorStateMachineMetrics();
-      ReconcilePlainNestedTypeMetrics();
-      ApplyBaselineAndThresholds(input.Baseline, input.Thresholds);
+      _lookup = new AggregationWorkspaceLookup(
+          _state.Assemblies,
+          _state.NamespaceIndex,
+          _state.Types,
+          assemblyFilter);
+      _lineIndexBuilder = new LineIndexBuilder();
     }
 
     public void BuildLineIndex()
         => _lineIndexBuilder.Build(_state.LineIndex, _state.Members.Values, _state.Types.Values, _lookup);
+  }
+
+  private sealed class AggregationSarifProcessor : IAggregationSarifProcessor
+  {
+    private readonly AggregationWorkspaceState _state;
+    private readonly SarifMetricsApplier _sarifApplier;
+
+    public AggregationSarifProcessor(
+        AggregationWorkspaceState state,
+        AssemblyFilter assemblyFilter)
+    {
+      _state = state ?? throw new ArgumentNullException(nameof(state));
+      ArgumentNullException.ThrowIfNull(assemblyFilter);
+
+      _sarifApplier = new SarifMetricsApplier(
+          _state.LineIndex,
+          assemblyFilter,
+          (node, identifier, value) => MergeMetric(node, identifier, value, aggregate: true));
+    }
 
     public void ApplySarifDocument(ParsedMetricsDocument document)
         => _sarifApplier.Apply(document, _state.Solution);
+  }
+
+  private sealed class AggregationBaselineAndThresholdProcessor : IAggregationBaselineAndThresholdProcessor
+  {
+    private readonly AggregationWorkspaceState _state;
+    private readonly BaselineEvaluator _baselineEvaluator;
+
+    public AggregationBaselineAndThresholdProcessor(AggregationWorkspaceState state)
+    {
+      _state = state ?? throw new ArgumentNullException(nameof(state));
+      _baselineEvaluator = new BaselineEvaluator();
+    }
 
     public void ApplyBaselineAndThresholds(
         MetricsReport? baseline,
         IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds)
         => _baselineEvaluator.Apply(_state.Solution, baseline?.Solution, thresholds);
+  }
+
+  private sealed class AggregationReconciliationProcessor : IAggregationReconciliationProcessor
+  {
+    private readonly AggregationWorkspaceState _state;
+    private readonly IteratorCoverageReconciler _iteratorReconciler;
+    private readonly PlainNestedTypeCoverageReconciler _plainNestedTypeCoverageReconciler;
+
+    public AggregationReconciliationProcessor(AggregationWorkspaceState state)
+    {
+      _state = state ?? throw new ArgumentNullException(nameof(state));
+      _iteratorReconciler = new IteratorCoverageReconciler();
+      _plainNestedTypeCoverageReconciler = new PlainNestedTypeCoverageReconciler();
+    }
 
     public void ReconcileIteratorStateMachineMetrics()
         => _iteratorReconciler.Reconcile(_state.Types, RemoveIteratorTypeFromHierarchy);
@@ -304,36 +338,104 @@ public sealed class MetricsAggregationService
         }
       }
     }
-
-    private static void MergeMetric(MetricsNode node, MetricIdentifier identifier, MetricValue value, bool aggregate)
-    {
-      if (!node.Metrics.TryGetValue(identifier, out var existing))
-      {
-        node.Metrics[identifier] = value;
-        return;
-      }
-
-      if (aggregate && value.Value.HasValue)
-      {
-        var sum = (existing.Value ?? 0m) + value.Value.Value;
-        node.Metrics[identifier] = new MetricValue
-        {
-          Value = sum,
-          Unit = existing.Unit ?? value.Unit,
-          Status = ThresholdStatus.NotApplicable
-        };
-      }
-    }
   }
 
-  private interface IReportThresholdMetadata
+  private sealed class AggregationWorkspaceWorkflow
   {
-    ReportMetadata CreateMetadata(
-        string? baselineReference,
-        ReportPaths paths,
-        string? excludedMemberNamesPatterns,
-        string? excludedAssemblyNames,
-        string? excludedTypeNamePatterns);
+    private readonly AggregationWorkspaceState _state;
+    private readonly IAggregationDocumentProcessor _documentProcessor;
+    private readonly IAggregationLineIndexProcessor _lineIndexProcessor;
+    private readonly IAggregationSarifProcessor _sarifProcessor;
+    private readonly IAggregationBaselineAndThresholdProcessor _baselineProcessor;
+    private readonly IAggregationReconciliationProcessor _reconciliationProcessor;
+
+    public AggregationWorkspaceWorkflow(
+        AggregationWorkspaceState state,
+        IAggregationDocumentProcessor documentProcessor,
+        IAggregationLineIndexProcessor lineIndexProcessor,
+        IAggregationSarifProcessor sarifProcessor,
+        IAggregationBaselineAndThresholdProcessor baselineProcessor,
+        IAggregationReconciliationProcessor reconciliationProcessor)
+    {
+      _state = state ?? throw new ArgumentNullException(nameof(state));
+      _documentProcessor = documentProcessor ?? throw new ArgumentNullException(nameof(documentProcessor));
+      _lineIndexProcessor = lineIndexProcessor ?? throw new ArgumentNullException(nameof(lineIndexProcessor));
+      _sarifProcessor = sarifProcessor ?? throw new ArgumentNullException(nameof(sarifProcessor));
+      _baselineProcessor = baselineProcessor ?? throw new ArgumentNullException(nameof(baselineProcessor));
+      _reconciliationProcessor = reconciliationProcessor ?? throw new ArgumentNullException(nameof(reconciliationProcessor));
+    }
+
+    public void MergeStructuralElements(ParsedMetricsDocument document)
+        => _documentProcessor.MergeStructuralElements(document);
+
+    public void ProcessDocuments(MetricsAggregationInput input)
+    {
+      ArgumentNullException.ThrowIfNull(input);
+
+      foreach (var document in input.AltCoverDocuments)
+      {
+        _documentProcessor.MergeStructuralElements(document);
+      }
+
+      foreach (var document in input.RoslynDocuments)
+      {
+        _documentProcessor.MergeStructuralElements(document);
+      }
+
+      _lineIndexProcessor.BuildLineIndex();
+
+      foreach (var document in input.SarifDocuments)
+      {
+        _sarifProcessor.ApplySarifDocument(document);
+      }
+    }
+
+    public void PrepareReport(MetricsAggregationInput input)
+    {
+      ArgumentNullException.ThrowIfNull(input);
+
+      ProcessDocuments(input);
+      _reconciliationProcessor.ReconcileIteratorStateMachineMetrics();
+      _reconciliationProcessor.ReconcilePlainNestedTypeMetrics();
+      _baselineProcessor.ApplyBaselineAndThresholds(input.Baseline, input.Thresholds);
+    }
+
+    public void BuildLineIndex()
+        => _lineIndexProcessor.BuildLineIndex();
+
+    public void ApplySarifDocument(ParsedMetricsDocument document)
+        => _sarifProcessor.ApplySarifDocument(document);
+
+    public void ApplyBaselineAndThresholds(
+        MetricsReport? baseline,
+        IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds)
+        => _baselineProcessor.ApplyBaselineAndThresholds(baseline, thresholds);
+
+    public void ReconcileIteratorStateMachineMetrics()
+        => _reconciliationProcessor.ReconcileIteratorStateMachineMetrics();
+
+    public void ReconcilePlainNestedTypeMetrics()
+        => _reconciliationProcessor.ReconcilePlainNestedTypeMetrics();
+  }
+
+  private static void MergeMetric(MetricsNode node, MetricIdentifier identifier, MetricValue value, bool aggregate)
+  {
+    if (!node.Metrics.TryGetValue(identifier, out var existing))
+    {
+      node.Metrics[identifier] = value;
+      return;
+    }
+
+    if (aggregate && value.Value.HasValue)
+    {
+      var sum = (existing.Value ?? 0m) + value.Value.Value;
+      node.Metrics[identifier] = new MetricValue
+      {
+        Value = sum,
+        Unit = existing.Unit ?? value.Unit,
+        Status = ThresholdStatus.NotApplicable
+      };
+    }
   }
 
   private static class ReportMetadataComposer
@@ -342,12 +444,17 @@ public sealed class MetricsAggregationService
     {
       ArgumentNullException.ThrowIfNull(input);
 
-      return input.ThresholdMetadata.CreateMetadata(
-          input.BaselineReference,
-          input.Paths,
-          input.ExcludedMemberNamesPatterns,
-          input.ExcludedAssemblyNames,
-          input.ExcludedTypeNamePatterns);
+      return new ReportMetadata
+      {
+        GeneratedAtUtc = DateTime.UtcNow,
+        BaselineReference = input.BaselineReference,
+        Paths = input.Paths,
+        ThresholdsByLevel = input.ThresholdMetadata.ThresholdsByLevel,
+        ThresholdDescriptions = input.ThresholdMetadata.Descriptions,
+        ExcludedMemberNamesPatterns = input.ExcludedMemberNamesPatterns,
+        ExcludedAssemblyNames = input.ExcludedAssemblyNames,
+        ExcludedTypeNamePatterns = input.ExcludedTypeNamePatterns
+      };
     }
 
     public static ReportMetadataInput CreateInput(
@@ -361,8 +468,7 @@ public sealed class MetricsAggregationService
       ArgumentNullException.ThrowIfNull(assemblyFilter);
       ArgumentNullException.ThrowIfNull(typeFilter);
 
-      var (thresholdLevels, thresholdDescriptions) = ThresholdMetadataBuilder.Build(input.Thresholds);
-      var thresholdMetadata = new ReportThresholdMetadata(thresholdLevels, thresholdDescriptions);
+      var thresholdMetadata = CreateThresholdMetadata(input.Thresholds);
 
       return new ReportMetadataInput(
           input.BaselineReference,
@@ -372,17 +478,26 @@ public sealed class MetricsAggregationService
           assemblyFilter.GetExcludedAssemblyPatternsString(),
           typeFilter.GetExcludedTypePatternsString());
     }
+
+    private static ReportThresholdMetadata CreateThresholdMetadata(
+        IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds)
+    {
+      ArgumentNullException.ThrowIfNull(thresholds);
+
+      var (thresholdLevels, thresholdDescriptions) = ThresholdMetadataBuilder.Build(thresholds);
+      return new ReportThresholdMetadata(thresholdLevels, thresholdDescriptions);
+    }
   }
 
   private sealed record ReportMetadataInput(
       string? BaselineReference,
       ReportPaths Paths,
-      IReportThresholdMetadata ThresholdMetadata,
+      ReportThresholdMetadata ThresholdMetadata,
       string? ExcludedMemberNamesPatterns,
       string? ExcludedAssemblyNames,
       string? ExcludedTypeNamePatterns);
 
-  private sealed class ReportThresholdMetadata : IReportThresholdMetadata
+  private sealed class ReportThresholdMetadata
   {
     private readonly Dictionary<MetricIdentifier, IDictionary<MetricSymbolLevel, MetricThreshold>> _thresholdsByLevel;
     private readonly Dictionary<MetricIdentifier, string?> _descriptions;
@@ -395,22 +510,10 @@ public sealed class MetricsAggregationService
       _descriptions = descriptions ?? throw new ArgumentNullException(nameof(descriptions));
     }
 
-    public ReportMetadata CreateMetadata(
-        string? baselineReference,
-        ReportPaths paths,
-        string? excludedMemberNamesPatterns,
-        string? excludedAssemblyNames,
-        string? excludedTypeNamePatterns)
-        => new()
-        {
-          GeneratedAtUtc = DateTime.UtcNow,
-          BaselineReference = baselineReference,
-          Paths = paths,
-          ThresholdsByLevel = _thresholdsByLevel,
-          ThresholdDescriptions = _descriptions,
-          ExcludedMemberNamesPatterns = excludedMemberNamesPatterns,
-          ExcludedAssemblyNames = excludedAssemblyNames,
-          ExcludedTypeNamePatterns = excludedTypeNamePatterns
-        };
+    public Dictionary<MetricIdentifier, IDictionary<MetricSymbolLevel, MetricThreshold>> ThresholdsByLevel
+        => _thresholdsByLevel;
+
+    public Dictionary<MetricIdentifier, string?> Descriptions
+        => _descriptions;
   }
 }
