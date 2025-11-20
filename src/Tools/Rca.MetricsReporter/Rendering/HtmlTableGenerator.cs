@@ -116,72 +116,91 @@ internal sealed class HtmlTableGenerator
   private void RenderNodeRows(MetricsNode node, int level, string? parentId, StringBuilder builder, string? currentAssembly = null, string? currentType = null)
   {
     var thisId = "node-" + (++_idCounter).ToString();
-
-    // Check if node has children
-    var hasChildren = node switch
-    {
-      SolutionMetricsNode s => s.Assemblies.Any(),
-      AssemblyMetricsNode a => a.Namespaces.Any(),
-      NamespaceMetricsNode n => n.Types.Any(),
-      TypeMetricsNode t => t.Members.Any(),
-      _ => false
-    };
-
+    var hasChildren = HasChildren(node);
     var role = GetNodeRole(node);
     var isStructuralNode = role is "assembly" or "namespace" or "type";
-
-    // Update assembly and type for recursive calls
-    var assemblyName = currentAssembly;
-    var typeName = currentType;
-    if (node is AssemblyMetricsNode assemblyNode)
-    {
-      assemblyName = assemblyNode.Name;
-    }
-    else if (node is TypeMetricsNode typeNode)
-    {
-      typeName = typeNode.Name;
-    }
-
-    var kind = NodeKindProvider.GetKind(node);
-    var tooltip = string.Empty;
-    if (!string.IsNullOrWhiteSpace(node.FullyQualifiedName))
-    {
-      tooltip = WebUtility.HtmlEncode(node.FullyQualifiedName + " — " + kind);
-    }
-
-    // Determine if this is a node row (has children) or a regular row
+    var assemblyName = UpdateAssemblyName(node, currentAssembly);
+    var typeName = UpdateTypeName(node, currentType);
     var isNodeRow = hasChildren || isStructuralNode;
+    var symbolTag = isNodeRow ? "th" : "td";
     var rowClass = isNodeRow ? "node-row node-header" : "node-row node-item";
+    var tooltip = BuildTooltip(node);
+    var coverageLink = BuildCoverageLink(node, isNodeRow, assemblyName);
+    var nameText = WebUtility.HtmlEncode(node.Name);
 
-    // Add FQN as data attribute for efficient filtering
-    var fqnAttribute = string.IsNullOrWhiteSpace(node.FullyQualifiedName)
+    AppendRowStart(builder, rowClass, thisId, level, parentId, hasChildren, role, node.IsNew, node.FullyQualifiedName);
+    AppendSymbolCell(builder, node, symbolTag, hasChildren, isStructuralNode, nameText, coverageLink, tooltip, thisId, isNodeRow);
+    AppendMetricCells(node, symbolTag, builder);
+    builder.AppendLine("    </tr>");
+
+    RenderChildren(node, level, thisId, builder, assemblyName, typeName);
+  }
+
+  private static bool HasChildren(MetricsNode node)
+      => node switch
+      {
+        SolutionMetricsNode s => s.Assemblies.Any(),
+        AssemblyMetricsNode a => a.Namespaces.Any(),
+        NamespaceMetricsNode n => n.Types.Any(),
+        TypeMetricsNode t => t.Members.Any(),
+        _ => false
+      };
+
+  private static string? UpdateAssemblyName(MetricsNode node, string? currentAssembly)
+      => node is AssemblyMetricsNode assemblyNode ? assemblyNode.Name : currentAssembly;
+
+  private static string? UpdateTypeName(MetricsNode node, string? currentType)
+      => node is TypeMetricsNode typeNode ? typeNode.Name : currentType;
+
+  private static string BuildTooltip(MetricsNode node)
+      => string.IsNullOrWhiteSpace(node.FullyQualifiedName)
+          ? string.Empty
+          : WebUtility.HtmlEncode(node.FullyQualifiedName + " — " + NodeKindProvider.GetKind(node));
+
+  private string? BuildCoverageLink(MetricsNode node, bool isNodeRow, string? assemblyName)
+      => isNodeRow && node is TypeMetricsNode typeNode && _coverageLinkBuilder is not null
+          ? _coverageLinkBuilder.BuildLink(typeNode, assemblyName)
+          : null;
+
+  private static void AppendRowStart(
+      StringBuilder builder,
+      string rowClass,
+      string thisId,
+      int level,
+      string? parentId,
+      bool hasChildren,
+      string role,
+      bool isNew,
+      string? fullyQualifiedName)
+  {
+    var fqnAttribute = string.IsNullOrWhiteSpace(fullyQualifiedName)
         ? string.Empty
-        : $" data-fqn=\"{WebUtility.HtmlEncode(node.FullyQualifiedName)}\"";
+        : $" data-fqn=\"{WebUtility.HtmlEncode(fullyQualifiedName)}\"";
 
     builder.AppendLine("    <tr class=\"" + rowClass + "\" " +
-        $"data-id=\"{thisId}\" data-level=\"{level}\" data-parent=\"{parentId ?? string.Empty}\" data-has-children=\"{hasChildren.ToString().ToLowerInvariant()}\" data-role=\"{role}\" data-is-new=\"{(node.IsNew ? "true" : "false")}\"{fqnAttribute}>");
+        $"data-id=\"{thisId}\" data-level=\"{level}\" data-parent=\"{parentId ?? string.Empty}\" data-has-children=\"{hasChildren.ToString().ToLowerInvariant()}\" data-role=\"{role}\" data-is-new=\"{(isNew ? "true" : "false")}\"{fqnAttribute}>");
+  }
 
-    // Symbol cell with tooltip and class for expander presence
-    var symbolClasses = "symbol";
-    if (hasChildren || isStructuralNode)
-    {
-      symbolClasses += " has-expander";
-    }
-
-    // For node rows, use <th>, for regular rows use <td>
-    var symbolTag = isNodeRow ? "th" : "td";
-
+  private void AppendSymbolCell(
+      StringBuilder builder,
+      MetricsNode node,
+      string symbolTag,
+      bool hasChildren,
+      bool isStructuralNode,
+      string nameText,
+      string? coverageLink,
+      string tooltip,
+      string thisId,
+      bool isNodeRow)
+  {
+    var symbolClasses = "symbol" + (hasChildren || isStructuralNode ? " has-expander" : string.Empty);
+    builder.Append($"      <{symbolTag} class=\"{symbolClasses}\"");
     if (!string.IsNullOrWhiteSpace(tooltip))
     {
-      builder.Append($"      <{symbolTag} class=\"{symbolClasses}\" title=\"{tooltip}\">");
-    }
-    else
-    {
-      builder.Append($"      <{symbolTag} class=\"{symbolClasses}\">");
+      builder.Append($" title=\"{tooltip}\"");
     }
 
-    // Expander button (only if node has children)
-    // WHY: Default state is expanded, so expander shows '-' initially
+    builder.Append(">");
     if (hasChildren)
     {
       builder.Append($"<button class=\"expander\" data-target=\"{thisId}\" aria-label=\"Toggle expand/collapse\">-</button>");
@@ -191,20 +210,20 @@ internal sealed class HtmlTableGenerator
       builder.Append("<span class=\"expander-placeholder\" aria-hidden=\"true\">∅</span>");
     }
 
-    // Name and NEW badge
-    var nameText = WebUtility.HtmlEncode(node.Name);
+    RenderNodeName(builder, node, nameText, coverageLink, isNodeRow);
 
-    // Create coverage link only for types
-    string? coverageLink = null;
-    if (isNodeRow && node is TypeMetricsNode && _coverageLinkBuilder is not null)
-    {
-      coverageLink = _coverageLinkBuilder.BuildLink(node, assemblyName);
-    }
+    builder.AppendLine($"</{symbolTag}>");
+  }
 
+  private static void RenderNodeName(
+      StringBuilder builder,
+      MetricsNode node,
+      string nameText,
+      string? coverageLink,
+      bool isNodeRow)
+  {
     if (!isNodeRow && node is MemberMetricsNode memberNode)
     {
-      // For member rows, wrap name in a span with red color class
-      // and show a subtle indicator when coverage includes iterator state machine data.
       if (memberNode.IncludesIteratorStateMachineCoverage)
       {
         builder.Append("<span class=\"method-state-machine\" title=\"Includes coverage from compiler-generated iterator state machine\">⊃</span>");
@@ -214,25 +233,21 @@ internal sealed class HtmlTableGenerator
     }
     else if (isNodeRow && node is TypeMetricsNode)
     {
-      // For type rows (node rows), create link to coverage HTML if available
       if (!string.IsNullOrEmpty(coverageLink))
       {
         builder.Append($"<a href=\"{coverageLink}\" class=\"name-text coverage-link-type\" target=\"_blank\" rel=\"noopener noreferrer\">" + nameText + "</a>");
       }
       else
       {
-        // For node rows without link, use plain text
         builder.Append("<span class=\"name-text\">" + nameText + "</span>");
       }
     }
     else if (!isNodeRow)
     {
-      // For regular rows (non-member), wrap name in a span with red color class
       builder.Append("<span class=\"name-text item-name\">" + nameText + "</span>");
     }
     else
     {
-      // For other node rows (assembly/namespace), use plain text
       builder.Append("<span class=\"name-text\">" + nameText + "</span>");
     }
 
@@ -240,16 +255,16 @@ internal sealed class HtmlTableGenerator
     {
       builder.Append(" <span class=\"badge badge-new\">NEW</span>");
     }
+  }
 
-    builder.AppendLine($"</{symbolTag}>");
-
-    // Metric cells - use <th> for node rows, <td> for regular rows
-    var metricTag = isNodeRow ? "th" : "td";
-    AppendMetricCells(node, metricTag, builder);
-
-    builder.AppendLine("    </tr>");
-
-    // Render children
+  private void RenderChildren(
+      MetricsNode node,
+      int level,
+      string thisId,
+      StringBuilder builder,
+      string? assemblyName,
+      string? typeName)
+  {
     switch (node)
     {
       case SolutionMetricsNode solution:
