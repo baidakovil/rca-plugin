@@ -17,7 +17,7 @@ public sealed class RoslynMetricsParser : IMetricsSourceParser
 {
   private static readonly XNamespace XmlNamespace = XNamespace.None;
 
-  private static readonly IReadOnlyDictionary<string, MetricIdentifier> MetricMap =
+  private static readonly Dictionary<string, MetricIdentifier> MetricMap =
       new Dictionary<string, MetricIdentifier>(StringComparer.OrdinalIgnoreCase)
       {
         ["MaintainabilityIndex"] = MetricIdentifier.RoslynMaintainabilityIndex,
@@ -165,7 +165,7 @@ public sealed class RoslynMetricsParser : IMetricsSourceParser
         ?? memberDisplayName;
   }
 
-  private static IDictionary<MetricIdentifier, MetricValue> ExtractMetrics(XElement? metricsElement)
+  private static Dictionary<MetricIdentifier, MetricValue> ExtractMetrics(XElement? metricsElement)
   {
     var result = new Dictionary<MetricIdentifier, MetricValue>();
     if (metricsElement is null)

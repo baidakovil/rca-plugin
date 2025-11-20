@@ -34,7 +34,7 @@ public sealed class ThresholdsParser
   /// Each metric object should have "name", optional "description", and optional "symbolThresholds".
   /// </remarks>
   /// <exception cref="InvalidOperationException">Thrown when JSON parsing fails or format is invalid.</exception>
-  public static IDictionary<MetricIdentifier, MetricThresholdDefinition> Parse(string? input)
+  public static Dictionary<MetricIdentifier, MetricThresholdDefinition> Parse(string? input)
   {
     var thresholds = CreateDefaults();
 
@@ -84,7 +84,7 @@ public sealed class ThresholdsParser
   /// </remarks>
   private static void ParseMetricEntry(
       JsonElement metricElement,
-      IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds)
+      Dictionary<MetricIdentifier, MetricThresholdDefinition> thresholds)
   {
     if (!TryExtractMetricIdentifier(metricElement, out var identifier))
     {
@@ -132,7 +132,7 @@ public sealed class ThresholdsParser
   /// <param name="identifier">The metric identifier.</param>
   /// <returns>An existing cloned definition or a new default definition.</returns>
   private static MetricThresholdDefinition GetOrCreateDefinition(
-      IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds,
+      Dictionary<MetricIdentifier, MetricThresholdDefinition> thresholds,
       MetricIdentifier identifier)
   {
     if (thresholds.TryGetValue(identifier, out var existing))

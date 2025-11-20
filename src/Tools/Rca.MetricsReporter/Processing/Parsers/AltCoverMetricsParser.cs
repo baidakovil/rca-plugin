@@ -86,7 +86,7 @@ public sealed class AltCoverMetricsParser : IMetricsSourceParser
     }
   }
 
-  private static IReadOnlyDictionary<string, string> BuildFileMap(XElement module)
+  private static Dictionary<string, string> BuildFileMap(XElement module)
   {
     return module.Element(XmlNamespace + "Files")?
                .Elements(XmlNamespace + "File")
@@ -103,7 +103,7 @@ public sealed class AltCoverMetricsParser : IMetricsSourceParser
   private static IEnumerable<ParsedCodeElement> ParseClasses(
       XElement module,
       ParsedCodeElement assemblyNode,
-      IReadOnlyDictionary<string, string> files)
+      Dictionary<string, string> files)
   {
     var classes = module.Element(XmlNamespace + "Classes")?.Elements(XmlNamespace + "Class")
                   ?? Enumerable.Empty<XElement>();
@@ -125,7 +125,7 @@ public sealed class AltCoverMetricsParser : IMetricsSourceParser
   private static IEnumerable<ParsedCodeElement> ParseMethods(
       XElement classElement,
       ParsedCodeElement classNode,
-      IReadOnlyDictionary<string, string> files)
+      Dictionary<string, string> files)
   {
     var methods = classElement.Element(XmlNamespace + "Methods")?.Elements(XmlNamespace + "Method")
                   ?? Enumerable.Empty<XElement>();
@@ -152,7 +152,7 @@ public sealed class AltCoverMetricsParser : IMetricsSourceParser
         Source = source
       };
 
-  private static SourceLocation? ResolveSourceLocation(XElement methodElement, IReadOnlyDictionary<string, string> files)
+    private static SourceLocation? ResolveSourceLocation(XElement methodElement, Dictionary<string, string> files)
   {
     var fileRef = methodElement.Element(XmlNamespace + "FileRef");
     var fileId = fileRef?.Attribute("uid")?.Value;
