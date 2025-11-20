@@ -37,7 +37,7 @@
     <!-- Comma-separated or semicolon-separated list of assembly name patterns to exclude from metrics reports. -->
     <!-- Assembly names containing any of the specified patterns will be excluded. Matching is case-insensitive. -->
     <!-- Examples: "Tests,Test" or "Tests;Test". If not specified, no assemblies are excluded. -->
-    <ExcludedAssemblyNames Condition="'$(ExcludedAssemblyNames)' == ''">Tests,Contracts</ExcludedAssemblyNames>
+    <ExcludedAssemblyNames Condition="'$(ExcludedAssemblyNames)' == ''">Tests,Contracts,MetricsReporter</ExcludedAssemblyNames>
 
     <!-- Toggle metrics dashboard generation -->
     <GenerateMetricsDashboard Condition="'$(GenerateMetricsDashboard)' == ''">false</GenerateMetricsDashboard>
