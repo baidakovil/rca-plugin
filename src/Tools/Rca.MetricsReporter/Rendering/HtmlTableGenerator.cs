@@ -207,7 +207,7 @@ internal sealed class HtmlTableGenerator
     }
     else if (isStructuralNode)
     {
-      builder.Append("<span class=\"expander-placeholder\" aria-hidden=\"true\">∅</span>");
+      builder.Append("<span class=\"expander-placeholder symbol-indicator\" title=\"No child nodes available\" aria-hidden=\"true\">Ø</span>");
     }
 
     RenderNodeName(builder, node, nameText, coverageLink, isNodeRow);
@@ -227,7 +227,7 @@ internal sealed class HtmlTableGenerator
     {
       if (memberNode.IncludesIteratorStateMachineCoverage)
       {
-        builder.Append("<span class=\"method-state-machine\" title=\"Includes coverage from compiler-generated iterator state machine\">⊃</span>");
+      builder.Append("<span class=\"method-state-machine symbol-indicator\" title=\"Includes coverage from compiler-generated iterator state machine\">⊃</span>");
       }
 
       builder.Append("<span class=\"name-text item-name\">" + nameText + "</span>");

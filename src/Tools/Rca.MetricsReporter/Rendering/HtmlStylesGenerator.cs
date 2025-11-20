@@ -161,7 +161,8 @@ internal static class HtmlStylesGenerator
     // but we still want a subtle visual hint that the data originates from a nested compiler-generated type.
     // The indicator is absolutely positioned and centered in the same 20px slot as the expander/placeholder
     // so that member names remain aligned while the glyph does not stick to the cell border.
-    builder.AppendLine(FormattableString.Invariant($".method-state-machine {{ color: {IteratorIndicatorColor}; font-size: 13px; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; }}"));
+    builder.AppendLine(".symbol-indicator { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; }");
+    builder.AppendLine(FormattableString.Invariant($".method-state-machine {{ color: {IteratorIndicatorColor}; font-size: 13px; }}"));
     builder.AppendLine(".fqn { font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; color: rgba(128, 128, 128, 0.8); }");
     // WHY: Coverage links for type nodes (non-leaf) should have black semi-transparent underlining
     // to match the text color while indicating clickability.
@@ -306,7 +307,7 @@ internal static class HtmlStylesGenerator
   {
     builder.AppendLine(".expander { position: absolute; left: 0; top: 50%; transform: translateY(-50%); border: 0; background: transparent; cursor: pointer; font-size: 14px; line-height: 1; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; z-index: 1; padding: 0; margin: 0; user-select: none; font-weight: bold; }");
     builder.AppendLine(".expander:focus { outline: 1px solid rgba(0,0,0,0.3); outline-offset: 2px; border-radius: 2px; }");
-    builder.AppendLine(FormattableString.Invariant($".expander-placeholder {{ position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: {PlaceholderExpanderColor}; pointer-events: none; user-select: none; }}"));
+    builder.AppendLine(FormattableString.Invariant($".expander-placeholder {{ font-weight: bold; color: {PlaceholderExpanderColor}; pointer-events: auto; user-select: none; }}"));
   }
 
   private static void AppendDepthIndentation(StringBuilder builder)
