@@ -80,7 +80,7 @@ namespace Rca.TestAdapter
           try
           {
             return !string.IsNullOrEmpty(p.MainWindowTitle) &&
-                   p.MainWindowTitle.IndexOf("Revit", StringComparison.OrdinalIgnoreCase) >= 0;
+                   p.MainWindowTitle.Contains("Revit", StringComparison.OrdinalIgnoreCase);
           }
           catch
           {

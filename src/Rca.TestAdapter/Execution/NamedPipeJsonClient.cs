@@ -60,7 +60,7 @@ internal static class NamedPipeJsonClient
     }
   }
 
-  private static Stream? ConnectToPipe(string pipeName, int timeoutMs)
+  private static NamedPipeClientStream? ConnectToPipe(string pipeName, int timeoutMs)
   {
     var pipeClient = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.None);
     pipeClient.Connect(timeoutMs);

@@ -113,7 +113,7 @@ public class RevitTestResult
   /// Gets or sets the messages.
   /// </summary>
   [JsonPropertyName("Messages")]
-  public List<TestMessage> Messages { get; set; } = new();
+  public List<TestMessage> Messages { get; set; } = [];
 }
 
 /// <summary>
@@ -149,7 +149,7 @@ public class TestExecutionPayload
   /// Gets or sets the tests to execute.
   /// </summary>
   [JsonPropertyName("Tests")]
-  public List<RevitTestRequest> Tests { get; set; } = new();
+  public List<RevitTestRequest> Tests { get; set; } = [];
 }
 
 

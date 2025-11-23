@@ -105,7 +105,7 @@ internal static class NUnitTestDiscoverer
     /// </summary>
     /// <param name="assembly">The loaded test assembly.</param>
     /// <returns>List of discovered <see cref="TestCase"/> objects.</returns>
-    public IList<TestCase> CreateTestCases(Assembly assembly)
+    public List<TestCase> CreateTestCases(Assembly assembly)
     {
       var result = new List<TestCase>();
       var types = GetLoadableTypes(assembly);

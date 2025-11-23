@@ -56,7 +56,7 @@ internal sealed class PipeTestExecutionTransport : ITestExecutionTransport
       if (response is null)
       {
         Console.WriteLine("DEBUG: No response received from pipe server for RUN_TESTS command");
-        return new List<RevitTestResult>();
+        return [];
       }
 
       Console.WriteLine($"DEBUG: Received test execution response (status: {response.Status}, message length: {response.Message?.Length ?? 0})");
@@ -66,12 +66,12 @@ internal sealed class PipeTestExecutionTransport : ITestExecutionTransport
     catch (TimeoutException)
     {
       Console.WriteLine($"DEBUG: Connection timed out after {timeoutMs}ms");
-      return new List<RevitTestResult>();
+      return [];
     }
     catch (Exception ex)
     {
       Console.WriteLine($"DEBUG: Error executing tests: {ex.Message}");
-      return new List<RevitTestResult>();
+      return [];
     }
   }
 
@@ -94,18 +94,18 @@ internal sealed class PipeTestExecutionTransport : ITestExecutionTransport
   {
     if (response?.Status != "OK" || string.IsNullOrEmpty(response.Message))
     {
-      return new List<RevitTestResult>();
+      return [];
     }
 
     try
     {
       var results = JsonSerializer.Deserialize<List<RevitTestResult>>(response.Message);
       Console.WriteLine($"DEBUG: Deserialized {results?.Count ?? 0} test results");
-      return results ?? new List<RevitTestResult>();
+      return results ?? [];
     }
     catch (JsonException)
     {
-      return new List<RevitTestResult>();
+      return [];
     }
   }
 }
