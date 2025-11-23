@@ -50,7 +50,8 @@ internal sealed class RevitTestRunCoordinator : ITestRunCoordinator
 
   public RevitTestRunCoordinator(RevitPipeClient pipeClient, TimeSpan defaultTimeout)
   {
-    _pipeClient = pipeClient ?? throw new ArgumentNullException(nameof(pipeClient));
+    ArgumentNullException.ThrowIfNull(pipeClient);
+    _pipeClient = pipeClient;
     _defaultTimeout = defaultTimeout;
   }
 
@@ -64,14 +65,10 @@ internal sealed class RevitTestRunCoordinator : ITestRunCoordinator
       IFrameworkHandle frameworkHandle,
       Func<bool> isCancelled)
   {
-    if (tests is null)
-      throw new ArgumentNullException(nameof(tests));
-    if (runContext is null)
-      throw new ArgumentNullException(nameof(runContext));
-    if (frameworkHandle is null)
-      throw new ArgumentNullException(nameof(frameworkHandle));
-    if (isCancelled is null)
-      throw new ArgumentNullException(nameof(isCancelled));
+    ArgumentNullException.ThrowIfNull(tests);
+    ArgumentNullException.ThrowIfNull(runContext);
+    ArgumentNullException.ThrowIfNull(frameworkHandle);
+    ArgumentNullException.ThrowIfNull(isCancelled);
 
     frameworkHandle.SendMessage(TestMessageLevel.Informational, "RCA Test Adapter: Starting test execution");
 

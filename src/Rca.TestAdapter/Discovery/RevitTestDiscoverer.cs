@@ -38,8 +38,10 @@ public class RevitTestDiscoverer : ITestDiscoverer
   /// </param>
   internal RevitTestDiscoverer(ITestAssemblyLocator assemblyLocator, ITestCasePublisher testCasePublisher)
   {
-    _assemblyLocator = assemblyLocator ?? throw new ArgumentNullException(nameof(assemblyLocator));
-    _testCasePublisher = testCasePublisher ?? throw new ArgumentNullException(nameof(testCasePublisher));
+    ArgumentNullException.ThrowIfNull(assemblyLocator);
+    ArgumentNullException.ThrowIfNull(testCasePublisher);
+    _assemblyLocator = assemblyLocator;
+    _testCasePublisher = testCasePublisher;
   }
 
   /// <summary>
@@ -62,12 +64,9 @@ public class RevitTestDiscoverer : ITestDiscoverer
       IMessageLogger logger,
       ITestCaseDiscoverySink discoverySink)
   {
-    if (sources is null)
-      throw new ArgumentNullException(nameof(sources));
-    if (logger is null)
-      throw new ArgumentNullException(nameof(logger));
-    if (discoverySink is null)
-      throw new ArgumentNullException(nameof(discoverySink));
+    ArgumentNullException.ThrowIfNull(sources);
+    ArgumentNullException.ThrowIfNull(logger);
+    ArgumentNullException.ThrowIfNull(discoverySink);
 
     logger.SendMessage(TestMessageLevel.Informational, "RCA Test Adapter: Starting test discovery");
 

@@ -32,8 +32,10 @@ public class RevitTestExecutor : ITestExecutor
   /// </summary>
   internal RevitTestExecutor(ITestRunCoordinator testRunCoordinator, ISourceTestDiscoverer sourceTestDiscoverer)
   {
-    _testRunCoordinator = testRunCoordinator ?? throw new ArgumentNullException(nameof(testRunCoordinator));
-    _sourceTestDiscoverer = sourceTestDiscoverer ?? throw new ArgumentNullException(nameof(sourceTestDiscoverer));
+    ArgumentNullException.ThrowIfNull(testRunCoordinator);
+    ArgumentNullException.ThrowIfNull(sourceTestDiscoverer);
+    _testRunCoordinator = testRunCoordinator;
+    _sourceTestDiscoverer = sourceTestDiscoverer;
     cancelled = false;
   }
 

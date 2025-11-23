@@ -36,10 +36,8 @@ internal sealed class NUnitSourceTestDiscoverer : ISourceTestDiscoverer
       Justification = "NUnitSourceTestDiscoverer orchestrates per-source discovery and runtime path annotation; low-level NUnit reflection logic is already encapsulated in NUnitTestDiscoverer.")]
   public IReadOnlyList<TestCase> DiscoverTests(IEnumerable<string> sources, IFrameworkHandle frameworkHandle)
   {
-    if (sources is null)
-      throw new ArgumentNullException(nameof(sources));
-    if (frameworkHandle is null)
-      throw new ArgumentNullException(nameof(frameworkHandle));
+    ArgumentNullException.ThrowIfNull(sources);
+    ArgumentNullException.ThrowIfNull(frameworkHandle);
 
     var discoveredTests = new List<TestCase>();
 

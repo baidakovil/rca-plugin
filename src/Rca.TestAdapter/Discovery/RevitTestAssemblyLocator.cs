@@ -32,10 +32,8 @@ internal sealed class RevitTestAssemblyLocator : ITestAssemblyLocator
       out string hostSource,
       out string testAssemblyPath)
   {
-    if (sources is null)
-      throw new ArgumentNullException(nameof(sources));
-    if (logger is null)
-      throw new ArgumentNullException(nameof(logger));
+    ArgumentNullException.ThrowIfNull(sources);
+    ArgumentNullException.ThrowIfNull(logger);
 
     hostSource = string.Empty;
     testAssemblyPath = string.Empty;

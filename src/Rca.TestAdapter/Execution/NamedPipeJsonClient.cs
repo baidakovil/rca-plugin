@@ -32,8 +32,7 @@ internal static class NamedPipeJsonClient
   {
     if (string.IsNullOrWhiteSpace(pipeName))
       throw new ArgumentException("Pipe name must be provided.", nameof(pipeName));
-    if (command is null)
-      throw new ArgumentNullException(nameof(command));
+    ArgumentNullException.ThrowIfNull(command);
 
     try
     {

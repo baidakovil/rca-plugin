@@ -34,8 +34,7 @@ internal sealed class PipeTestExecutionTransport : ITestExecutionTransport
       Justification = "PipeTestExecutionTransport is responsible for low-level pipe transport concerns (NamedPipe, JSON, DTO mapping). Further splitting would fragment cohesive transport logic without improving design sustainability.")]
   public List<RevitTestResult> Execute(string assemblyPath, IReadOnlyList<TestCase> tests, TimeSpan timeout)
   {
-    if (tests is null)
-      throw new ArgumentNullException(nameof(tests));
+    ArgumentNullException.ThrowIfNull(tests);
 
     var timeoutMs = (int)timeout.TotalMilliseconds;
     Console.WriteLine($"DEBUG: ExecuteTests starting for {tests.Count} tests in {assemblyPath}");

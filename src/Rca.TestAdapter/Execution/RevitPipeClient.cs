@@ -19,7 +19,8 @@ public class RevitPipeClient
 
   internal RevitPipeClient(ITestExecutionTransport transport)
   {
-    _transport = transport ?? throw new ArgumentNullException(nameof(transport));
+    ArgumentNullException.ThrowIfNull(transport);
+    _transport = transport;
   }
 
   /// <summary>
@@ -31,8 +32,7 @@ public class RevitPipeClient
   /// <returns>The test results.</returns>
   public List<RevitTestResult> ExecuteTests(string assemblyPath, List<TestCase> tests, TimeSpan timeout)
   {
-    if (tests is null)
-      throw new ArgumentNullException(nameof(tests));
+    ArgumentNullException.ThrowIfNull(tests);
 
     return _transport.Execute(assemblyPath, tests, timeout);
   }

@@ -22,14 +22,12 @@ internal sealed class RcaTestCasePublisher : ITestCasePublisher
       string runtimeAssemblyPath,
       ITestCaseDiscoverySink discoverySink)
   {
-    if (testCases is null)
-      throw new ArgumentNullException(nameof(testCases));
+    ArgumentNullException.ThrowIfNull(testCases);
     if (string.IsNullOrEmpty(hostSource))
       throw new ArgumentException("Host source must be provided.", nameof(hostSource));
     if (string.IsNullOrEmpty(runtimeAssemblyPath))
       throw new ArgumentException("Runtime assembly path must be provided.", nameof(runtimeAssemblyPath));
-    if (discoverySink is null)
-      throw new ArgumentNullException(nameof(discoverySink));
+    ArgumentNullException.ThrowIfNull(discoverySink);
 
     foreach (var testCase in testCases)
     {

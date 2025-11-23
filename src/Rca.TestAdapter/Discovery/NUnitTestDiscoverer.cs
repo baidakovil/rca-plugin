@@ -96,7 +96,8 @@ internal static class NUnitTestDiscoverer
 
     public NUnitTestCaseFactory(string assemblyPath)
     {
-      _assemblyPath = assemblyPath ?? throw new ArgumentNullException(nameof(assemblyPath));
+      ArgumentNullException.ThrowIfNull(assemblyPath);
+      _assemblyPath = assemblyPath;
     }
 
     /// <summary>

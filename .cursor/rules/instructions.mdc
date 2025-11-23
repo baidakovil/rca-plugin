@@ -32,6 +32,7 @@ Follow these guidelines to generate clean, maintainable C# code for AI-first dev
 - Encapsulate long event handlers by extracting helper methods
 - Always check for `null` before accessing object members (or use nullable reference types appropriately)
 - Group related properties in region blocks with clear names
+- Prefer `ArgumentNullException.ThrowIfNull(param)` over manual `if (param == null) throw new ArgumentNullException(nameof(param));` patterns for parameter validation
 
 ### Revit API Guidelines
 
