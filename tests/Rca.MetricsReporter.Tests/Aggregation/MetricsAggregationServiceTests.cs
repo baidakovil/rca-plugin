@@ -159,7 +159,7 @@ public sealed class MetricsAggregationServiceTests
   }
 
   [Test]
-  public void BuildReport_SarifAssemblyValueEqualWarning_ProducesWarning()
+  public void BuildReport_SarifAssemblyValueAtWarning_RemainsSuccess()
   {
     // Arrange
     const string assemblyName = "Inclusive.Assembly";
@@ -197,11 +197,53 @@ public sealed class MetricsAggregationServiceTests
 
     // Assert
     var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+    assembly.Metrics[MetricIdentifier.SarifCaRuleViolations].Status.Should().Be(ThresholdStatus.Success);
+  }
+
+  [Test]
+  public void BuildReport_SarifAssemblyValueAboveWarning_ProducesWarning()
+  {
+    // Arrange
+    const string assemblyName = "Inclusive.Assembly";
+
+    var serviceUnderTest = new MetricsAggregationService();
+    var thresholds = ThresholdTestFactory.CreateUniformThresholds(
+        (MetricIdentifier.SarifCaRuleViolations, 1m, 2m, false));
+
+    var roslynDocument = new ParsedMetricsDocument
+    {
+      Elements = new List<ParsedCodeElement>
+            {
+                new(CodeElementKind.Assembly, assemblyName, assemblyName)
+                {
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.SarifCaRuleViolations] = Metric(1.5m, "count")
+                    }
+                }
+            }
+    };
+
+    var input = new MetricsAggregationInput
+    {
+      SolutionName = "InclusiveSolution",
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      AltCoverDocuments = new List<ParsedMetricsDocument>(),
+      RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
+
+    // Act
+    var report = serviceUnderTest.BuildReport(input);
+
+    // Assert
+    var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
     assembly.Metrics[MetricIdentifier.SarifCaRuleViolations].Status.Should().Be(ThresholdStatus.Warning);
   }
 
   [Test]
-  public void BuildReport_MaintainabilityValueEqualWarning_ProducesWarning()
+  public void BuildReport_MaintainabilityValueAtWarning_RemainsSuccess()
   {
     // Arrange
     const string assemblyName = "Inclusive.Assembly";
@@ -227,6 +269,58 @@ public sealed class MetricsAggregationServiceTests
                     Metrics = new Dictionary<MetricIdentifier, MetricValue>
                     {
                         [MetricIdentifier.RoslynMaintainabilityIndex] = Metric(65, "score")
+                    }
+                }
+            }
+    };
+
+    var input = new MetricsAggregationInput
+    {
+      SolutionName = "InclusiveSolution",
+      RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
+      AltCoverDocuments = new List<ParsedMetricsDocument>(),
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
+
+    // Act
+    var report = serviceUnderTest.BuildReport(input);
+
+    // Assert
+    var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+    var @namespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == namespaceName).Subject;
+    var type = @namespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
+    type.Metrics[MetricIdentifier.RoslynMaintainabilityIndex].Status.Should().Be(ThresholdStatus.Success);
+  }
+
+  [Test]
+  public void BuildReport_MaintainabilityValueBelowWarning_ProducesWarning()
+  {
+    // Arrange
+    const string assemblyName = "Inclusive.Assembly";
+    const string namespaceName = "Inclusive.Namespace";
+    const string typeFqn = "Inclusive.Namespace.SampleType";
+
+    var serviceUnderTest = new MetricsAggregationService();
+    var thresholds = ThresholdTestFactory.CreateUniformThresholds(
+        (MetricIdentifier.RoslynMaintainabilityIndex, 65m, 40m, true));
+
+    var roslynDocument = new ParsedMetricsDocument
+    {
+      Elements = new List<ParsedCodeElement>
+            {
+                new(CodeElementKind.Assembly, assemblyName, assemblyName),
+                new(CodeElementKind.Namespace, namespaceName, namespaceName)
+                {
+                    ParentFullyQualifiedName = assemblyName
+                },
+                new(CodeElementKind.Type, "SampleType", typeFqn)
+                {
+                    ParentFullyQualifiedName = namespaceName,
+                    Metrics = new Dictionary<MetricIdentifier, MetricValue>
+                    {
+                        [MetricIdentifier.RoslynMaintainabilityIndex] = Metric(60, "score")
                     }
                 }
             }

@@ -191,12 +191,12 @@ internal sealed class BaselineEvaluator
 
   private static ThresholdStatus EvaluateHigherIsBetter(decimal value, MetricThreshold threshold)
   {
-    if (threshold.Error.HasValue && value <= threshold.Error)
+    if (threshold.Error.HasValue && value < threshold.Error)
     {
       return ThresholdStatus.Error;
     }
 
-    if (threshold.Warning.HasValue && value <= threshold.Warning)
+    if (threshold.Warning.HasValue && value < threshold.Warning)
     {
       return ThresholdStatus.Warning;
     }
@@ -206,12 +206,12 @@ internal sealed class BaselineEvaluator
 
   private static ThresholdStatus EvaluateLowerIsBetter(decimal value, MetricThreshold threshold)
   {
-    if (threshold.Error.HasValue && value >= threshold.Error)
+    if (threshold.Error.HasValue && value > threshold.Error)
     {
       return ThresholdStatus.Error;
     }
 
-    if (threshold.Warning.HasValue && value >= threshold.Warning)
+    if (threshold.Warning.HasValue && value > threshold.Warning)
     {
       return ThresholdStatus.Warning;
     }
