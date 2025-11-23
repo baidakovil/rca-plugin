@@ -49,5 +49,17 @@ public sealed class MetricsAggregationInput
   /// Optional textual description of the baseline (for example, git commit hash).
   /// </summary>
   public string? BaselineReference { get; init; }
+
+  /// <summary>
+  /// Optional collection of suppressed symbol entries that should be attached to
+  /// the resulting report metadata.
+  /// </summary>
+  /// <remarks>
+  /// Aggregation itself does not change metric values based on suppression; instead
+  /// this information is propagated into <see cref="ReportMetadata.SuppressedSymbols"/>
+  /// so that the HTML renderer and external tools can adjust visualisation and
+  /// tooling behaviour without altering the underlying metrics.
+  /// </remarks>
+  public IList<SuppressedSymbolInfo> SuppressedSymbols { get; init; } = new List<SuppressedSymbolInfo>();
 }
 

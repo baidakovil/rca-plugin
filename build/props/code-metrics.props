@@ -16,6 +16,14 @@
     <!-- Target framework of test projects whose binaries participate in AltCover-based metrics -->
     <RcaTestTargetFramework Condition="'$(RcaTestTargetFramework)' == ''">net8.0-windows</RcaTestTargetFramework>
 
+      <!-- When true, MetricsReporter will analyze suppressed symbols via Roslyn before aggregating metrics. -->
+      <!-- The analysis is scoped to the solution source tree and respects ExcludedAssemblyNames. -->
+      <AnalyzeSuppressedSymbols Condition="'$(AnalyzeSuppressedSymbols)' == ''">true</AnalyzeSuppressedSymbols>
+      <!-- Comma- or semicolon-separated list of source code folder paths (relative to SolutionDir) -->
+      <!-- that contain assembly projects to scan for suppressed symbols. -->
+      <!-- Example: "src,src/Tools,tests" or "Source,Tests" -->
+      <SourceCodeFolders Condition="'$(SourceCodeFolders)' == ''">src,src/Tools,tests</SourceCodeFolders>
+
     <!-- Directory that contains Metrics.exe and its dependencies. -->
     <RoslynMetricsToolDir Condition="'$(RoslynMetricsToolDir)' == ''">$(SolutionDir)build\Resources\Metrics\win-arm64</RoslynMetricsToolDir>
     <!-- Full path to Metrics.exe. -->
@@ -54,6 +62,7 @@
     <CompilerVisibleProperty Include="GenerateMetricsDashboard" />
     <CompilerVisibleProperty Include="GenerateHtmlFromJson" />
     <CompilerVisibleProperty Include="ReplaceMetricsBaseline" />
+    <CompilerVisibleProperty Include="AnalyzeSuppressedSymbols" />
   </ItemGroup>
 
   <!-- Test assemblies that should receive instrumented runtime binaries for AltCover coverage -->

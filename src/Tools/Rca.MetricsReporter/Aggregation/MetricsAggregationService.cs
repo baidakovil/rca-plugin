@@ -447,7 +447,8 @@ public sealed class MetricsAggregationService
         ThresholdDescriptions = input.ThresholdMetadata.Descriptions,
         ExcludedMemberNamesPatterns = input.ExcludedMemberNamesPatterns,
         ExcludedAssemblyNames = input.ExcludedAssemblyNames,
-        ExcludedTypeNamePatterns = input.ExcludedTypeNamePatterns
+        ExcludedTypeNamePatterns = input.ExcludedTypeNamePatterns,
+        SuppressedSymbols = input.SuppressedSymbols
       };
     }
 
@@ -470,7 +471,8 @@ public sealed class MetricsAggregationService
           thresholdMetadata,
           memberFilter.GetExcludedMemberNamesPatternsString(),
           assemblyFilter.GetExcludedAssemblyPatternsString(),
-          typeFilter.GetExcludedTypePatternsString());
+          typeFilter.GetExcludedTypePatternsString(),
+          input.SuppressedSymbols);
     }
 
     private static ReportThresholdMetadata CreateThresholdMetadata(
@@ -489,7 +491,8 @@ public sealed class MetricsAggregationService
       ReportThresholdMetadata ThresholdMetadata,
       string? ExcludedMemberNamesPatterns,
       string? ExcludedAssemblyNames,
-      string? ExcludedTypeNamePatterns);
+      string? ExcludedTypeNamePatterns,
+      IList<SuppressedSymbolInfo> SuppressedSymbols);
 
   private sealed class ReportThresholdMetadata
   {

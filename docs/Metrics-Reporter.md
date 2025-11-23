@@ -6,11 +6,13 @@ Metrics Reporter — консольное приложение .NET 8, объе�
 - `metrics-report.json` — иерархическая модель Solution → Assembly → Namespace → Type → Member с 12 единообразными метриками.
 - `metrics-baseline.json` — предыдущий снепшот, служащий источником дельт и пометок `NEW`.
 - `metrics-report.html` — визуализация фактических значений и дельт.
+ - `RcaSuppressedSymbols.json` — плоский список символов, подавленных через `SuppressMessage`, с привязкой к FQN и метрике.
 
 ### Источники данных
 1. **AltCover/OpenCover**: `AltCoverSequenceCoverage`, `AltCoverBranchCoverage`, `AltCoverCyclomaticComplexity`, `AltCoverNPathComplexity`.
 2. **Roslyn (Microsoft.CodeAnalysis.Metrics)**: `RoslynMaintainabilityIndex`, `RoslynCyclomaticComplexity`, `RoslynClassCoupling`, `RoslynDepthOfInheritance`, `RoslynSourceLines`, `RoslynExecutableLines`.
 3. **SARIF (Roslyn анализаторы)**: количество нарушений `SarifCaRuleViolations`, `SarifIdeRuleViolations`.
+4. **SuppressMessage-анализ** (опционально): карта подавленных символов, полученная из атрибутов `SuppressMessage` и сопоставленная с Roslyn-метриками (`CA1506 → RoslynClassCoupling`, `CA1502 → RoslynCyclomaticComplexity`, `CA1505 → RoslynMaintainabilityIndex`, `CA1501 → RoslynDepthOfInheritance`). Анализ выполняется только для файлов, расположенных в папках, указанных в `SourceCodeFolders` (например, `["src", "src/Tools", "tests"]`). Имя сборки извлекается из первого сегмента пути после соответствующей папки с исходниками.
 
 ### HTML Dashboard Highlights
 - **Фильтрация сборок**: при агрегации исключаются сборки, перечисленные в `ExcludedAssemblyNames`; в HTML они не отображаются.
@@ -105,6 +107,9 @@ Metrics Reporter — консольное приложение .NET 8, объе�
   - Вызывает `Rca.MetricsReporter.exe` из `src/Tools/Rca.MetricsReporter/bin/<Configuration>/net8.0`.
   - Создает каталог отчётов (`$(MetricsDir)\Report`) и записывает JSON/HTML + лог.
 - Благодаря этому, после стандартного `dotnet build --no-incremental` в `build/Metrics/Report` автоматически появляются `metrics-report.json` и `metrics-report.html`.
+- **Настройка анализа suppressed-символов**: В `build/Props/code-metrics.props` можно настроить:
+  - `AnalyzeSuppressedSymbols` — включить/выключить анализ (по умолчанию `true`).
+  - `SourceCodeFolders` — список папок с исходниками через запятую (по умолчанию `"src,src/Tools,tests"`). Пути указываются относительно корня решения (`SolutionDir`). Анализатор сканирует только файлы в этих папках и определяет имя сборки по первому сегменту пути после соответствующей папки.
 
 ### Автоматическое управление Baseline
 

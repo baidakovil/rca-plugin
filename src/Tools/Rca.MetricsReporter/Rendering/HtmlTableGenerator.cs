@@ -16,6 +16,7 @@ internal sealed class HtmlTableGenerator
   private readonly MetricIdentifier[] _metricOrder;
   private int _idCounter;
   private CoverageLinkBuilder? _coverageLinkBuilder;
+  private Dictionary<(string Fqn, MetricIdentifier Metric), SuppressedSymbolInfo>? _suppressedIndex;
 
   /// <summary>
   /// Initializes a new instance of the <see cref="HtmlTableGenerator"/> class.
@@ -38,6 +39,7 @@ internal sealed class HtmlTableGenerator
 
     _idCounter = 0;
     _coverageLinkBuilder = string.IsNullOrWhiteSpace(coverageHtmlDir) ? null : new CoverageLinkBuilder(coverageHtmlDir);
+    _suppressedIndex = BuildSuppressedIndex(report);
     var builder = new StringBuilder();
 
     builder.AppendLine("<div class=\"table-container\"> ");
@@ -324,8 +326,68 @@ internal sealed class HtmlTableGenerator
       node.Metrics.TryGetValue(mid, out var val);
       var status = val is null ? "na" : val.Status.ToString().ToLowerInvariant();
       var hasDelta = val is not null && val.Delta.HasValue && val.Delta.Value != 0;
-      builder.AppendLine($"      <{metricTag} class=\"metric\" data-col=\"{mid}\" data-status=\"{status}\" data-has-delta=\"{(hasDelta ? "true" : "false")}\" data-metric-id=\"{mid}\">{MetricValueRenderer.Render(val)}</{metricTag}>");
+      var suppression = TryGetSuppression(node, mid);
+      var suppressedAttr = suppression is null ? string.Empty : " data-suppressed=\"true\"";
+      var tooltipAttr = BuildSuppressionTooltipAttribute(suppression);
+      builder.AppendLine($"      <{metricTag} class=\"metric\" data-col=\"{mid}\" data-status=\"{status}\" data-has-delta=\"{(hasDelta ? "true" : "false")}\" data-metric-id=\"{mid}\"{suppressedAttr}{tooltipAttr}>{MetricValueRenderer.Render(val)}</{metricTag}>");
     }
+  }
+
+  private Dictionary<(string Fqn, MetricIdentifier Metric), SuppressedSymbolInfo> BuildSuppressedIndex(MetricsReport report)
+  {
+    var result = new Dictionary<(string Fqn, MetricIdentifier Metric), SuppressedSymbolInfo>();
+    foreach (var entry in report.Metadata.SuppressedSymbols)
+    {
+      if (string.IsNullOrWhiteSpace(entry.FullyQualifiedName) || string.IsNullOrWhiteSpace(entry.Metric))
+      {
+        continue;
+      }
+
+      if (!Enum.TryParse<MetricIdentifier>(entry.Metric, out var metricIdentifier))
+      {
+        continue;
+      }
+
+      var key = (entry.FullyQualifiedName, metricIdentifier);
+      // Last-in-wins is acceptable here: multiple suppressions for the same
+      // symbol/metric pair are rare and the most recent justification is likely
+      // the one users care about.
+      result[key] = entry;
+    }
+
+    return result;
+  }
+
+  private SuppressedSymbolInfo? TryGetSuppression(MetricsNode node, MetricIdentifier metric)
+  {
+    if (_suppressedIndex is null)
+    {
+      return null;
+    }
+
+    if (string.IsNullOrWhiteSpace(node.FullyQualifiedName))
+    {
+      return null;
+    }
+
+    return _suppressedIndex.TryGetValue((node.FullyQualifiedName, metric), out var info) ? info : null;
+  }
+
+  private static string BuildSuppressionTooltipAttribute(SuppressedSymbolInfo? suppression)
+  {
+    if (suppression is null)
+    {
+      return string.Empty;
+    }
+
+    var justification = suppression.Justification;
+    if (string.IsNullOrWhiteSpace(justification))
+    {
+      justification = "Suppressed via SuppressMessage.";
+    }
+
+    var escaped = WebUtility.HtmlEncode($"Suppressed {suppression.RuleId}: {justification}");
+    return $" title=\"{escaped}\"";
   }
 }
 

@@ -191,14 +191,17 @@
       <MetricsReporterExcludedMembersArg Condition="'$(ExcludedMemberNamesPatterns)' != ''"> --excluded-members "$(ExcludedMemberNamesPatterns)"</MetricsReporterExcludedMembersArg>
       <MetricsReporterExcludedAssembliesArg Condition="'$(ExcludedAssemblyNames)' != ''"> --excluded-assemblies "$(ExcludedAssemblyNames)"</MetricsReporterExcludedAssembliesArg>
       <MetricsReporterExcludedTypesArg Condition="'$(ExcludedTypeNamePatterns)' != ''"> --excluded-types "$(ExcludedTypeNamePatterns)"</MetricsReporterExcludedTypesArg>
+      <!-- When AnalyzeSuppressedSymbols is enabled, instruct MetricsReporter to analyze suppressed symbols and persist them to RcaSuppressedSymbols.json. -->
+      <MetricsReporterSuppressedSymbolsArg Condition="'$(AnalyzeSuppressedSymbols)' == 'true'"> --analyze-suppressed-symbols --suppressed-symbols "$(RcaSuppressedSymbolsJson)" --solution-dir "$(SolutionDir)" --source-code-folders "$(SourceCodeFolders)"</MetricsReporterSuppressedSymbolsArg>
       <MetricsReporterReplaceBaselineArg Condition="'$(ReplaceMetricsBaseline)' == 'true'"> --replace-baseline</MetricsReporterReplaceBaselineArg>
       <MetricsReporterBaselineStoragePathArg Condition="'$(ReplaceMetricsBaseline)' == 'true' and '$(MetricsReportStoragePath)' != ''"> --baseline-storage-path "$(MetricsReportStoragePath)"</MetricsReporterBaselineStoragePathArg>
       <MetricsReporterCoverageHtmlDirArg Condition="Exists('$(CoverageHtmlDir)')"> --coverage-html-dir "$(CoverageHtmlDir)"</MetricsReporterCoverageHtmlDirArg>
-      <MetricsReporterCommand>"$(MetricsReporterExe)" --solution-name "$(MetricsSolutionName)" --metrics-dir "$(RcaMetricsDir)"$(MetricsReporterAltCoverArg)$(MetricsReporterRoslynArgs)$(MetricsReporterSarifArgs)$(MetricsReporterBaselineArg)$(MetricsReporterBaselineRefArg) --output-json "$(MetricsReportJson)" --output-html "$(MetricsReportHtml)"$(MetricsReporterThresholdArg)$(MetricsReporterExcludedMembersArg)$(MetricsReporterExcludedAssembliesArg)$(MetricsReporterExcludedTypesArg)$(MetricsReporterReplaceBaselineArg)$(MetricsReporterBaselineStoragePathArg)$(MetricsReporterCoverageHtmlDirArg)</MetricsReporterCommand>
+      <MetricsReporterCommand>"$(MetricsReporterExe)" --solution-name "$(MetricsSolutionName)" --metrics-dir "$(RcaMetricsDir)"$(MetricsReporterAltCoverArg)$(MetricsReporterRoslynArgs)$(MetricsReporterSarifArgs)$(MetricsReporterBaselineArg)$(MetricsReporterBaselineRefArg) --output-json "$(MetricsReportJson)" --output-html "$(MetricsReportHtml)"$(MetricsReporterThresholdArg)$(MetricsReporterExcludedMembersArg)$(MetricsReporterExcludedAssembliesArg)$(MetricsReporterExcludedTypesArg)$(MetricsReporterSuppressedSymbolsArg)$(MetricsReporterReplaceBaselineArg)$(MetricsReporterBaselineStoragePathArg)$(MetricsReporterCoverageHtmlDirArg)</MetricsReporterCommand>
     </PropertyGroup>
 
     <Message Text="Generating HTML report from existing JSON: $(InputJsonFile)" Importance="High" Condition="'$(GenerateHtmlFromJson)' == 'true' and Exists('$(MetricsReporterExe)')" />
     <Message Text="Generating metrics dashboard (Rca.MetricsReporter.Tests)." Importance="High" Condition="'$(GenerateHtmlFromJson)' != 'true' and Exists('$(MetricsReporterExe)')" />
+    <Message Text="MetricsReporterCommand: $(MetricsReporterCommand)" Importance="High" Condition="Exists('$(MetricsReporterExe)')" />
     <MakeDir Directories="$(MetricsReportDir)" />
     <Exec Command="$(MetricsReporterCommand)"
           WorkingDirectory="$(SolutionDir)"

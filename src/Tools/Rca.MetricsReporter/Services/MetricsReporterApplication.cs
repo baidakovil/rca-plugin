@@ -95,13 +95,53 @@ public sealed class MetricsReporterApplication
 
     var baseline = await BaselineLoader.LoadAsync(options.BaselinePath, cancellationToken).ConfigureAwait(false);
 
+    // Optionally compute suppressed symbol metadata before parsing metrics so that
+    // both the standalone JSON artefact and the final report share the same view.
+    IList<SuppressedSymbolInfo> suppressedSymbols = new List<SuppressedSymbolInfo>();
+    if (options.AnalyzeSuppressedSymbols)
+    {
+      try
+      {
+        if (string.IsNullOrWhiteSpace(options.SuppressedSymbolsPath))
+        {
+          throw new ArgumentException("Suppressed symbols path must be specified when AnalyzeSuppressedSymbols is enabled.", nameof(options));
+        }
+
+        var suppressionRoot = ResolveSuppressedSymbolsRootDirectory(options);
+        var sourceCodeFolders = options.SourceCodeFolders ?? Array.Empty<string>();
+        logger.LogInformation($"Analyzing suppressed symbols via Roslyn (root: '{suppressionRoot}', source folders: [{string.Join(", ", sourceCodeFolders)}], excluded assemblies: '{options.ExcludedAssemblyNames ?? string.Empty}').");
+        var suppressedReport = Processing.SuppressedSymbolsAnalyzer.Analyze(suppressionRoot, sourceCodeFolders, options.ExcludedAssemblyNames, cancellationToken);
+
+        var suppressedDirectory = Path.GetDirectoryName(options.SuppressedSymbolsPath);
+        if (!string.IsNullOrWhiteSpace(suppressedDirectory) && !Directory.Exists(suppressedDirectory))
+        {
+          Directory.CreateDirectory(suppressedDirectory);
+        }
+
+        await SuppressedSymbolsWriter.WriteAsync(suppressedReport, options.SuppressedSymbolsPath, cancellationToken).ConfigureAwait(false);
+        suppressedSymbols = suppressedReport.SuppressedSymbols;
+        logger.LogInformation($"Suppressed symbols analysis completed. Entries: {suppressedSymbols.Count}");
+      }
+      catch (Exception ex)
+      {
+        logger.LogError("Failed to analyze suppressed symbols. Proceeding without suppression metadata.", ex);
+        suppressedSymbols = new List<SuppressedSymbolInfo>();
+      }
+    }
+    else
+    {
+      // If analysis is disabled, still try to load pre-existing suppression metadata
+      // so that manual or previous runs can be reused.
+      suppressedSymbols = await SuppressedSymbolsLoader.LoadAsync(options.SuppressedSymbolsPath, cancellationToken).ConfigureAwait(false);
+    }
+
     var documentsResult = await ParseAllDocumentsAsync(options, logger, cancellationToken).ConfigureAwait(false);
     if (documentsResult.ExitCode != MetricsReporterExitCode.Success)
     {
       return documentsResult.ExitCode;
     }
 
-    var aggregationInput = BuildAggregationInput(options, documentsResult, thresholdsResult.Thresholds, baseline);
+    var aggregationInput = BuildAggregationInput(options, documentsResult, thresholdsResult.Thresholds, baseline, suppressedSymbols);
     var report = BuildReportWithLogging(aggregationInput, options, logger);
     if (report is null)
     {
@@ -129,6 +169,51 @@ public sealed class MetricsReporterApplication
 
     logger.LogInformation("Metrics Reporter completed successfully.");
     return MetricsReporterExitCode.Success;
+  }
+
+  private static string ResolveSuppressedSymbolsRootDirectory(MetricsReporterOptions options)
+  {
+    // 1. Explicit solution directory wins if it looks valid.
+    if (!string.IsNullOrWhiteSpace(options.SolutionDirectory))
+    {
+      var explicitRoot = Path.GetFullPath(options.SolutionDirectory);
+      if (Directory.Exists(explicitRoot))
+      {
+        return explicitRoot;
+      }
+    }
+
+    // 2. Otherwise start from MetricsDirectory (if available) or the process base directory
+    // and walk upwards until we find a directory that contains a solution file (*.sln).
+    var startDirectory = !string.IsNullOrWhiteSpace(options.MetricsDirectory)
+      ? Path.GetFullPath(options.MetricsDirectory)
+      : AppContext.BaseDirectory;
+
+    var currentDirectory = new DirectoryInfo(startDirectory);
+    while (currentDirectory is not null)
+    {
+      try
+      {
+        var hasSolution = currentDirectory.GetFiles("*.sln").Length > 0;
+        if (hasSolution)
+        {
+          return currentDirectory.FullName;
+        }
+      }
+      catch (IOException)
+      {
+        // Ignore IO issues and continue walking up the tree.
+      }
+      catch (UnauthorizedAccessException)
+      {
+        // Ignore permission issues when probing for solution files.
+      }
+
+      currentDirectory = currentDirectory.Parent;
+    }
+
+    // 3. Fallback to the original starting directory if no solution file was discovered.
+    return startDirectory;
   }
 
   /// <summary>
@@ -300,7 +385,8 @@ public sealed class MetricsReporterApplication
       MetricsReporterOptions options,
       (MetricsReporterExitCode ExitCode, IList<ParsedMetricsDocument> AltCoverDocuments, IList<ParsedMetricsDocument> RoslynDocuments, IList<ParsedMetricsDocument> SarifDocuments) documentsResult,
       IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds,
-      MetricsReport? baseline)
+      MetricsReport? baseline,
+      IList<SuppressedSymbolInfo> suppressedSymbols)
   {
     var memberFilter = MemberFilter.FromString(options.ExcludedMemberNamesPatterns);
     var assemblyFilter = AssemblyFilter.FromString(options.ExcludedAssemblyNames);
@@ -324,7 +410,8 @@ public sealed class MetricsReporterApplication
                 ? options.ThresholdsPath
                 : !string.IsNullOrWhiteSpace(options.ThresholdsJson) ? "(inline thresholds)" : null
       },
-      BaselineReference = options.BaselineReference
+      BaselineReference = options.BaselineReference,
+      SuppressedSymbols = suppressedSymbols
     };
   }
 

@@ -129,5 +129,58 @@ public sealed class MetricsReporterOptions
   /// coverage HTML files in this directory. Links are only created if the target HTML file exists.
   /// </remarks>
   public string? CoverageHtmlDir { get; init; }
+
+  /// <summary>
+  /// When <see langword="true"/>, performs an additional Roslyn-based scan of the solution
+  /// to discover <see cref="System.Diagnostics.CodeAnalysis.SuppressMessageAttribute"/> usages
+  /// before aggregating metrics.
+  /// </summary>
+  /// <remarks>
+  /// The scan is limited to <c>.cs</c> files under <see cref="SolutionDirectory"/> and respects
+  /// <see cref="ExcludedAssemblyNames"/> by skipping source roots whose assembly names match
+  /// any of the configured exclusion patterns. Results are written to
+  /// <see cref="SuppressedSymbolsPath"/> and also embedded into the final <c>metrics-report.json</c>
+  /// so that the HTML dashboard can visually distinguish suppressed metrics.
+  /// </remarks>
+  public bool AnalyzeSuppressedSymbols { get; init; }
+
+  /// <summary>
+  /// Optional path to the JSON file where suppressed symbol metadata is stored.
+  /// </summary>
+  /// <remarks>
+  /// When <see cref="AnalyzeSuppressedSymbols"/> is enabled, the application will generate
+  /// <c>RcaSuppressedSymbols.json</c> at this path. During aggregation the same file is read
+  /// back and its contents are embedded into the report metadata to make the information
+  /// available for HTML rendering and external tooling.
+  /// </remarks>
+  public string? SuppressedSymbolsPath { get; init; }
+
+  /// <summary>
+  /// Root directory of the solution source tree used for suppressed symbol analysis.
+  /// </summary>
+  /// <remarks>
+  /// When <see cref="AnalyzeSuppressedSymbols"/> is enabled, this directory is used as
+  /// the base for resolving paths in <see cref="SourceCodeFolders"/>. The scanner derives
+  /// a logical assembly name from the folder structure relative to the source code folders
+  /// and applies <see cref="ExcludedAssemblyNames"/> filters before processing files.
+  /// </remarks>
+  public string? SolutionDirectory { get; init; }
+
+  /// <summary>
+  /// List of source code folder paths (relative to <see cref="SolutionDirectory"/>)
+  /// that contain assembly projects to scan for suppressed symbols.
+  /// </summary>
+  /// <remarks>
+  /// Each folder in this list is scanned recursively for <c>.cs</c> files. The assembly name
+  /// is derived from the first segment after the source code folder in the file path.
+  /// For example, if <c>SourceCodeFolders = ["src", "src/Tools", "tests"]</c> and a file
+  /// is located at <c>src/Rca.TestAdapter/File.cs</c>, the assembly name is <c>Rca.TestAdapter</c>.
+  /// For <c>src/Tools/Rca.MetricsReporter/File.cs</c>, the assembly name is <c>Rca.MetricsReporter</c>
+  /// because <c>src/Tools</c> is matched first (longest prefix match).
+  /// </remarks>
+  /// <example>
+  /// Typical values: <c>["src", "src/Tools", "tests"]</c> or <c>["Source", "Tests"]</c>
+  /// </example>
+  public IReadOnlyCollection<string> SourceCodeFolders { get; init; } = [];
 }
 

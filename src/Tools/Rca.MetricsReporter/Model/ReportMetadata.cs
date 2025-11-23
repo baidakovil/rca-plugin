@@ -63,5 +63,18 @@ public sealed class ReportMetadata
   /// This property is used for display purposes in the HTML report header.
   /// </remarks>
   public string? ExcludedTypeNamePatterns { get; init; }
+
+  /// <summary>
+  /// Optional collection of suppressed symbol entries that were taken into account
+  /// when computing this report.
+  /// </summary>
+  /// <remarks>
+  /// Each entry originates from a <see cref="System.Diagnostics.CodeAnalysis.SuppressMessageAttribute"/>
+  /// and is keyed by normalized fully qualified name and metric identifier. The HTML
+  /// renderer uses this information to visually distinguish metrics that are suppressed
+  /// (for example, by rendering them in a light azure color) and to surface the
+  /// justification text as a tooltip on hover without re-running analysis.
+  /// </remarks>
+  public IList<SuppressedSymbolInfo> SuppressedSymbols { get; init; } = new List<SuppressedSymbolInfo>();
 }
 

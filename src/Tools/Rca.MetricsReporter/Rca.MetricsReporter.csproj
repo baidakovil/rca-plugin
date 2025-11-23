@@ -9,5 +9,9 @@
   <ItemGroup>
     <AdditionalFiles Include="CodeMetricsConfig.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Roslyn APIs used for lightweight scanning of SuppressMessage attributes in source files. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.10.0" />
+  </ItemGroup>
 </Project>
 

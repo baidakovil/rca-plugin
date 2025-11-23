@@ -187,6 +187,21 @@
         "thresholdDescriptions": {
           "type": "object",
           "additionalProperties": { "type": ["string", "null"] }
+        },
+        "suppressedSymbols": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "filePath": { "type": "string" },
+              "fullyQualifiedName": { "type": "string" },
+              "ruleId": { "type": "string" },
+              "metric": { "type": "string" },
+              "justification": { "type": ["string", "null"] }
+            },
+            "required": ["filePath", "fullyQualifiedName", "ruleId", "metric"],
+            "additionalProperties": false
+          }
         }
       },
       "required": ["generatedAtUtc", "paths"],

@@ -29,6 +29,8 @@ internal static class HtmlStylesGenerator
   private const string StatusErrorColor = "rgba(217, 83, 79, 1)";
   private const string DeltaNeutralColor = "rgba(140, 140, 140, 1)";
   private const string IteratorIndicatorColor = "rgba(128, 128, 128, 0.9)";
+  private const string SuppressedMetricOverlayColor = "rgba(173, 216, 230, 0.25)";
+  private const string SuppressedMetricForegroundColor = "rgba(0, 70, 110, 0.9)";
 
   private const string DefaultGap = "8px";
   private const string ControlBlockGap = "16px";
@@ -287,6 +289,18 @@ internal static class HtmlStylesGenerator
     builder.AppendLine(FormattableString.Invariant($".metrics tr.leaf-row .metric[data-status='warning'] .metric-value {{ color: {StatusWarningColor}; }}"));
     builder.AppendLine(".metrics tr.leaf-row .metric-value { font-weight: normal; }");
     builder.AppendLine(".metric-value { font-weight: normal; }");
+    // WHY: Suppressed metrics should remain visible but de-emphasised and clearly
+    // distinguished from both normal, warning and error states. A light azure,
+    // semi-transparent overlay keeps the cell readable while signalling that the
+    // high severity is intentionally ignored via SuppressMessage.
+    // Suppressed styles must have equal or greater specificity than error/warning
+    // styles to override them when both attributes are present.
+    builder.AppendLine(FormattableString.Invariant($".metrics tr.node-header th.metric[data-suppressed='true'] {{ box-shadow: inset 0 0 0 9999px {SuppressedMetricOverlayColor} !important; }}"));
+    builder.AppendLine(FormattableString.Invariant($".metrics tr.node-header th.metric[data-suppressed='true'] .metric-value {{ color: {SuppressedMetricForegroundColor} !important; }}"));
+    builder.AppendLine(FormattableString.Invariant($".metrics tr.node-item td.metric[data-suppressed='true'] {{ box-shadow: inset 0 0 0 9999px {SuppressedMetricOverlayColor} !important; }}"));
+    builder.AppendLine(FormattableString.Invariant($".metrics tr.node-item td.metric[data-suppressed='true'] .metric-value {{ color: {SuppressedMetricForegroundColor} !important; }}"));
+    builder.AppendLine(FormattableString.Invariant($".metrics tr.leaf-row .metric[data-suppressed='true'] {{ box-shadow: inset 0 0 0 9999px {SuppressedMetricOverlayColor} !important; }}"));
+    builder.AppendLine(FormattableString.Invariant($".metrics tr.leaf-row .metric[data-suppressed='true'] .metric-value {{ color: {SuppressedMetricForegroundColor} !important; }}"));
   }
 
   private static void AppendSymbolColumnStyles(StringBuilder builder)

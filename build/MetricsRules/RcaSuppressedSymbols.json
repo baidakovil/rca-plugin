@@ -1,0 +1,47 @@
+{
+  "generatedAtUtc": "2025-11-23T19:21:50.5672806Z",
+  "suppressedSymbols": [
+    {
+      "filePath": "src\\Rca.TestAdapter\\Discovery\\RevitTestDiscoverer.cs",
+      "fullyQualifiedName": "Rca.TestAdapter.RevitTestDiscoverer.DiscoverTests(...)",
+      "ruleId": "CA1506",
+      "metric": "RoslynClassCoupling",
+      "justification": "Revit test discoverer is an orchestration point over VSTest abstractions and RCA discovery services; further decomposition would harm clarity."
+    },
+    {
+      "filePath": "src\\Rca.TestAdapter\\Execution\\NUnitSourceTestDiscoverer.cs",
+      "fullyQualifiedName": "Rca.TestAdapter.NUnitSourceTestDiscoverer.DiscoverTests(...)",
+      "ruleId": "CA1506",
+      "metric": "RoslynClassCoupling",
+      "justification": "NUnitSourceTestDiscoverer orchestrates per-source discovery and runtime path annotation; low-level NUnit reflection logic is already encapsulated in NUnitTestDiscoverer."
+    },
+    {
+      "filePath": "src\\Rca.TestAdapter\\Execution\\PipeTestExecutionTransport.cs",
+      "fullyQualifiedName": "Rca.TestAdapter.PipeTestExecutionTransport.Execute(...)",
+      "ruleId": "CA1506",
+      "metric": "RoslynClassCoupling",
+      "justification": "PipeTestExecutionTransport is responsible for low-level pipe transport concerns (NamedPipe, JSON, DTO mapping). Further splitting would fragment cohesive transport logic without improving design sustainability."
+    },
+    {
+      "filePath": "src\\Rca.TestAdapter\\Execution\\RevitTestRunCoordinator.cs",
+      "fullyQualifiedName": "Rca.TestAdapter.RevitTestRunCoordinator.ExecuteTests(...)",
+      "ruleId": "CA1506",
+      "metric": "RoslynClassCoupling",
+      "justification": "Revit test run coordinator is an orchestration point over VSTest abstractions and RCA execution services; low-level details are already delegated to dedicated components."
+    },
+    {
+      "filePath": "src\\Rca.TestAdapter\\Execution\\RevitTestRunCoordinator.cs",
+      "fullyQualifiedName": "Rca.TestAdapter.RevitTestRunCoordinator.ExecuteTestGroup(...)",
+      "ruleId": "CA1506",
+      "metric": "RoslynClassCoupling",
+      "justification": "ExecuteTestGroup is an orchestration helper that maps RCA pipe results to VSTest TestResult instances; lower-level concerns are already delegated to RevitPipeClient and transport."
+    },
+    {
+      "filePath": "src\\Rca.UI\\obj\\Debug\\net8.0-windows\\RcaDockablePanel.g.cs",
+      "fullyQualifiedName": "Rca.UI.Views.RcaDockablePanel.Connect(...)",
+      "ruleId": "CA1502",
+      "metric": "RoslynCyclomaticComplexity",
+      "justification": null
+    }
+  ]
+}

@@ -80,6 +80,10 @@ internal sealed class MetricsReporterConsoleHost
     string? excludedAssemblyNames = null;
     string? excludedTypeNamePatterns = null;
     string? excludedMemberNamesPatterns = null;
+    bool analyzeSuppressedSymbols = false;
+    string? suppressedSymbolsPath = null;
+    string? solutionDirectory = null;
+    var sourceCodeFolders = new List<string>();
     bool replaceBaseline = false;
     string? baselineStoragePath = null;
     string? coverageHtmlDir = null;
@@ -143,6 +147,23 @@ internal sealed class MetricsReporterConsoleHost
         case "--coverage-html-dir":
           coverageHtmlDir = RequireValue(args, ref index, argument);
           break;
+        case "--analyze-suppressed-symbols":
+          analyzeSuppressedSymbols = true;
+          break;
+        case "--suppressed-symbols":
+          suppressedSymbolsPath = RequireValue(args, ref index, argument);
+          break;
+        case "--solution-dir":
+          solutionDirectory = RequireValue(args, ref index, argument);
+          break;
+        case "--source-code-folders":
+          var foldersValue = RequireValue(args, ref index, argument);
+          // Support comma- or semicolon-separated list
+          var folders = foldersValue.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(f => f.Trim())
+            .Where(f => !string.IsNullOrWhiteSpace(f));
+          sourceCodeFolders.AddRange(folders);
+          break;
         default:
           throw new ArgumentException($"Unknown argument '{argument}'. Use --help to view usage.", argument);
       }
@@ -190,6 +211,11 @@ internal sealed class MetricsReporterConsoleHost
       ReplaceMetricsBaseline = replaceBaseline,
       MetricsReportStoragePath = baselineStoragePath is null ? null : Path.GetFullPath(baselineStoragePath),
       CoverageHtmlDir = coverageHtmlDir is null ? null : Path.GetFullPath(coverageHtmlDir)
+      ,
+      AnalyzeSuppressedSymbols = analyzeSuppressedSymbols,
+      SuppressedSymbolsPath = suppressedSymbolsPath is null ? null : Path.GetFullPath(suppressedSymbolsPath),
+      SolutionDirectory = solutionDirectory is null ? null : Path.GetFullPath(solutionDirectory),
+      SourceCodeFolders = sourceCodeFolders.ToArray()
     };
   }
 
@@ -228,6 +254,11 @@ internal sealed class MetricsReporterConsoleHost
     _outputWriter.WriteLine("  --excluded-members <list> Comma-separated or semicolon-separated list of member name patterns to exclude.");
     _outputWriter.WriteLine("  --excluded-assemblies <list> Comma-separated or semicolon-separated list of assembly patterns to exclude.");
     _outputWriter.WriteLine("  --excluded-types <list> Comma-separated or semicolon-separated list of type name patterns to exclude.");
+    _outputWriter.WriteLine("  --analyze-suppressed-symbols  Analyze SuppressMessage attributes and persist suppressed symbol metadata.");
+    _outputWriter.WriteLine("  --suppressed-symbols <path>  Path to JSON file where suppressed symbol metadata will be stored.");
+    _outputWriter.WriteLine("  --solution-dir <path>        Root directory of the solution source tree for suppressed symbol analysis.");
+    _outputWriter.WriteLine("  --source-code-folders <list> Comma- or semicolon-separated list of source code folder paths (relative to solution-dir)");
+    _outputWriter.WriteLine("                               that contain assembly projects. Example: \"src,src/Tools,tests\".");
   }
 }
 
