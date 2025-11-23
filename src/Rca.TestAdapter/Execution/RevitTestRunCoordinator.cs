@@ -30,9 +30,18 @@ internal interface ITestRunCoordinator
 }
 
 /// <summary>
-/// Default implementation of <see cref="ITestRunCoordinator"/> that uses
-/// <see cref="RevitTestInitializer"/> and <see cref="RevitPipeClient"/> to execute tests
-/// inside a running Revit instance.
+/// Default implementation of <see cref="ITestRunCoordinator"/> that coordinates
+/// Revit integration test execution. This class encapsulates the high-level flow:
+/// checking Revit availability, grouping tests by runtime assembly, dispatching
+/// execution via <see cref="RevitPipeClient"/>, and translating raw pipe results
+/// into VSTest <see cref="TestResult"/> instances.
+/// <remarks>
+/// WHY: We keep this orchestration logic in a single place so that
+/// <see cref="RevitTestExecutor"/> remains a thin adapter over VSTest APIs. Low-level
+/// concerns such as pipe transport and JSON serialization are delegated to
+/// <see cref="RevitPipeClient"/> and <see cref="PipeTestExecutionTransport"/>, which
+/// makes the coordination code easier to reason about and maintain.
+/// </remarks>
 /// </summary>
 internal sealed class RevitTestRunCoordinator : ITestRunCoordinator
 {
@@ -126,6 +135,16 @@ internal sealed class RevitTestRunCoordinator : ITestRunCoordinator
     return test.GetPropertyValue(AdapterProperties.RuntimeAssemblyPath, defaultValue: test.Source);
   }
 
+  /// <summary>
+  /// Executes a homogeneous group of tests that share the same runtime assembly path.
+  /// </summary>
+  /// <param name="assemblyPath">The runtime assembly path used for execution.</param>
+  /// <param name="sourceTests">The tests mapped to this assembly path.</param>
+  /// <param name="frameworkHandle">VSTest framework handle for logging and recording results.</param>
+  [SuppressMessage(
+      "Microsoft.Maintainability",
+      "CA1506:Avoid excessive class coupling",
+      Justification = "ExecuteTestGroup is an orchestration helper that maps RCA pipe results to VSTest TestResult instances; lower-level concerns are already delegated to RevitPipeClient and transport.")]
   private void ExecuteTestGroup(string assemblyPath, List<TestCase> sourceTests, IFrameworkHandle frameworkHandle)
   {
     try

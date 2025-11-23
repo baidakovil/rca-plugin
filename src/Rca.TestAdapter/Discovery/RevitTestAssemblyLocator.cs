@@ -25,6 +25,7 @@ internal interface ITestAssemblyLocator
 /// </summary>
 internal sealed class RevitTestAssemblyLocator : ITestAssemblyLocator
 {
+  /// <inheritdoc />
   public bool TryLocateRuntimeTestAssembly(
       IEnumerable<string> sources,
       IMessageLogger logger,
@@ -39,24 +40,81 @@ internal sealed class RevitTestAssemblyLocator : ITestAssemblyLocator
     hostSource = string.Empty;
     testAssemblyPath = string.Empty;
 
-    hostSource = sources.FirstOrDefault(s =>
-        string.Equals(Path.GetFileName(s), "Rca.Integration.Revit.Tests.dll", StringComparison.OrdinalIgnoreCase))
-        ?? string.Empty;
-
-    if (string.IsNullOrEmpty(hostSource))
+    if (!TryResolveHostSource(sources, logger, out hostSource))
     {
-      logger.SendMessage(TestMessageLevel.Warning, "RCA Test Adapter: No matching host source provided. Discovery skipped.");
-      logger.SendMessage(TestMessageLevel.Informational, "RCA Test Adapter: Test discovery completed (0 tests)");
       return false;
     }
 
-    var testRoot = Path.Combine(
+    var testRoot = GetTestRoot();
+    if (!TryResolveTestAssemblyPath(testRoot, logger, out testAssemblyPath))
+    {
+      hostSource = string.Empty;
+      return false;
+    }
+
+    return true;
+  }
+
+  /// <summary>
+  /// Determines the host source DLL from the list of VSTest sources.
+  /// </summary>
+  /// <param name="sources">Sources provided by VSTest.</param>
+  /// <param name="logger">Logger used for diagnostic messages.</param>
+  /// <param name="hostSource">The resolved host source path, if any.</param>
+  /// <returns>
+  /// <see langword="true"/> if a matching host source was found; otherwise <see langword="false"/>.
+  /// </returns>
+  private static bool TryResolveHostSource(
+      IEnumerable<string> sources,
+      IMessageLogger logger,
+      out string hostSource)
+  {
+    hostSource = sources
+        .FirstOrDefault(s =>
+            string.Equals(Path.GetFileName(s), "Rca.Integration.Revit.Tests.dll", StringComparison.OrdinalIgnoreCase))
+        ?? string.Empty;
+
+    if (!string.IsNullOrEmpty(hostSource))
+    {
+      return true;
+    }
+
+    logger.SendMessage(TestMessageLevel.Warning, "RCA Test Adapter: No matching host source provided. Discovery skipped.");
+    logger.SendMessage(TestMessageLevel.Informational, "RCA Test Adapter: Test discovery completed (0 tests)");
+    return false;
+  }
+
+  /// <summary>
+  /// Builds the RCA test root path under the local application data folder.
+  /// </summary>
+  private static string GetTestRoot()
+  {
+    return Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "RCA",
         "Test");
+  }
+
+  /// <summary>
+  /// Resolves the concrete runtime test assembly path from the RCA test root,
+  /// using the latest deployment folder.
+  /// </summary>
+  /// <param name="testRoot">The RCA test root directory.</param>
+  /// <param name="logger">Logger used for diagnostic messages.</param>
+  /// <param name="testAssemblyPath">The resolved runtime test assembly path, if any.</param>
+  /// <returns>
+  /// <see langword="true"/> if the runtime assembly path was resolved successfully;
+  /// otherwise <see langword="false"/>.
+  /// </returns>
+  private static bool TryResolveTestAssemblyPath(
+      string testRoot,
+      IMessageLogger logger,
+      out string testAssemblyPath)
+  {
+    testAssemblyPath = string.Empty;
 
     var latestFolder = GetLatestFolder(testRoot);
-    if (string.IsNullOrEmpty(latestFolder) || !Directory.Exists(latestFolder))
+    if (string.IsNullOrEmpty(latestFolder))
     {
       logger.SendMessage(TestMessageLevel.Informational, $"RCA Test Adapter: No test deploy folder found under {testRoot}");
       logger.SendMessage(TestMessageLevel.Informational, "RCA Test Adapter: Test discovery completed (0 tests)");
@@ -65,16 +123,15 @@ internal sealed class RevitTestAssemblyLocator : ITestAssemblyLocator
 
     logger.SendMessage(TestMessageLevel.Informational, $"RCA Test Adapter: Latest test folder: {latestFolder}");
 
-    testAssemblyPath = Path.Combine(latestFolder, "Rca.Integration.Revit.Tests.dll");
-    if (!File.Exists(testAssemblyPath))
+    var candidate = Path.Combine(latestFolder, "Rca.Integration.Revit.Tests.dll");
+    if (!File.Exists(candidate))
     {
-      logger.SendMessage(TestMessageLevel.Informational, $"RCA Test Adapter: Test assembly not found: {testAssemblyPath}");
+      logger.SendMessage(TestMessageLevel.Informational, $"RCA Test Adapter: Test assembly not found: {candidate}");
       logger.SendMessage(TestMessageLevel.Informational, "RCA Test Adapter: Test discovery completed (0 tests)");
-      hostSource = string.Empty;
-      testAssemblyPath = string.Empty;
       return false;
     }
 
+    testAssemblyPath = candidate;
     return true;
   }
 

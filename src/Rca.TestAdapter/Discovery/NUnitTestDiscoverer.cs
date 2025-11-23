@@ -26,26 +26,9 @@ internal static class NUnitTestDiscoverer
       using (alc.EnterContextualReflection())
       {
         var assembly = alc.LoadFromAssemblyPath(assemblyPath);
-
-        // Get only loadable types to handle missing RevitAPI dependencies
-        var types = GetLoadableTypes(assembly);
-
-        // Find all classes with TestFixture attribute
-        foreach (var type in types)
-        {
-          if (type.GetCustomAttributes(true).Any(a => a.GetType().Name == "TestFixtureAttribute"))
-          {
-            // Find all methods with Test attribute
-            foreach (var method in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
-            {
-              if (method.GetCustomAttributes(true).Any(a => a.GetType().Name == "TestAttribute"))
-              {
-                var testCase = CreateTestCase(assemblyPath, type, method);
-                testCases.Add(testCase);
-              }
-            }
-          }
-        }
+        var factory = new NUnitTestCaseFactory(assemblyPath);
+        var discovered = factory.CreateTestCases(assembly);
+        testCases.AddRange(discovered);
       }
     }
     catch (Exception ex)
@@ -65,55 +48,6 @@ internal static class NUnitTestDiscoverer
     }
 
     return testCases;
-  }
-
-  /// <summary>
-  /// Gets only the types that can be loaded from an assembly, handling ReflectionTypeLoadException.
-  /// </summary>
-  /// <param name="assembly">The assembly to get types from.</param>
-  /// <returns>Array of successfully loaded types.</returns>
-  private static Type[] GetLoadableTypes(Assembly assembly)
-  {
-    try
-    {
-      return assembly.GetTypes();
-    }
-    catch (ReflectionTypeLoadException ex)
-    {
-      // Return only successfully loaded types, skip failed ones
-      // This handles cases where RevitAPI dependencies are missing during test discovery
-      return ex.Types.Where(t => t != null).ToArray()!;
-    }
-  }
-
-  private static TestCase CreateTestCase(string assemblyPath, Type type, MethodInfo method)
-  {
-    // Create a fully qualified name for the test
-    var fullyQualifiedName = $"{type.FullName}.{method.Name}";
-
-    // Create the test case
-    var testCase = new TestCase(fullyQualifiedName, new Uri(Constants.ExecutorUri), assemblyPath)
-    {
-      DisplayName = method.Name,
-      CodeFilePath = null,
-      LineNumber = 0,
-    };
-
-    // Add any traits from Test categories
-    var categoryAttributes = method.GetCustomAttributes(true)
-        .Concat(type.GetCustomAttributes(true))
-        .Where(a => a.GetType().Name == "CategoryAttribute");
-
-    foreach (var attr in categoryAttributes)
-    {
-      var categoryName = attr.GetType().GetProperty("Name")?.GetValue(attr) as string;
-      if (!string.IsNullOrEmpty(categoryName))
-      {
-        testCase.Traits.Add(new Trait("Category", categoryName));
-      }
-    }
-
-    return testCase;
   }
 
   /// <summary>
@@ -150,6 +84,97 @@ internal static class NUnitTestDiscoverer
       if (!string.IsNullOrEmpty(path))
         return LoadUnmanagedDllFromPath(path);
       return IntPtr.Zero;
+    }
+  }
+
+  /// <summary>
+  /// Builds <see cref="TestCase"/> instances from a loaded NUnit test assembly.
+  /// </summary>
+  private sealed class NUnitTestCaseFactory
+  {
+    private readonly string _assemblyPath;
+
+    public NUnitTestCaseFactory(string assemblyPath)
+    {
+      _assemblyPath = assemblyPath ?? throw new ArgumentNullException(nameof(assemblyPath));
+    }
+
+    /// <summary>
+    /// Creates test cases for all NUnit <c>[TestFixture]</c> and <c>[Test]</c> combinations.
+    /// </summary>
+    /// <param name="assembly">The loaded test assembly.</param>
+    /// <returns>List of discovered <see cref="TestCase"/> objects.</returns>
+    public IList<TestCase> CreateTestCases(Assembly assembly)
+    {
+      var result = new List<TestCase>();
+      var types = GetLoadableTypes(assembly);
+
+      foreach (var type in types)
+      {
+        if (!HasAttribute(type.GetCustomAttributes(true), "TestFixtureAttribute"))
+        {
+          continue;
+        }
+
+        foreach (var method in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
+        {
+          if (!HasAttribute(method.GetCustomAttributes(true), "TestAttribute"))
+          {
+            continue;
+          }
+
+          var testCase = CreateTestCase(type, method);
+          result.Add(testCase);
+        }
+      }
+
+      return result;
+    }
+
+    private static bool HasAttribute(object[] attributes, string attributeName)
+    {
+      return attributes.Any(a => a.GetType().Name == attributeName);
+    }
+
+    private static Type[] GetLoadableTypes(Assembly assembly)
+    {
+      try
+      {
+        return assembly.GetTypes();
+      }
+      catch (ReflectionTypeLoadException ex)
+      {
+        // Return only successfully loaded types, skip failed ones
+        // This handles cases where RevitAPI dependencies are missing during test discovery
+        return ex.Types.Where(t => t != null).ToArray()!;
+      }
+    }
+
+    private TestCase CreateTestCase(Type type, MethodInfo method)
+    {
+      var fullyQualifiedName = $"{type.FullName}.{method.Name}";
+
+      var testCase = new TestCase(fullyQualifiedName, new Uri(Constants.ExecutorUri), _assemblyPath)
+      {
+        DisplayName = method.Name,
+        CodeFilePath = null,
+        LineNumber = 0,
+      };
+
+      var categoryAttributes = method.GetCustomAttributes(true)
+          .Concat(type.GetCustomAttributes(true))
+          .Where(a => a.GetType().Name == "CategoryAttribute");
+
+      foreach (var attr in categoryAttributes)
+      {
+        var categoryName = attr.GetType().GetProperty("Name")?.GetValue(attr) as string;
+        if (!string.IsNullOrEmpty(categoryName))
+        {
+          testCase.Traits.Add(new Trait("Category", categoryName));
+        }
+      }
+
+      return testCase;
     }
   }
 }

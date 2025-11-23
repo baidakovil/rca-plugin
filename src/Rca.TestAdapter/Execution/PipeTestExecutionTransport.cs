@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.Json;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
@@ -27,6 +28,10 @@ internal interface ITestExecutionTransport
 /// </summary>
 internal sealed class PipeTestExecutionTransport : ITestExecutionTransport
 {
+  [SuppressMessage(
+      "Microsoft.Maintainability",
+      "CA1506:Avoid excessive class coupling",
+      Justification = "PipeTestExecutionTransport is responsible for low-level pipe transport concerns (NamedPipe, JSON, DTO mapping). Further splitting would fragment cohesive transport logic without improving design sustainability.")]
   public List<RevitTestResult> Execute(string assemblyPath, IReadOnlyList<TestCase> tests, TimeSpan timeout)
   {
     if (tests is null)

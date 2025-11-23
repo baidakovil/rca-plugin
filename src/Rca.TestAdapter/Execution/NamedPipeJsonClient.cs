@@ -35,56 +35,69 @@ internal static class NamedPipeJsonClient
     if (command is null)
       throw new ArgumentNullException(nameof(command));
 
-    NamedPipeClientStream? pipeClient = null;
-    StreamWriter? writer = null;
-    StreamReader? reader = null;
-
     try
     {
-      pipeClient = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.None);
-      pipeClient.Connect(timeoutMs);
-
-      if (!pipeClient.IsConnected)
+      using var pipeStream = ConnectToPipe(pipeName, timeoutMs);
+      if (pipeStream is null)
       {
         return null;
       }
 
-      writer = new StreamWriter(pipeClient) { AutoFlush = true };
-      reader = new StreamReader(pipeClient);
+      WriteJson(pipeStream, command);
 
-      var requestJson = JsonSerializer.Serialize(command);
-      writer.WriteLine(requestJson);
-
-      var responseJson = reader.ReadLine();
+      var responseJson = ReadJson(pipeStream);
       if (string.IsNullOrEmpty(responseJson))
       {
         return null;
       }
 
+      return DeserializeResponse(responseJson);
+    }
+    catch (Exception)
+    {
+      // Treat any transport-level exception as "no response" for callers; execution
+      // services can decide how to surface this as a warning or error.
+      return null;
+    }
+  }
+
+  private static Stream? ConnectToPipe(string pipeName, int timeoutMs)
+  {
+    var pipeClient = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.None);
+    pipeClient.Connect(timeoutMs);
+
+    if (!pipeClient.IsConnected)
+    {
+      pipeClient.Dispose();
+      return null;
+    }
+
+    return pipeClient;
+  }
+
+  private static void WriteJson(Stream stream, PipeCommand command)
+  {
+    var writer = new StreamWriter(stream) { AutoFlush = true };
+    var requestJson = JsonSerializer.Serialize(command);
+    writer.WriteLine(requestJson);
+  }
+
+  private static string? ReadJson(Stream stream)
+  {
+    var reader = new StreamReader(stream);
+    return reader.ReadLine();
+  }
+
+  private static PipeResponse? DeserializeResponse(string responseJson)
+  {
+    try
+    {
       return JsonSerializer.Deserialize<PipeResponse>(responseJson);
     }
     catch (JsonException)
     {
-      // Treat malformed JSON as "no response" for callers; they can decide how to handle it.
+      // Treat malformed JSON as "no response" for callers.
       return null;
-    }
-    finally
-    {
-      try { writer?.Dispose(); } catch { }
-      try { reader?.Dispose(); } catch { }
-      try
-      {
-        if (pipeClient?.IsConnected == true)
-        {
-          pipeClient.Close();
-        }
-
-        pipeClient?.Dispose();
-      }
-      catch
-      {
-        // Ignore cleanup failures.
-      }
     }
   }
 }

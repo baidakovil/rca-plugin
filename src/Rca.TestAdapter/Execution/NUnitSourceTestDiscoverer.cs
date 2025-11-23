@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
@@ -29,6 +30,10 @@ internal interface ISourceTestDiscoverer
 /// </summary>
 internal sealed class NUnitSourceTestDiscoverer : ISourceTestDiscoverer
 {
+  [SuppressMessage(
+      "Microsoft.Maintainability",
+      "CA1506:Avoid excessive class coupling",
+      Justification = "NUnitSourceTestDiscoverer orchestrates per-source discovery and runtime path annotation; low-level NUnit reflection logic is already encapsulated in NUnitTestDiscoverer.")]
   public IReadOnlyList<TestCase> DiscoverTests(IEnumerable<string> sources, IFrameworkHandle frameworkHandle)
   {
     if (sources is null)
