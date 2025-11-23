@@ -40,7 +40,7 @@
   </ItemGroup>
 
   <!-- Provide shared code-metrics configuration as AdditionalFiles for analyzers -->
-  <ItemGroup Condition="Exists('$(CodeMetricsConfigFile)')">
+  <ItemGroup Condition="Exists('$(CodeMetricsConfigFile)') and '$(MSBuildProjectName)' != 'Rca.MetricsReporter'">
     <AdditionalFiles Include="$(CodeMetricsConfigFile)" />
   </ItemGroup>
 

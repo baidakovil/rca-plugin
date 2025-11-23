@@ -21,7 +21,7 @@
     <MetricsBaselineJson Condition="'$(MetricsBaselineJson)' == ''">$(MetricsReportDir)\metrics-baseline.json</MetricsBaselineJson>
     <MetricsThresholdsPath Condition="'$(MetricsThresholdsPath)' == ''">$(SolutionDir)build\MetricsRules\MetricsReporterThresholds.json</MetricsThresholdsPath>
     <CodeMetricsRulesDir Condition="'$(CodeMetricsRulesDir)' == ''">$(SolutionDir)build\MetricsRules</CodeMetricsRulesDir>
-    <CodeMetricsConfigFile Condition="'$(CodeMetricsConfigFile)' == ''">$(CodeMetricsRulesDir)\CodeMetricsConfigStrong.txt</CodeMetricsConfigFile>
+    <CodeMetricsConfigFile Condition="'$(CodeMetricsConfigFile)' == ''">$(CodeMetricsRulesDir)\CodeMetricsConfig.txt</CodeMetricsConfigFile>
     <MetricsReportHtml Condition="'$(MetricsReportHtml)' == ''">$(MetricsReportDir)\metrics-report.html</MetricsReportHtml>
     <MetricsSolutionName Condition="'$(MetricsSolutionName)' == ''">rca-plugin</MetricsSolutionName>
     <MetricsReporterProject Condition="'$(MetricsReporterProject)' == ''">$(SolutionDir)src\Tools\Rca.MetricsReporter\Rca.MetricsReporter.csproj</MetricsReporterProject>
