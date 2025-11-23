@@ -1,3 +1,4 @@
+using System;
 using Microsoft.CodeAnalysis;
 
 namespace Rca.BuildMetadata.Generator;
@@ -24,129 +25,51 @@ internal static class BuildPropertyReader
   /// </remarks>
   public static BuildProperties? ReadProperties(GeneratorExecutionContext context)
   {
-    // Read and validate SourceHashLength (required, positive integer)
-    if (!TryGetRequiredProperty(context, "RcaSourceHashLength", out var lengthStr))
+    if (!TryReadPositiveIntProperty(context, "RcaSourceHashLength", "RCA002", out var length))
       return null;
 
-    if (!int.TryParse(lengthStr, out var length) || length <= 0)
-    {
-      ReportError(context, "RCA002", "Invalid build property: RcaSourceHashLength",
-          $"MSBuild property 'RcaSourceHashLength' must be a positive integer. Current value: '{lengthStr ?? "(null)"}'");
-      return null;
-    }
-
-    // Read and validate TimestampPattern (required, non-empty)
-    if (!TryGetRequiredProperty(context, "RcaTimestampPattern", out var patternStr))
+    if (!TryReadNonEmptyStringProperty(context, "RcaTimestampPattern", "RCA004", out var timestampPattern))
       return null;
 
-    if (string.IsNullOrWhiteSpace(patternStr))
-    {
-      ReportError(context, "RCA004", "Invalid build property: RcaTimestampPattern",
-          $"MSBuild property 'RcaTimestampPattern' must be a non-empty string. Current value: '{patternStr ?? "(null)"}'");
-      return null;
-    }
-
-    // Read and validate string properties (required, non-empty)
-    if (!TryGetRequiredProperty(context, "RcaRevitAddinsDir", out var addinsDir))
+    if (!TryReadNonEmptyStringProperty(context, "RcaRevitAddinsDir", "RCA006", out var addinsDir))
       return null;
 
-    if (string.IsNullOrWhiteSpace(addinsDir))
-    {
-      ReportError(context, "RCA006", "Invalid build property: RcaRevitAddinsDir",
-          $"MSBuild property 'RcaRevitAddinsDir' must be a non-empty string. Current value: '{addinsDir ?? "(null)"}'");
-      return null;
-    }
-
-    if (!TryGetRequiredProperty(context, "RcaTestDeployRoot", out var testDeployRoot))
+    if (!TryReadNonEmptyStringProperty(context, "RcaTestDeployRoot", "RCA008", out var testDeployRoot))
       return null;
 
-    if (string.IsNullOrWhiteSpace(testDeployRoot))
-    {
-      ReportError(context, "RCA008", "Invalid build property: RcaTestDeployRoot",
-          $"MSBuild property 'RcaTestDeployRoot' must be a non-empty string. Current value: '{testDeployRoot ?? "(null)"}'");
-      return null;
-    }
-
-    if (!TryGetRequiredProperty(context, "RcaLogRoot", out var logRoot))
+    if (!TryReadNonEmptyStringProperty(context, "RcaLogRoot", "RCA010", out var logRoot))
       return null;
 
-    if (string.IsNullOrWhiteSpace(logRoot))
-    {
-      ReportError(context, "RCA010", "Invalid build property: RcaLogRoot",
-          $"MSBuild property 'RcaLogRoot' must be a non-empty string. Current value: '{logRoot ?? "(null)"}'");
-      return null;
-    }
-
-    if (!TryGetRequiredProperty(context, "RcaRevitVersion", out var revitVersion))
+    if (!TryReadNonEmptyStringProperty(context, "RcaRevitVersion", "RCA012", out var revitVersion))
       return null;
 
-    if (string.IsNullOrWhiteSpace(revitVersion))
-    {
-      ReportError(context, "RCA012", "Invalid build property: RcaRevitVersion",
-          $"MSBuild property 'RcaRevitVersion' must be a non-empty string. Current value: '{revitVersion ?? "(null)"}'");
-      return null;
-    }
-
-    if (!TryGetRequiredProperty(context, "RcaRevitLibsPath", out var libsPath))
+    if (!TryReadNonEmptyStringProperty(context, "RcaRevitLibsPath", "RCA014", out var libsPath))
       return null;
 
-    if (string.IsNullOrWhiteSpace(libsPath))
-    {
-      ReportError(context, "RCA014", "Invalid build property: RcaRevitLibsPath",
-          $"MSBuild property 'RcaRevitLibsPath' must be a non-empty string. Current value: '{libsPath ?? "(null)"}'");
-      return null;
-    }
+    var pipeName = GetOptionalProperty(context, "RcaCommandPipeName");
+    var logPipeName = GetOptionalProperty(context, "RcaLogPipeName");
 
-    // Read optional pipe names
-    context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.RcaCommandPipeName", out var pipeName);
-    context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.RcaLogPipeName", out var logPipeName);
-
-    // Read and validate timestamp file (required, non-empty)
     if (!TryGetRequiredProperty(context, "RcaTimestampFile", out var timestampFile))
       return null;
 
-    // Read and validate StickyStampSeconds (required, non-negative integer)
-    if (!TryGetRequiredProperty(context, "RcaStickyStampSeconds", out var stickyStr))
+    if (!TryReadNonNegativeIntProperty(context, "RcaStickyStampSeconds", "RCA017", out var stickySeconds))
       return null;
 
-    if (!int.TryParse(stickyStr, out var stickySeconds) || stickySeconds < 0)
-    {
-      ReportError(context, "RCA017", "Invalid build property: RcaStickyStampSeconds",
-          $"MSBuild property 'RcaStickyStampSeconds' must be a non-negative integer. Current value: '{stickyStr ?? "(null)"}'");
-      return null;
-    }
+    var forceNewStamp = ReadBooleanFlag(GetOptionalProperty(context, "RcaForceNewStamp"));
+    var loaderProjects = GetOptionalProperty(context, "RcaLoaderProjectsList");
+    var runtimeProjects = GetOptionalProperty(context, "RcaRuntimeProjectsList");
+    var projectName = GetOptionalProperty(context, "MSBuildProjectName");
+    var hotReloadTimestamp = GetOptionalProperty(context, "RcaHotReloadTimestamp");
 
-    // Read ForceNewStamp (optional, defaults to false)
-    context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.RcaForceNewStamp", out var forceStr);
-    var forceNewStamp = false;
-    if (!string.IsNullOrWhiteSpace(forceStr))
-    {
-      var tmp = forceStr!;
-      var lower = tmp.Trim().ToLowerInvariant();
-      forceNewStamp = lower == "true" || lower == "1";
-    }
-
-    // Read optional project lists (may be empty for non-group projects)
-    context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.RcaLoaderProjectsList", out var loaderProjects);
-    context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.RcaRuntimeProjectsList", out var runtimeProjects);
-
-    // Read project name (optional, used for diagnostics)
-    context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.MSBuildProjectName", out var projectName);
-
-    // Read hot-reload timestamp (optional, may be empty during parallel builds)
-    context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.RcaHotReloadTimestamp", out var hotReloadTimestamp);
-
-    // At this point, all required string properties have been validated to be non-empty
-    // Use null-forgiving operator to satisfy nullable analysis after validation
     var properties = new BuildProperties
     {
       SourceHashLength = length,
-      TimestampPattern = patternStr!,
-      RevitAddinsDir = addinsDir!,
-      TestDeployRoot = testDeployRoot!,
-      LogRoot = logRoot!,
-      RevitVersion = revitVersion!,
-      RevitLibsPath = libsPath!,
+      TimestampPattern = timestampPattern,
+      RevitAddinsDir = addinsDir,
+      TestDeployRoot = testDeployRoot,
+      LogRoot = logRoot,
+      RevitVersion = revitVersion,
+      RevitLibsPath = libsPath,
       CommandPipeName = pipeName,
       LogPipeName = logPipeName,
       TimestampFile = timestampFile!,
@@ -178,6 +101,85 @@ internal static class BuildPropertyReader
         $"MSBuild property '{propertyName}' must be defined (e.g. in Directory.Build.props).");
     return false;
   }
+
+  private static bool TryReadPositiveIntProperty(GeneratorExecutionContext context, string propertyName, string errorCode, out int value)
+  {
+    return TryReadIntProperty(context, propertyName, v => v > 0, "a positive integer", errorCode, out value);
+  }
+
+  private static bool TryReadNonNegativeIntProperty(GeneratorExecutionContext context, string propertyName, string errorCode, out int value)
+  {
+    return TryReadIntProperty(context, propertyName, v => v >= 0, "a non-negative integer", errorCode, out value);
+  }
+
+  private static bool TryReadIntProperty(
+      GeneratorExecutionContext context,
+      string propertyName,
+      Func<int, bool> validator,
+      string requirementDescription,
+      string errorCode,
+      out int value)
+  {
+    if (!TryGetRequiredProperty(context, propertyName, out var rawValue))
+    {
+      value = 0;
+      return false;
+    }
+
+    if (!int.TryParse(rawValue, out value) || !validator(value))
+    {
+      ReportError(
+          context,
+          errorCode,
+          $"Invalid build property: {propertyName}",
+          $"MSBuild property '{propertyName}' must be {requirementDescription}. Current value: '{FormatValue(rawValue)}'");
+      value = 0;
+      return false;
+    }
+
+    return true;
+  }
+
+  private static bool TryReadNonEmptyStringProperty(GeneratorExecutionContext context, string propertyName, string invalidErrorCode, out string value)
+  {
+    if (!TryGetRequiredProperty(context, propertyName, out var rawValue))
+    {
+      value = string.Empty;
+      return false;
+    }
+
+    if (string.IsNullOrWhiteSpace(rawValue))
+    {
+      ReportError(
+          context,
+          invalidErrorCode,
+          $"Invalid build property: {propertyName}",
+          $"MSBuild property '{propertyName}' must be a non-empty string. Current value: '{FormatValue(rawValue)}'");
+      value = string.Empty;
+      return false;
+    }
+
+    value = rawValue!;
+    return true;
+  }
+
+  private static string? GetOptionalProperty(GeneratorExecutionContext context, string propertyName)
+  {
+    context.AnalyzerConfigOptions.GlobalOptions.TryGetValue($"build_property.{propertyName}", out var value);
+    return value;
+  }
+
+  private static bool ReadBooleanFlag(string? rawValue)
+  {
+    if (string.IsNullOrWhiteSpace(rawValue))
+      return false;
+
+    var normalized = rawValue!.Trim();
+    return normalized.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+           normalized.Equals("1", StringComparison.OrdinalIgnoreCase);
+  }
+
+  private static string FormatValue(string? value) => value ?? "(null)";
 
   /// <summary>
   /// Gets the diagnostic error code for a missing property based on property name conventions.

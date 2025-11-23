@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 
@@ -32,114 +33,125 @@ internal static class HashMarkerReader
       bool isRuntimeProject,
       string? projectName)
   {
-    string? loaderHash = null;
-    string? runtimeHash = null;
+    var additionalFilesCount = context.AdditionalFiles.Length;
 
-    // Find and read Loader hash marker file
-    var loaderMarkerFile = context.AdditionalFiles.FirstOrDefault(af =>
-    {
-      var path = af.Path.ToString();
-      return path.IndexOf("SourceHash-Loader-", StringComparison.OrdinalIgnoreCase) >= 0 &&
-                 path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase);
-    });
+    var loaderHash = ReadHashFromMarker(
+        context,
+        "Loader",
+        "RCA020",
+        "Failed to read Loader hash marker file",
+        "Failed to read SourceHash-Loader marker file: {0}");
 
-    if (loaderMarkerFile != null)
-    {
-      try
-      {
-        var hashText = loaderMarkerFile.GetText(context.CancellationToken)?.ToString();
-        if (!string.IsNullOrWhiteSpace(hashText))
-        {
-          loaderHash = hashText!.Trim();
-        }
-      }
-      catch (Exception ex)
-      {
-        var diag = Diagnostic.Create(
-            new DiagnosticDescriptor(
-                id: "RCA020",
-                title: "Failed to read Loader hash marker file",
-                messageFormat: "Failed to read SourceHash-Loader marker file: {0}",
-                category: "Rca.BuildMetadata.Generator",
-                defaultSeverity: DiagnosticSeverity.Warning,
-                isEnabledByDefault: true),
-            Location.None,
-            ex.Message);
-        context.ReportDiagnostic(diag);
-      }
-    }
+    var runtimeHash = ReadHashFromMarker(
+        context,
+        "Runtime",
+        "RCA021",
+        "Failed to read Runtime hash marker file",
+        "Failed to read SourceHash-Runtime marker file: {0}");
 
-    // Find and read Runtime hash marker file
-    var runtimeMarkerFile = context.AdditionalFiles.FirstOrDefault(af =>
-    {
-      var path = af.Path.ToString();
-      return path.IndexOf("SourceHash-Runtime-", StringComparison.OrdinalIgnoreCase) >= 0 &&
-                 path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase);
-    });
+    ReportMissingGroupHash(
+        context,
+        isLoaderProject,
+        loaderHash,
+        "Loader",
+        "RCA022",
+        projectName,
+        additionalFilesCount);
 
-    if (runtimeMarkerFile != null)
-    {
-      try
-      {
-        var hashText = runtimeMarkerFile.GetText(context.CancellationToken)?.ToString();
-        if (!string.IsNullOrWhiteSpace(hashText))
-        {
-          runtimeHash = hashText!.Trim();
-        }
-      }
-      catch (Exception ex)
-      {
-        var diag = Diagnostic.Create(
-            new DiagnosticDescriptor(
-                id: "RCA021",
-                title: "Failed to read Runtime hash marker file",
-                messageFormat: "Failed to read SourceHash-Runtime marker file: {0}",
-                category: "Rca.BuildMetadata.Generator",
-                defaultSeverity: DiagnosticSeverity.Warning,
-                isEnabledByDefault: true),
-            Location.None,
-            ex.Message);
-        context.ReportDiagnostic(diag);
-      }
-    }
-
-    // Report diagnostics if marker files are missing for group projects
-    if (isLoaderProject || isRuntimeProject)
-    {
-      if (isLoaderProject && string.IsNullOrWhiteSpace(loaderHash))
-      {
-        var diag = Diagnostic.Create(
-            new DiagnosticDescriptor(
-                id: "RCA022",
-                title: "Missing Loader hash marker file",
-                messageFormat: "SourceHash-Loader marker file not found in AdditionalFiles for {0} project. Found {1} additional files.",
-                category: "Rca.BuildMetadata.Generator",
-                defaultSeverity: DiagnosticSeverity.Warning,
-                isEnabledByDefault: true),
-            Location.None,
-            projectName ?? "(unknown)",
-            context.AdditionalFiles.Length);
-        context.ReportDiagnostic(diag);
-      }
-
-      if (isRuntimeProject && string.IsNullOrWhiteSpace(runtimeHash))
-      {
-        var diag = Diagnostic.Create(
-            new DiagnosticDescriptor(
-                id: "RCA023",
-                title: "Missing Runtime hash marker file",
-                messageFormat: "SourceHash-Runtime marker file not found in AdditionalFiles for {0} project. Found {1} additional files.",
-                category: "Rca.BuildMetadata.Generator",
-                defaultSeverity: DiagnosticSeverity.Warning,
-                isEnabledByDefault: true),
-            Location.None,
-            projectName ?? "(unknown)",
-            context.AdditionalFiles.Length);
-        context.ReportDiagnostic(diag);
-      }
-    }
+    ReportMissingGroupHash(
+        context,
+        isRuntimeProject,
+        runtimeHash,
+        "Runtime",
+        "RCA023",
+        projectName,
+        additionalFilesCount);
 
     return (loaderHash, runtimeHash);
   }
+
+  private static string? ReadHashFromMarker(
+      GeneratorExecutionContext context,
+      string groupName,
+      string readErrorId,
+      string readErrorTitle,
+      string readErrorMessageFormat)
+  {
+    var markerFile = FindMarkerFile(context, groupName);
+    if (markerFile == null)
+      return null;
+
+    try
+    {
+      var hashText = markerFile.GetText(context.CancellationToken)?.ToString();
+      if (!string.IsNullOrWhiteSpace(hashText))
+      {
+        return hashText!.Trim();
+      }
+    }
+    catch (Exception ex)
+    {
+      ReportHashReadFailure(context, readErrorId, readErrorTitle, readErrorMessageFormat, ex.Message);
+    }
+
+    return null;
+  }
+
+  private static AdditionalText? FindMarkerFile(GeneratorExecutionContext context, string groupName)
+  {
+    return context.AdditionalFiles.FirstOrDefault(file =>
+    {
+      var path = file.Path.ToString();
+      return path.IndexOf($"SourceHash-{groupName}-", StringComparison.OrdinalIgnoreCase) >= 0 &&
+             path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase);
+    });
+  }
+
+  private static void ReportMissingGroupHash(
+      GeneratorExecutionContext context,
+      bool isGroupProject,
+      string? hashValue,
+      string groupName,
+      string diagnosticId,
+      string? projectName,
+      int additionalFilesCount)
+  {
+    if (!isGroupProject || !string.IsNullOrWhiteSpace(hashValue))
+      return;
+
+    var descriptor = new DiagnosticDescriptor(
+        id: diagnosticId,
+        title: $"Missing {groupName} hash marker file",
+        messageFormat: $"SourceHash-{groupName} marker file not found in AdditionalFiles for {{0}} project. Found {{1}} additional files.",
+        category: "Rca.BuildMetadata.Generator",
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    context.ReportDiagnostic(
+        Diagnostic.Create(
+            descriptor,
+            Location.None,
+            projectName ?? "(unknown)",
+            additionalFilesCount));
+  }
+
+  private static void ReportHashReadFailure(
+      GeneratorExecutionContext context,
+      string diagnosticId,
+      string title,
+      string messageFormat,
+      string exceptionMessage)
+  {
+    var descriptor = new DiagnosticDescriptor(
+        id: diagnosticId,
+        title: title,
+        messageFormat: messageFormat,
+        category: "Rca.BuildMetadata.Generator",
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    context.ReportDiagnostic(Diagnostic.Create(descriptor, Location.None, exceptionMessage));
+  }
+
 }
 
