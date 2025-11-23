@@ -7,7 +7,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 
-internal class Program
+namespace Rca.SourceHashGenerator;
+
+internal static class Program
 {
     private static int Main(string[] args)
     {
@@ -234,10 +236,10 @@ internal class Program
 
             // Write marker file into runtimeTimestampFolder
             var markerFile = Path.Combine(runtimeTimestampFolder, $"SourceHash-{group}-{shortHash}.txt");
-                try
-                {
-                    File.WriteAllText(markerFile, shortHash);
-                }
+            try
+            {
+                File.WriteAllText(markerFile, shortHash);
+            }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"Failed to write marker file '{markerFile}': {ex.Message}");
@@ -246,21 +248,21 @@ internal class Program
             }
 
             // Optionally write outputPath for MSBuild compatibility only if --out provided
-                    if (writeOut)
-                    {
-                        try
-                        {
-                            var outDir = Path.GetDirectoryName(outputPath);
-                            if (!string.IsNullOrEmpty(outDir) && !Directory.Exists(outDir)) Directory.CreateDirectory(outDir);
-                            File.WriteAllText(outputPath!, shortHash);
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.Error.WriteLine($"Failed to write output file '{outputPath}': {ex.Message}");
-                            Environment.ExitCode = 6;
-                            return;
-                        }
-                    }
+            if (writeOut)
+            {
+                try
+                {
+                    var outDir = Path.GetDirectoryName(outputPath);
+                    if (!string.IsNullOrEmpty(outDir) && !Directory.Exists(outDir)) Directory.CreateDirectory(outDir);
+                    File.WriteAllText(outputPath!, shortHash);
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"Failed to write output file '{outputPath}': {ex.Message}");
+                    Environment.ExitCode = 6;
+                    return;
+                }
+            }
 
             Console.WriteLine(shortHash);
         }
@@ -296,3 +298,4 @@ internal class Program
         return textExt.Contains(ext);
     }
 }
+

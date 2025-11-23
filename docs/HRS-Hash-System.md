@@ -15,7 +15,7 @@ This document explains the current source-hash based system used by the RCA hot-
 
 ## Top-level files (where to look)
 - Source hash generator tool
-  - `src/Tools/SourceHashGenerator/Program.cs` — CLI tool that computes SHA256 over normalized source content and writes a deploy marker file `SourceHash-<Group>-<shortHash>.txt` in the deploy timestamp folder. It only writes a fixed `--out` file when explicitly requested by the caller.
+  - `src/Tools/Rca.SourceHashGenerator/Program.cs` — CLI tool (`Rca.SourceHashGenerator`) that computes SHA256 over normalized source content and writes a deploy marker file `SourceHash-<Group>-<shortHash>.txt` in the deploy timestamp folder. It only writes a fixed `--out` file when explicitly requested by the caller.
 
 - MSBuild orchestration (single place)
   - `Directory.Build.targets` and `build/targets/hash-generation.targets`
@@ -111,7 +111,7 @@ Project name groupings (for MSBuild conditions and Source Generator) are defined
 ---
 
 ## Quick links (files you will likely inspect)
-- Generator: `src/Tools/SourceHashGenerator/Program.cs`
+- Generator: `src/Tools/Rca.SourceHashGenerator/Program.cs`
 - MSBuild integration: `build/targets/hash-generation.targets` (hash computation and marker file creation), `src/Tools/Rca.BuildMetadata.Generator/BuildMetadataGenerator.cs` (Source Generator for assembly metadata)
 - Status tracking: `src/Rca.Loader/AssemblyManagement/AssemblyStatusManager.cs`
 - Restart: `src/Rca.Loader/Restart/RestartManager.cs`

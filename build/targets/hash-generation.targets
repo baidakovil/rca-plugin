@@ -2,9 +2,9 @@
 <Project>
   <!-- Hash generation for hot-reloading system -->
 
-  <!-- Ensure SourceHashGenerator tool is built before hash computation -->
+  <!-- Ensure Rca.SourceHashGenerator tool is built before hash computation -->
   <!-- Builds the generator incrementally only when source project or exe timestamp indicates need -->
-  <Target Name="BuildSourceHashGenerator" BeforeTargets="ComputeSourceHashes" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' != 'SourceHashGenerator' and '$(MSBuildProjectName)' != 'Rca.BuildMetadata.Generator' and ('$(IsLoaderGroupProject)' == 'true' or '$(IsRuntimeGroupProject)' == 'true')">
+  <Target Name="BuildSourceHashGenerator" BeforeTargets="ComputeSourceHashes" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' != 'Rca.SourceHashGenerator' and '$(MSBuildProjectName)' != 'Rca.BuildMetadata.Generator' and ('$(IsLoaderGroupProject)' == 'true' or '$(IsRuntimeGroupProject)' == 'true')">
     <PropertyGroup>
       <!-- Compare modification times to determine if rebuild is needed -->
       <SourceHashProjectModTime>$([System.IO.File]::GetLastWriteTime('$(SourceHashProject)').Ticks)</SourceHashProjectModTime>

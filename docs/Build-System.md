@@ -32,7 +32,7 @@
 
 ## Build pipeline overview
 - `EnsureRcaTimestamp` (`build/targets/timestamp-management.targets`) – runs `build\Scripts\EnsureRcaStamp.ps1` to create/reuse a timestamp under a global mutex, with TTL and force override; exports `RcaHotReloadTimestamp` MSBuild property.
-- `ComputeSourceHashes` (`build/targets/hash-generation.targets`) – computes source hashes for Loader/Runtime groups by invoking `SourceHashGenerator` tool, which creates marker files (`SourceHash-Loader-<hash>.txt`, `SourceHash-Runtime-<hash>.txt`) in the deploy timestamp folder.
+- `ComputeSourceHashes` (`build/targets/hash-generation.targets`) – computes source hashes for Loader/Runtime groups by invoking `Rca.SourceHashGenerator` tool, which creates marker files (`SourceHash-Loader-<hash>.txt`, `SourceHash-Runtime-<hash>.txt`) in the deploy timestamp folder.
 - `AddHashMarkersToAdditionalFiles` (`build/targets/hash-generation.targets`) – adds marker files to `AdditionalFiles` so Source Generator can read them.
 - Source Generator (`src/Tools/Rca.BuildMetadata.Generator`) – reads marker files from `AdditionalFiles`, extracts hashes, and generates `Rca.AssemblyMetadata.g.cs` with `[assembly: AssemblyMetadata("SourceHash", "<hash>")]` and `[assembly: AssemblyMetadata("DeployFolder", "<timestamp>")]`. Also emits `Rca.Generated.RcaBuildMetadata` class in `Rca.Contracts` to expose build-time constants.
 - `DeployLoaderGroup` / `DeployRuntimeGroup` (`build/targets/deployment.targets`) – copy the corresponding DLLs into the timestamped folder: `%APPDATA%\Autodesk\Revit\Addins\$(RcaRevitVersion)\<timestamp>`.

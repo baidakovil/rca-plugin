@@ -130,10 +130,10 @@ try {
     Write-Host "Error enumerating/removing build directories: $($_.Exception.Message)" -ForegroundColor Red
 }
 
-# 4) Ensure SourceHashGenerator restore + build using msbuild
-$shProj = Join-Path $projectRoot "src\Tools\SourceHashGenerator\SourceHashGenerator.csproj"
+# 4) Ensure Rca.SourceHashGenerator restore + build using msbuild
+$shProj = Join-Path $projectRoot "src\Tools\Rca.SourceHashGenerator\Rca.SourceHashGenerator.csproj"
 if (Test-Path $shProj) {
-    Write-Host "Restoring and building SourceHashGenerator via msbuild: $shProj" -ForegroundColor Yellow
+    Write-Host "Restoring and building Rca.SourceHashGenerator via msbuild: $shProj" -ForegroundColor Yellow
     try {
         # Prefer msbuild if available, fallback to 'dotnet msbuild'
         $msbuildCmd = Get-Command msbuild -ErrorAction SilentlyContinue
@@ -148,15 +148,15 @@ if (Test-Path $shProj) {
         # print full msbuild/dotnet output with highlighting
         Write-BuildOutput $output
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "SourceHashGenerator restored and built successfully" -ForegroundColor Green
+            Write-Host "Rca.SourceHashGenerator restored and built successfully" -ForegroundColor Green
         } else {
-            Write-Host "SourceHashGenerator msbuild finished with exit code $LASTEXITCODE" -ForegroundColor Red
+            Write-Host "Rca.SourceHashGenerator msbuild finished with exit code $LASTEXITCODE" -ForegroundColor Red
         }
     } catch {
-        Write-Host "Error building SourceHashGenerator: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "Error building Rca.SourceHashGenerator: $($_.Exception.Message)" -ForegroundColor Red
     }
 } else {
-    Write-Host "SourceHashGenerator project not found at $shProj, skipping" -ForegroundColor Gray
+    Write-Host "Rca.SourceHashGenerator project not found at $shProj, skipping" -ForegroundColor Gray
 }
 
 # 5) Optional: build entire solution (restore + build --no-incremental)

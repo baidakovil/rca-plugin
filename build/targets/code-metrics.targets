@@ -3,14 +3,14 @@
   <!-- Code metrics targets for AltCover instrumentation and coverage collection -->
 
   <!-- Set ErrorLog (SARIF) -->
-  <Target Name="SetSarifErrorLog" BeforeTargets="CoreCompile" Condition="'$(DesignTimeBuild)' != 'true' and '$(SarifMetricsEnabled)' == 'true' and '$(MSBuildProjectName)' != 'SourceHashGenerator'">
+  <Target Name="SetSarifErrorLog" BeforeTargets="CoreCompile" Condition="'$(DesignTimeBuild)' != 'true' and '$(SarifMetricsEnabled)' == 'true' and '$(MSBuildProjectName)' != 'Rca.SourceHashGenerator'">
     <PropertyGroup>
       <ErrorLog>$(SarifOutputDir)\$(MSBuildProjectName).sarif,version=2.1</ErrorLog>
     </PropertyGroup>
   </Target>
 
   <!-- Ensure metrics directories exist before compilation (only for SARIF, as it needs ErrorLog during compilation) -->
-  <Target Name="PrepareMetricsDirectories" BeforeTargets="CoreCompile" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' != 'SourceHashGenerator'">
+  <Target Name="PrepareMetricsDirectories" BeforeTargets="CoreCompile" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' != 'Rca.SourceHashGenerator'">
     <!-- Ensure Sarif directory exists for compiler-generated SARIF files -->
     <MakeDir Condition="'$(SarifMetricsEnabled)' == 'true'" Directories="$(SarifOutputDir)" />
     <!-- Ensure AltCover directory exists -->

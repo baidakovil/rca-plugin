@@ -62,10 +62,10 @@
     <SarifOutputDir Condition="'$(SarifOutputDir)' == ''">$(RcaMetricsDir)\Sarif</SarifOutputDir>
 
     <!-- Generator project and executable paths -->
-    <SourceHashProject>$(SolutionDir)src\Tools\SourceHashGenerator\SourceHashGenerator.csproj</SourceHashProject>
-    <SourceHashExe>$(SolutionDir)src\Tools\SourceHashGenerator\bin\$(Configuration)\net8.0\SourceHashGenerator.exe</SourceHashExe>
+    <SourceHashProject>$(SolutionDir)src\Tools\Rca.SourceHashGenerator\Rca.SourceHashGenerator.csproj</SourceHashProject>
+    <SourceHashExe>$(SolutionDir)src\Tools\Rca.SourceHashGenerator\bin\$(Configuration)\net8.0\Rca.SourceHashGenerator.exe</SourceHashExe>
 
-    <!-- Source code roots for Loader and Runtime groups: directories scanned by SourceHashGenerator -->
+    <!-- Source code roots for Loader and Runtime groups: directories scanned by Rca.SourceHashGenerator -->
     <!-- These paths are used for hash computation; project names are defined in project-groups.props -->
     <RcaLoaderRoots>$(SolutionDir)src\Rca.Loader;$(SolutionDir)src\Rca.Loader.Contracts;$(SolutionDir)src\Rca.Logging.Contracts</RcaLoaderRoots>
     <RcaRuntimeRoots>$(SolutionDir)src\Rca.Core;$(SolutionDir)src\Rca.Runtime;$(SolutionDir)src\Rca.Network;$(SolutionDir)src\Rca.UI;$(SolutionDir)src\Rca.Contracts</RcaRuntimeRoots>

@@ -20,7 +20,7 @@
     </ItemGroup>
     <Copy SourceFiles="@(LoaderDeployPdbs)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" Condition="@(LoaderDeployPdbs)!='' and '$(AltCoverEnabled)' == 'true'" />
 
-    <!-- Marker file is created by SourceHashGenerator in deploy folder -->
+    <!-- Marker file is created by Rca.SourceHashGenerator in deploy folder -->
 
     <Message Text="Loader group deployed to $(RuntimeDeployDir)" Importance="High" />
   </Target>
@@ -50,7 +50,7 @@
     </ItemGroup>
     <Copy SourceFiles="@(LibFiles)" DestinationFiles="@(LibFiles-&gt;'$(RuntimeDeployDir)\Lib\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="@(LibFiles)!=''" />
 
-    <!-- Marker file is created by SourceHashGenerator in deploy folder -->
+    <!-- Marker file is created by Rca.SourceHashGenerator in deploy folder -->
 
     <Message Text="Runtime group deployed to $(RuntimeDeployDir)" Importance="High" />
   </Target>

@@ -31,7 +31,7 @@
         <!-- Central Panel -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0" Background="#F5F5F5">
             <StackPanel Background="#F5F5F5">
-                <TextBlock Text="Python Output" Margin="5" FontSize="14" FontWeight="Bold"/>
+                <TextBlock Text="Python Output!" Margin="5" FontSize="14" FontWeight="Bold"/>
                 <Expander Header="Code LLM Snippets" Margin="10" Padding="3" Background="#ECECEC" BorderBrush="#C8C8C8" BorderThickness="1">
                     <StackPanel Background="#F5F5F5">
                         <TextBlock Text="{Binding OutputText}" Margin="5" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap"/>
