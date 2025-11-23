@@ -1,8 +1,6 @@
 using System;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text.Json;
-using System.IO;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Logging;
@@ -16,13 +14,26 @@ namespace Rca.TestAdapter;
 public class RevitTestExecutor : ITestExecutor
 {
   private bool cancelled;
-  private readonly TimeSpan defaultTimeout = TimeSpan.FromMinutes(2);
+  private readonly ITestRunCoordinator _testRunCoordinator;
+  private readonly ISourceTestDiscoverer _sourceTestDiscoverer;
 
   /// <summary>
   /// Initializes a new instance of the <see cref="RevitTestExecutor"/> class.
   /// </summary>
   public RevitTestExecutor()
   {
+    _testRunCoordinator = new RevitTestRunCoordinator(new RevitPipeClient(), TimeSpan.FromMinutes(2));
+    _sourceTestDiscoverer = new NUnitSourceTestDiscoverer();
+    cancelled = false;
+  }
+
+  /// <summary>
+  /// Internal constructor used for testing to inject custom collaborators.
+  /// </summary>
+  internal RevitTestExecutor(ITestRunCoordinator testRunCoordinator, ISourceTestDiscoverer sourceTestDiscoverer)
+  {
+    _testRunCoordinator = testRunCoordinator ?? throw new ArgumentNullException(nameof(testRunCoordinator));
+    _sourceTestDiscoverer = sourceTestDiscoverer ?? throw new ArgumentNullException(nameof(sourceTestDiscoverer));
     cancelled = false;
   }
 
@@ -31,106 +42,12 @@ public class RevitTestExecutor : ITestExecutor
   /// </summary>
   public void RunTests(IEnumerable<TestCase>? tests, IRunContext? runContext, IFrameworkHandle? frameworkHandle)
   {
-      if (tests == null || runContext == null || frameworkHandle == null)
-      {
-        return;
-      }
+    if (tests == null || runContext == null || frameworkHandle == null)
+    {
+      return;
+    }
 
-      try
-      {
-        frameworkHandle.SendMessage(TestMessageLevel.Informational, "RCA Test Adapter: Starting test execution");
-
-        // Ensure Revit is initialized. When Revit is not running we treat this as a
-        // skipped scenario rather than a hard error so that CI can succeed without Revit.
-        if (!RevitTestInitializer.EnsureRevitIsInitialized())
-        {
-          frameworkHandle.SendMessage(
-              TestMessageLevel.Warning,
-              "RCA Test Adapter: Revit is not initialized. Revit integration tests will be skipped. " +
-              "Start Autodesk Revit with the RCA plugin loaded to enable these tests.");
-
-          foreach (var testCase in tests)
-          {
-            var skippedResult = new Microsoft.VisualStudio.TestPlatform.ObjectModel.TestResult(testCase)
-            {
-              Outcome = TestOutcome.Skipped,
-              ErrorMessage = "Revit is not running or RCA pipe server is not available. Test skipped.",
-            };
-
-            frameworkHandle.RecordResult(skippedResult);
-          }
-
-          frameworkHandle.SendMessage(TestMessageLevel.Informational, "RCA Test Adapter: Test execution skipped (Revit not running)");
-          return;
-        }
-
-        // Group tests by runtime assembly path if available, otherwise by source
-        var testsByGroup = tests.GroupBy(test =>
-            test.GetPropertyValue(AdapterProperties.RuntimeAssemblyPath, defaultValue: test.Source));
-
-        foreach (var group in testsByGroup)
-        {
-          if (cancelled)
-          {
-            break;
-          }
-
-          try
-          {
-            var assemblyPath = group.Key; // Prefer runtime path
-            var sourceTests = group.ToList();
-
-            frameworkHandle.SendMessage(
-                TestMessageLevel.Informational,
-                $"RCA Test Adapter: Executing {sourceTests.Count} tests from {assemblyPath}");
-
-            var pipeClient = new RevitPipeClient();
-            var results = pipeClient.ExecuteTests(assemblyPath, sourceTests, defaultTimeout);
-
-            // Process results
-            foreach (var result in results)
-            {
-              var testCase = sourceTests.FirstOrDefault(t =>
-                  t.FullyQualifiedName == result.FullyQualifiedName);
-
-              if (testCase != null)
-              {
-                var testResult = new Microsoft.VisualStudio.TestPlatform.ObjectModel.TestResult(testCase)
-                {
-                  Outcome = ConvertTestOutcome(result.Outcome),
-                  ErrorMessage = result.ErrorMessage,
-                  ErrorStackTrace = result.ErrorStackTrace,
-                  DisplayName = result.DisplayName,
-                  Duration = TimeSpan.FromMilliseconds(result.DurationInMilliseconds),
-                  StartTime = DateTimeOffset.FromUnixTimeMilliseconds(result.StartTimeUnixMs),
-                  EndTime = DateTimeOffset.FromUnixTimeMilliseconds(result.EndTimeUnixMs),
-                };
-
-                foreach (var message in result.Messages)
-                {
-                  frameworkHandle.SendMessage(ConvertMessageLevel(message.Level), message.Text);
-                }
-
-                frameworkHandle.RecordResult(testResult);
-              }
-            }
-          }
-          catch (Exception ex)
-          {
-            frameworkHandle.SendMessage(
-                TestMessageLevel.Error,
-                $"RCA Test Adapter: Error executing tests: {ex.Message}");
-            frameworkHandle.SendMessage(
-                TestMessageLevel.Informational,
-                $"RCA Test Adapter: Exception details: {ex}");
-          }
-        }
-
-        frameworkHandle.SendMessage(TestMessageLevel.Informational, "RCA Test Adapter: Test execution completed");
-      }
-      finally
-      {
-      }
+    _testRunCoordinator.ExecuteTests(tests, runContext, frameworkHandle, () => cancelled);
   }
 
   /// <summary>
@@ -145,33 +62,7 @@ public class RevitTestExecutor : ITestExecutor
 
     try
     {
-      var discoveredTests = new List<TestCase>();
-
-      foreach (var source in sources)
-      {
-        try
-        {
-          var tests = NUnitTestDiscoverer.FindTestsInAssembly(source);
-          // Annotate source-discovered tests with runtime path if this source is the runtime test assembly
-          foreach (var t in tests)
-          {
-            if (string.Equals(Path.GetFileName(t.Source), "Rca.Integration.Revit.Tests.dll", StringComparison.OrdinalIgnoreCase))
-            {
-              var testRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RCA", "Test");
-              var latest = new DirectoryInfo(testRoot).GetDirectories().OrderByDescending(d => d.Name, StringComparer.OrdinalIgnoreCase).FirstOrDefault()?.FullName ?? string.Empty;
-              var testDll = string.IsNullOrEmpty(latest) ? t.Source : Path.Combine(latest, "Rca.Integration.Revit.Tests.dll");
-              t.SetPropertyValue(AdapterProperties.RuntimeAssemblyPath, testDll);
-            }
-          }
-          discoveredTests.AddRange(tests);
-        }
-        catch (Exception ex)
-        {
-          frameworkHandle.SendMessage(TestMessageLevel.Error,
-              $"RCA Test Adapter: Error discovering tests in {source}: {ex.Message}");
-        }
-      }
-
+      var discoveredTests = _sourceTestDiscoverer.DiscoverTests(sources, frameworkHandle);
       RunTests(discoveredTests, runContext, frameworkHandle);
     }
     catch (Exception ex)
@@ -187,27 +78,5 @@ public class RevitTestExecutor : ITestExecutor
   public void Cancel()
   {
     cancelled = true;
-  }
-
-  private static TestOutcome ConvertTestOutcome(string outcome)
-  {
-    return outcome switch
-    {
-      "Passed" => TestOutcome.Passed,
-      "Failed" => TestOutcome.Failed,
-      "Skipped" => TestOutcome.Skipped,
-      "NotFound" => TestOutcome.NotFound,
-      _ => TestOutcome.None
-    };
-  }
-
-  private static TestMessageLevel ConvertMessageLevel(string level)
-  {
-    return level switch
-    {
-      "Error" => TestMessageLevel.Error,
-      "Warning" => TestMessageLevel.Warning,
-      _ => TestMessageLevel.Informational
-    };
   }
 }
