@@ -33,9 +33,13 @@ internal static class HtmlScriptGenerator
 
   var hasThresholdData = thresholdData && Object.keys(thresholdData).length > 0;
   var tooltip = null;
+  var suppressionTooltip = null;
   var tooltipTimer = null;
   var tooltipVisible = false;
   var tooltipTarget = null;
+  var suppressionTooltipTimer = null;
+  var suppressionTooltipVisible = false;
+  var suppressionTooltipTarget = null;
 
   var levelOrder = ['Solution', 'Assembly', 'Namespace', 'Type', 'Member'];
   var levelLabels = {
@@ -54,6 +58,27 @@ internal static class HtmlScriptGenerator
   } else {
     thresholdData = null;
   }
+
+  suppressionTooltip = document.createElement('div');
+  suppressionTooltip.className = 'metric-tooltip';
+  suppressionTooltip.style.display = 'none';
+  document.body.appendChild(suppressionTooltip);
+
+  var symbolTooltip = document.createElement('div');
+  symbolTooltip.className = 'metric-tooltip';
+  symbolTooltip.style.display = 'none';
+  document.body.appendChild(symbolTooltip);
+  var symbolTooltipTimer = null;
+  var symbolTooltipVisible = false;
+  var symbolTooltipTarget = null;
+
+  var simpleTooltip = document.createElement('div');
+  simpleTooltip.className = 'metric-tooltip';
+  simpleTooltip.style.display = 'none';
+  document.body.appendChild(simpleTooltip);
+  var simpleTooltipTimer = null;
+  var simpleTooltipVisible = false;
+  var simpleTooltipTarget = null;
 
   var preferencesStorageBaseKey = 'rcaMetricsReport.preferences';
   var preferencesLocationKey = (typeof window !== 'undefined' && window.location && window.location.pathname)
@@ -154,13 +179,21 @@ internal static class HtmlScriptGenerator
     tooltipTarget = null;
   }
 
-  function positionTooltip(target){
-    if(!tooltip || !target){
+  function positionTooltip(target, tooltipElement){
+    var actualTooltip = tooltipElement || tooltip;
+    if(!actualTooltip || !target){
       return;
     }
     var rect = target.getBoundingClientRect();
-    var tooltipRect = tooltip.getBoundingClientRect();
-    var top = window.scrollY + rect.bottom + 8;
+    var tooltipRect = actualTooltip.getBoundingClientRect();
+    
+    // WHY: For buttons (C, F), position tooltip below with more offset to avoid cursor blocking
+    // Check if target is a button with row-action-icon class or data-action attribute
+    var isButton = target.classList && target.classList.contains('row-action-icon');
+    
+    // WHY: Larger offset for buttons (24px) to ensure tooltip appears well below cursor/pointer
+    // This prevents the cursor from covering the tooltip text
+    var top = window.scrollY + rect.bottom + (isButton ? 24 : 8);
     var left = window.scrollX + rect.left + (rect.width - tooltipRect.width) / 2;
 
     var viewportRight = window.scrollX + window.innerWidth;
@@ -172,12 +205,15 @@ internal static class HtmlScriptGenerator
     if(left < window.scrollX + 8){
       left = window.scrollX + 8;
     }
-    if(top + tooltipRect.height > viewportBottom - 8){
+    
+    // WHY: For buttons, always position below to avoid cursor blocking, even if it goes off-screen
+    // For other elements, allow positioning above if needed
+    if(!isButton && top + tooltipRect.height > viewportBottom - 8){
       top = window.scrollY + rect.top - tooltipRect.height - 8;
     }
 
-    tooltip.style.left = left + 'px';
-    tooltip.style.top = top + 'px';
+    actualTooltip.style.left = left + 'px';
+    actualTooltip.style.top = top + 'px';
   }
 
   function buildTooltipHtml(metricId){
@@ -290,12 +326,384 @@ internal static class HtmlScriptGenerator
       if(tooltipVisible && tooltipTarget){
         positionTooltip(tooltipTarget);
       }
+      if(suppressionTooltipVisible && suppressionTooltipTarget){
+        positionTooltip(suppressionTooltipTarget, suppressionTooltip);
+      }
+      if(symbolTooltipVisible && symbolTooltipTarget){
+        positionTooltip(symbolTooltipTarget, symbolTooltip);
+      }
+      if(simpleTooltipVisible && simpleTooltipTarget){
+        positionTooltip(simpleTooltipTarget, simpleTooltip);
+      }
     }, true);
     window.addEventListener(""resize"", function(){
       if(tooltipVisible && tooltipTarget){
         positionTooltip(tooltipTarget);
       }
+      if(suppressionTooltipVisible && suppressionTooltipTarget){
+        positionTooltip(suppressionTooltipTarget, suppressionTooltip);
+      }
+      if(symbolTooltipVisible && symbolTooltipTarget){
+        positionTooltip(symbolTooltipTarget, symbolTooltip);
+      }
+      if(simpleTooltipVisible && simpleTooltipTarget){
+        positionTooltip(simpleTooltipTarget, simpleTooltip);
+      }
     });
+  } else {
+    window.addEventListener(""scroll"", function(){
+      if(suppressionTooltipVisible && suppressionTooltipTarget){
+        positionTooltip(suppressionTooltipTarget, suppressionTooltip);
+      }
+      if(symbolTooltipVisible && symbolTooltipTarget){
+        positionTooltip(symbolTooltipTarget, symbolTooltip);
+      }
+      if(simpleTooltipVisible && simpleTooltipTarget){
+        positionTooltip(simpleTooltipTarget, simpleTooltip);
+      }
+    }, true);
+    window.addEventListener(""resize"", function(){
+      if(suppressionTooltipVisible && suppressionTooltipTarget){
+        positionTooltip(suppressionTooltipTarget, suppressionTooltip);
+      }
+      if(symbolTooltipVisible && symbolTooltipTarget){
+        positionTooltip(symbolTooltipTarget, symbolTooltip);
+      }
+      if(simpleTooltipVisible && simpleTooltipTarget){
+        positionTooltip(simpleTooltipTarget, simpleTooltip);
+      }
+    });
+  }
+
+  // Suppressed metrics tooltip functionality
+  function cancelSuppressionTooltipTimer(){
+    if(suppressionTooltipTimer){
+      clearTimeout(suppressionTooltipTimer);
+      suppressionTooltipTimer = null;
+    }
+  }
+
+  function hideSuppressionTooltip(){
+    cancelSuppressionTooltipTimer();
+    if(!suppressionTooltipVisible || !suppressionTooltip){
+      suppressionTooltipTarget = null;
+      return;
+    }
+    suppressionTooltip.style.display = 'none';
+    suppressionTooltipVisible = false;
+    suppressionTooltipTarget = null;
+  }
+
+  function buildSuppressionTooltipHtml(suppressionInfo){
+    if(!suppressionInfo){
+      return null;
+    }
+    var parts = [];
+    parts.push('<p class=""metric-tooltip__heading""><strong>Suppressed ' + escapeHtml(suppressionInfo.ruleId || '') + '</strong></p>');
+    if(suppressionInfo.justification){
+      // WHY: Justification text already contains HTML formatting (bold tags, line breaks)
+      // from FormatJustificationText, so we use innerHTML-safe approach.
+      parts.push('<p class=""metric-tooltip__desc"">' + suppressionInfo.justification + '</p>');
+    } else {
+      parts.push('<p class=""metric-tooltip__desc"">Suppressed via SuppressMessage.</p>');
+    }
+    return parts.join('');
+  }
+
+  function showSuppressionTooltip(target){
+    if(!suppressionTooltip || !target){
+      return;
+    }
+    var suppressionData = target.dataset.suppressionInfo;
+    if(!suppressionData){
+      return;
+    }
+    try{
+      var suppressionInfo = JSON.parse(suppressionData);
+      var html = buildSuppressionTooltipHtml(suppressionInfo);
+      if(!html){
+        return;
+      }
+      suppressionTooltip.innerHTML = html;
+      suppressionTooltip.style.display = 'block';
+      suppressionTooltipVisible = true;
+      suppressionTooltipTarget = target;
+      positionTooltip(target, suppressionTooltip);
+    }catch(_){
+      // Invalid JSON, ignore
+    }
+  }
+
+  function scheduleSuppressionTooltip(target){
+    if(!target){
+      return;
+    }
+    cancelSuppressionTooltipTimer();
+    suppressionTooltipTimer = setTimeout(function(){
+      showSuppressionTooltip(target);
+    }, 500);
+  }
+
+  // Suppressed tooltip handling is now in unified handler
+
+  // Symbol tooltip functionality
+  function cancelSymbolTooltipTimer(){
+    if(symbolTooltipTimer){
+      clearTimeout(symbolTooltipTimer);
+      symbolTooltipTimer = null;
+    }
+  }
+
+  function hideSymbolTooltip(){
+    cancelSymbolTooltipTimer();
+    if(!symbolTooltipVisible || !symbolTooltip){
+      symbolTooltipTarget = null;
+      return;
+    }
+    symbolTooltip.style.display = 'none';
+    symbolTooltipVisible = false;
+    symbolTooltipTarget = null;
+  }
+
+  function buildSymbolTooltipHtml(symbolInfo){
+    if(!symbolInfo){
+      return null;
+    }
+    var parts = [];
+    var role = symbolInfo.role || '';
+    var fqn = symbolInfo.fullyQualifiedName || '';
+    parts.push('<p class=""metric-tooltip__heading""><strong>' + escapeHtml(role) + '</strong></p>');
+    if(fqn){
+      parts.push('<p class=""metric-tooltip__desc"">' + escapeHtml(fqn) + '</p>');
+    }
+    return parts.join('');
+  }
+
+  function showSymbolTooltip(target){
+    if(!symbolTooltip || !target){
+      return;
+    }
+    var symbolData = target.dataset.symbolInfo;
+    if(!symbolData){
+      return;
+    }
+    try{
+      var symbolInfo = JSON.parse(symbolData);
+      var html = buildSymbolTooltipHtml(symbolInfo);
+      if(!html){
+        return;
+      }
+      symbolTooltip.innerHTML = html;
+      symbolTooltip.style.display = 'block';
+      symbolTooltipVisible = true;
+      symbolTooltipTarget = target;
+      positionTooltip(target, symbolTooltip);
+    }catch(_){
+      // Invalid JSON, ignore
+    }
+  }
+
+  function scheduleSymbolTooltip(target){
+    if(!target){
+      return;
+    }
+    cancelSymbolTooltipTimer();
+    symbolTooltipTimer = setTimeout(function(){
+      showSymbolTooltip(target);
+    }, 500);
+  }
+
+
+  // Simple tooltip functionality
+  function cancelSimpleTooltipTimer(){
+    if(simpleTooltipTimer){
+      clearTimeout(simpleTooltipTimer);
+      simpleTooltipTimer = null;
+    }
+  }
+
+  function hideSimpleTooltip(){
+    cancelSimpleTooltipTimer();
+    if(!simpleTooltipVisible || !simpleTooltip){
+      simpleTooltipTarget = null;
+      return;
+    }
+    simpleTooltip.style.display = 'none';
+    simpleTooltipVisible = false;
+    simpleTooltipTarget = null;
+  }
+
+  function buildSimpleTooltipHtml(text){
+    if(!text){
+      return null;
+    }
+    return '<p class=""metric-tooltip__desc"">' + escapeHtml(text) + '</p>';
+  }
+
+  function showSimpleTooltip(target){
+    if(!simpleTooltip || !target){
+      return;
+    }
+    var tooltipText = target.dataset.simpleTooltip;
+    if(!tooltipText){
+      return;
+    }
+    var html = buildSimpleTooltipHtml(tooltipText);
+    if(!html){
+      return;
+    }
+    simpleTooltip.innerHTML = html;
+    simpleTooltip.style.display = 'block';
+    simpleTooltipVisible = true;
+    simpleTooltipTarget = target;
+    positionTooltip(target, simpleTooltip);
+  }
+
+  function scheduleSimpleTooltip(target){
+    if(!target){
+      return;
+    }
+    cancelSimpleTooltipTimer();
+    simpleTooltipTimer = setTimeout(function(){
+      showSimpleTooltip(target);
+    }, 500);
+  }
+
+
+  // Unified tooltip handler for better performance (event delegation)
+  // WHY: Symbol tooltip is now only on .name-text elements, so it doesn't conflict with
+  // buttons/indicators. Order doesn't matter much, but we check in a logical priority order.
+  function handleUnifiedTooltipMouseOver(event){
+    // Check for suppressed metric tooltip first (metric cells)
+    var metric = event.target.closest('.metric[data-suppressed=""true""]');
+    if(metric && metric.dataset.suppressionInfo){
+      if(suppressionTooltipTarget && suppressionTooltipTarget !== metric){
+        hideSuppressionTooltip();
+      }
+      if(tooltipVisible && tooltipTarget){ hideTooltip(); }
+      if(symbolTooltipVisible && symbolTooltipTarget){ hideSymbolTooltip(); }
+      if(simpleTooltipVisible && simpleTooltipTarget){ hideSimpleTooltip(); }
+      scheduleSuppressionTooltip(metric);
+      return;
+    }
+    // Check for symbol tooltip (name-text elements only)
+    var nameElement = event.target.closest('.name-text[data-symbol-info], a.name-text[data-symbol-info]');
+    if(nameElement && nameElement.dataset.symbolInfo){
+      if(symbolTooltipTarget && symbolTooltipTarget !== nameElement){
+        hideSymbolTooltip();
+      }
+      if(tooltipVisible && tooltipTarget){ hideTooltip(); }
+      if(suppressionTooltipVisible && suppressionTooltipTarget){ hideSuppressionTooltip(); }
+      if(simpleTooltipVisible && simpleTooltipTarget){ hideSimpleTooltip(); }
+      scheduleSymbolTooltip(nameElement);
+      return;
+    }
+    // Check for simple tooltip (buttons, indicators)
+    var simpleTarget = event.target.closest('[data-simple-tooltip]');
+    if(simpleTarget && simpleTarget.dataset.simpleTooltip){
+      if(simpleTooltipTarget && simpleTooltipTarget !== simpleTarget){
+        hideSimpleTooltip();
+      }
+      if(tooltipVisible && tooltipTarget){ hideTooltip(); }
+      if(suppressionTooltipVisible && suppressionTooltipTarget){ hideSuppressionTooltip(); }
+      if(symbolTooltipVisible && symbolTooltipTarget){ hideSymbolTooltip(); }
+      scheduleSimpleTooltip(simpleTarget);
+      return;
+    }
+  }
+
+  function handleUnifiedTooltipMouseOut(event){
+    var target = event.target;
+    var related = event.relatedTarget;
+    
+    // WHY: Instant tooltip hiding - immediately cancel all pending timers and hide tooltips
+    // when mouse leaves tooltip-triggering elements. We only keep tooltip visible if moving
+    // to the tooltip element itself or staying within the triggering element.
+    
+    // Check if we're leaving a suppressed metric tooltip element
+    if(suppressionTooltipVisible && suppressionTooltipTarget){
+      if(related){
+        // Check if moving to tooltip or still within the metric cell
+        if(suppressionTooltip && suppressionTooltip.contains && suppressionTooltip.contains(related)){
+          return; // Moving to tooltip - keep it visible
+        }
+        if(suppressionTooltipTarget.contains && suppressionTooltipTarget.contains(related)){
+          return; // Still within metric cell - keep it visible
+        }
+      }
+      // Moving away - hide immediately
+      cancelSuppressionTooltipTimer();
+      hideSuppressionTooltip();
+      return;
+    }
+    
+    // Check if we're leaving a symbol tooltip element (.name-text only)
+    if(symbolTooltipVisible && symbolTooltipTarget){
+      if(related){
+        // Check if moving to tooltip or still within the name-text element
+        if(symbolTooltip && symbolTooltip.contains && symbolTooltip.contains(related)){
+          return; // Moving to tooltip - keep it visible
+        }
+        // WHY: Only check if still within the name-text element itself, not the parent cell
+        // This ensures tooltip disappears when mouse leaves the text, not the entire cell
+        if(symbolTooltipTarget.contains && symbolTooltipTarget.contains(related)){
+          return; // Still within name-text element - keep it visible
+        }
+      }
+      // Moving away from name-text - hide immediately
+      cancelSymbolTooltipTimer();
+      hideSymbolTooltip();
+      return;
+    }
+    
+    // Check if we're leaving a simple tooltip element (buttons, indicators)
+    if(simpleTooltipVisible && simpleTooltipTarget){
+      // WHY: For buttons/indicators, we want instant hiding when mouse leaves the element.
+      // Hide immediately unless moving to the tooltip itself or staying within the button.
+      if(!related){
+        // No related target means mouse left the page - hide immediately
+        cancelSimpleTooltipTimer();
+        hideSimpleTooltip();
+        return;
+      }
+      // Only keep visible if moving directly to the tooltip element
+      if(simpleTooltip && simpleTooltip.contains && simpleTooltip.contains(related)){
+        return; // Moving to tooltip - keep it visible
+      }
+      // Check if still within the button/indicator element itself
+      // WHY: For buttons, this check ensures tooltip disappears immediately when leaving the button
+      // even if moving to a sibling element in the same container
+      if(simpleTooltipTarget.contains && simpleTooltipTarget.contains(related)){
+        return; // Still within the element - keep it visible
+      }
+      // Moving away from button/indicator - hide immediately
+      cancelSimpleTooltipTimer();
+      hideSimpleTooltip();
+      return;
+    }
+    
+    // If no tooltip is visible but timers might be pending, cancel them all
+    // This handles the case when mouse leaves before tooltip appears (after 500ms delay)
+    cancelSuppressionTooltipTimer();
+    cancelSymbolTooltipTimer();
+    cancelSimpleTooltipTimer();
+    
+    // Also hide all visible tooltips as cleanup (shouldn't happen, but just in case)
+    if(suppressionTooltipVisible){
+      hideSuppressionTooltip();
+    }
+    if(symbolTooltipVisible){
+      hideSymbolTooltip();
+    }
+    if(simpleTooltipVisible){
+      hideSimpleTooltip();
+    }
+  }
+
+  // Attach unified event listeners for better performance
+  if(tbody){
+    tbody.addEventListener(""mouseover"", handleUnifiedTooltipMouseOver, true);
+    tbody.addEventListener(""mouseout"", handleUnifiedTooltipMouseOut, true);
   }
 
   var state = {
@@ -336,20 +744,29 @@ internal static class HtmlScriptGenerator
       var metrics = row.querySelectorAll('.metric');
       var hasError = false;
       var hasWarning = false;
+      var hasSuppressed = false;
       var hasDelta = false;
       for(var i = 0; i < metrics.length; i++){
-        var status = metrics[i].dataset.status;
+        var metric = metrics[i];
+        var isSuppressed = metric.dataset.suppressed === 'true';
+        if(isSuppressed){
+          hasSuppressed = true;
+          // WHY: Suppressed metrics should not be counted as errors or warnings
+          // because they are intentionally ignored via SuppressMessage attributes.
+          continue;
+        }
+        var status = metric.dataset.status;
         if(status === 'error'){
           hasError = true;
         } else if(status === 'warning'){
           hasWarning = true;
         }
         if(!hasDelta){
-          if(metrics[i].dataset && metrics[i].dataset.hasDelta === 'true'){
+          if(metric.dataset && metric.dataset.hasDelta === 'true'){
             hasDelta = true;
           } else {
             // WHY: Check for temporary classes (before JavaScript processing) and final classes (after processing)
-            var deltaElement = metrics[i].querySelector('.delta-positive, .delta-negative, .delta-improving, .delta-degrading');
+            var deltaElement = metric.querySelector('.delta-positive, .delta-negative, .delta-improving, .delta-degrading');
             if(deltaElement){
               hasDelta = true;
             }
@@ -361,6 +778,7 @@ internal static class HtmlScriptGenerator
       }
       row.dataset.hasError = hasError ? 'true' : 'false';
       row.dataset.hasWarning = hasWarning ? 'true' : 'false';
+      row.dataset.hasSuppressed = hasSuppressed ? 'true' : 'false';
       row.dataset.hasDelta = hasDelta ? 'true' : 'false';
       var isNew = row.dataset.isNew === 'true' || !!row.querySelector('.badge-new');
       row.dataset.isNew = isNew ? 'true' : 'false';
@@ -588,17 +1006,27 @@ internal static class HtmlScriptGenerator
   var awarenessLabel = document.getElementById('awareness-label');
   var awarenessLevels = {
     '1': { label: 'All', predicate: function(row){ return true; } },
-    '2': { label: 'Warning', predicate: function(row){ return row.dataset.hasError === 'true' || row.dataset.hasWarning === 'true'; } },
-    '3': { label: 'Error', predicate: function(row){ return row.dataset.hasError === 'true'; } }
+    '2': { label: 'Warning', predicate: function(row){ 
+      // WHY: Suppressed metrics are intentionally ignored and should not appear in warning/error filters
+      if(row.dataset.hasSuppressed === 'true'){ return false; }
+      return row.dataset.hasError === 'true' || row.dataset.hasWarning === 'true'; 
+    } },
+    '3': { label: 'Error', predicate: function(row){ 
+      // WHY: Suppressed metrics are intentionally ignored and should not appear in warning/error filters
+      if(row.dataset.hasSuppressed === 'true'){ return false; }
+      return row.dataset.hasError === 'true'; 
+    } }
   };
   var currentAwarenessKey = '1';
   var currentAwareness = awarenessLevels[currentAwarenessKey];
 
   var newFilterControl = document.getElementById('filter-new');
   var changesFilterControl = document.getElementById('filter-changes');
+  var suppressedFilterControl = document.getElementById('filter-suppressed');
   var stateFilter = {
     onlyNew: savedPreferences ? savedPreferences.filterNew === true : false,
-    onlyChanges: savedPreferences ? savedPreferences.filterChanges === true : false
+    onlyChanges: savedPreferences ? savedPreferences.filterChanges === true : false,
+    onlySuppressed: savedPreferences ? savedPreferences.filterSuppressed === true : false
   };
 
   function isRowHidden(row){
@@ -1073,7 +1501,8 @@ internal static class HtmlScriptGenerator
       awarenessLevel: currentAwarenessKey,
       filterText: filterText,
       filterNew: stateFilter.onlyNew === true,
-      filterChanges: stateFilter.onlyChanges === true
+      filterChanges: stateFilter.onlyChanges === true,
+      filterSuppressed: stateFilter.onlySuppressed === true
     };
   }
 
@@ -1089,6 +1518,9 @@ internal static class HtmlScriptGenerator
   }
   if(changesFilterControl){
     changesFilterControl.checked = stateFilter.onlyChanges;
+  }
+  if(suppressedFilterControl){
+    suppressedFilterControl.checked = stateFilter.onlySuppressed;
   }
   if(filterInput && savedPreferences && typeof savedPreferences.filterText === 'string'){
     filterInput.value = savedPreferences.filterText;
@@ -1393,8 +1825,9 @@ internal static class HtmlScriptGenerator
   function applyStateFilters(){
     var requireNew = stateFilter.onlyNew;
     var requireChanges = stateFilter.onlyChanges;
+    var requireSuppressed = stateFilter.onlySuppressed;
 
-    if(!requireNew && !requireChanges){
+    if(!requireNew && !requireChanges && !requireSuppressed){
       state.rows.forEach(function(row){
         row.dataset.hiddenByState = 'false';
       });
@@ -1409,7 +1842,8 @@ internal static class HtmlScriptGenerator
     state.rows.forEach(function(row){
       var matchesNew = requireNew && row.dataset.isNew === 'true';
       var matchesChanges = requireChanges && row.dataset.hasDelta === 'true';
-      var matches = matchesNew || matchesChanges;
+      var matchesSuppressed = requireSuppressed && row.dataset.hasSuppressed === 'true';
+      var matches = matchesNew || matchesChanges || matchesSuppressed;
       if(matches){
         var current = row;
         while(current){
@@ -1441,12 +1875,25 @@ internal static class HtmlScriptGenerator
     persistPreferences();
   }
 
+  function handleSuppressedFilterChange(){
+    if(!suppressedFilterControl){
+      return;
+    }
+    stateFilter.onlySuppressed = suppressedFilterControl.checked;
+    applyStateFilters();
+    persistPreferences();
+  }
+
   if(newFilterControl){
     newFilterControl.addEventListener('change', handleNewFilterChange);
   }
 
   if(changesFilterControl){
     changesFilterControl.addEventListener('change', handleChangesFilterChange);
+  }
+
+  if(suppressedFilterControl){
+    suppressedFilterControl.addEventListener('change', handleSuppressedFilterChange);
   }
 
   // Meta section spoiler toggle

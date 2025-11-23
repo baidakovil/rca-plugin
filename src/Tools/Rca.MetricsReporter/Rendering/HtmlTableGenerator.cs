@@ -60,6 +60,10 @@ internal sealed class HtmlTableGenerator
     builder.AppendLine("      <input type=\"checkbox\" id=\"filter-changes\" aria-label=\"Show only rows with metric changes\" />");
     builder.AppendLine("      <span>changes</span>");
     builder.AppendLine("    </label>");
+    builder.AppendLine("    <label class=\"state-filter-option\">");
+    builder.AppendLine("      <input type=\"checkbox\" id=\"filter-suppressed\" aria-label=\"Show only rows with suppressed metrics\" />");
+    builder.AppendLine("      <span>suppressed</span>");
+    builder.AppendLine("    </label>");
     builder.AppendLine("  </div>");
     builder.AppendLine("  <div class=\"awareness-control\">");
     builder.AppendLine("    <label for=\"awareness-level\" class=\"awareness-label\">Awareness:</label>");
@@ -126,12 +130,12 @@ internal sealed class HtmlTableGenerator
     var isNodeRow = hasChildren || isStructuralNode;
     var symbolTag = isNodeRow ? "th" : "td";
     var rowClass = isNodeRow ? "node-row node-header" : "node-row node-item";
-    var tooltip = BuildTooltip(node);
+    var symbolTooltipData = BuildSymbolTooltipData(node);
     var coverageLink = BuildCoverageLink(node, isNodeRow, assemblyName);
     var nameText = WebUtility.HtmlEncode(node.Name);
 
     AppendRowStart(builder, rowClass, thisId, level, parentId, hasChildren, role, node.IsNew, node.FullyQualifiedName);
-    AppendSymbolCell(builder, node, symbolTag, hasChildren, isStructuralNode, nameText, coverageLink, tooltip, thisId, isNodeRow);
+    AppendSymbolCell(builder, node, symbolTag, hasChildren, isStructuralNode, nameText, coverageLink, thisId, isNodeRow, symbolTooltipData);
     AppendMetricCells(node, symbolTag, builder);
     builder.AppendLine("    </tr>");
 
@@ -154,10 +158,28 @@ internal sealed class HtmlTableGenerator
   private static string? UpdateTypeName(MetricsNode node, string? currentType)
       => node is TypeMetricsNode typeNode ? typeNode.Name : currentType;
 
-  private static string BuildTooltip(MetricsNode node)
-      => string.IsNullOrWhiteSpace(node.FullyQualifiedName)
-          ? string.Empty
-          : WebUtility.HtmlEncode(node.FullyQualifiedName + " — " + NodeKindProvider.GetKind(node));
+  private static string BuildSymbolTooltipData(MetricsNode node)
+  {
+    if (string.IsNullOrWhiteSpace(node.FullyQualifiedName))
+    {
+      return string.Empty;
+    }
+
+    var role = NodeKindProvider.GetKind(node);
+    var roleUpper = role.ToUpperInvariant();
+    var data = new
+    {
+      role = roleUpper,
+      fullyQualifiedName = node.FullyQualifiedName
+    };
+
+    var json = System.Text.Json.JsonSerializer.Serialize(data, new System.Text.Json.JsonSerializerOptions
+    {
+      PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+    });
+
+    return $" data-symbol-info=\"{WebUtility.HtmlEncode(json)}\"";
+  }
 
   private string? BuildCoverageLink(MetricsNode node, bool isNodeRow, string? assemblyName)
       => isNodeRow && node is TypeMetricsNode typeNode && _coverageLinkBuilder is not null
@@ -191,28 +213,22 @@ internal sealed class HtmlTableGenerator
       bool isStructuralNode,
       string nameText,
       string? coverageLink,
-      string tooltip,
       string thisId,
-      bool isNodeRow)
+      bool isNodeRow,
+      string nameTooltipData)
   {
     var symbolClasses = "symbol" + (hasChildren || isStructuralNode ? " has-expander" : string.Empty);
-    builder.Append($"      <{symbolTag} class=\"{symbolClasses}\"");
-    if (!string.IsNullOrWhiteSpace(tooltip))
-    {
-      builder.Append($" title=\"{tooltip}\"");
-    }
-
-    builder.Append(">");
+    builder.Append($"      <{symbolTag} class=\"{symbolClasses}\">");
     if (hasChildren)
     {
       builder.Append($"<button class=\"expander\" data-target=\"{thisId}\" aria-label=\"Toggle expand/collapse\">-</button>");
     }
     else if (isStructuralNode)
     {
-      builder.Append("<span class=\"expander-placeholder symbol-indicator\" title=\"No child nodes available\" aria-hidden=\"true\">Ø</span>");
+      builder.Append("<span class=\"expander-placeholder symbol-indicator\" data-simple-tooltip=\"No child nodes available\" aria-hidden=\"true\">Ø</span>");
     }
 
-    RenderNodeName(builder, node, nameText, coverageLink, isNodeRow);
+    RenderNodeName(builder, node, nameText, coverageLink, isNodeRow, nameTooltipData);
     AppendRowActionIcons(builder);
 
     builder.AppendLine($"</{symbolTag}>");
@@ -223,35 +239,36 @@ internal sealed class HtmlTableGenerator
       MetricsNode node,
       string nameText,
       string? coverageLink,
-      bool isNodeRow)
+      bool isNodeRow,
+      string nameTooltipData)
   {
     if (!isNodeRow && node is MemberMetricsNode memberNode)
     {
       if (memberNode.IncludesIteratorStateMachineCoverage)
       {
-      builder.Append("<span class=\"method-state-machine symbol-indicator\" title=\"Includes coverage from compiler-generated iterator state machine\">⊃</span>");
+      builder.Append("<span class=\"method-state-machine symbol-indicator\" data-simple-tooltip=\"Includes coverage from compiler-generated iterator state machine\">⊃</span>");
       }
 
-      builder.Append("<span class=\"name-text item-name\">" + nameText + "</span>");
+      builder.Append("<span class=\"name-text item-name\"" + nameTooltipData + ">" + nameText + "</span>");
     }
     else if (isNodeRow && node is TypeMetricsNode)
     {
       if (!string.IsNullOrEmpty(coverageLink))
       {
-        builder.Append($"<a href=\"{coverageLink}\" class=\"name-text coverage-link-type\" target=\"_blank\" rel=\"noopener noreferrer\">" + nameText + "</a>");
+        builder.Append($"<a href=\"{coverageLink}\" class=\"name-text coverage-link-type\" target=\"_blank\" rel=\"noopener noreferrer\"" + nameTooltipData + ">" + nameText + "</a>");
       }
       else
       {
-        builder.Append("<span class=\"name-text\">" + nameText + "</span>");
+        builder.Append("<span class=\"name-text\"" + nameTooltipData + ">" + nameText + "</span>");
       }
     }
     else if (!isNodeRow)
     {
-      builder.Append("<span class=\"name-text item-name\">" + nameText + "</span>");
+      builder.Append("<span class=\"name-text item-name\"" + nameTooltipData + ">" + nameText + "</span>");
     }
     else
     {
-      builder.Append("<span class=\"name-text\">" + nameText + "</span>");
+      builder.Append("<span class=\"name-text\"" + nameTooltipData + ">" + nameText + "</span>");
     }
 
     if (node.IsNew)
@@ -263,10 +280,10 @@ internal sealed class HtmlTableGenerator
   private static void AppendRowActionIcons(StringBuilder builder)
   {
     builder.AppendLine("      <span class=\"row-action-icons\" aria-hidden=\"true\">");
-    builder.AppendLine("        <button type=\"button\" class=\"row-action-icon\" data-action=\"copy\" aria-label=\"Copy symbol name\" title=\"Copy fully qualified symbol name\">");
+    builder.AppendLine("        <button type=\"button\" class=\"row-action-icon\" data-action=\"copy\" aria-label=\"Copy symbol name\" data-simple-tooltip=\"Copy fully qualified symbol name\">");
     builder.AppendLine("          C");
     builder.AppendLine("        </button>");
-    builder.AppendLine("        <button type=\"button\" class=\"row-action-icon\" data-action=\"filter\" aria-label=\"Filter by this symbol\" title=\"Set filter to this symbol\">");
+    builder.AppendLine("        <button type=\"button\" class=\"row-action-icon\" data-action=\"filter\" aria-label=\"Filter by this symbol\" data-simple-tooltip=\"Set filter to this symbol\">");
     builder.AppendLine("          F");
     builder.AppendLine("        </button>");
     builder.AppendLine("      </span>");
@@ -328,8 +345,8 @@ internal sealed class HtmlTableGenerator
       var hasDelta = val is not null && val.Delta.HasValue && val.Delta.Value != 0;
       var suppression = TryGetSuppression(node, mid);
       var suppressedAttr = suppression is null ? string.Empty : " data-suppressed=\"true\"";
-      var tooltipAttr = BuildSuppressionTooltipAttribute(suppression);
-      builder.AppendLine($"      <{metricTag} class=\"metric\" data-col=\"{mid}\" data-status=\"{status}\" data-has-delta=\"{(hasDelta ? "true" : "false")}\" data-metric-id=\"{mid}\"{suppressedAttr}{tooltipAttr}>{MetricValueRenderer.Render(val)}</{metricTag}>");
+      var suppressionDataAttr = BuildSuppressionDataAttribute(suppression);
+      builder.AppendLine($"      <{metricTag} class=\"metric\" data-col=\"{mid}\" data-status=\"{status}\" data-has-delta=\"{(hasDelta ? "true" : "false")}\" data-metric-id=\"{mid}\"{suppressedAttr}{suppressionDataAttr}>{MetricValueRenderer.Render(val)}</{metricTag}>");
     }
   }
 
@@ -373,21 +390,52 @@ internal sealed class HtmlTableGenerator
     return _suppressedIndex.TryGetValue((node.FullyQualifiedName, metric), out var info) ? info : null;
   }
 
-  private static string BuildSuppressionTooltipAttribute(SuppressedSymbolInfo? suppression)
+  private static string BuildSuppressionDataAttribute(SuppressedSymbolInfo? suppression)
   {
     if (suppression is null)
     {
       return string.Empty;
     }
 
-    var justification = suppression.Justification;
+    var formattedJustification = FormatJustificationText(suppression.Justification);
+    var data = new
+    {
+      ruleId = suppression.RuleId,
+      justification = formattedJustification
+    };
+
+    var json = System.Text.Json.JsonSerializer.Serialize(data, new System.Text.Json.JsonSerializerOptions
+    {
+      PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+    });
+
+    return $" data-suppression-info=\"{WebUtility.HtmlEncode(json)}\"";
+  }
+
+  private static string FormatJustificationText(string? justification)
+  {
     if (string.IsNullOrWhiteSpace(justification))
     {
-      justification = "Suppressed via SuppressMessage.";
+      return "Suppressed via SuppressMessage.";
     }
 
-    var escaped = WebUtility.HtmlEncode($"Suppressed {suppression.RuleId}: {justification}");
-    return $" title=\"{escaped}\"";
+    // WHY: Format justification text for better readability:
+    // - Preserve paragraph breaks (split on double newlines)
+    // - Escape HTML to prevent XSS
+
+    var text = justification.Trim();
+    var parts = new System.Collections.Generic.List<string>();
+
+    // Split by double newlines to preserve paragraph structure
+    var paragraphs = text.Split(new[] { "\r\n\r\n", "\n\n", "\r\r" }, StringSplitOptions.RemoveEmptyEntries);
+
+    foreach (var paragraph in paragraphs)
+    {
+      var escaped = WebUtility.HtmlEncode(paragraph.Trim());
+      parts.Add(escaped);
+    }
+
+    return string.Join("<br/><br/>", parts);
   }
 }
 

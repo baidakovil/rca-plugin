@@ -90,7 +90,9 @@ public sealed class HtmlTableGeneratorSuppressedTests
 
     // Assert
     html.Should().Contain("data-suppressed=\"true\"", "suppressed metric cell must be marked for styling");
-    html.Should().Contain("Suppressed CA1506: Suppression justification.", "suppression justification must be exposed via tooltip");
+    html.Should().Contain("data-suppression-info", "suppression data must be available for tooltip rendering");
+    html.Should().Contain("CA1506", "suppression rule ID must be included in data attribute");
+    html.Should().Contain("Suppression justification.", "suppression justification must be included in data attribute");
   }
 }
 
