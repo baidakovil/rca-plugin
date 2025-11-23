@@ -1,7 +1,4 @@
 using System;
-using System.IO;
-using System.IO.Pipes;
-using System.Text.Json;
 using System.Diagnostics;
 using System.Linq;
 
@@ -110,42 +107,12 @@ namespace Rca.TestAdapter
     /// <returns>True if responsive, false otherwise.</returns>
     private static bool CheckPipeServerResponsive()
     {
-      NamedPipeClientStream? pipeClient = null;
-      StreamWriter? writer = null;
-      StreamReader? reader = null;
-
       try
       {
-        pipeClient = new NamedPipeClientStream(".", Constants.CommandPipeName, PipeDirection.InOut, PipeOptions.None);
-        pipeClient.Connect(5000);
-
-        if (!pipeClient.IsConnected)
-        {
-          return false;
-        }
-
-        writer = new StreamWriter(pipeClient) { AutoFlush = true };
-        reader = new StreamReader(pipeClient);
-
         // Send a status command
         var command = new PipeCommand { Command = "STATUS", Payload = "TEST_ADAPTER" };
-        writer.WriteLine(JsonSerializer.Serialize(command));
-
-        // Read the response
-        var responseJson = reader.ReadLine();
-        if (string.IsNullOrEmpty(responseJson))
-        {
-          return false;
-        }
-
-        var response = JsonSerializer.Deserialize<PipeResponse>(responseJson);
-        var success = response != null && !string.IsNullOrEmpty(response.Status);
-
-        // Explicitly close streams before disposal
-        writer.Close();
-        reader.Close();
-
-        return success;
+        var response = NamedPipeJsonClient.SendCommand(Constants.CommandPipeName, command, 5000);
+        return response != null && !string.IsNullOrEmpty(response.Status);
       }
       catch (TimeoutException)
       {
@@ -159,15 +126,6 @@ namespace Rca.TestAdapter
       }
       finally
       {
-        // Clean up resources in proper order
-        try { writer?.Dispose(); } catch { }
-        try { reader?.Dispose(); } catch { }
-        try
-        {
-          if (pipeClient?.IsConnected == true) pipeClient.Close();
-          pipeClient?.Dispose();
-        }
-        catch { }
       }
     }
   }
