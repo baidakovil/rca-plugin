@@ -92,10 +92,17 @@ If tests fail to execute:
 
 ## Implementation Details
 
-- `RevitTestDiscoverer` — discovery and `RuntimeAssemblyPath` assignment
-- `RevitTestExecutor` — grouping and pipe execution
-- `RevitPipeClient` — transport
-- `RevitTestInitializer` — environment checks
+- `RevitTestDiscoverer` — discovery orchestration and `RuntimeAssemblyPath` assignment
+- `RevitTestAssemblyLocator` — locates the latest `%LOCALAPPDATA%\RCA\Test\<timestamp>` folder and resolves the runtime `Rca.Integration.Revit.Tests.dll` path
+- `RcaTestCasePublisher` — applies RCA-specific metadata to discovered `TestCase` instances and publishes them to VSTest
+- `NUnitTestDiscoverer` / `NUnitTestCaseFactory` — reflection-based NUnit discovery in a collectible `AssemblyLoadContext`
+- `RevitTestExecutor` — VSTest `ITestExecutor` implementation; delegates execution to coordinator/transport
+- `RevitTestRunCoordinator` — groups tests by runtime assembly, coordinates execution via `RevitPipeClient`, and maps pipe results to VSTest `TestResult`
+- `NUnitSourceTestDiscoverer` — discovers tests directly from source assemblies for the `RunTests(IEnumerable<string> sources, ...)` path
+- `RevitPipeClient` — high-level pipe client used by the coordinator
+- `PipeTestExecutionTransport` — low-level pipe transport that sends `RUN_TESTS` commands and deserializes `RevitTestResult` payloads
+- `NamedPipeJsonClient` — shared helper for JSON-over-named-pipe request/response handling
+- `RevitTestInitializer` — environment checks (Revit process + RCA pipe server availability); when Revit is not available, integration tests are reported as *Skipped* rather than causing a hard failure
 
 On the Revit side:
 
