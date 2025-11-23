@@ -35,7 +35,7 @@
   </ItemGroup>
 
   <!-- Add Microsoft.CodeAnalysis.Metrics package to all projects that need it -->
-  <ItemGroup Condition="'$(MSBuildProjectName)' != 'Rca.BuildMetadata.Generator' and '$(MSBuildProjectName)' != 'SourceHashGenerator'">
+  <ItemGroup Condition="'$(MSBuildProjectName)' != 'SourceHashGenerator'">
     <PackageReference Include="Microsoft.CodeAnalysis.Metrics" Version="4.14.0" />
   </ItemGroup>
 
