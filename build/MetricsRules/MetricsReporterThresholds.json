@@ -96,7 +96,7 @@
           "notes": "AI Advice was to rely on what you are coding: from 15 for core business service to 50 for adapter/facades/configurations."
         },
         "Member": {
-          "warning": 10,
+          "warning": 11,
           "error": 20,
           "notes": "Threshold level 9 is MS Advice."
         }

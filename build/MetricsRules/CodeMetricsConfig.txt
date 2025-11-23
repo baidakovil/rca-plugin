@@ -51,7 +51,7 @@ CA1505(Namespace): 50
 # ==============================================
 # Methods: Strict - minimize dependencies per method
 # Threshold level 9 is MS Advice
-CA1506(Method): 10
+CA1506(Method): 11
 
 # Types: AI Advice was to rely on what you are coding: from 15 for core business service to 50 for adapter/facades/configurations
 CA1506(Type): 40
