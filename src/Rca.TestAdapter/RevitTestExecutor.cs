@@ -31,87 +31,106 @@ public class RevitTestExecutor : ITestExecutor
   /// </summary>
   public void RunTests(IEnumerable<TestCase>? tests, IRunContext? runContext, IFrameworkHandle? frameworkHandle)
   {
-    if (tests == null || runContext == null || frameworkHandle == null)
-    {
-      return;
-    }
-
-    try
-    {
-      frameworkHandle.SendMessage(TestMessageLevel.Informational, "RCA Test Adapter: Starting test execution");
-
-      // Ensure Revit is initialized
-      if (!RevitTestInitializer.EnsureRevitIsInitialized())
+      if (tests == null || runContext == null || frameworkHandle == null)
       {
-        frameworkHandle.SendMessage(TestMessageLevel.Error,
-            "RCA Test Adapter: Failed to initialize Revit. Make sure Revit is running with the RCA plugin loaded.");
         return;
       }
 
-      // Group tests by runtime assembly path if available, otherwise by source
-      var testsByGroup = tests.GroupBy(test =>
-          test.GetPropertyValue(AdapterProperties.RuntimeAssemblyPath, defaultValue: test.Source));
-
-      foreach (var group in testsByGroup)
+      try
       {
-        if (cancelled)
+        frameworkHandle.SendMessage(TestMessageLevel.Informational, "RCA Test Adapter: Starting test execution");
+
+        // Ensure Revit is initialized. When Revit is not running we treat this as a
+        // skipped scenario rather than a hard error so that CI can succeed without Revit.
+        if (!RevitTestInitializer.EnsureRevitIsInitialized())
         {
-          break;
+          frameworkHandle.SendMessage(
+              TestMessageLevel.Warning,
+              "RCA Test Adapter: Revit is not initialized. Revit integration tests will be skipped. " +
+              "Start Autodesk Revit with the RCA plugin loaded to enable these tests.");
+
+          foreach (var testCase in tests)
+          {
+            var skippedResult = new Microsoft.VisualStudio.TestPlatform.ObjectModel.TestResult(testCase)
+            {
+              Outcome = TestOutcome.Skipped,
+              ErrorMessage = "Revit is not running or RCA pipe server is not available. Test skipped.",
+            };
+
+            frameworkHandle.RecordResult(skippedResult);
+          }
+
+          frameworkHandle.SendMessage(TestMessageLevel.Informational, "RCA Test Adapter: Test execution skipped (Revit not running)");
+          return;
         }
 
-        try
+        // Group tests by runtime assembly path if available, otherwise by source
+        var testsByGroup = tests.GroupBy(test =>
+            test.GetPropertyValue(AdapterProperties.RuntimeAssemblyPath, defaultValue: test.Source));
+
+        foreach (var group in testsByGroup)
         {
-          var assemblyPath = group.Key; // Prefer runtime path
-          var sourceTests = group.ToList();
-
-          frameworkHandle.SendMessage(TestMessageLevel.Informational,
-              $"RCA Test Adapter: Executing {sourceTests.Count} tests from {assemblyPath}");
-
-          var pipeClient = new RevitPipeClient();
-          var results = pipeClient.ExecuteTests(assemblyPath, sourceTests, defaultTimeout);
-
-          // Process results
-          foreach (var result in results)
+          if (cancelled)
           {
-            var testCase = sourceTests.FirstOrDefault(t =>
-                t.FullyQualifiedName == result.FullyQualifiedName);
+            break;
+          }
 
-            if (testCase != null)
+          try
+          {
+            var assemblyPath = group.Key; // Prefer runtime path
+            var sourceTests = group.ToList();
+
+            frameworkHandle.SendMessage(
+                TestMessageLevel.Informational,
+                $"RCA Test Adapter: Executing {sourceTests.Count} tests from {assemblyPath}");
+
+            var pipeClient = new RevitPipeClient();
+            var results = pipeClient.ExecuteTests(assemblyPath, sourceTests, defaultTimeout);
+
+            // Process results
+            foreach (var result in results)
             {
-              var testResult = new Microsoft.VisualStudio.TestPlatform.ObjectModel.TestResult(testCase)
-              {
-                Outcome = ConvertTestOutcome(result.Outcome),
-                ErrorMessage = result.ErrorMessage,
-                ErrorStackTrace = result.ErrorStackTrace,
-                DisplayName = result.DisplayName,
-                Duration = TimeSpan.FromMilliseconds(result.DurationInMilliseconds),
-                StartTime = DateTimeOffset.FromUnixTimeMilliseconds(result.StartTimeUnixMs),
-                EndTime = DateTimeOffset.FromUnixTimeMilliseconds(result.EndTimeUnixMs),
-              };
+              var testCase = sourceTests.FirstOrDefault(t =>
+                  t.FullyQualifiedName == result.FullyQualifiedName);
 
-              foreach (var message in result.Messages)
+              if (testCase != null)
               {
-                frameworkHandle.SendMessage(ConvertMessageLevel(message.Level), message.Text);
+                var testResult = new Microsoft.VisualStudio.TestPlatform.ObjectModel.TestResult(testCase)
+                {
+                  Outcome = ConvertTestOutcome(result.Outcome),
+                  ErrorMessage = result.ErrorMessage,
+                  ErrorStackTrace = result.ErrorStackTrace,
+                  DisplayName = result.DisplayName,
+                  Duration = TimeSpan.FromMilliseconds(result.DurationInMilliseconds),
+                  StartTime = DateTimeOffset.FromUnixTimeMilliseconds(result.StartTimeUnixMs),
+                  EndTime = DateTimeOffset.FromUnixTimeMilliseconds(result.EndTimeUnixMs),
+                };
+
+                foreach (var message in result.Messages)
+                {
+                  frameworkHandle.SendMessage(ConvertMessageLevel(message.Level), message.Text);
+                }
+
+                frameworkHandle.RecordResult(testResult);
               }
-
-              frameworkHandle.RecordResult(testResult);
             }
           }
+          catch (Exception ex)
+          {
+            frameworkHandle.SendMessage(
+                TestMessageLevel.Error,
+                $"RCA Test Adapter: Error executing tests: {ex.Message}");
+            frameworkHandle.SendMessage(
+                TestMessageLevel.Informational,
+                $"RCA Test Adapter: Exception details: {ex}");
+          }
         }
-        catch (Exception ex)
-        {
-          frameworkHandle.SendMessage(TestMessageLevel.Error,
-              $"RCA Test Adapter: Error executing tests: {ex.Message}");
-          frameworkHandle.SendMessage(TestMessageLevel.Informational,
-              $"RCA Test Adapter: Exception details: {ex}");
-        }
-      }
 
-      frameworkHandle.SendMessage(TestMessageLevel.Informational, "RCA Test Adapter: Test execution completed");
-    }
-    finally
-    {
-    }
+        frameworkHandle.SendMessage(TestMessageLevel.Informational, "RCA Test Adapter: Test execution completed");
+      }
+      finally
+      {
+      }
   }
 
   /// <summary>
