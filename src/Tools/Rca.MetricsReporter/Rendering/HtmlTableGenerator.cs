@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.Json.Serialization;
 using Rca.Tools.MetricsReporter.Model;
 
 /// <summary>
@@ -169,16 +170,23 @@ internal sealed class HtmlTableGenerator
 
     var role = NodeKindProvider.GetKind(node);
     var roleUpper = role.ToUpperInvariant();
+    var source = node.Source;
     var data = new
     {
       role = roleUpper,
-      fullyQualifiedName = node.FullyQualifiedName
+      fullyQualifiedName = node.FullyQualifiedName,
+      sourcePath = source?.Path,
+      sourceStartLine = source?.StartLine,
+      sourceEndLine = source?.EndLine
     };
 
-    var json = System.Text.Json.JsonSerializer.Serialize(data, new System.Text.Json.JsonSerializerOptions
-    {
-      PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
-    });
+    var json = System.Text.Json.JsonSerializer.Serialize(
+        data,
+        new System.Text.Json.JsonSerializerOptions
+        {
+          PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+          DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        });
 
     return $" data-symbol-info=\"{WebUtility.HtmlEncode(json)}\"";
   }

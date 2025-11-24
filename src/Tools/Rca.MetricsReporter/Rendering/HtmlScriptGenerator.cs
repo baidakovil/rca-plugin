@@ -476,6 +476,18 @@ internal static class HtmlScriptGenerator
     if(fqn){
       parts.push('<p class=""metric-tooltip__desc"">' + escapeHtml(fqn) + '</p>');
     }
+    if(symbolInfo.sourcePath){
+      var label = symbolInfo.sourcePath;
+      var hasStart = typeof symbolInfo.sourceStartLine === 'number';
+      var hasEnd = typeof symbolInfo.sourceEndLine === 'number';
+      if(hasStart){
+        label += ':' + symbolInfo.sourceStartLine;
+        if(hasEnd && symbolInfo.sourceEndLine !== symbolInfo.sourceStartLine){
+          label += '-' + symbolInfo.sourceEndLine;
+        }
+      }
+      parts.push('<p class=""metric-tooltip__desc""><strong>Path:</strong> <code>' + escapeHtml(label) + '</code></p>');
+    }
     return parts.join('');
   }
 

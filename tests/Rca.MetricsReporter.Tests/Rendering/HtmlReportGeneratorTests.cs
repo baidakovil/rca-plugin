@@ -158,6 +158,8 @@ public sealed class HtmlReportGeneratorTests
     typeRow.Should().Contain("data-action=\"open\"");
     typeRow.Should().Contain("data-source-path=\"C:\\Repo\\SampleType.cs\"");
     typeRow.Should().Contain("data-source-line=\"10\"");
+    typeRow.Should().Contain("sourcePath");
+    typeRow.Should().Contain("C:\\\\Repo\\\\SampleType.cs");
   }
 
   [Test]
@@ -267,6 +269,7 @@ public sealed class HtmlReportGeneratorTests
 
     typeRow.Should().NotContain("data-action=\"open\"");
     typeRow.Should().NotContain("data-source-path");
+    typeRow.Should().NotContain("sourcePath");
   }
 
   [Test]

@@ -375,6 +375,7 @@ internal static class HtmlStylesGenerator
     builder.AppendLine(".metric-tooltip__list li span { color: #0066cc; font-variant-numeric: tabular-nums; }");
     builder.AppendLine(".metric-tooltip strong { font-weight: 600; color: #1a1a1a; }");
     builder.AppendLine(".metric-tooltip em { font-style: italic; }");
+    builder.AppendLine(".metric-tooltip code { display: inline-block; font-family: 'Consolas','Courier New',monospace; font-size: 11px; white-space: pre-wrap; word-break: break-all; overflow-wrap: anywhere; }");
   }
 }
 
