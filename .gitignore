@@ -35,5 +35,8 @@
 src/Rca.Loader/source-hash.txt
 src/Rca.Core/source-hash.txt
 
+# Generated metrics baselines
+*.g.json
+
 # Build log files
 build/binlog

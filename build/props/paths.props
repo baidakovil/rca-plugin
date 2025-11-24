@@ -18,9 +18,10 @@
     <!-- Aggregated metrics report artifacts -->
     <MetricsReportDir Condition="'$(MetricsReportDir)' == ''">$(RcaMetricsDir)\Report</MetricsReportDir>
     <MetricsReportJson Condition="'$(MetricsReportJson)' == ''">$(MetricsReportDir)\metrics-report.json</MetricsReportJson>
-    <MetricsBaselineJson Condition="'$(MetricsBaselineJson)' == ''">$(MetricsReportDir)\metrics-baseline.json</MetricsBaselineJson>
-    <MetricsThresholdsPath Condition="'$(MetricsThresholdsPath)' == ''">$(SolutionDir)build\MetricsRules\MetricsReporterThresholds.json</MetricsThresholdsPath>
+    <!-- Baseline file is stored alongside other static metrics rules to keep it under source-controlled configuration. -->
     <CodeMetricsRulesDir Condition="'$(CodeMetricsRulesDir)' == ''">$(SolutionDir)build\MetricsRules</CodeMetricsRulesDir>
+    <MetricsBaselineJson Condition="'$(MetricsBaselineJson)' == ''">$(CodeMetricsRulesDir)\metrics-baseline.g.json</MetricsBaselineJson>
+    <MetricsThresholdsPath Condition="'$(MetricsThresholdsPath)' == ''">$(CodeMetricsRulesDir)\MetricsReporterThresholds.json</MetricsThresholdsPath>
     <!-- Path to JSON file with suppressed symbol metadata produced by Roslyn analysis. -->
     <RcaSuppressedSymbolsJson Condition="'$(RcaSuppressedSymbolsJson)' == ''">$(CodeMetricsRulesDir)\RcaSuppressedSymbols.json</RcaSuppressedSymbolsJson>
     <CodeMetricsConfigFile Condition="'$(CodeMetricsConfigFile)' == ''">$(CodeMetricsRulesDir)\CodeMetricsConfig.txt</CodeMetricsConfigFile>
