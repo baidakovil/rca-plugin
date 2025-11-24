@@ -292,11 +292,10 @@ function initActions(ctx){
       if(!path || isNaN(line)){
         return;
       }
+      const normalizedPath = path.replace(/\\/g, '/');
+      const cursorUrl = 'cursor://file/' + normalizedPath + ':' + line + '#L' + line;
       try{
-        const url = new URL('cursor://file/');
-        url.pathname = path.startsWith('/') ? path : '/' + path.replace(/\\/g, '/');
-        url.hash = 'L' + line;
-        window.location.href = url.toString();
+        window.location.href = encodeURI(cursorUrl);
       }catch(error){
         console.warn('Failed to open file via Cursor protocol:', error);
       }
