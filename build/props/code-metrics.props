@@ -8,7 +8,7 @@
     <!-- Set to true to enable Sarif metrics collection -->
     <SarifMetricsEnabled Condition="'$(SarifMetricsEnabled)' == ''">true</SarifMetricsEnabled>
     <!-- Set to true to enable AltCover metrics collection -->
-    <AltCoverEnabled Condition="'$(AltCoverEnabled)' == ''">false</AltCoverEnabled>
+    <AltCoverEnabled Condition="'$(AltCoverEnabled)' == ''">true</AltCoverEnabled>
     <!-- Assembly filter for AltCover instrumentation (which assemblies to instrument) -->
     <RcaCoverageAssemblyFilter Condition="'$(RcaCoverageAssemblyFilter)' == ''">Rca.*.dll</RcaCoverageAssemblyFilter>
     <!-- Method filter for AltCover instrumentation (which methods to exclude from coverage, e.g. constructors) -->
@@ -30,7 +30,6 @@
     <RoslynMetricsToolExe Condition="'$(RoslynMetricsToolExe)' == ''">$(RoslynMetricsToolDir)\Metrics.exe</RoslynMetricsToolExe>
     <!-- Solution file path and output file for metrics calculation -->
     <RoslynMetricsSolutionPath Condition="'$(RoslynMetricsSolutionPath)' == ''">$(SolutionDir)rca-plugin.sln</RoslynMetricsSolutionPath>
-    <RoslynSolutionMetricsOutputFile Condition="'$(RoslynSolutionMetricsOutputFile)' == ''">$(RoslynOutputDir)\solution-metrics.xml</RoslynSolutionMetricsOutputFile>
 
     <!-- Comma-separated or semicolon-separated list of member name patterns to exclude from metrics reports. -->
     <!-- Patterns support '*' and '?' wildcards. Plain names without wildcards are treated as exact matches. -->

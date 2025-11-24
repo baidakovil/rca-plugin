@@ -111,7 +111,24 @@ if (Test-Path $rcaTestPath) {
     Write-Host "RCA Test path not found, skipping" -ForegroundColor Gray
 }
 
-# 3) Remove all bin and obj directories recursively under project root
+# 3) Clear local Metrics directory under project root
+$metricsPath = "C:\Users\baidakov\rca-plugin\build\Metrics"
+if (Test-Path $metricsPath) {
+    Write-Host "Cleaning Metrics directory: $metricsPath" -ForegroundColor Yellow
+    try {
+        if (Safe-Remove $metricsPath) {
+            Write-Host "Metrics directory removed: $metricsPath" -ForegroundColor Green
+        } else {
+            Write-Host "Metrics directory could not be fully removed (see warnings above)" -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Host "Error cleaning Metrics directory: $($_.Exception.Message)" -ForegroundColor Red
+    }
+} else {
+    Write-Host "Metrics directory not found, skipping" -ForegroundColor Gray
+}
+
+# 4) Remove all bin and obj directories recursively under project root
 $projectRoot = "C:\Users\baidakov\rca-plugin"
 Write-Host "Searching for bin and obj directories under $projectRoot" -ForegroundColor Yellow
 try {

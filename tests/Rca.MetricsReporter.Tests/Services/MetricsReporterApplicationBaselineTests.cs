@@ -34,7 +34,7 @@ public sealed class MetricsReporterApplicationBaselineTests
     reportPath = Path.Combine(reportDir, "metrics-report.json");
     baselinePath = Path.Combine(reportDir, "metrics-baseline.json");
     storagePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RCA", "Metrics");
-    logFilePath = Path.Combine(reportDir, "metrics-reporter.log");
+    logFilePath = Path.Combine(reportDir, "MetricsReporter.log");
 
     Directory.CreateDirectory(reportDir!);
   }

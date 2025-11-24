@@ -198,7 +198,7 @@ internal sealed class MetricsReporterConsoleHost
 
     var normalizedMetricsDir = string.IsNullOrWhiteSpace(metricsDir) ? string.Empty : Path.GetFullPath(metricsDir);
     var reportDir = string.IsNullOrWhiteSpace(normalizedMetricsDir) ? Path.GetTempPath() : Path.Combine(normalizedMetricsDir, "Report");
-    var logFilePath = Path.Combine(reportDir, "metrics-reporter.log");
+    var logFilePath = Path.Combine(reportDir, "MetricsReporter.log");
 
     return new MetricsReporterOptions
     {

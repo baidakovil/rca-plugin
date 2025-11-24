@@ -11,21 +11,21 @@
     <RcaTestDeployRoot Condition="'$(RcaTestDeployRoot)' == ''">$(LOCALAPPDATA)\RCA\Test</RcaTestDeployRoot>
     <!-- Directory where RCA logs are written -->
     <RcaLogRoot Condition="'$(RcaLogRoot)' == ''">$(LOCALAPPDATA)\RCA\Logs</RcaLogRoot>
-
     <!-- Directory for code metrics output files -->
     <RcaMetricsDir Condition="'$(RcaMetricsDir)' == ''">$(SolutionDir)build\Metrics</RcaMetricsDir>
-
+    <!-- Temporary directory for generated metrics artefacts such as baselines, coverage storage and suppressed symbols. -->
+    <MetricsTempDir Condition="'$(MetricsTempDir)' == ''">$(SolutionDir)build\MetricsTemp</MetricsTempDir>
     <!-- Aggregated metrics report artifacts -->
     <MetricsReportDir Condition="'$(MetricsReportDir)' == ''">$(RcaMetricsDir)\Report</MetricsReportDir>
-    <MetricsReportJson Condition="'$(MetricsReportJson)' == ''">$(MetricsReportDir)\metrics-report.json</MetricsReportJson>
-    <!-- Baseline file is stored alongside other static metrics rules to keep it under source-controlled configuration. -->
+    <MetricsReportJson Condition="'$(MetricsReportJson)' == ''">$(MetricsReportDir)\MetricsReport.g.json</MetricsReportJson>
+    <!-- Static metrics rules configuration -->
     <CodeMetricsRulesDir Condition="'$(CodeMetricsRulesDir)' == ''">$(SolutionDir)build\MetricsRules</CodeMetricsRulesDir>
-    <MetricsBaselineJson Condition="'$(MetricsBaselineJson)' == ''">$(CodeMetricsRulesDir)\metrics-baseline.g.json</MetricsBaselineJson>
+    <MetricsBaselineJson Condition="'$(MetricsBaselineJson)' == ''">$(MetricsTempDir)\MetricsBaseline.g.json</MetricsBaselineJson>
     <MetricsThresholdsPath Condition="'$(MetricsThresholdsPath)' == ''">$(CodeMetricsRulesDir)\MetricsReporterThresholds.json</MetricsThresholdsPath>
     <!-- Path to JSON file with suppressed symbol metadata produced by Roslyn analysis. -->
-    <RcaSuppressedSymbolsJson Condition="'$(RcaSuppressedSymbolsJson)' == ''">$(CodeMetricsRulesDir)\RcaSuppressedSymbols.json</RcaSuppressedSymbolsJson>
+    <RcaSuppressedSymbolsJson Condition="'$(RcaSuppressedSymbolsJson)' == ''">$(MetricsTempDir)\RcaSuppressedSymbols.g.json</RcaSuppressedSymbolsJson>
     <CodeMetricsConfigFile Condition="'$(CodeMetricsConfigFile)' == ''">$(CodeMetricsRulesDir)\CodeMetricsConfig.txt</CodeMetricsConfigFile>
-    <MetricsReportHtml Condition="'$(MetricsReportHtml)' == ''">$(MetricsReportDir)\metrics-report.html</MetricsReportHtml>
+    <MetricsReportHtml Condition="'$(MetricsReportHtml)' == ''">$(MetricsReportDir)\MetricsReport.html</MetricsReportHtml>
     <MetricsSolutionName Condition="'$(MetricsSolutionName)' == ''">rca-plugin</MetricsSolutionName>
     <MetricsReporterProject Condition="'$(MetricsReporterProject)' == ''">$(SolutionDir)src\Tools\Rca.MetricsReporter\Rca.MetricsReporter.csproj</MetricsReporterProject>
     <MetricsReporterExe Condition="'$(MetricsReporterExe)' == ''">$(SolutionDir)src\Tools\Rca.MetricsReporter\bin\$(Configuration)\net8.0\Rca.MetricsReporter.exe</MetricsReporterExe>
@@ -33,17 +33,14 @@
     <!-- Directory where old baseline files are archived with timestamps -->
     <MetricsReportStoragePath Condition="'$(MetricsReportStoragePath)' == ''">$(LOCALAPPDATA)\RCA\Metrics</MetricsReportStoragePath>
 
-
-
     <!-- Roslyn Code Metrics -->
     <!-- Directory for Roslyn output files -->
     <RoslynOutputDir Condition="'$(RoslynOutputDir)' == ''">$(RcaMetricsDir)\Roslyn</RoslynOutputDir>
-    <!-- Output file for Roslyn Analyzer (MetricsOutputFile is an system property) -->
-    <MetricsOutputFile Condition="'$(MetricsOutputFile)' == ''">$(RoslynOutputDir)\$(MSBuildProjectName).xml</MetricsOutputFile>
+    <RoslynSolutionMetricsOutputFile Condition="'$(RoslynSolutionMetricsOutputFile)' == ''">$(RoslynOutputDir)\SolutionMetrics.g.xml</RoslynSolutionMetricsOutputFile>
 
     <!-- AltCover Code Metrics -->
     <!-- Name for AltCover file-->
-    <CoverageOutputFileName Condition="'$(CoverageOutputFileName)' == ''">coverage.xml</CoverageOutputFileName>
+    <CoverageOutputFileName Condition="'$(CoverageOutputFileName)' == ''">CoverageTemplate.g.xml</CoverageOutputFileName>
     <!-- Directory for AltCover output files -->
     <AltCoverOutputDir Condition="'$(AltCoverOutputDir)' == ''">$(RcaMetricsDir)\AltCover</AltCoverOutputDir>
     <!-- Output file for final coverage report -->
@@ -51,7 +48,7 @@
     <!-- Path to AltCover signal file-->
     <AltCoverSignalFile Condition="'$(AltCoverSignalFile)' == ''">$(AltCoverOutputDir)\$(CoverageOutputFileName).acv</AltCoverSignalFile>
     <!-- Path to stored coverage file that can be consumed by external tools (e.g. metrics reporter) -->
-    <RcaCoverageStorageFile Condition="'$(RcaCoverageStorageFile)' == ''">$(AltCoverOutputDir)\coverage_storage.xml</RcaCoverageStorageFile>
+    <RcaCoverageStorageFile Condition="'$(RcaCoverageStorageFile)' == ''">$(MetricsTempDir)\CoverageStorage.g.xml</RcaCoverageStorageFile>
     <!-- Directory for HTML coverage reports generated by reportgenerator -->
     <CoverageHtmlDir Condition="'$(CoverageHtmlDir)' == ''">$(AltCoverOutputDir)\html</CoverageHtmlDir>
 
