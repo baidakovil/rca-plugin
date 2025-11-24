@@ -87,6 +87,189 @@ public sealed class HtmlReportGeneratorTests
   }
 
   [Test]
+  public void Generate_WithSourceLocation_AddsOpenFileAction()
+  {
+    var typeSource = new SourceLocation
+    {
+      Path = @"C:\Repo\SampleType.cs",
+      StartLine = 10,
+      EndLine = 60
+    };
+
+    var member = new MemberMetricsNode
+    {
+      Name = "DoWork",
+      FullyQualifiedName = "Sample.Namespace.SampleType.DoWork(...)",
+      Source = new SourceLocation
+      {
+        Path = @"C:\Repo\SampleType.cs",
+        StartLine = 42,
+        EndLine = 45
+      },
+      Metrics = new Dictionary<MetricIdentifier, MetricValue>()
+    };
+
+    var type = new TypeMetricsNode
+    {
+      Name = "SampleType",
+      FullyQualifiedName = "Sample.Namespace.SampleType",
+      Source = typeSource,
+      Metrics = new Dictionary<MetricIdentifier, MetricValue>(),
+      Members = new List<MemberMetricsNode> { member }
+    };
+
+    var @namespace = new NamespaceMetricsNode
+    {
+      Name = "Sample.Namespace",
+      FullyQualifiedName = "Sample.Namespace",
+      Metrics = new Dictionary<MetricIdentifier, MetricValue>(),
+      Types = new List<TypeMetricsNode> { type }
+    };
+
+    var assembly = new AssemblyMetricsNode
+    {
+      Name = "Sample.Assembly",
+      FullyQualifiedName = "Sample.Assembly",
+      Metrics = new Dictionary<MetricIdentifier, MetricValue>(),
+      Namespaces = new List<NamespaceMetricsNode> { @namespace }
+    };
+
+    var report = new MetricsReport
+    {
+      Metadata = new ReportMetadata
+      {
+        GeneratedAtUtc = DateTime.UtcNow,
+        Paths = new ReportPaths(),
+        ThresholdsByLevel = new Dictionary<MetricIdentifier, IDictionary<MetricSymbolLevel, MetricThreshold>>(),
+        ThresholdDescriptions = new Dictionary<MetricIdentifier, string?>()
+      },
+      Solution = new SolutionMetricsNode
+      {
+        Name = "SampleSolution",
+        FullyQualifiedName = "SampleSolution",
+        Metrics = new Dictionary<MetricIdentifier, MetricValue>(),
+        Assemblies = new List<AssemblyMetricsNode> { assembly }
+      }
+    };
+
+    var html = HtmlReportGenerator.Generate(report);
+    var typeRow = ExtractFirstTypeRow(html);
+
+    typeRow.Should().Contain("data-action=\"open\"");
+    typeRow.Should().Contain("data-source-path=\"C:\\Repo\\SampleType.cs\"");
+    typeRow.Should().Contain("data-source-line=\"10\"");
+  }
+
+  [Test]
+  public void Generate_WithSourceLocation_EmitsEndLineAttribute()
+  {
+    var type = new TypeMetricsNode
+    {
+      Name = "SampleType",
+      FullyQualifiedName = "Sample.Namespace.SampleType",
+      Source = new SourceLocation
+      {
+        Path = @"C:\Repo\SampleType.cs",
+        StartLine = 12,
+        EndLine = 64
+      },
+      Metrics = new Dictionary<MetricIdentifier, MetricValue>(),
+      Members = new List<MemberMetricsNode>()
+    };
+
+    var @namespace = new NamespaceMetricsNode
+    {
+      Name = "Sample.Namespace",
+      FullyQualifiedName = "Sample.Namespace",
+      Metrics = new Dictionary<MetricIdentifier, MetricValue>(),
+      Types = new List<TypeMetricsNode> { type }
+    };
+
+    var assembly = new AssemblyMetricsNode
+    {
+      Name = "Sample.Assembly",
+      FullyQualifiedName = "Sample.Assembly",
+      Metrics = new Dictionary<MetricIdentifier, MetricValue>(),
+      Namespaces = new List<NamespaceMetricsNode> { @namespace }
+    };
+
+    var report = new MetricsReport
+    {
+      Metadata = new ReportMetadata
+      {
+        GeneratedAtUtc = DateTime.UtcNow,
+        Paths = new ReportPaths(),
+        ThresholdsByLevel = new Dictionary<MetricIdentifier, IDictionary<MetricSymbolLevel, MetricThreshold>>(),
+        ThresholdDescriptions = new Dictionary<MetricIdentifier, string?>()
+      },
+      Solution = new SolutionMetricsNode
+      {
+        Name = "SampleSolution",
+        FullyQualifiedName = "SampleSolution",
+        Metrics = new Dictionary<MetricIdentifier, MetricValue>(),
+        Assemblies = new List<AssemblyMetricsNode> { assembly }
+      }
+    };
+
+    var html = HtmlReportGenerator.Generate(report);
+    var typeRow = ExtractFirstTypeRow(html);
+
+    typeRow.Should().Contain("data-source-end-line=\"64\"");
+  }
+
+  [Test]
+  public void Generate_WithoutSourceLocation_OmitsOpenFileAction()
+  {
+    var type = new TypeMetricsNode
+    {
+      Name = "SampleType",
+      FullyQualifiedName = "Sample.Namespace.SampleType",
+      Metrics = new Dictionary<MetricIdentifier, MetricValue>(),
+      Members = new List<MemberMetricsNode>()
+    };
+
+    var @namespace = new NamespaceMetricsNode
+    {
+      Name = "Sample.Namespace",
+      FullyQualifiedName = "Sample.Namespace",
+      Metrics = new Dictionary<MetricIdentifier, MetricValue>(),
+      Types = new List<TypeMetricsNode> { type }
+    };
+
+    var assembly = new AssemblyMetricsNode
+    {
+      Name = "Sample.Assembly",
+      FullyQualifiedName = "Sample.Assembly",
+      Metrics = new Dictionary<MetricIdentifier, MetricValue>(),
+      Namespaces = new List<NamespaceMetricsNode> { @namespace }
+    };
+
+    var report = new MetricsReport
+    {
+      Metadata = new ReportMetadata
+      {
+        GeneratedAtUtc = DateTime.UtcNow,
+        Paths = new ReportPaths(),
+        ThresholdsByLevel = new Dictionary<MetricIdentifier, IDictionary<MetricSymbolLevel, MetricThreshold>>(),
+        ThresholdDescriptions = new Dictionary<MetricIdentifier, string?>()
+      },
+      Solution = new SolutionMetricsNode
+      {
+        Name = "SampleSolution",
+        FullyQualifiedName = "SampleSolution",
+        Metrics = new Dictionary<MetricIdentifier, MetricValue>(),
+        Assemblies = new List<AssemblyMetricsNode> { assembly }
+      }
+    };
+
+    var html = HtmlReportGenerator.Generate(report);
+    var typeRow = ExtractFirstTypeRow(html);
+
+    typeRow.Should().NotContain("data-action=\"open\"");
+    typeRow.Should().NotContain("data-source-path");
+  }
+
+  [Test]
   public void Generate_WithCoverageHtmlDir_GeneratesLinksForTypes()
   {
     // Arrange
@@ -238,7 +421,8 @@ public sealed class HtmlReportGeneratorTests
         Directory.Delete(tempDir, recursive: true);
       }
     }
-  }
+
+    }
 
   [Test]
   public void Generate_WithoutCoverageHtmlDir_DoesNotGenerateLinks()
@@ -298,6 +482,30 @@ public sealed class HtmlReportGeneratorTests
     html.Should().Contain("SampleType");
     // Verify that no link with coverage-link-type class is generated
     html.Should().NotMatchRegex(@"<a[^>]*coverage-link-type[^>]*>");
+  }
+
+  private static string ExtractFirstTypeRow(string html)
+  {
+    const string marker = "data-role=\"type\"";
+    var markerIndex = html.IndexOf(marker, StringComparison.Ordinal);
+    if (markerIndex < 0)
+    {
+      return string.Empty;
+    }
+
+    var rowStart = html.LastIndexOf("<tr", markerIndex, StringComparison.Ordinal);
+    if (rowStart < 0)
+    {
+      rowStart = markerIndex;
+    }
+
+    var rowEnd = html.IndexOf("</tr>", markerIndex, StringComparison.Ordinal);
+    if (rowEnd < 0)
+    {
+      rowEnd = html.Length;
+    }
+
+    return html[rowStart..rowEnd];
   }
 }
 

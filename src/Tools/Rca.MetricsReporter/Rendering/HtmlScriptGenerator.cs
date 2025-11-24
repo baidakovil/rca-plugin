@@ -1604,6 +1604,21 @@ internal static class HtmlScriptGenerator
     if(!row){
       return;
     }
+    if(action === 'open'){
+      var sourcePath = (row.getAttribute('data-source-path') || '').trim();
+      var sourceLine = (row.getAttribute('data-source-line') || '').trim();
+      if(!sourcePath || !sourceLine){
+        return;
+      }
+      var normalizedPath = sourcePath.replace(/\\/g, '/');
+      var cursorUrl = 'cursor://file/' + normalizedPath + ':' + sourceLine;
+      try{
+        window.location.href = encodeURI(cursorUrl);
+      }catch(error){
+        console.warn('Failed to open file via Cursor protocol:', error);
+      }
+      return;
+    }
     var fqn = (row.dataset.fqn || '').trim();
     if(!fqn){
       return;

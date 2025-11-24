@@ -257,7 +257,10 @@ public sealed class MetricsAggregationService
     }
 
     public void BuildLineIndex()
-        => LineIndexBuilder.Build(_state.LineIndex, _state.Members.Values, _state.Types.Values, _lookup);
+    {
+      TypeSourceBackfiller.PopulateMissingSources(_state.Types.Values);
+      LineIndexBuilder.Build(_state.LineIndex, _state.Members.Values, _state.Types.Values, _lookup);
+    }
   }
 
   private sealed class AggregationSarifProcessor : IAggregationSarifProcessor

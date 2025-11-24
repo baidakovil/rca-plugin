@@ -2,6 +2,7 @@ namespace Rca.MetricsReporter.Tests.Aggregation;
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using FluentAssertions;
 using NUnit.Framework;
 using Rca.Tools.MetricsReporter.Aggregation;
@@ -156,6 +157,214 @@ public sealed class MetricsAggregationServiceTests
     newMember.Metrics[MetricIdentifier.RoslynMaintainabilityIndex].Value.Should().Be(55);
     newMember.Metrics[MetricIdentifier.RoslynMaintainabilityIndex].Delta.Should().BeNull();
     newMember.Metrics[MetricIdentifier.RoslynMaintainabilityIndex].Status.Should().Be(ThresholdStatus.Warning);
+  }
+
+  [Test]
+  public void BuildReport_PopulatesTypeSourceFromMemberMetadata()
+  {
+    const string assemblyName = "Sample.Assembly";
+    const string namespaceFqn = "Sample.Namespace";
+    const string typeFqn = "Sample.Namespace.SampleType";
+    const string memberFqn = "Sample.Namespace.SampleType.DoWork(...)";
+    const string filePath = @"C:\Repo\SampleType.cs";
+
+    var document = new ParsedMetricsDocument
+    {
+      SolutionName = "SampleSolution",
+      Elements = new List<ParsedCodeElement>
+      {
+        new(CodeElementKind.Assembly, assemblyName, assemblyName),
+        new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
+        {
+          ParentFullyQualifiedName = assemblyName
+        },
+        new(CodeElementKind.Type, "SampleType", typeFqn)
+        {
+          ParentFullyQualifiedName = namespaceFqn
+        },
+        new(CodeElementKind.Member, "DoWork", memberFqn)
+        {
+          ParentFullyQualifiedName = typeFqn,
+          Source = new SourceLocation
+          {
+            Path = filePath,
+            StartLine = 40,
+            EndLine = 45
+          }
+        },
+        new(CodeElementKind.Member, "DoMore", $"{typeFqn}.DoMore(...)")
+        {
+          ParentFullyQualifiedName = typeFqn,
+          Source = new SourceLocation
+          {
+            Path = filePath,
+            StartLine = 50,
+            EndLine = 55
+          }
+        }
+      }
+    };
+
+    var input = new MetricsAggregationInput
+    {
+      SolutionName = "SampleSolution",
+      RoslynDocuments = new List<ParsedMetricsDocument> { document },
+      AltCoverDocuments = new List<ParsedMetricsDocument>(),
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
+
+    var report = service.BuildReport(input);
+
+    var typeNode = report.Solution.Assemblies.Single().Namespaces.Single().Types.Single();
+    typeNode.Source.Should().NotBeNull();
+    typeNode.Source!.Path.Should().Be(filePath);
+    typeNode.Source.StartLine.Should().Be(40);
+    typeNode.Source.EndLine.Should().Be(55);
+  }
+
+  [Test]
+  public void BuildReport_TypeMembersAcrossFiles_UsesDominantFileForSource()
+  {
+    const string assemblyName = "Sample.Assembly";
+    const string namespaceFqn = "Sample.Namespace";
+    const string typeFqn = "Sample.Namespace.SampleType";
+    const string dominantFile = @"C:\Repo\SampleType.Part1.cs";
+    const string minorityFile = @"C:\Repo\SampleType.Part2.cs";
+
+    var document = new ParsedMetricsDocument
+    {
+      SolutionName = "SampleSolution",
+      Elements = new List<ParsedCodeElement>
+      {
+        new(CodeElementKind.Assembly, assemblyName, assemblyName),
+        new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
+        {
+          ParentFullyQualifiedName = assemblyName
+        },
+        new(CodeElementKind.Type, "SampleType", typeFqn)
+        {
+          ParentFullyQualifiedName = namespaceFqn
+        },
+        new(CodeElementKind.Member, "DoWork", $"{typeFqn}.DoWork(...)")
+        {
+          ParentFullyQualifiedName = typeFqn,
+          Source = new SourceLocation
+          {
+            Path = dominantFile,
+            StartLine = 10,
+            EndLine = 20
+          }
+        },
+        new(CodeElementKind.Member, "DoStuff", $"{typeFqn}.DoStuff(...)")
+        {
+          ParentFullyQualifiedName = typeFqn,
+          Source = new SourceLocation
+          {
+            Path = dominantFile,
+            StartLine = 30,
+            EndLine = 40
+          }
+        },
+        new(CodeElementKind.Member, "DoMinor", $"{typeFqn}.DoMinor(...)")
+        {
+          ParentFullyQualifiedName = typeFqn,
+          Source = new SourceLocation
+          {
+            Path = minorityFile,
+            StartLine = 5,
+            EndLine = 6
+          }
+        }
+      }
+    };
+
+    var input = new MetricsAggregationInput
+    {
+      SolutionName = "SampleSolution",
+      RoslynDocuments = new List<ParsedMetricsDocument> { document },
+      AltCoverDocuments = new List<ParsedMetricsDocument>(),
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
+
+    var report = service.BuildReport(input);
+
+    var typeNode = report.Solution.Assemblies.Single().Namespaces.Single().Types.Single();
+    typeNode.Source.Should().NotBeNull();
+    typeNode.Source!.Path.Should().Be(dominantFile);
+    typeNode.Source.StartLine.Should().Be(10);
+    typeNode.Source.EndLine.Should().Be(40);
+  }
+
+  [Test]
+  public void BuildReport_TypeWithExistingPath_PreservesPathAndAddsLineNumbers()
+  {
+    const string assemblyName = "Sample.Assembly";
+    const string namespaceFqn = "Sample.Namespace";
+    const string typeFqn = "Sample.Namespace.SampleType";
+    const string preservedPath = @"C:\Repo\Existing.cs";
+
+    var document = new ParsedMetricsDocument
+    {
+      SolutionName = "SampleSolution",
+      Elements = new List<ParsedCodeElement>
+      {
+        new(CodeElementKind.Assembly, assemblyName, assemblyName),
+        new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
+        {
+          ParentFullyQualifiedName = assemblyName
+        },
+        new(CodeElementKind.Type, "SampleType", typeFqn)
+        {
+          ParentFullyQualifiedName = namespaceFqn,
+          Source = new SourceLocation
+          {
+            Path = preservedPath
+          }
+        },
+        new(CodeElementKind.Member, "DoWork", $"{typeFqn}.DoWork(...)")
+        {
+          ParentFullyQualifiedName = typeFqn,
+          Source = new SourceLocation
+          {
+            Path = preservedPath,
+            StartLine = 15,
+            EndLine = 20
+          }
+        },
+        new(CodeElementKind.Member, "DoMore", $"{typeFqn}.DoMore(...)")
+        {
+          ParentFullyQualifiedName = typeFqn,
+          Source = new SourceLocation
+          {
+            Path = preservedPath,
+            StartLine = 22,
+            EndLine = 25
+          }
+        }
+      }
+    };
+
+    var input = new MetricsAggregationInput
+    {
+      SolutionName = "SampleSolution",
+      RoslynDocuments = new List<ParsedMetricsDocument> { document },
+      AltCoverDocuments = new List<ParsedMetricsDocument>(),
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
+
+    var report = service.BuildReport(input);
+
+    var typeNode = report.Solution.Assemblies.Single().Namespaces.Single().Types.Single();
+    typeNode.Source.Should().NotBeNull();
+    typeNode.Source!.Path.Should().Be(preservedPath);
+    typeNode.Source.StartLine.Should().Be(15);
+    typeNode.Source.EndLine.Should().Be(25);
   }
 
   [Test]

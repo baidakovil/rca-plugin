@@ -2,6 +2,7 @@ namespace Rca.Tools.MetricsReporter.Rendering;
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -134,7 +135,8 @@ internal sealed class HtmlTableGenerator
     var coverageLink = BuildCoverageLink(node, isNodeRow, assemblyName);
     var nameText = WebUtility.HtmlEncode(node.Name);
 
-    AppendRowStart(builder, rowClass, thisId, level, parentId, hasChildren, role, node.IsNew, node.FullyQualifiedName);
+    var sourceDataAttributes = BuildSourceDataAttributes(node);
+    AppendRowStart(builder, rowClass, thisId, level, parentId, hasChildren, role, node.IsNew, node.FullyQualifiedName, sourceDataAttributes);
     AppendSymbolCell(builder, node, symbolTag, hasChildren, isStructuralNode, nameText, coverageLink, thisId, isNodeRow, symbolTooltipData);
     AppendMetricCells(node, symbolTag, builder);
     builder.AppendLine("    </tr>");
@@ -195,14 +197,15 @@ internal sealed class HtmlTableGenerator
       bool hasChildren,
       string role,
       bool isNew,
-      string? fullyQualifiedName)
+      string? fullyQualifiedName,
+      string sourceDataAttributes)
   {
     var fqnAttribute = string.IsNullOrWhiteSpace(fullyQualifiedName)
         ? string.Empty
         : $" data-fqn=\"{WebUtility.HtmlEncode(fullyQualifiedName)}\"";
 
     builder.AppendLine("    <tr class=\"" + rowClass + "\" " +
-        $"data-id=\"{thisId}\" data-level=\"{level}\" data-parent=\"{parentId ?? string.Empty}\" data-has-children=\"{hasChildren.ToString().ToLowerInvariant()}\" data-role=\"{role}\" data-is-new=\"{(isNew ? "true" : "false")}\"{fqnAttribute}>");
+        $"data-id=\"{thisId}\" data-level=\"{level}\" data-parent=\"{parentId ?? string.Empty}\" data-has-children=\"{hasChildren.ToString().ToLowerInvariant()}\" data-role=\"{role}\" data-is-new=\"{(isNew ? "true" : "false")}\"{fqnAttribute}{sourceDataAttributes}>");
   }
 
   private static void AppendSymbolCell(
@@ -229,7 +232,7 @@ internal sealed class HtmlTableGenerator
     }
 
     RenderNodeName(builder, node, nameText, coverageLink, isNodeRow, nameTooltipData);
-    AppendRowActionIcons(builder);
+    AppendRowActionIcons(builder, node);
 
     builder.AppendLine($"</{symbolTag}>");
   }
@@ -277,9 +280,15 @@ internal sealed class HtmlTableGenerator
     }
   }
 
-  private static void AppendRowActionIcons(StringBuilder builder)
+  private static void AppendRowActionIcons(StringBuilder builder, MetricsNode node)
   {
     builder.AppendLine("      <span class=\"row-action-icons\" aria-hidden=\"true\">");
+    if (HasOpenSource(node))
+    {
+      builder.AppendLine("        <button type=\"button\" class=\"row-action-icon\" data-action=\"open\" aria-label=\"Open file in Cursor\" data-simple-tooltip=\"Open file in Cursor\">");
+      builder.AppendLine("          O");
+      builder.AppendLine("        </button>");
+    }
     builder.AppendLine("        <button type=\"button\" class=\"row-action-icon\" data-action=\"copy\" aria-label=\"Copy symbol name\" data-simple-tooltip=\"Copy fully qualified symbol name\">");
     builder.AppendLine("          C");
     builder.AppendLine("        </button>");
@@ -287,6 +296,25 @@ internal sealed class HtmlTableGenerator
     builder.AppendLine("          F");
     builder.AppendLine("        </button>");
     builder.AppendLine("      </span>");
+  }
+
+  private static bool HasOpenSource(MetricsNode node)
+      => node.Source?.Path is not null && node.Source.StartLine.HasValue;
+
+  private static string BuildSourceDataAttributes(MetricsNode node)
+  {
+    if (node.Source?.Path is null || !node.Source.StartLine.HasValue)
+    {
+      return string.Empty;
+    }
+
+    var encodedPath = WebUtility.HtmlEncode(node.Source.Path);
+    var startLine = node.Source.StartLine.Value.ToString(CultureInfo.InvariantCulture);
+    var endLineAttribute = node.Source.EndLine.HasValue
+        ? $" data-source-end-line=\"{node.Source.EndLine.Value.ToString(CultureInfo.InvariantCulture)}\""
+        : string.Empty;
+
+    return $" data-source-path=\"{encodedPath}\" data-source-line=\"{startLine}\"{endLineAttribute}";
   }
 
   private void RenderChildren(
