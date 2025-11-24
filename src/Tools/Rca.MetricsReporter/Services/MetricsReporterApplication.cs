@@ -56,6 +56,17 @@ public sealed class MetricsReporterApplication
     using var logger = new FileLogger(options.LogFilePath);
     logger.LogInformation("Metrics Reporter started.");
 
+    // Log raw command-line arguments to diagnose CLI-to-options binding (especially bool flags).
+    try
+    {
+      var cliArgs = Environment.GetCommandLineArgs();
+      logger.LogInformation($"CLI args: {string.Join(" | ", cliArgs)}");
+    }
+    catch (Exception)
+    {
+      // Swallow any environment-related exceptions; argument logging is best-effort only.
+    }
+
     // If input JSON is specified, load it and generate HTML only
     if (!string.IsNullOrWhiteSpace(options.InputJsonPath))
     {
@@ -74,11 +85,28 @@ public sealed class MetricsReporterApplication
       return thresholdsResult.ExitCode;
     }
 
-    // Create baseline from previous report if baseline doesn't exist and ReplaceMetricsBaseline is enabled
-    // This allows new report to be generated with deltas calculated against the previous report
-    if (options.ReplaceMetricsBaseline && !string.IsNullOrWhiteSpace(options.BaselinePath) && !File.Exists(options.BaselinePath))
+    // Capture initial state so we can distinguish the very first run (no previous report/baseline)
+    // from subsequent runs when deciding whether to replace the baseline at the end.
+    var hadReportAtStart = !string.IsNullOrWhiteSpace(options.OutputJsonPath) && File.Exists(options.OutputJsonPath);
+    var hadBaselineAtStart = !string.IsNullOrWhiteSpace(options.BaselinePath) && File.Exists(options.BaselinePath);
+
+    // Baseline management is controlled solely by ReplaceMetricsBaseline, which is driven by
+    // the command-line flag --replace-baseline emitted by MSBuild.
+    var replaceBaselineEnabled = options.ReplaceMetricsBaseline;
+
+    logger.LogInformation(
+      $"Baseline debug: ReplaceMetricsBaseline={options.ReplaceMetricsBaseline}, " +
+      $"EffectiveReplaceBaseline={replaceBaselineEnabled}, " +
+      $"BaselinePath='{options.BaselinePath ?? "(null)"}', " +
+      $"OutputJsonPath='{options.OutputJsonPath}', " +
+      $"MetricsReportStoragePath='{options.MetricsReportStoragePath ?? "(null)"}', " +
+      $"hadReportAtStart={hadReportAtStart}, hadBaselineAtStart={hadBaselineAtStart}");
+
+    // Create baseline from previous report if baseline doesn't exist and ReplaceMetricsBaseline is enabled.
+    // This allows the new report to be generated with deltas calculated against the previous report.
+    if (replaceBaselineEnabled && !string.IsNullOrWhiteSpace(options.BaselinePath) && !hadBaselineAtStart)
     {
-      if (File.Exists(options.OutputJsonPath))
+      if (hadReportAtStart)
       {
         logger.LogInformation("Baseline does not exist. Creating baseline from previous report...");
         await BaselineManager.CreateBaselineFromPreviousReportAsync(
@@ -155,9 +183,12 @@ public sealed class MetricsReporterApplication
       return writeResult;
     }
 
-    // Replace baseline with newly generated report if enabled
-    // This archives the old baseline (if exists) and prepares baseline for the next generation cycle
-    if (options.ReplaceMetricsBaseline && !string.IsNullOrWhiteSpace(options.BaselinePath))
+    // Replace baseline with newly generated report if enabled and there was a previous
+    // report or baseline at the start of the run. This ensures that baselines are created
+    // only from _previous_ reports and not from the very first run with no history.
+    if (replaceBaselineEnabled
+        && !string.IsNullOrWhiteSpace(options.BaselinePath)
+        && (hadReportAtStart || hadBaselineAtStart))
     {
       await BaselineManager.ReplaceBaselineAsync(
           options.OutputJsonPath,

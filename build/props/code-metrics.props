@@ -4,7 +4,7 @@
   <PropertyGroup>
     <!-- Enable/disable code metrics collection -->
     <!-- Set to true to enable Roslyn metrics collection -->
-    <RoslynMetricsEnabled Condition="'$(RoslynMetricsEnabled)' == ''">false</RoslynMetricsEnabled>
+    <RoslynMetricsEnabled Condition="'$(RoslynMetricsEnabled)' == ''">true</RoslynMetricsEnabled>
     <!-- Set to true to enable Sarif metrics collection -->
     <SarifMetricsEnabled Condition="'$(SarifMetricsEnabled)' == ''">true</SarifMetricsEnabled>
     <!-- Set to true to enable AltCover metrics collection -->
@@ -48,8 +48,10 @@
     <ExcludedAssemblyNames Condition="'$(ExcludedAssemblyNames)' == ''">Tests,Contracts</ExcludedAssemblyNames>
 
     <!-- Toggle metrics dashboard generation -->
-    <GenerateMetricsDashboard Condition="'$(GenerateMetricsDashboard)' == ''">false</GenerateMetricsDashboard>
-    <!-- When true, generates HTML from existing JSON without collecting metrics -->
+    <GenerateMetricsDashboard Condition="'$(GenerateMetricsDashboard)' == ''">true</GenerateMetricsDashboard>
+    <!-- When true, generates HTML from existing JSON without collecting metrics.
+         Default is false so that full metrics collection (JSON + HTML) is the normal behavior.
+         HTML-only mode must be enabled explicitly via /p:GenerateHtmlFromJson=true or an overriding props file. -->
     <GenerateHtmlFromJson Condition="'$(GenerateHtmlFromJson)' == ''">false</GenerateHtmlFromJson>
     <!-- Set to true to enable automatic baseline replacement when metrics-report.json differs from metrics-baseline.json -->
     <ReplaceMetricsBaseline Condition="'$(ReplaceMetricsBaseline)' == ''">true</ReplaceMetricsBaseline>

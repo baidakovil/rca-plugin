@@ -191,8 +191,11 @@
       <MetricsReporterExcludedMembersArg Condition="'$(ExcludedMemberNamesPatterns)' != ''"> --excluded-members "$(ExcludedMemberNamesPatterns)"</MetricsReporterExcludedMembersArg>
       <MetricsReporterExcludedAssembliesArg Condition="'$(ExcludedAssemblyNames)' != ''"> --excluded-assemblies "$(ExcludedAssemblyNames)"</MetricsReporterExcludedAssembliesArg>
       <MetricsReporterExcludedTypesArg Condition="'$(ExcludedTypeNamePatterns)' != ''"> --excluded-types "$(ExcludedTypeNamePatterns)"</MetricsReporterExcludedTypesArg>
-      <!-- When AnalyzeSuppressedSymbols is enabled, instruct MetricsReporter to analyze suppressed symbols and persist them to RcaSuppressedSymbols.json. -->
-      <MetricsReporterSuppressedSymbolsArg Condition="'$(AnalyzeSuppressedSymbols)' == 'true'"> --analyze-suppressed-symbols --suppressed-symbols "$(RcaSuppressedSymbolsJson)" --solution-dir "$(SolutionDir)" --source-code-folders "$(SourceCodeFolders)"</MetricsReporterSuppressedSymbolsArg>
+      <!-- When AnalyzeSuppressedSymbols is enabled, instruct MetricsReporter to analyze suppressed symbols and persist them to RcaSuppressedSymbols.json.
+           IMPORTANT: Use a SolutionDir without trailing backslash to avoid escaping the closing quote on Windows command line, which would merge
+           subsequent switches (including replace-baseline) into the same argument and break CLI parsing. -->
+      <_SanitizedSolutionDir>$([System.String]::Copy('$(SolutionDir)').TrimEnd('\'))</_SanitizedSolutionDir>
+      <MetricsReporterSuppressedSymbolsArg Condition="'$(AnalyzeSuppressedSymbols)' == 'true'"> --analyze-suppressed-symbols --suppressed-symbols "$(RcaSuppressedSymbolsJson)" --solution-dir "$(_SanitizedSolutionDir)" --source-code-folders "$(SourceCodeFolders)"</MetricsReporterSuppressedSymbolsArg>
       <MetricsReporterReplaceBaselineArg Condition="'$(ReplaceMetricsBaseline)' == 'true'"> --replace-baseline</MetricsReporterReplaceBaselineArg>
       <MetricsReporterBaselineStoragePathArg Condition="'$(ReplaceMetricsBaseline)' == 'true' and '$(MetricsReportStoragePath)' != ''"> --baseline-storage-path "$(MetricsReportStoragePath)"</MetricsReporterBaselineStoragePathArg>
       <MetricsReporterCoverageHtmlDirArg Condition="Exists('$(CoverageHtmlDir)')"> --coverage-html-dir "$(CoverageHtmlDir)"</MetricsReporterCoverageHtmlDirArg>

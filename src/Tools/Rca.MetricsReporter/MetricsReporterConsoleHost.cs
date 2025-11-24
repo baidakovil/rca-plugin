@@ -62,7 +62,17 @@ internal sealed class MetricsReporterConsoleHost
     return await application.RunAsync(options, cancellationToken).ConfigureAwait(false);
   }
 
-  private MetricsReporterOptions ParseArguments(string[] args)
+  /// <summary>
+  /// Parses raw command-line arguments into strongly-typed <see cref="MetricsReporterOptions"/>.
+  /// </summary>
+  /// <param name="args">The raw <see cref="string"/> array passed to the process.</param>
+  /// <returns>Populated <see cref="MetricsReporterOptions"/> instance.</returns>
+  /// <remarks>
+  /// This method is <see langword="internal"/> to allow tests in <c>Rca.MetricsReporter.Tests</c>
+  /// to verify CLI-to-options binding (e.g., <c>--replace-baseline</c> →
+  /// <see cref="MetricsReporterOptions.ReplaceMetricsBaseline"/>).
+  /// </remarks>
+  internal MetricsReporterOptions ParseArguments(string[] args)
   {
     var roslynPaths = new List<string>();
     var sarifPaths = new List<string>();
