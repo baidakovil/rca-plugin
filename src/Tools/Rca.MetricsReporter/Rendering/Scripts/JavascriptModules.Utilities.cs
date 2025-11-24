@@ -210,6 +210,20 @@ function normalizeHotkeyKey(rawKey){
   return map[key] || key;
 }
 
+function snapRangeValue(control, raw){
+  if(!control){
+    return raw;
+  }
+  const min = parseInt(control.min || '1', 10) || 1;
+  const max = parseInt(control.max || '3', 10) || 3;
+  let numeric = parseFloat(raw);
+  if(Number.isNaN(numeric)){
+    numeric = min;
+  }
+  const snapped = Math.min(max, Math.max(min, Math.round(numeric)));
+  return String(snapped);
+}
+
 function snapSlider(control, event, setter){
   if(!control || !setter){
     return;
@@ -225,8 +239,10 @@ function snapSlider(control, event, setter){
   const min = parseInt(control.min || '1', 10) || 1;
   const max = parseInt(control.max || '3', 10) || 3;
   const ratio = Math.min(Math.max((event.clientX - rect.left) / width, 0), 1);
-  const snapped = Math.round(ratio * (max - min)) + min;
-  setter(String(Math.min(max, Math.max(min, snapped))));
+  const numeric = ratio * (max - min) + min;
+  const snapped = snapRangeValue(control, numeric);
+  control.value = snapped;
+  setter(snapped);
 }
 ";
 }

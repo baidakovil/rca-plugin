@@ -67,10 +67,18 @@ function initActions(ctx){
   updateStickyHeaderPosition();
 
   refs.detailControl.addEventListener('input', function(){
-    setDetailLevel(refs.detailControl.value);
+    const snapped = snapRangeValue(refs.detailControl, refs.detailControl.value);
+    if(refs.detailControl.value !== snapped){
+      refs.detailControl.value = snapped;
+    }
+    setDetailLevel(snapped);
   });
   refs.detailControl.addEventListener('change', function(){
-    setDetailLevel(refs.detailControl.value);
+    const snapped = snapRangeValue(refs.detailControl, refs.detailControl.value);
+    if(refs.detailControl.value !== snapped){
+      refs.detailControl.value = snapped;
+    }
+    setDetailLevel(snapped);
   });
   refs.detailControl.addEventListener('click', function(event){
     if(event.target === refs.detailControl){
@@ -79,28 +87,54 @@ function initActions(ctx){
   });
 
   function handleAwarenessInput(){
-    if(ctx.awarenessChangeTimer){
-      clearTimeout(ctx.awarenessChangeTimer);
+    const snapped = snapRangeValue(refs.awarenessControl, refs.awarenessControl.value);
+    if(refs.awarenessControl.value !== snapped){
+      refs.awarenessControl.value = snapped;
     }
-    const value = refs.awarenessControl.value;
-    ctx.awarenessChangeTimer = setTimeout(function(){
-      ctx.awarenessChangeTimer = null;
-      setAwarenessLevel(value);
-    }, 120);
+    ctx.pendingAwarenessValue = snapped;
+    if(!ctx.awarenessDragging){
+      commitAwareness();
+    }
   }
+
+  function commitAwareness(){
+    var value = ctx.pendingAwarenessValue;
+    if(typeof value !== 'string'){
+      value = snapRangeValue(refs.awarenessControl, refs.awarenessControl.value);
+    }
+    ctx.pendingAwarenessValue = undefined;
+    setAwarenessLevel(value);
+  }
+
+  refs.awarenessControl.addEventListener('pointerdown', function(event){
+    ctx.awarenessDragging = true;
+    ctx.activeAwarenessPointer = event.pointerId;
+    if(refs.awarenessControl.setPointerCapture){
+      try{
+        refs.awarenessControl.setPointerCapture(event.pointerId);
+      }catch(_){}
+    }
+  });
+
+  function releaseAwarenessDrag(event){
+    if(ctx.activeAwarenessPointer !== undefined && event.pointerId !== ctx.activeAwarenessPointer){
+      return;
+    }
+    ctx.awarenessDragging = false;
+    ctx.activeAwarenessPointer = undefined;
+    if(refs.awarenessControl.releasePointerCapture){
+      try{
+        refs.awarenessControl.releasePointerCapture(event.pointerId);
+      }catch(_){}
+    }
+    commitAwareness();
+  }
+
+  refs.awarenessControl.addEventListener('pointerup', releaseAwarenessDrag);
+  refs.awarenessControl.addEventListener('pointercancel', releaseAwarenessDrag);
 
   refs.awarenessControl.addEventListener('input', handleAwarenessInput);
   refs.awarenessControl.addEventListener('change', handleAwarenessInput);
-  refs.awarenessControl.addEventListener('pointerup', handleAwarenessInput);
-  refs.awarenessControl.addEventListener('pointercancel', handleAwarenessInput);
-  refs.awarenessControl.addEventListener('click', function(event){
-    if(event.target === refs.awarenessControl){
-      snapSlider(refs.awarenessControl, event, function(val){
-        refs.awarenessControl.value = val;
-        handleAwarenessInput();
-      });
-    }
-  });
 
   if(refs.expandButton){
     refs.expandButton.addEventListener('click', function(){
