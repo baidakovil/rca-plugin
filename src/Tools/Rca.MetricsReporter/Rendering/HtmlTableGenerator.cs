@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json.Serialization;
 using Rca.Tools.MetricsReporter.Model;
@@ -19,6 +20,7 @@ internal sealed class HtmlTableGenerator
   private int _idCounter;
   private CoverageLinkBuilder? _coverageLinkBuilder;
   private Dictionary<(string Fqn, MetricIdentifier Metric), SuppressedSymbolInfo>? _suppressedIndex;
+  private Dictionary<MetricsNode, int>? _descendantCountIndex;
 
   /// <summary>
   /// Initializes a new instance of the <see cref="HtmlTableGenerator"/> class.
@@ -42,6 +44,7 @@ internal sealed class HtmlTableGenerator
     _idCounter = 0;
     _coverageLinkBuilder = string.IsNullOrWhiteSpace(coverageHtmlDir) ? null : new CoverageLinkBuilder(coverageHtmlDir);
     _suppressedIndex = BuildSuppressedIndex(report);
+    _descendantCountIndex = BuildDescendantCountIndex(report);
     var builder = new StringBuilder();
 
     builder.AppendLine("<div class=\"table-container\"> ");
@@ -118,6 +121,8 @@ internal sealed class HtmlTableGenerator
     builder.AppendLine("</table>");
     builder.AppendLine("</div>");
 
+    _descendantCountIndex = null;
+
     return builder.ToString();
   }
 
@@ -137,7 +142,17 @@ internal sealed class HtmlTableGenerator
     var nameText = WebUtility.HtmlEncode(node.Name);
 
     var sourceDataAttributes = BuildSourceDataAttributes(node);
-    AppendRowStart(builder, rowClass, thisId, level, parentId, hasChildren, role, node.IsNew, node.FullyQualifiedName, sourceDataAttributes);
+    var rowStateAttributes = BuildRowStateAttributes(CalculateRowState(node));
+    var filterAttributes = BuildFilterAttributes(node);
+    var virtualizationAttributes = BuildDescendantAttribute(node);
+    var defaultVisibilityAttributes = BuildVisibilityAttributes();
+    var combinedAttributes = string.Concat(
+      sourceDataAttributes,
+      rowStateAttributes,
+      filterAttributes,
+      virtualizationAttributes,
+      defaultVisibilityAttributes);
+    AppendRowStart(builder, rowClass, thisId, level, parentId, hasChildren, role, node.IsNew, node.FullyQualifiedName, combinedAttributes);
     AppendSymbolCell(builder, node, symbolTag, hasChildren, isStructuralNode, nameText, coverageLink, thisId, isNodeRow, symbolTooltipData);
     AppendMetricCells(node, symbolTag, builder);
     builder.AppendLine("    </tr>");
@@ -206,14 +221,14 @@ internal sealed class HtmlTableGenerator
       string role,
       bool isNew,
       string? fullyQualifiedName,
-      string sourceDataAttributes)
+      string extendedAttributes)
   {
     var fqnAttribute = string.IsNullOrWhiteSpace(fullyQualifiedName)
         ? string.Empty
         : $" data-fqn=\"{WebUtility.HtmlEncode(fullyQualifiedName)}\"";
 
     builder.AppendLine("    <tr class=\"" + rowClass + "\" " +
-        $"data-id=\"{thisId}\" data-level=\"{level}\" data-parent=\"{parentId ?? string.Empty}\" data-has-children=\"{hasChildren.ToString().ToLowerInvariant()}\" data-role=\"{role}\" data-is-new=\"{(isNew ? "true" : "false")}\"{fqnAttribute}{sourceDataAttributes}>");
+        $"data-id=\"{thisId}\" data-level=\"{level}\" data-parent=\"{parentId ?? string.Empty}\" data-has-children=\"{hasChildren.ToString().ToLowerInvariant()}\" data-role=\"{role}\" data-is-new=\"{(isNew ? "true" : "false")}\"{fqnAttribute}{extendedAttributes}>");
   }
 
   private static void AppendSymbolCell(
@@ -324,6 +339,149 @@ internal sealed class HtmlTableGenerator
 
     return $" data-source-path=\"{encodedPath}\" data-source-line=\"{startLine}\"{endLineAttribute}";
   }
+
+  private static string BuildFilterAttributes(MetricsNode node)
+  {
+    var filterSource = string.IsNullOrWhiteSpace(node.FullyQualifiedName)
+        ? node.Name
+        : node.FullyQualifiedName!;
+
+    if (string.IsNullOrWhiteSpace(filterSource))
+    {
+      return " data-filter-key=\"\"";
+    }
+
+    var normalized = filterSource.ToLowerInvariant();
+    return $" data-filter-key=\"{WebUtility.HtmlEncode(normalized)}\"";
+  }
+
+  private static string BuildVisibilityAttributes()
+    => " data-hidden-by-detail=\"false\" data-hidden-by-filter=\"false\" data-hidden-by-awareness=\"false\" data-hidden-by-state=\"false\" data-expanded=\"true\"";
+
+  private string BuildDescendantAttribute(MetricsNode node)
+  {
+    if (_descendantCountIndex is null || !_descendantCountIndex.TryGetValue(node, out var count) || count <= 0)
+    {
+      return string.Empty;
+    }
+
+    return $" data-descendant-count=\"{count}\"";
+  }
+
+  private RowState CalculateRowState(MetricsNode node)
+  {
+    var hasError = false;
+    var hasWarning = false;
+    var hasSuppressed = false;
+    var hasDelta = false;
+
+    foreach (var metricId in _metricOrder)
+    {
+      var suppression = TryGetSuppression(node, metricId);
+      if (suppression is not null)
+      {
+        hasSuppressed = true;
+        continue;
+      }
+
+      if (!node.Metrics.TryGetValue(metricId, out var metricValue) || metricValue is null)
+      {
+        continue;
+      }
+
+      if (!hasDelta && metricValue.Delta.HasValue && metricValue.Delta.Value != 0)
+      {
+        hasDelta = true;
+      }
+
+      switch (metricValue.Status)
+      {
+        case ThresholdStatus.Error:
+          hasError = true;
+          break;
+        case ThresholdStatus.Warning:
+          hasWarning = true;
+          break;
+      }
+
+      if (hasError && hasWarning && hasSuppressed && hasDelta)
+      {
+        break;
+      }
+    }
+
+    return new RowState(hasError, hasWarning, hasSuppressed, hasDelta);
+  }
+
+  private static string BuildRowStateAttributes(RowState state)
+  {
+    var error = state.HasError ? "true" : "false";
+    var warning = state.HasWarning ? "true" : "false";
+    var suppressed = state.HasSuppressed ? "true" : "false";
+    var delta = state.HasDelta ? "true" : "false";
+    return $" data-has-error=\"{error}\" data-has-warning=\"{warning}\" data-has-suppressed=\"{suppressed}\" data-has-delta=\"{delta}\"";
+  }
+
+  private Dictionary<MetricsNode, int> BuildDescendantCountIndex(MetricsReport report)
+  {
+    var index = new Dictionary<MetricsNode, int>(MetricsNodeReferenceComparer.Instance);
+    if (report.Solution is MetricsNode root)
+    {
+      PopulateDescendantCounts(root, index);
+    }
+
+    return index;
+  }
+
+  private static int PopulateDescendantCounts(MetricsNode node, IDictionary<MetricsNode, int> index)
+  {
+    var total = 0;
+    foreach (var child in EnumerateChildren(node))
+    {
+      var childDescendants = PopulateDescendantCounts(child, index);
+      total += 1 + childDescendants;
+    }
+
+    index[node] = total;
+    return total;
+  }
+
+  private static IEnumerable<MetricsNode> EnumerateChildren(MetricsNode node)
+  {
+    switch (node)
+    {
+      case SolutionMetricsNode solution when solution.Assemblies is not null:
+        foreach (var assembly in solution.Assemblies)
+        {
+          yield return assembly;
+        }
+
+        break;
+      case AssemblyMetricsNode assembly when assembly.Namespaces is not null:
+        foreach (var ns in assembly.Namespaces)
+        {
+          yield return ns;
+        }
+
+        break;
+      case NamespaceMetricsNode @namespace when @namespace.Types is not null:
+        foreach (var type in @namespace.Types)
+        {
+          yield return type;
+        }
+
+        break;
+      case TypeMetricsNode type when type.Members is not null:
+        foreach (var member in type.Members)
+        {
+          yield return member;
+        }
+
+        break;
+    }
+  }
+
+  private readonly record struct RowState(bool HasError, bool HasWarning, bool HasSuppressed, bool HasDelta);
 
   private void RenderChildren(
       MetricsNode node,
@@ -472,6 +630,17 @@ internal sealed class HtmlTableGenerator
     }
 
     return string.Join("<br/><br/>", parts);
+  }
+
+  private sealed class MetricsNodeReferenceComparer : IEqualityComparer<MetricsNode>
+  {
+    public static MetricsNodeReferenceComparer Instance { get; } = new();
+
+    public bool Equals(MetricsNode? x, MetricsNode? y)
+      => ReferenceEquals(x, y);
+
+    public int GetHashCode(MetricsNode obj)
+      => RuntimeHelpers.GetHashCode(obj);
   }
 }
 
