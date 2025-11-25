@@ -1,12 +1,12 @@
 ## Metrics Reporter Overview
 
-Metrics Reporter — консольное приложение .NET 8, объединяющее метрики покрытия AltCover/OpenCover, кодовые метрики Roslyn и нарушения правил из SARIF в единый файл `metrics-report.json`, после чего генерируется HTML-дашборд.
+Metrics Reporter — консольное приложение .NET 8, объединяющее метрики покрытия AltCover/OpenCover, кодовые метрики Roslyn и нарушения правил из SARIF в единый файл `MetricsReport.g.json`, после чего генерируется HTML-дашборд.
 
 ### Основные артефакты
-- `metrics-report.json` — иерархическая модель Solution → Assembly → Namespace → Type → Member с 12 единообразными метриками.
-- `metrics-baseline.json` — предыдущий снепшот, служащий источником дельт и пометок `NEW`.
-- `metrics-report.html` — визуализация фактических значений и дельт.
- - `RcaSuppressedSymbols.json` — плоский список символов, подавленных через `SuppressMessage`, с привязкой к FQN и метрике.
+- `MetricsReport.g.json` — иерархическая модель Solution → Assembly → Namespace → Type → Member с 12 единообразными метриками (используется `metrics-reader` и HTML).
+- `MetricsBaseline.g.json` — предыдущий снепшот, служащий источником дельт и пометок `NEW`.
+- `MetricsReport.html` — визуализация фактических значений и дельт.
+- `RcaSuppressedSymbols.g.json` — плоский список символов, подавленных через `SuppressMessage`, с привязкой к FQN и метрике.
 
 ### Источники данных
 1. **AltCover/OpenCover**: `AltCoverSequenceCoverage`, `AltCoverBranchCoverage`, `AltCoverCyclomaticComplexity`, `AltCoverNPathComplexity`.
@@ -26,15 +26,24 @@ Metrics Reporter — консольное приложение .NET 8, объе�
 ### JSON-структура (сокращённо)
 ```json
 {
-  "solution": {
-    "name": "rca-plugin",
-    "generatedAtUtc": "2025-11-06T21:40:00Z",
+  "metadata": {
+    "generatedAtUtc": "2025-11-25T21:33:10Z",
     "paths": {
       "metricsDirectory": "build/Metrics",
-      "baseline": "build/Metrics/Report/metrics-baseline.json",
-      "report": "build/Metrics/Report/metrics-report.json",
-      "html": "build/Metrics/Report/metrics-report.html"
+      "baseline": "build/MetricsTemp/MetricsBaseline.g.json",
+      "report": "build/Metrics/Report/MetricsReport.g.json",
+      "html": "build/Metrics/Report/MetricsReport.html",
+      "thresholds": "build/MetricsRules/MetricsReporterThresholds.json"
     },
+    "thresholdsByLevel": {
+      "RoslynClassCoupling": {
+        "Type": { "warning": 40, "error": 70, "higherIsBetter": false }
+      }
+    },
+    "excludedMemberNamesPatterns": "*b__*,<Clone>$,ctor,cctor,MoveNext,SetStateMachine,MoveNextAsync,DisposeAsync"
+  },
+  "solution": {
+    "name": "rca-plugin",
     "assemblies": [
       {
         "name": "Rca.Loader",
@@ -99,7 +108,7 @@ Metrics Reporter — консольное приложение .NET 8, объе�
 - `source` — сведения о файле/диапазоне строк, используются для сопоставления SARIF и подсказок в отчёте.
 
 ### JSON Schema
-- Файл `Model/metrics-report.schema.json` фиксирует обязательные поля и допустимые перечисления.
+- Файл `src/Tools/Rca.MetricsReporter/Model/metrics-report.schema.json` описывает структуру `MetricsReport.g.json` (metadata, пороги, дерево Solution → Member). Любые изменения схемы синхронизируются с этим файлом.
 - DTO сериализуются через `System.Text.Json` (camelCase).
 
 ### Автоматическая генерация через MSBuild
@@ -109,14 +118,14 @@ Metrics Reporter — консольное приложение .NET 8, объе�
   - Формирует аргументы (AltCover, все Roslyn XML, SARIF, baseline, пороги) с правильными разделителями.
   - Вызывает `Rca.MetricsReporter.exe` из `src/Tools/Rca.MetricsReporter/bin/<Configuration>/net8.0`.
   - Создает каталог отчётов (`$(MetricsDir)\Report`) и записывает JSON/HTML + лог.
-- Благодаря этому, после стандартного `dotnet build --no-incremental` в `build/Metrics/Report` автоматически появляются `metrics-report.json` и `metrics-report.html`.
+- Благодаря этому, после стандартного `dotnet build --no-incremental` в `build/Metrics/Report` автоматически появляются `MetricsReport.g.json` и `MetricsReport.html`.
 - **Настройка анализа suppressed-символов**: В `build/Props/code-metrics.props` можно настроить:
   - `AnalyzeSuppressedSymbols` — включить/выключить анализ (по умолчанию `true`).
   - `SourceCodeFolders` — список папок с исходниками через запятую (по умолчанию `"src,src/Tools,tests"`). Пути указываются относительно корня решения (`SolutionDir`). Анализатор сканирует только файлы в этих папках и определяет имя сборки по первому сегменту пути после соответствующей папки.
 
 ### Автоматическое управление Baseline
 
-Система автоматического управления baseline создает `metrics-baseline.json` из предыдущего отчета перед генерацией нового отчета, обеспечивая автоматический расчет дельт между запусками.
+Система автоматического управления baseline создает `MetricsBaseline.g.json` из предыдущего отчета перед генерацией нового отчета, обеспечивая автоматический расчет дельт между запусками.
 
 #### Настройка
 
@@ -128,15 +137,15 @@ Metrics Reporter — консольное приложение .NET 8, объе�
 #### Логика работы
 
 1. **Создание baseline из предыдущего отчета (если baseline не существует)**: 
-   - Если `ReplaceMetricsBaseline=true`, путь к baseline задан, но baseline не существует, система проверяет наличие предыдущего `metrics-report.json`.
-   - Если предыдущий отчет существует, он копируется в `metrics-baseline.json` **ДО генерации нового отчета**.
+   - Если `ReplaceMetricsBaseline=true`, путь к baseline задан, но baseline не существует, система проверяет наличие предыдущего `MetricsReport.g.json`.
+   - Если предыдущий отчет существует, он копируется в `MetricsBaseline.g.json` **ДО генерации нового отчета**.
    - Это позволяет новому отчету сразу генерироваться с дельтами, рассчитанными относительно предыдущего отчета.
 
-2. **Генерация нового отчета**: Создается новый `metrics-report.json` с текущими метриками на основе baseline (если он существует или был создан на шаге 1).
+2. **Генерация нового отчета**: Создается новый `MetricsReport.g.json` с текущими метриками на основе baseline (если он существует или был создан на шаге 1).
 
 3. **Архивация и замена baseline**: После генерации нового отчета, если `ReplaceMetricsBaseline=true`:
-   - Если старый baseline существует, он архивируется в директорию хранения (`MetricsReportStoragePath`, по умолчанию `C:\Users\<username>\AppData\Local\RCA\Metrics`) с добавлением timestamp к имени файла (формат: `metrics-baseline-YYYYMMDD-HHMMSS.json`).
-   - Новый `metrics-report.json` копируется в `metrics-baseline.json`, подготавливая baseline для следующего цикла генерации.
+   - Если старый baseline существует, он архивируется в директорию хранения (`MetricsReportStoragePath`, по умолчанию `C:\Users\<username>\AppData\Local\RCA\Metrics`) с добавлением timestamp к имени файла (формат: `MetricsBaseline-YYYYMMDD-HHMMSS.g.json`).
+   - Новый `MetricsReport.g.json` копируется в `MetricsBaseline.g.json`, подготавливая baseline для следующего цикла генерации.
 
 4. **Завершение**: После замены baseline процесс завершается. При следующем запуске baseline будет создан из этого отчета (шаг 1), а текущий baseline будет заархивирован (шаг 3).
 
@@ -149,7 +158,7 @@ Metrics Reporter — консольное приложение .NET 8, объе�
   - `ReplaceMetricsBaseline=true`
   - Путь к baseline задан (не null и не пустой)
   - Baseline не существует
-  - Предыдущий `metrics-report.json` существует
+  - Предыдущий `MetricsReport.g.json` существует
 - **Путь к baseline**: Должен быть задан через параметр `--baseline` или MSBuild property `MetricsBaselineJson`. MSBuild target автоматически передает путь к baseline в `Rca.MetricsReporter` когда `ReplaceMetricsBaseline=true`, даже если файл еще не существует.
 
 #### Пример использования
@@ -161,7 +170,7 @@ dotnet msbuild rca-plugin.sln /t:Build /p:ReplaceMetricsBaseline=true
 
 ### Дополнительно
 - **Автоматическое управление baseline**: При включенной опции `ReplaceMetricsBaseline=true` baseline автоматически создается из предыдущего отчета перед генерацией нового отчета. Подробности см. в разделе "Автоматическое управление Baseline" выше.
-- Приложение логирует шаги в `$(MetricsDir)\Report\metrics-reporter.log` и возвращает коды: 0 — OK, 1 — parsing error, 2 — IO error, 3 — validation error.
+- Приложение логирует шаги в `$(MetricsDir)\Report\MetricsReporter.log` и возвращает коды: 0 — OK, 1 — parsing error, 2 — IO error, 3 — validation error.
 - Пороговые значения хранятся в `build/MetricsRules/MetricsReporterThresholds.json`; путь до файла конфигурируется через `build/Props/paths.props` (свойство `MetricsThresholdsPath`) и передается агрегатору.
 
 ### HTML Dashboard UI и производительность
@@ -195,10 +204,9 @@ dotnet run --project src/Tools/Rca.MetricsReporter/Rca.MetricsReporter.csproj --
   --altcover "build/Metrics/AltCover/coverage.xml" \
   --roslyn "build/Metrics/Roslyn/Rca.Loader.xml" \
   --sarif "build/Metrics/Sarif/Rca.Loader.sarif" \
-  --baseline "build/Metrics/Report/metrics-baseline.json" \
-  --baseline-ref "origin/main" \
-  --output-json "build/Metrics/Report/metrics-report.json" \
-  --output-html "build/Metrics/Report/metrics-report.html" \
+  --baseline "build/MetricsTemp/MetricsBaseline.g.json" \
+  --output-json "build/Metrics/Report/MetricsReport.g.json" \
+  --output-html "build/Metrics/Report/MetricsReport.html" \
   --thresholds "{'AltCoverSequenceCoverage':{'warning':75,'error':60,'higherIsBetter':true}}"
 ```
 
@@ -210,26 +218,77 @@ dotnet run --project src/Tools/Rca.MetricsReporter/Rca.MetricsReporter.csproj --
 
 Помимо генерации отчёта теперь доступен встроенный CLI-хелпер `metrics-reader`, предназначенный для оркестраторов и ручного анализа. Он работает на базе `Spectre.Console.Cli` и использует уже сгенерированный `MetricsReport.g.json`.
 
+Команды вызываются через основной exe. Примеры:
+
+```powershell
+dotnet run --project src/Tools/Rca.MetricsReporter/Rca.MetricsReporter.csproj -- `
+  metrics-reader list --namespace Rca.Loader --metric Complexity
+```
+
+```powershell
+# если инструмент уже собран
+.\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe `
+  metrics-reader most-problematic --namespace Rca.Loader --metric Coupling --symbol-kind Member
+```
+
 ### Общие параметры
 
-- `--report` — путь к `MetricsReport.g.json` (по умолчанию `build/Metrics/Report/MetricsReport.g.json`).
-- `--thresholds-file` — путь к `build/MetricsRules/MetricsReporterThresholds.json`, если нужно временно переопределить пороги (по умолчанию читаются из отчёта).
-- `--include-suppressed` — добавляет метрики, подавленные через `[SuppressMessage]`.
-- `--update` — перед выполнением команды запускает `dotnet msbuild rca-plugin.sln /t:Rca.MetricsReporter.Tests /p:GenerateMetricsDashboard=true`.
+| Параметр              | Обязательность | Значение по умолчанию | Описание |
+|-----------------------|----------------|------------------------|----------|
+| `--report <PATH>`     | Нет            | `build/Metrics/Report/MetricsReport.g.json` | Путь к агрегированному отчёту. |
+| `--thresholds-file`   | Нет            | Пороги из отчёта       | Позволяет временно переопределить предупреждения/ошибки. |
+| `--include-suppressed`| Нет            | `false`                | Включает символы, подавленные через `[SuppressMessage]`. |
+| `--update`            | Нет            | `false`                | Перед выполнением пересчитывает метрики (`GenerateMetricsDashboard`). |
 
-### Команды
+### Команды и параметры
 
-1. `metrics-reader most-problematic --namespace Rca.Loader --metric Complexity [--symbol-kind Member]`
-   - Возвращает один самый критичный символ (тип или член), у которого статус `Warning/Error`.
-   - Результат содержит `symbolFqn`, `symbolType`, `metric`, `value`, `threshold`, `delta`, `filePath`, `status`, `isSuppressed`.
+#### `metrics-reader most-problematic`
 
-2. `metrics-reader list --namespace Rca.Loader --metric Complexity [--symbol-kind Member]`
-   - Выводит массив всех символов с превышением порога, отсортированных по серьёзности (Error → Warning, затем по величине нарушения).
+```
+metrics-reader most-problematic --namespace <NamespacePrefix> --metric <MetricAlias>
+                                [--symbol-kind <Type|Member>] [общие параметры]
+```
 
-3. `metrics-reader test --symbol Rca.Loader.Services.Validator.Validate(...) --metric Complexity`
-   - Проверяет конкретный тип или метод после рефакторинга. Поле `isOk` показывает, удовлетворяет ли символ порогам, а `details` содержит ту же структуру, что и остальные команды.
+- **Обязательные:** `--namespace`, `--metric`.
+- **Опциональные:** `--symbol-kind` (по умолчанию `Type`), все общие параметры.
+- Возвращает один самый критичный символ (`symbolFqn`, `symbolType`, `metric`, `value`, `threshold`, `delta`, `filePath`, `status`, `isSuppressed`).
 
-Метрики можно указывать как точные идентификаторы (`RoslynCyclomaticComplexity`) или через алиасы (`Complexity`, `Coupling`, `Maintainability`, `Coverage` и т. п.). Вся сериализация выполняется в JSON (camelCase), что упрощает интеграцию с PowerShell и оркестраторами.
+#### `metrics-reader list`
+
+```
+metrics-reader list --namespace <NamespacePrefix> --metric <MetricAlias>
+                    [--symbol-kind <Type|Member>] [общие параметры]
+```
+
+- **Обязательные:** `--namespace`, `--metric`.
+- **Опциональные:** `--symbol-kind` (по умолчанию `Type`), общие параметры.
+- Выводит массив всех символов, у которых `status = Warning/Error`, отсортированный по серьёзности (Error → Warning) и величине превышения.  
+  Если нужен вывод по методам, добавьте `--symbol-kind Member`.
+
+#### `metrics-reader test`
+
+```
+metrics-reader test --symbol <FullyQualifiedName> --metric <MetricAlias> [общие параметры]
+```
+
+- **Обязательные:** `--symbol` (тип или член), `--metric`.
+- **Опциональные:** общие параметры.
+- Возвращает JSON вида `{ "isOk": <bool>, "details": {…}, "message": "..." }`, где `details` содержит ту же структуру, что и остальные команды.
+
+### Метрики и алиасы
+
+Метрики можно указывать как точные идентификаторы (`RoslynCyclomaticComplexity`, `RoslynClassCoupling`, и т. д.) либо через алиасы:
+
+| Алиас            | Идентификатор                     |
+|------------------|-----------------------------------|
+| `Complexity`     | `RoslynCyclomaticComplexity`      |
+| `Coupling`       | `RoslynClassCoupling`             |
+| `Maintainability`| `RoslynMaintainabilityIndex`      |
+| `Coverage`       | `AltCoverSequenceCoverage`        |
+| `Inheritance`    | `RoslynDepthOfInheritance`        |
+| …                | См. `MetricIdentifierResolver`.   |
+
+Все команды возвращают JSON в `camelCase`, поэтому их удобно парсить скриптами PowerShell (`ConvertFrom-Json`) или оркестраторами.
 
 ## Symbol Normalization
 
@@ -376,17 +435,19 @@ Metrics Reporter объединяет метрики из разных исто�
 
 ## Member Filtering
 
-Metrics Reporter автоматически исключает методы конструктора и компилятора из отчетов, так как они не представляют интереса для анализа качества кода.
+Metrics Reporter автоматически исключает методы конструктора и компилятора из отчётов, так как они не представляют интереса для анализа качества кода.
 
-### Исключаемые методы
+### Конфигурация и значения по умолчанию
 
-Фильтруются и не попадают в JSON/HTML отчеты: конструкторы (`.ctor`, `.cctor`) и методы компилятора (`MoveNext`, `SetStateMachine`, `MoveNextAsync`, `DisposeAsync`). Список захардкожен в классе `MemberFilter` для простоты и прозрачности.
+- Свойство MSBuild `ExcludedMemberNamesPatterns` (см. `build/Props/code-metrics.props`) задаёт шаблоны для исключения. Формат — список через запятую/точку с запятой, поддерживаются `*` и `?`. По умолчанию: `*b__*,<Clone>$,ctor,cctor,MoveNext,SetStateMachine,MoveNextAsync,DisposeAsync`.
+- CLI `Rca.MetricsReporter.exe` получает этот список через аргумент `--excluded-members` (см. `build/Targets/code-metrics.targets`).
+- Фактический набор сохраняется в `ReportMetadata.excludedMemberNamesPatterns` и отображается в шапке HTML, чтобы было видно, какие шаблоны использовались.
 
 ### Механизм работы
 
-Фильтрация происходит в `MetricsAggregationService.MergeMember()` после нормализации FQN. Конструкторы AltCover: `Namespace.Type..ctor(...)`. Конструкторы Roslyn: `Namespace.Type.Type(...)` (имя метода совпадает с типом). Методы компилятора определяются по имени. Исключенные методы не добавляются в структуру отчета и отсутствуют в JSON/HTML.
+Фильтрация происходит в `MetricsAggregationService.MergeMember()` после нормализации FQN. Конструкторы AltCover (`Namespace.Type..ctor(...)`) и Roslyn (`Namespace.Type.Type(...)`) определяются автоматически, остальные методы сравниваются с шаблонами `MemberFilter`. Исключённые методы не попадают в `MetricsReport.g.json`/HTML.
 
 ### Реализация
 
-Фильтрация в `MemberFilter` (`src/Tools/Rca.MetricsReporter/Processing/MemberFilter.cs`): `ShouldExcludeMethod(string?)` — проверка по имени, `ShouldExcludeMethodByFqn(string?)` — проверка по FQN с поддержкой AltCover и Roslyn. Тесты: `MemberFilterTests.cs` и `MetricsAggregationServiceTests.cs`.
+`MemberFilter` (`src/Tools/Rca.MetricsReporter/Processing/MemberFilter.cs`): `ShouldExcludeMethod(string?)` — проверка по имени, `ShouldExcludeMethodByFqn(string?)` — проверка по FQN. Тесты можно найти в `MemberFilterTests.cs` и `MetricsAggregationServiceTests.cs`.
 

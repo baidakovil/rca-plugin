@@ -49,15 +49,15 @@ internal static class MetricsReaderConsoleHost
 
       config.AddCommand<MostProblematicCommand>("most-problematic")
         .WithDescription("Returns the most severe symbol that violates the specified metric.")
-        .WithExample(new[] { "metrics-reader", "most-problematic", "--namespace", "Rca.Loader", "--metric", "Complexity" });
+        .WithExample(new[] { "most-problematic", "--namespace", "Rca.Loader", "--metric", "Complexity" });
 
       config.AddCommand<ListWarningsCommand>("list")
         .WithDescription("Lists all symbols that exceed the specified metric thresholds.")
-        .WithExample(new[] { "metrics-reader", "list", "--namespace", "Rca.Loader", "--metric", "Complexity", "--symbol-kind", "Member" });
+        .WithExample(new[] { "list", "--namespace", "Rca.Loader", "--metric", "Complexity", "--symbol-kind", "Member" });
 
       config.AddCommand<TestMetricCommand>("test")
         .WithDescription("Checks whether a symbol satisfies the specified metric after refactoring.")
-        .WithExample(new[] { "metrics-reader", "test", "--symbol", "Rca.Loader.SomeType.SomeMethod(...)", "--metric", "Complexity" });
+        .WithExample(new[] { "test", "--symbol", "Rca.Loader.SomeType.SomeMethod(...)", "--metric", "Complexity" });
     });
   }
 }
