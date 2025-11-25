@@ -206,6 +206,31 @@ dotnet run --project src/Tools/Rca.MetricsReporter/Rca.MetricsReporter.csproj --
 
 Информация о CLI и MSBuild обновляется по мере развития инструмента.
 
+## Metrics Reader Helper
+
+Помимо генерации отчёта теперь доступен встроенный CLI-хелпер `metrics-reader`, предназначенный для оркестраторов и ручного анализа. Он работает на базе `Spectre.Console.Cli` и использует уже сгенерированный `MetricsReport.g.json`.
+
+### Общие параметры
+
+- `--report` — путь к `MetricsReport.g.json` (по умолчанию `build/Metrics/Report/MetricsReport.g.json`).
+- `--thresholds-file` — путь к `build/MetricsRules/MetricsReporterThresholds.json`, если нужно временно переопределить пороги (по умолчанию читаются из отчёта).
+- `--include-suppressed` — добавляет метрики, подавленные через `[SuppressMessage]`.
+- `--update` — перед выполнением команды запускает `dotnet msbuild rca-plugin.sln /t:Rca.MetricsReporter.Tests /p:GenerateMetricsDashboard=true`.
+
+### Команды
+
+1. `metrics-reader most-problematic --namespace Rca.Loader --metric Complexity [--symbol-kind Member]`
+   - Возвращает один самый критичный символ (тип или член), у которого статус `Warning/Error`.
+   - Результат содержит `symbolFqn`, `symbolType`, `metric`, `value`, `threshold`, `delta`, `filePath`, `status`, `isSuppressed`.
+
+2. `metrics-reader list --namespace Rca.Loader --metric Complexity [--symbol-kind Member]`
+   - Выводит массив всех символов с превышением порога, отсортированных по серьёзности (Error → Warning, затем по величине нарушения).
+
+3. `metrics-reader test --symbol Rca.Loader.Services.Validator.Validate(...) --metric Complexity`
+   - Проверяет конкретный тип или метод после рефакторинга. Поле `isOk` показывает, удовлетворяет ли символ порогам, а `details` содержит ту же структуру, что и остальные команды.
+
+Метрики можно указывать как точные идентификаторы (`RoslynCyclomaticComplexity`) или через алиасы (`Complexity`, `Coupling`, `Maintainability`, `Coverage` и т. п.). Вся сериализация выполняется в JSON (camelCase), что упрощает интеграцию с PowerShell и оркестраторами.
+
 ## Symbol Normalization
 
 Metrics Reporter объединяет метрики из разных источников (AltCover, Roslyn, SARIF), которые описывают одни и те же символы (классы, методы) в разных форматах. Для корректного объединения метрик символы нормализуются к единому формату.
