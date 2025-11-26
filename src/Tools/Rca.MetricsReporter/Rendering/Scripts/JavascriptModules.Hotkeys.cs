@@ -22,6 +22,26 @@ function initHotkeys(ctx){
     return false;
   }
 
+  function resetToDefaults(){
+    if(ctx.refs.filterInput){
+      ctx.refs.filterInput.value = '';
+    }
+    ctx.applyFilterText('');
+    ['newFilter', 'changesFilter', 'suppressedFilter'].forEach(function(filterKey){
+      const control = ctx.refs[filterKey];
+      if(control){
+        control.checked = false;
+      }
+    });
+    ctx.stateFilter.onlyNew = false;
+    ctx.stateFilter.onlyChanges = false;
+    ctx.stateFilter.onlySuppressed = false;
+    ctx.applyStateFilters();
+    ctx.setAwarenessLevel('1');
+    ctx.setDetailLevel('2');
+    ctx.persistPreferences && ctx.persistPreferences();
+  }
+
   window.addEventListener('keydown', function(event){
     if(event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey){
       return;
@@ -71,6 +91,10 @@ function initHotkeys(ctx){
         break;
       case 'z':
         ctx.setAwarenessLevel(String(Math.max(1, parseInt(ctx.currentAwarenessKey, 10) - 1)));
+        break;
+      case 'q':
+        resetToDefaults();
+        ctx.refs.collapseButton && ctx.refs.collapseButton.click();
         break;
       case 'e':
         ctx.refs.expandButton && ctx.refs.expandButton.click();

@@ -205,7 +205,8 @@ function normalizeHotkeyKey(rawKey){
     'у': 'e',
     'к': 'r',
     'в': 'd',
-    'ы': 's'
+    'ы': 's',
+    'й': 'q'
   };
   return map[key] || key;
 }

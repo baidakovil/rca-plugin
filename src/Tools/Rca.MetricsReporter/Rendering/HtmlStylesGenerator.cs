@@ -179,7 +179,7 @@ internal static class HtmlStylesGenerator
   private static void AppendControlPanelStyles(StringBuilder builder)
   {
     builder.AppendLine(".table-container { max-width: 100%; }");
-    builder.AppendLine(FormattableString.Invariant($".table-actions {{ display: flex; align-items: center; justify-content: flex-end; gap: {ControlBlockGap}; margin: 0; position: sticky; top: 0; background: {PageBackgroundColor}; z-index: 10; padding: 6px 0; }}"));
+    builder.AppendLine(FormattableString.Invariant($".table-actions {{ display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: {ControlBlockGap}; margin: 0; position: sticky; top: 0; background: {PageBackgroundColor}; z-index: 10; padding: 6px 0; }}"));
     builder.AppendLine(FormattableString.Invariant($".status-badges {{ display: flex; gap: {DefaultGap}; align-items: center; }}"));
     builder.AppendLine(".table-actions button { margin-left: 0px; padding: 4px 8px; font-size: 10px; background: rgba(245,245,245,1); border: 1px solid rgba(180,180,180,1); color: rgba(30,30,30,1); border-radius: 4px; cursor: pointer; }");
     builder.AppendLine(".table-actions button:hover { background: rgba(230,230,230,1); }");

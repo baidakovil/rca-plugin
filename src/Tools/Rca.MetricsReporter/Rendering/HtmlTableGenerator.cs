@@ -81,11 +81,11 @@ internal sealed class HtmlTableGenerator
     builder.AppendLine("      <button type=\"button\" id=\"filter-clear\" class=\"filter-clear\" aria-label=\"Clear filter\" style=\"display: none;\">×</button>");
     builder.AppendLine("    </div>");
     builder.AppendLine("  </div>");
-    builder.AppendLine("  <div class=\"detail-control\">");
-    builder.AppendLine("    <label for=\"detail-level\" class=\"detail-label\">Detailing:</label>");
-    builder.AppendLine("    <input type=\"range\" id=\"detail-level\" min=\"1\" max=\"3\" step=\"1\" value=\"2\" aria-valuemin=\"1\" aria-valuemax=\"3\" aria-valuenow=\"2\" aria-label=\"Detail level\" />");
-    builder.AppendLine("    <span id=\"detail-label\" class=\"detail-value\">Type</span>");
-    builder.AppendLine("  </div>");
+  builder.AppendLine("  <div class=\"detail-control\">");
+  builder.AppendLine("    <label for=\"detail-level\" class=\"detail-label\">Detailing:</label>");
+  builder.AppendLine("    <input type=\"range\" id=\"detail-level\" min=\"1\" max=\"3\" step=\"1\" value=\"2\" aria-valuemin=\"1\" aria-valuemax=\"3\" aria-valuenow=\"2\" aria-label=\"Detail level\" />");
+  builder.AppendLine("    <span id=\"detail-label\" class=\"detail-value\">Type</span>");
+  builder.AppendLine("  </div>");
     builder.AppendLine("  <button id=\"expand-all\">Expand all</button>");
     builder.AppendLine("  <button id=\"collapse-all\">Collapse all</button>");
     builder.AppendLine("</div>");
