@@ -19,9 +19,29 @@ public sealed class SarifMetricsParser : IMetricsSourceParser
   {
     ArgumentNullException.ThrowIfNull(path);
 
-    await using var stream = File.OpenRead(path);
-    using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
+    using var document = await ReadJsonDocumentAsync(path, cancellationToken).ConfigureAwait(false);
+    return ProcessDocument(document);
+  }
 
+  /// <summary>
+  /// Reads and parses a JSON document from a file path.
+  /// </summary>
+  /// <param name="path">Path to the JSON file.</param>
+  /// <param name="cancellationToken">Cancellation token for async operations.</param>
+  /// <returns>The parsed JSON document.</returns>
+  private static async Task<JsonDocument> ReadJsonDocumentAsync(string path, CancellationToken cancellationToken)
+  {
+    await using var stream = File.OpenRead(path);
+    return await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
+  }
+
+  /// <summary>
+  /// Processes a parsed JSON document and extracts code elements.
+  /// </summary>
+  /// <param name="document">The parsed JSON document.</param>
+  /// <returns>A parsed metrics document containing extracted elements.</returns>
+  private static ParsedMetricsDocument ProcessDocument(JsonDocument document)
+  {
     if (!document.RootElement.TryGetProperty("runs", out var runs) || runs.ValueKind != JsonValueKind.Array)
     {
       return EmptyDocument();
@@ -47,34 +67,59 @@ public sealed class SarifMetricsParser : IMetricsSourceParser
 
     foreach (var result in results.EnumerateArray())
     {
-      var ruleId = result.GetPropertyOrDefault("ruleId")?.GetString();
-      if (ruleId is null)
+      foreach (var element in ProcessResult(result))
       {
-        continue;
-      }
-
-      if (!TryResolveMetric(ruleId, out var identifier))
-      {
-        continue;
-      }
-
-      foreach (var location in EnumerateLocations(result))
-      {
-        yield return new ParsedCodeElement(CodeElementKind.Member, ruleId, null)
-        {
-          Metrics = new Dictionary<MetricIdentifier, MetricValue>
-          {
-            [identifier] = new MetricValue
-            {
-              Value = 1,
-              Unit = "count",
-              Status = ThresholdStatus.NotApplicable
-            }
-          },
-          Source = location
-        };
+        yield return element;
       }
     }
+  }
+
+  /// <summary>
+  /// Processes a single SARIF result and yields code elements for each location.
+  /// </summary>
+  /// <param name="result">The SARIF result JSON element.</param>
+  /// <returns>An enumerable of parsed code elements.</returns>
+  private static IEnumerable<ParsedCodeElement> ProcessResult(JsonElement result)
+  {
+    var ruleId = result.GetPropertyOrDefault("ruleId")?.GetString();
+    if (ruleId is null)
+    {
+      yield break;
+    }
+
+    if (!TryResolveMetric(ruleId, out var identifier))
+    {
+      yield break;
+    }
+
+    foreach (var location in EnumerateLocations(result))
+    {
+      yield return CreateCodeElement(ruleId, identifier, location);
+    }
+  }
+
+  /// <summary>
+  /// Creates a parsed code element from rule ID, metric identifier, and source location.
+  /// </summary>
+  /// <param name="ruleId">The SARIF rule identifier.</param>
+  /// <param name="identifier">The resolved metric identifier.</param>
+  /// <param name="location">The source location of the violation.</param>
+  /// <returns>A parsed code element representing the violation.</returns>
+  private static ParsedCodeElement CreateCodeElement(string ruleId, MetricIdentifier identifier, SourceLocation location)
+  {
+    return new ParsedCodeElement(CodeElementKind.Member, ruleId, null)
+    {
+      Metrics = new Dictionary<MetricIdentifier, MetricValue>
+      {
+        [identifier] = new MetricValue
+        {
+          Value = 1,
+          Unit = "count",
+          Status = ThresholdStatus.NotApplicable
+        }
+      },
+      Source = location
+    };
   }
 
   private static ParsedMetricsDocument EmptyDocument()
