@@ -3,6 +3,7 @@ namespace Rca.Tools.MetricsReporter.MetricsReader.Services;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,7 +11,7 @@ using System.Threading.Tasks;
 /// <summary>
 /// Runs the MSBuild target that refreshes MetricsReport.g.json.
 /// </summary>
-internal sealed class MetricsUpdater
+internal class MetricsUpdater
 {
   private readonly string _solutionPath;
 
@@ -22,18 +23,8 @@ internal sealed class MetricsUpdater
     var solutionDirectory = Path.GetDirectoryName(_solutionPath)
       ?? throw new InvalidOperationException($"Cannot resolve solution directory for '{_solutionPath}'.");
 
-    var arguments = $"msbuild \"{_solutionPath}\" /t:Rca.MetricsReporter.Tests /p:GenerateMetricsDashboard=true";
-    var startInfo = new ProcessStartInfo
-    {
-      FileName = "dotnet",
-      Arguments = arguments,
-      WorkingDirectory = solutionDirectory,
-      RedirectStandardOutput = true,
-      RedirectStandardError = true,
-      UseShellExecute = false,
-      CreateNoWindow = true
-    };
-
+    var projectPath = ResolveMetricsProjectPath(solutionDirectory);
+    var startInfo = CreateStartInfo(projectPath, solutionDirectory);
     using var process = new Process { StartInfo = startInfo };
     Console.WriteLine("Updating metrics via GenerateMetricsDashboard...");
     if (!process.Start())
@@ -53,6 +44,33 @@ internal sealed class MetricsUpdater
     }
 
     Console.WriteLine("Metrics updated successfully.");
+  }
+
+  protected virtual ProcessStartInfo CreateStartInfo(string projectPath, string solutionDirectory)
+  {
+    var arguments = $"msbuild \"{projectPath}\" /t:GenerateMetricsDashboard /p:GenerateMetricsDashboard=true /p:BuildProjectReferences=false";
+    return new ProcessStartInfo
+    {
+      FileName = "dotnet",
+      Arguments = arguments,
+      WorkingDirectory = solutionDirectory,
+      RedirectStandardOutput = true,
+      RedirectStandardError = true,
+      UseShellExecute = false,
+      CreateNoWindow = true
+    };
+  }
+
+  private static string ResolveMetricsProjectPath(string solutionDirectory)
+  {
+    var projectPath = Directory.EnumerateFiles(solutionDirectory, "Rca.MetricsReporter.Tests.csproj", SearchOption.AllDirectories)
+      .FirstOrDefault();
+    if (string.IsNullOrWhiteSpace(projectPath))
+    {
+      throw new InvalidOperationException("Rca.MetricsReporter.Tests project file could not be located.");
+    }
+
+    return projectPath;
   }
 
   private static async Task PumpAsync(StreamReader reader, TextWriter destination, CancellationToken cancellationToken)

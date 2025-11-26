@@ -147,6 +147,9 @@
   </Target>
 
   <!-- Generate consolidated metrics dashboard after all metrics are collected -->
+  <PropertyGroup>
+    <ShowMetricsReporterCommand Condition="'$(ShowMetricsReporterCommand)' == ''">false</ShowMetricsReporterCommand>
+  </PropertyGroup>
   <!-- When GenerateHtmlFromJson=true, generates HTML from existing JSON without collecting metrics -->
   <!-- DependsOnTargets ensures GenerateSolutionMetrics completes first in normal mode -->
   <!-- If GenerateSolutionMetrics doesn't run (RoslynMetricsEnabled=false), dependency is skipped gracefully -->
@@ -204,7 +207,7 @@
 
     <Message Text="Generating HTML report from existing JSON: $(InputJsonFile)" Importance="High" Condition="'$(GenerateHtmlFromJson)' == 'true' and Exists('$(MetricsReporterExe)')" />
     <Message Text="Generating metrics dashboard (Rca.MetricsReporter.Tests)." Importance="High" Condition="'$(GenerateHtmlFromJson)' != 'true' and Exists('$(MetricsReporterExe)')" />
-    <Message Text="MetricsReporterCommand: $(MetricsReporterCommand)" Importance="High" Condition="Exists('$(MetricsReporterExe)')" />
+    <Message Text="MetricsReporterCommand: $(MetricsReporterCommand)" Importance="Low" Condition="Exists('$(MetricsReporterExe)') and '$(ShowMetricsReporterCommand)' == 'true'" />
     <MakeDir Directories="$(MetricsReportDir)" />
     <Exec Command="$(MetricsReporterCommand)"
           WorkingDirectory="$(SolutionDir)"
