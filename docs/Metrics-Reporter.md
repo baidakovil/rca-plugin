@@ -253,6 +253,13 @@ metrics-reader most-problematic --namespace <NamespacePrefix> --metric <MetricAl
 - **Опциональные:** `--symbol-kind` (по умолчанию `Type`), все общие параметры.
 - Возвращает один самый критичный символ (`symbolFqn`, `symbolType`, `metric`, `value`, `threshold`, `delta`, `filePath`, `status`, `isSuppressed`).
 
+**Пример:**
+
+```powershell
+metrics-reader most-problematic --namespace Rca.Loader --metric Coupling
+metrics-reader most-problematic --namespace Rca.Loader.Infrastructure --metric Complexity --symbol-kind Member
+```
+
 #### `metrics-reader list`
 
 ```
@@ -265,6 +272,12 @@ metrics-reader list --namespace <NamespacePrefix> --metric <MetricAlias>
 - Выводит массив всех символов, у которых `status = Warning/Error`, отсортированный по серьёзности (Error → Warning) и величине превышения.  
   Если нужен вывод по методам, добавьте `--symbol-kind Member`.
 
+**Пример:**
+
+```powershell
+metrics-reader list --namespace Rca.Loader --metric Coupling --symbol-kind Member --include-suppressed
+```
+
 #### `metrics-reader test`
 
 ```
@@ -274,6 +287,17 @@ metrics-reader test --symbol <FullyQualifiedName> --metric <MetricAlias> [общ
 - **Обязательные:** `--symbol` (тип или член), `--metric`.
 - **Опциональные:** общие параметры.
 - Возвращает JSON вида `{ "isOk": <bool>, "details": {…}, "message": "..." }`, где `details` содержит ту же структуру, что и остальные команды.
+
+**Важные детали:**
+
+- `--symbol` необходимо указывать в нормализованном формате, **обязательно** с суффиксом `(...)` и в кавычках, чтобы оболочка не съела пробелы. Значение можно скопировать из поля `symbolFqn`, возвращаемого командой `list`. Например:
+
+  ```powershell
+  metrics-reader test --symbol "Rca.Loader.Services.RuntimeManager.ReloadRuntime(...)" --metric Coupling
+  metrics-reader test --symbol "Rca.Loader.LoaderApp.OnStartup(...)" --metric RoslynClassCoupling --include-suppressed
+  ```
+
+- Для типов правила те же: `--symbol "Rca.Loader.Services.RuntimeManager"`.
 
 ### Метрики и алиасы
 
