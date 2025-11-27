@@ -18,11 +18,11 @@
         "status": {
           "type": "string",
           "enum": [
-            "NotApplicable",
             "Success",
             "Warning",
             "Error"
-          ]
+          ],
+          "description": "Threshold comparison result. Metrics with omitted thresholds default to \"Success\", while metrics without data are not emitted."
         },
         "unit": { "type": ["string", "null"], "enum": ["percent", "count", "score", null] },
         "breakdown": {
@@ -215,6 +215,18 @@
         "thresholdDescriptions": {
           "type": "object",
           "additionalProperties": { "type": ["string", "null"] }
+        },
+        "excludedMemberNamesPatterns": {
+          "type": ["string", "null"],
+          "description": "Comma-separated member name patterns excluded while generating the report."
+        },
+        "excludedAssemblyNames": {
+          "type": ["string", "null"],
+          "description": "Comma-separated assembly name patterns excluded while generating the report."
+        },
+        "excludedTypeNamePatterns": {
+          "type": ["string", "null"],
+          "description": "Comma-separated fully qualified type name patterns excluded while generating the report."
         },
         "suppressedSymbols": {
           "type": "array",

@@ -1491,6 +1491,118 @@ public sealed class MetricsAggregationServiceTests
     method.IncludesIteratorStateMachineCoverage.Should().BeFalse();
   }
 
+  [Test]
+  public void BuildReport_RemovesMetricsWithoutValueFromFinalReport()
+  {
+    // Arrange
+    const string assemblyName = "Sample.Assembly";
+    const string namespaceFqn = "Sample.Namespace";
+    const string typeFqn = "Sample.Namespace.SampleType";
+    const string memberFqn = "Sample.Namespace.SampleType.DoWork(...)";
+
+    var roslynDocument = new ParsedMetricsDocument
+    {
+      Elements = new List<ParsedCodeElement>
+      {
+        new(CodeElementKind.Assembly, assemblyName, assemblyName),
+        new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
+        {
+          ParentFullyQualifiedName = assemblyName
+        },
+        new(CodeElementKind.Type, "SampleType", typeFqn)
+        {
+          ParentFullyQualifiedName = namespaceFqn
+        },
+        new(CodeElementKind.Member, "DoWork", memberFqn)
+        {
+          ParentFullyQualifiedName = typeFqn,
+          Metrics = new Dictionary<MetricIdentifier, MetricValue>
+          {
+            [MetricIdentifier.RoslynMaintainabilityIndex] = new MetricValue
+            {
+              Value = null,
+              Delta = null,
+              Unit = "score",
+              Status = ThresholdStatus.NotApplicable
+            }
+          }
+        }
+      }
+    };
+
+    var input = new MetricsAggregationInput
+    {
+      SolutionName = "SampleSolution",
+      RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
+      AltCoverDocuments = new List<ParsedMetricsDocument>(),
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      Baseline = null,
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
+
+    // Act
+    var report = service.BuildReport(input);
+
+    // Assert
+    var member = report.Solution.Assemblies.Single().Namespaces.Single().Types.Single().Members.Single();
+    member.Metrics.Should().BeEmpty("metrics without actionable values must be pruned from the report");
+  }
+
+  [Test]
+  public void BuildReport_PreservesMetricsWithValueWhenThresholdsAreMissing()
+  {
+    // Arrange
+    const string assemblyName = "Sample.Assembly";
+    const string namespaceFqn = "Sample.Namespace";
+    const string typeFqn = "Sample.Namespace.SampleType";
+
+    var roslynDocument = new ParsedMetricsDocument
+    {
+      Elements = new List<ParsedCodeElement>
+      {
+        new(CodeElementKind.Assembly, assemblyName, assemblyName),
+        new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
+        {
+          ParentFullyQualifiedName = assemblyName
+        },
+        new(CodeElementKind.Type, "SampleType", typeFqn)
+        {
+          ParentFullyQualifiedName = namespaceFqn,
+          Metrics = new Dictionary<MetricIdentifier, MetricValue>
+          {
+            [MetricIdentifier.RoslynSourceLines] = new MetricValue
+            {
+              Value = 120,
+              Unit = "count",
+              Status = ThresholdStatus.NotApplicable
+            }
+          }
+        }
+      }
+    };
+
+    var input = new MetricsAggregationInput
+    {
+      SolutionName = "SampleSolution",
+      RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
+      AltCoverDocuments = new List<ParsedMetricsDocument>(),
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      Baseline = null,
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
+
+    // Act
+    var report = service.BuildReport(input);
+
+    // Assert
+    var type = report.Solution.Assemblies.Single().Namespaces.Single().Types.Single();
+    type.Metrics.Should().ContainKey(MetricIdentifier.RoslynSourceLines);
+    type.Metrics[MetricIdentifier.RoslynSourceLines].Status.Should().Be(ThresholdStatus.Success, "metrics with values remain even when thresholds are not defined");
+    type.Metrics[MetricIdentifier.RoslynSourceLines].Value.Should().Be(120);
+  }
+
   private static MetricValue Metric(decimal value, string unit)
       => new()
       {

@@ -54,12 +54,14 @@ public sealed class MetricsAggregationService
     // Collect rule IDs that are actually used in breakdown across all metrics
     var usedRuleIds = CollectUsedRuleIds(workspace.Solution);
     
+    var filteredRuleIds = usedRuleIds.Count == 0 ? null : usedRuleIds;
+
     var metadataInput = ReportMetadataComposer.CreateInput(
         input,
         _memberFilter,
         _assemblyFilter,
         _typeFilter,
-        usedRuleIds);
+        filteredRuleIds);
     var metadata = ReportMetadataComposer.Compose(metadataInput);
 
     return new MetricsReport

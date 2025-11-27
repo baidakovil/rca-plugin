@@ -58,7 +58,7 @@ Metrics Reporter — консольное приложение .NET 8, объе�
           {
             "name": "Rca.Loader.Infrastructure",
             "kind": "Namespace",
-            "metrics": { "AltCoverSequenceCoverage": { "value": null, "status": "NotApplicable", "unit": "percent" } },
+            "metrics": {},
             "types": [
               {
                 "name": "CommandValidationService",
@@ -81,7 +81,7 @@ Metrics Reporter — консольное приложение .NET 8, объе�
                     "fullyQualifiedName": "Rca.Loader.Infrastructure.CommandValidationService.ValidateAsync(System.String)",
                     "isNew": true,
                     "metrics": {
-                      "AltCoverSequenceCoverage": { "value": 72.1, "status": "NotApplicable", "unit": "percent" },
+                      "AltCoverSequenceCoverage": { "value": 72.1, "status": "Warning", "unit": "percent" },
                       "RoslynMaintainabilityIndex": { "value": 42, "status": "Error", "unit": "score" }
                     }
                   }
@@ -102,10 +102,16 @@ Metrics Reporter — консольное приложение .NET 8, объе�
 - `metrics` — словарь по метрике (строковый идентификатор `MetricIdentifier`) и объекту значения:
   - `value` (`number?`) — фактическое значение, `null`, если данных нет.
   - `delta` (`number?`) — отклонение от baseline, `null`, если элемент новый или baseline отсутствует.
-  - `status` — результат сравнения с порогом (`NotApplicable`, `Success`, `Warning`, `Error`).
+  - `status` — результат сравнения с порогом (значения: `Success`, `Warning`, `Error`). Метрики без данных не сериализуются, поэтому вариант `NotApplicable` больше не попадает в JSON.
   - `unit` — `percent`, `count` или `score`, помогает HTML отформатировать значение.
 - `isNew` — пометка новых элементов, для HTML добавляется префикс `NEW`; дельты не отображаются.
 - `source` — сведения о файле/диапазоне строк, используются для сопоставления SARIF и подсказок в отчёте.
+
+Если ключ отсутствует в `metrics`, значит метрика неприменима к данному символу или недоступна в исходных данных. Метрики с фактическими значениями, но без настроенных порогов, по умолчанию получают статус `Success`, чтобы значение сохранилось в отчёте без визуального подсвечивания.
+
+**Как формируются записи о метриках.** Агрегатор сериализует только те метрики, для которых есть числовое значение и рассчитан значимый статус. Если после сравнения с порогами статус остался `NotApplicable` (например, нет данных или правило не покрывает символ), метрика исключается из JSON — HTML показывает это как пустую ячейку. Если же значение существует, но пороги не заданы, сервис помечает метрику как `Success`, чтобы она попала в отчёт без визуальных подсветок.
+
+**Метаданные исключений.** Поля `excludedMemberNamesPatterns`, `excludedAssemblyNames` и `excludedTypeNamePatterns` содержат списки шаблонов (через запятую), которые использовались при генерации отчёта. Значения отображаются в шапке HTML, чтобы было очевидно, какие сборки, типы или члены были исключены; те же поля описаны в JSON Schema и доступны для машинной проверки.
 
 ### JSON Schema
 - Файл `src/Tools/Rca.MetricsReporter/Model/metrics-report.schema.json` описывает структуру `MetricsReport.g.json` (metadata, пороги, дерево Solution → Member). Любые изменения схемы синхронизируются с этим файлом.
