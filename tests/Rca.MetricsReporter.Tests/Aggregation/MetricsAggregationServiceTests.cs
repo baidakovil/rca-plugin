@@ -1639,6 +1639,65 @@ public sealed class MetricsAggregationServiceTests
     report.Metadata.MetricDescriptors[MetricIdentifier.RoslynMaintainabilityIndex].Unit.Should().Be("score");
   }
 
+  [Test]
+  public void BuildReport_WhenValueMatchesBaseline_DeltaIsNull()
+  {
+    // Arrange
+    const string assemblyName = "Sample.Assembly";
+    const string namespaceFqn = "Sample.Namespace";
+    const string typeFqn = "Sample.Namespace.SampleType";
+    const string memberFqn = "Sample.Namespace.SampleType.DoWork(...)";
+    const decimal value = 80m;
+
+    var baseline = CreateBaselineReport(assemblyName, namespaceFqn, typeFqn, memberFqn, value);
+
+    var roslynDocument = new ParsedMetricsDocument
+    {
+      Elements = new List<ParsedCodeElement>
+      {
+        new(CodeElementKind.Assembly, assemblyName, assemblyName),
+        new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
+        {
+          ParentFullyQualifiedName = assemblyName
+        },
+        new(CodeElementKind.Type, "SampleType", typeFqn)
+        {
+          ParentFullyQualifiedName = namespaceFqn
+        },
+        new(CodeElementKind.Member, "DoWork", memberFqn)
+        {
+          ParentFullyQualifiedName = typeFqn,
+          Metrics = new Dictionary<MetricIdentifier, MetricValue>
+          {
+            [MetricIdentifier.RoslynMaintainabilityIndex] = new MetricValue
+            {
+              Value = value,
+              Status = ThresholdStatus.NotApplicable
+            }
+          }
+        }
+      }
+    };
+
+    var input = new MetricsAggregationInput
+    {
+      SolutionName = "SampleSolution",
+      RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
+      AltCoverDocuments = new List<ParsedMetricsDocument>(),
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      Baseline = baseline,
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
+
+    // Act
+    var report = service.BuildReport(input);
+
+    // Assert
+    var member = report.Solution.Assemblies.Single().Namespaces.Single().Types.Single().Members.Single();
+    member.Metrics[MetricIdentifier.RoslynMaintainabilityIndex].Delta.Should().BeNull("zero delta must be treated as absent");
+  }
+
   private static MetricValue Metric(decimal value, string _)
       => new()
       {

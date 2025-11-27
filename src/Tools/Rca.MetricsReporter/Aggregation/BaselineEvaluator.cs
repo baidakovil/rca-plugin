@@ -130,6 +130,10 @@ internal sealed class BaselineEvaluator
       var delta = value.HasValue && baseline?.Value is decimal baselineValue
           ? value.Value - baselineValue
           : (decimal?)null;
+      if (delta.HasValue && delta.Value == 0)
+      {
+        delta = null;
+      }
 
       var status = EvaluateStatus(identifier, value, thresholds, symbolLevel);
 

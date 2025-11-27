@@ -16,7 +16,8 @@ public static class JsonSerializerOptionsFactory
     var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
     {
       WriteIndented = true,
-      PropertyNameCaseInsensitive = true
+      PropertyNameCaseInsensitive = true,
+      DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
     options.Converters.Add(new JsonStringEnumConverter());
