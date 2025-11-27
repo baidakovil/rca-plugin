@@ -50,6 +50,7 @@ internal static partial class JavascriptModules
     tbody,
     refs,
     thresholdData: readThresholdData(doc),
+    ruleDescriptionsData: readRuleDescriptionsData(doc),
     preferenceStore,
     savedPreferences,
     isRestoringPreferences: !!savedPreferences,

@@ -11,6 +11,7 @@ function initTooltips(ctx){
   ctx.tooltipHost = host;
 
   const thresholdData = ctx.thresholdData;
+  const ruleDescriptionsData = ctx.ruleDescriptionsData;
 
   function buildThresholdTooltip(metricId){
     if(!thresholdData || !thresholdData[metricId]){
@@ -90,6 +91,77 @@ function initTooltips(ctx){
     return '<p class=""metric-tooltip__desc"">' + escapeHtml(text) + '</p>';
   }
 
+  function buildBreakdownTooltip(breakdown, metricId){
+    if(!breakdown || typeof breakdown !== 'object' || Object.keys(breakdown).length === 0){
+      return null;
+    }
+    if(!ruleDescriptionsData){
+      return null;
+    }
+
+    // Extract rule IDs and sort by number after CA/IDE prefix
+    const ruleIds = Object.keys(breakdown).filter(function(ruleId){
+      return breakdown[ruleId] > 0;
+    });
+
+    if(ruleIds.length === 0){
+      return null;
+    }
+
+    // Sort by numeric part after CA/IDE prefix
+    ruleIds.sort(function(a, b){
+      const aMatch = a.match(/^(CA|IDE)(\d+)$/);
+      const bMatch = b.match(/^(CA|IDE)(\d+)$/);
+      if(!aMatch || !bMatch){
+        return a.localeCompare(b);
+      }
+      const aNum = parseInt(aMatch[2], 10);
+      const bNum = parseInt(bMatch[2], 10);
+      if(aNum !== bNum){
+        return aNum - bNum;
+      }
+      return aMatch[1].localeCompare(bMatch[1]);
+    });
+
+    const parts = [];
+    ruleIds.forEach(function(ruleId){
+      const count = breakdown[ruleId];
+      const description = ruleDescriptionsData[ruleId];
+      
+      if(!description){
+        // Fallback if description is missing
+        parts.push('<p><strong>' + escapeHtml(ruleId) + ':</strong> <span style=""color: #0066cc;"">' + escapeHtml(String(count)) + '</span></p>');
+        return;
+      }
+
+      const category = description.category || '';
+      const shortDesc = description.shortDescription || '';
+      const fullDesc = description.fullDescription || '';
+
+      // Build description line: Category: Short description
+      let descLine = '';
+      if(category && shortDesc){
+        descLine = escapeHtml(category) + ': ' + escapeHtml(shortDesc);
+      } else if(shortDesc){
+        descLine = escapeHtml(shortDesc);
+      } else if(category){
+        descLine = escapeHtml(category);
+      }
+
+      parts.push('<p><strong>' + escapeHtml(ruleId) + ':</strong> <span style=""color: #0066cc;"">' + escapeHtml(String(count)) + '</span></p>');
+      
+      if(descLine){
+        parts.push('<p style=""margin-left: 8px; margin-top: 2px; margin-bottom: 4px;""><em>' + descLine + '</em></p>');
+      }
+      
+      if(fullDesc){
+        parts.push('<p style=""margin-left: 8px; margin-top: 2px; margin-bottom: 8px;""><em>' + escapeHtml(fullDesc) + '</em></p>');
+      }
+    });
+
+    return parts.join('');
+  }
+
   function attachTableHeaderTooltips(){
     const head = ctx.table.tHead;
     if(!head || !thresholdData){
@@ -159,6 +231,24 @@ function initTooltips(ctx){
           }
         });
         return;
+      }
+
+      // Check for breakdown tooltip on SARIF metric cells
+      const metricCell = event.target.closest('.metric[data-breakdown]');
+      if(metricCell && metricCell.dataset.breakdown && metricCell.dataset.metricId){
+        const metricId = metricCell.dataset.metricId;
+        // Only show breakdown tooltip for SARIF metrics
+        if(metricId === 'SarifCaRuleViolations' || metricId === 'SarifIdeRuleViolations'){
+          host.schedule(metricCell, function(){
+            try{
+              const breakdown = JSON.parse(metricCell.dataset.breakdown);
+              return buildBreakdownTooltip(breakdown, metricId);
+            }catch(_){
+              return null;
+            }
+          });
+          return;
+        }
       }
 
       const nameElement = event.target.closest('.name-text[data-symbol-info], a.name-text[data-symbol-info]');

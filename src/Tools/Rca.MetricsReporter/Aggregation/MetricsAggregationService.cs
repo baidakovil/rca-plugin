@@ -50,11 +50,16 @@ public sealed class MetricsAggregationService
 
     var workspace = new AggregationWorkspace(input.SolutionName, _memberFilter, _assemblyFilter, _typeFilter);
     workspace.PrepareReport(input);
+    
+    // Collect rule IDs that are actually used in breakdown across all metrics
+    var usedRuleIds = CollectUsedRuleIds(workspace.Solution);
+    
     var metadataInput = ReportMetadataComposer.CreateInput(
         input,
         _memberFilter,
         _assemblyFilter,
-        _typeFilter);
+        _typeFilter,
+        usedRuleIds);
     var metadata = ReportMetadataComposer.Compose(metadataInput);
 
     return new MetricsReport
@@ -62,6 +67,75 @@ public sealed class MetricsAggregationService
       Metadata = metadata,
       Solution = workspace.Solution
     };
+  }
+
+  /// <summary>
+  /// Recursively collects all rule IDs from breakdown dictionaries in SARIF metrics across the entire metrics tree.
+  /// </summary>
+  /// <param name="solution">The root solution node to traverse.</param>
+  /// <returns>A set of rule IDs that are actually used in breakdown.</returns>
+  private static HashSet<string> CollectUsedRuleIds(SolutionMetricsNode solution)
+  {
+    var usedRuleIds = new HashSet<string>(StringComparer.Ordinal);
+    CollectUsedRuleIdsRecursive(solution, usedRuleIds);
+    return usedRuleIds;
+  }
+
+  /// <summary>
+  /// Recursively traverses the metrics tree and collects rule IDs from breakdown dictionaries.
+  /// </summary>
+  /// <param name="node">The current node to process.</param>
+  /// <param name="usedRuleIds">The set to accumulate rule IDs into.</param>
+  private static void CollectUsedRuleIdsRecursive(MetricsNode node, HashSet<string> usedRuleIds)
+  {
+    // Collect rule IDs from SARIF metrics breakdown
+    if (node.Metrics.TryGetValue(MetricIdentifier.SarifCaRuleViolations, out var caMetric)
+        && caMetric.Breakdown is not null)
+    {
+      foreach (var ruleId in caMetric.Breakdown.Keys)
+      {
+        usedRuleIds.Add(ruleId);
+      }
+    }
+
+    if (node.Metrics.TryGetValue(MetricIdentifier.SarifIdeRuleViolations, out var ideMetric)
+        && ideMetric.Breakdown is not null)
+    {
+      foreach (var ruleId in ideMetric.Breakdown.Keys)
+      {
+        usedRuleIds.Add(ruleId);
+      }
+    }
+
+    // Recursively process child nodes
+    if (node is SolutionMetricsNode solutionNode)
+    {
+      foreach (var assembly in solutionNode.Assemblies)
+      {
+        CollectUsedRuleIdsRecursive(assembly, usedRuleIds);
+      }
+    }
+    else if (node is AssemblyMetricsNode assemblyNode)
+    {
+      foreach (var ns in assemblyNode.Namespaces)
+      {
+        CollectUsedRuleIdsRecursive(ns, usedRuleIds);
+      }
+    }
+    else if (node is NamespaceMetricsNode namespaceNode)
+    {
+      foreach (var type in namespaceNode.Types)
+      {
+        CollectUsedRuleIdsRecursive(type, usedRuleIds);
+      }
+    }
+    else if (node is TypeMetricsNode typeNode)
+    {
+      foreach (var member in typeNode.Members)
+      {
+        CollectUsedRuleIdsRecursive(member, usedRuleIds);
+      }
+    }
   }
 
   private sealed class AggregationWorkspace
@@ -530,7 +604,8 @@ public sealed class MetricsAggregationService
         MetricsAggregationInput input,
         MemberFilter memberFilter,
         AssemblyFilter assemblyFilter,
-        TypeFilter typeFilter)
+        TypeFilter typeFilter,
+        HashSet<string>? usedRuleIds = null)
     {
       ArgumentNullException.ThrowIfNull(input);
       ArgumentNullException.ThrowIfNull(memberFilter);
@@ -538,7 +613,12 @@ public sealed class MetricsAggregationService
       ArgumentNullException.ThrowIfNull(typeFilter);
 
       var thresholdMetadata = CreateThresholdMetadata(input.Thresholds);
-      var ruleDescriptions = MergeRuleDescriptions(input.SarifDocuments);
+      var allRuleDescriptions = MergeRuleDescriptions(input.SarifDocuments);
+      
+      // Filter rule descriptions to only include rules that are actually used in breakdown
+      var ruleDescriptions = usedRuleIds is not null && usedRuleIds.Count > 0
+          ? FilterRuleDescriptions(allRuleDescriptions, usedRuleIds)
+          : allRuleDescriptions;
 
       return new ReportMetadataInput(
           input.BaselineReference,
@@ -549,6 +629,29 @@ public sealed class MetricsAggregationService
           typeFilter.GetExcludedTypePatternsString(),
           input.SuppressedSymbols,
           ruleDescriptions);
+    }
+
+    /// <summary>
+    /// Filters rule descriptions to only include rules that are actually used in breakdown.
+    /// </summary>
+    /// <param name="allRuleDescriptions">All rule descriptions from SARIF files.</param>
+    /// <param name="usedRuleIds">Set of rule IDs that are actually used in breakdown.</param>
+    /// <returns>A filtered dictionary containing only used rule descriptions.</returns>
+    private static Dictionary<string, RuleDescription> FilterRuleDescriptions(
+        Dictionary<string, RuleDescription> allRuleDescriptions,
+        HashSet<string> usedRuleIds)
+    {
+      var filtered = new Dictionary<string, RuleDescription>();
+      
+      foreach (var (ruleId, description) in allRuleDescriptions)
+      {
+        if (usedRuleIds.Contains(ruleId))
+        {
+          filtered[ruleId] = description;
+        }
+      }
+      
+      return filtered;
     }
 
     /// <summary>

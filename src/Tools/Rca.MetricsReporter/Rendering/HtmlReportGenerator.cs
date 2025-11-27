@@ -76,6 +76,14 @@ public sealed class HtmlReportGenerator
       builder.AppendLine("</script>");
     }
 
+    var ruleDescriptionsPayload = CreateRuleDescriptionsPayload(report.Metadata);
+    if (!string.IsNullOrEmpty(ruleDescriptionsPayload))
+    {
+      builder.AppendLine("<script id=\"rule-descriptions-data\" type=\"application/json\">");
+      builder.AppendLine(ruleDescriptionsPayload);
+      builder.AppendLine("</script>");
+    }
+
     // JavaScript section
     builder.AppendLine("<script>");
     builder.AppendLine(HtmlScriptGenerator.Generate());
@@ -209,5 +217,55 @@ public sealed class HtmlReportGenerator
   /// <returns>A sanitized JSON string with escaped script tags.</returns>
   private static string SanitizeJsonForScriptTag(string json)
       => json.Replace("</script>", "<\\/script>", StringComparison.Ordinal);
+
+  /// <summary>
+  /// Creates a JSON payload containing rule descriptions for JavaScript consumption in the HTML report.
+  /// </summary>
+  /// <param name="metadata">The report metadata containing rule descriptions.</param>
+  /// <returns>
+  /// A JSON string with rule descriptions, or <see langword="null"/> if no rule descriptions are defined.
+  /// The JSON is sanitized to prevent script tag injection.
+  /// </returns>
+  private static string? CreateRuleDescriptionsPayload(ReportMetadata metadata)
+  {
+    if (metadata.RuleDescriptions.Count == 0)
+    {
+      return null;
+    }
+
+    var payload = BuildRuleDescriptionsPayload(metadata);
+    var json = SerializeRuleDescriptionsPayload(payload);
+    return SanitizeJsonForScriptTag(json);
+  }
+
+  /// <summary>
+  /// Builds the rule descriptions payload dictionary structure from report metadata.
+  /// </summary>
+  /// <param name="metadata">The report metadata containing rule descriptions.</param>
+  /// <returns>A dictionary keyed by rule ID with rule description information.</returns>
+  private static Dictionary<string, object?> BuildRuleDescriptionsPayload(ReportMetadata metadata)
+  {
+    var payload = new Dictionary<string, object?>(StringComparer.Ordinal);
+    foreach (var (ruleId, description) in metadata.RuleDescriptions)
+    {
+      payload[ruleId] = new
+      {
+        shortDescription = description.ShortDescription,
+        fullDescription = description.FullDescription,
+        helpUri = description.HelpUri,
+        category = description.Category
+      };
+    }
+
+    return payload;
+  }
+
+  /// <summary>
+  /// Serializes the rule descriptions payload to JSON.
+  /// </summary>
+  /// <param name="payload">The payload dictionary to serialize.</param>
+  /// <returns>A JSON string representation of the payload.</returns>
+  private static string SerializeRuleDescriptionsPayload(Dictionary<string, object?> payload)
+      => JsonSerializer.Serialize(payload, JsonSerializerOptionsFactory.Create());
 }
 
