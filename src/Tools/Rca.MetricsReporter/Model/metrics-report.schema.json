@@ -24,7 +24,6 @@
           ],
           "description": "Threshold comparison result. Metrics with omitted thresholds default to \"Success\", while metrics without data are not emitted."
         },
-        "unit": { "type": ["string", "null"], "enum": ["percent", "count", "score", null] },
         "breakdown": {
           "type": ["object", "null"],
           "description": "Optional breakdown of rule violations by rule ID (e.g., CA1502, IDE0051). Only present for SarifCaRuleViolations and SarifIdeRuleViolations metrics.",
@@ -191,6 +190,13 @@
       "required": ["shortDescription"],
       "additionalProperties": false
     },
+    "metricDescriptor": {
+      "type": "object",
+      "properties": {
+        "unit": { "type": ["string", "null"], "enum": ["percent", "count", "score", null] }
+      },
+      "additionalProperties": false
+    },
     "reportMetadata": {
       "type": "object",
       "properties": {
@@ -215,6 +221,10 @@
         "thresholdDescriptions": {
           "type": "object",
           "additionalProperties": { "type": ["string", "null"] }
+        },
+        "metricDescriptors": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/definitions/metricDescriptor" }
         },
         "excludedMemberNamesPatterns": {
           "type": ["string", "null"],

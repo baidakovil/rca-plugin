@@ -40,6 +40,11 @@ Metrics Reporter — консольное приложение .NET 8, объе�
         "Type": { "warning": 40, "error": 70, "higherIsBetter": false }
       }
     },
+    "metricDescriptors": {
+      "AltCoverSequenceCoverage": { "unit": "percent" },
+      "RoslynMaintainabilityIndex": { "unit": "score" },
+      "SarifCaRuleViolations": { "unit": "count" }
+    },
     "excludedMemberNamesPatterns": "*b__*,<Clone>$,ctor,cctor,MoveNext,SetStateMachine,MoveNextAsync,DisposeAsync"
   },
   "solution": {
@@ -50,9 +55,9 @@ Metrics Reporter — консольное приложение .NET 8, объе�
         "kind": "Assembly",
         "fullyQualifiedName": "Rca.Loader",
         "metrics": {
-          "AltCoverSequenceCoverage": { "value": 48.59, "delta": -1.41, "status": "Warning", "unit": "percent" },
-          "RoslynMaintainabilityIndex": { "value": 81, "delta": 0, "status": "Success", "unit": "score" },
-          "SarifCaRuleViolations": { "value": 12, "delta": 2, "status": "Warning", "unit": "count" }
+          "AltCoverSequenceCoverage": { "value": 48.59, "delta": -1.41, "status": "Warning" },
+          "RoslynMaintainabilityIndex": { "value": 81, "delta": 0, "status": "Success" },
+          "SarifCaRuleViolations": { "value": 12, "delta": 2, "status": "Warning" }
         },
         "namespaces": [
           {
@@ -71,8 +76,8 @@ Metrics Reporter — консольное приложение .NET 8, объе�
                 },
                 "isNew": false,
                 "metrics": {
-                  "RoslynCyclomaticComplexity": { "value": 48, "delta": -5, "status": "Warning", "unit": "count" },
-                  "SarifCaRuleViolations": { "value": 3, "delta": 1, "status": "Error", "unit": "count" }
+                  "RoslynCyclomaticComplexity": { "value": 48, "delta": -5, "status": "Warning" },
+                  "SarifCaRuleViolations": { "value": 3, "delta": 1, "status": "Error" }
                 },
                 "members": [
                   {
@@ -81,8 +86,8 @@ Metrics Reporter — консольное приложение .NET 8, объе�
                     "fullyQualifiedName": "Rca.Loader.Infrastructure.CommandValidationService.ValidateAsync(System.String)",
                     "isNew": true,
                     "metrics": {
-                      "AltCoverSequenceCoverage": { "value": 72.1, "status": "Warning", "unit": "percent" },
-                      "RoslynMaintainabilityIndex": { "value": 42, "status": "Error", "unit": "score" }
+                      "AltCoverSequenceCoverage": { "value": 72.1, "status": "Warning" },
+                      "RoslynMaintainabilityIndex": { "value": 42, "status": "Error" }
                     }
                   }
                 ]
@@ -103,13 +108,14 @@ Metrics Reporter — консольное приложение .NET 8, объе�
   - `value` (`number?`) — фактическое значение, `null`, если данных нет.
   - `delta` (`number?`) — отклонение от baseline, `null`, если элемент новый или baseline отсутствует.
   - `status` — результат сравнения с порогом (значения: `Success`, `Warning`, `Error`). Метрики без данных не сериализуются, поэтому вариант `NotApplicable` больше не попадает в JSON.
-  - `unit` — `percent`, `count` или `score`, помогает HTML отформатировать значение.
 - `isNew` — пометка новых элементов, для HTML добавляется префикс `NEW`; дельты не отображаются.
 - `source` — сведения о файле/диапазоне строк, используются для сопоставления SARIF и подсказок в отчёте.
 
 Если ключ отсутствует в `metrics`, значит метрика неприменима к данному символу или недоступна в исходных данных. Метрики с фактическими значениями, но без настроенных порогов, по умолчанию получают статус `Success`, чтобы значение сохранилось в отчёте без визуального подсвечивания.
 
 **Как формируются записи о метриках.** Агрегатор сериализует только те метрики, для которых есть числовое значение и рассчитан значимый статус. Если после сравнения с порогами статус остался `NotApplicable` (например, нет данных или правило не покрывает символ), метрика исключается из JSON — HTML показывает это как пустую ячейку. Если же значение существует, но пороги не заданы, сервис помечает метрику как `Success`, чтобы она попала в отчёт без визуальных подсветок.
+
+**Metadata → unit descriptors.** Справочник `metricDescriptors` хранит единицы измерения для каждой метрики. Ключ — `MetricIdentifier`, значение — объект `{ "unit": "percent|count|score" }`. HTML-рендерер получает единицы из этого справочника, поэтому внутри узлов больше нет повторяющихся `unit`. Свойство `MetricValue.Unit` оставлено только для обратной совместимости и не сериализуется.
 
 **Метаданные исключений.** Поля `excludedMemberNamesPatterns`, `excludedAssemblyNames` и `excludedTypeNamePatterns` содержат списки шаблонов (через запятую), которые использовались при генерации отчёта. Значения отображаются в шапке HTML, чтобы было очевидно, какие сборки, типы или члены были исключены; те же поля описаны в JSON Schema и доступны для машинной проверки.
 

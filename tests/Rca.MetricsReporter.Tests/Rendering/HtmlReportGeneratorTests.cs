@@ -87,6 +87,70 @@ public sealed class HtmlReportGeneratorTests
   }
 
   [Test]
+  public void Generate_UsesMetricDescriptorsForUnitFormatting()
+  {
+    var member = new MemberMetricsNode
+    {
+      Name = "Coverage",
+      FullyQualifiedName = "Sample.Namespace.SampleType.Coverage()",
+      Metrics = new Dictionary<MetricIdentifier, MetricValue>
+      {
+        [MetricIdentifier.AltCoverSequenceCoverage] = new MetricValue { Value = 75, Status = ThresholdStatus.Warning }
+      }
+    };
+
+    var type = new TypeMetricsNode
+    {
+      Name = "SampleType",
+      FullyQualifiedName = "Sample.Namespace.SampleType",
+      Metrics = new Dictionary<MetricIdentifier, MetricValue>(),
+      Members = new List<MemberMetricsNode> { member }
+    };
+
+    var assembly = new AssemblyMetricsNode
+    {
+      Name = "Sample.Assembly",
+      FullyQualifiedName = "Sample.Assembly",
+      Metrics = new Dictionary<MetricIdentifier, MetricValue>(),
+      Namespaces = new List<NamespaceMetricsNode>
+      {
+        new()
+        {
+          Name = "Sample.Namespace",
+          FullyQualifiedName = "Sample.Namespace",
+          Metrics = new Dictionary<MetricIdentifier, MetricValue>(),
+          Types = new List<TypeMetricsNode> { type }
+        }
+      }
+    };
+
+    var report = new MetricsReport
+    {
+      Metadata = new ReportMetadata
+      {
+        GeneratedAtUtc = DateTime.UtcNow,
+        Paths = new ReportPaths(),
+        ThresholdsByLevel = new Dictionary<MetricIdentifier, IDictionary<MetricSymbolLevel, MetricThreshold>>(),
+        ThresholdDescriptions = new Dictionary<MetricIdentifier, string?>(),
+        MetricDescriptors = new Dictionary<MetricIdentifier, MetricDescriptor>
+        {
+          [MetricIdentifier.AltCoverSequenceCoverage] = new() { Unit = "percent" }
+        }
+      },
+      Solution = new SolutionMetricsNode
+      {
+        Name = "SampleSolution",
+        FullyQualifiedName = "SampleSolution",
+        Metrics = new Dictionary<MetricIdentifier, MetricValue>(),
+        Assemblies = new List<AssemblyMetricsNode> { assembly }
+      }
+    };
+
+    var html = HtmlReportGenerator.Generate(report);
+    html.Should().Contain("75%");
+  }
+
+  [Test]
   public void Generate_WithSourceLocation_AddsOpenFileAction()
   {
     var typeSource = new SourceLocation

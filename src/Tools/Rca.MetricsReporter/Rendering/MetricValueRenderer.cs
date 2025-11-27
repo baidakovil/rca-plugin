@@ -14,7 +14,7 @@ internal static class MetricValueRenderer
   /// </summary>
   /// <param name="value">The metric value to render. Can be <see langword="null"/>.</param>
   /// <returns>HTML markup for the metric value.</returns>
-  public static string Render(MetricValue? value)
+  public static string Render(MetricValue? value, string? unit)
   {
     if (value is null)
     {
@@ -22,7 +22,7 @@ internal static class MetricValueRenderer
     }
 
     var displayValue = value.Value.HasValue
-        ? FormatValue(value.Value.Value, value.Unit)
+        ? FormatValue(value.Value.Value, unit)
         : "-";
 
     var builder = new StringBuilder();
@@ -30,7 +30,7 @@ internal static class MetricValueRenderer
 
     if (value.Delta.HasValue && value.Delta.Value != 0)
     {
-      var deltaText = FormatDelta(value.Delta.Value, value.Unit);
+      var deltaText = FormatDelta(value.Delta.Value, unit);
       // WHY: JavaScript applies correct colors (delta-improving/delta-degrading) based on
       // higherIsBetter flag from threshold data. Temporary classes are used only to mark
       // delta elements for JavaScript processing.

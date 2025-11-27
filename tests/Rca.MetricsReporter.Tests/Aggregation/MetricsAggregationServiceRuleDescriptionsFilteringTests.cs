@@ -77,7 +77,6 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
             [MetricIdentifier.SarifCaRuleViolations] = new MetricValue
             {
               Value = 1,
-              Unit = "count",
               Status = ThresholdStatus.NotApplicable,
               Breakdown = new Dictionary<string, int> { ["CA1502"] = 1 }
             }
@@ -177,7 +176,6 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
             [MetricIdentifier.SarifCaRuleViolations] = new MetricValue
             {
               Value = 1,
-              Unit = "count",
               Status = ThresholdStatus.NotApplicable,
               Breakdown = new Dictionary<string, int> { ["CA1502"] = 1 }
             }
@@ -191,7 +189,6 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
             [MetricIdentifier.SarifCaRuleViolations] = new MetricValue
             {
               Value = 1,
-              Unit = "count",
               Status = ThresholdStatus.NotApplicable,
               Breakdown = new Dictionary<string, int> { ["CA1506"] = 1 }
             }
@@ -294,7 +291,6 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
             [MetricIdentifier.SarifIdeRuleViolations] = new MetricValue
             {
               Value = 1,
-              Unit = "count",
               Status = ThresholdStatus.NotApplicable,
               Breakdown = new Dictionary<string, int> { ["IDE0051"] = 1 }
             }
@@ -391,7 +387,6 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
             [MetricIdentifier.SarifCaRuleViolations] = new MetricValue
             {
               Value = 1,
-              Unit = "count",
               Status = ThresholdStatus.NotApplicable,
               Breakdown = new Dictionary<string, int> { ["CA1502"] = 1 }
             }
@@ -405,7 +400,6 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
             [MetricIdentifier.SarifIdeRuleViolations] = new MetricValue
             {
               Value = 1,
-              Unit = "count",
               Status = ThresholdStatus.NotApplicable,
               Breakdown = new Dictionary<string, int> { ["IDE0051"] = 1 }
             }
@@ -501,7 +495,6 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
             [MetricIdentifier.SarifCaRuleViolations] = new MetricValue
             {
               Value = 1,
-              Unit = "count",
               Status = ThresholdStatus.NotApplicable,
               Breakdown = new Dictionary<string, int> { ["CA1502"] = 1 }
             }
@@ -515,7 +508,6 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
             [MetricIdentifier.SarifCaRuleViolations] = new MetricValue
             {
               Value = 1,
-              Unit = "count",
               Status = ThresholdStatus.NotApplicable,
               Breakdown = new Dictionary<string, int> { ["CA1506"] = 1 }
             }
@@ -656,7 +648,6 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
             [MetricIdentifier.SarifCaRuleViolations] = new MetricValue
             {
               Value = 0,
-              Unit = "count",
               Status = ThresholdStatus.NotApplicable,
               Breakdown = new Dictionary<string, int>() // Empty breakdown
             }
@@ -744,7 +735,6 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
             [MetricIdentifier.SarifCaRuleViolations] = new MetricValue
             {
               Value = 1,
-              Unit = "count",
               Status = ThresholdStatus.NotApplicable,
               Breakdown = new Dictionary<string, int> { ["CA1502"] = 1, ["CA9999"] = 1 } // CA9999 not in descriptions
             }
@@ -848,7 +838,6 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
             [MetricIdentifier.SarifCaRuleViolations] = new MetricValue
             {
               Value = 1,
-              Unit = "count",
               Status = ThresholdStatus.NotApplicable,
               Breakdown = new Dictionary<string, int> { ["CA1502"] = 1 }
             }
@@ -862,7 +851,6 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
             [MetricIdentifier.SarifCaRuleViolations] = new MetricValue
             {
               Value = 1,
-              Unit = "count",
               Status = ThresholdStatus.NotApplicable,
               Breakdown = new Dictionary<string, int> { ["CA1506"] = 1 }
             }

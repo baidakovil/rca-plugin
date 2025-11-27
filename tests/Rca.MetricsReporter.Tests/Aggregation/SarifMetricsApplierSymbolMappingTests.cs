@@ -450,7 +450,6 @@ public sealed class SarifMetricsApplierSymbolMappingTests
         [MetricIdentifier.SarifCaRuleViolations] = new MetricValue
         {
           Value = 1,
-          Unit = "count",
           Status = ThresholdStatus.NotApplicable,
           Breakdown = new Dictionary<string, int> { ["CA1822"] = 1 }
         }

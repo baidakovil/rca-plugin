@@ -191,19 +191,19 @@ public sealed class AltCoverMetricsParser : IMetricsSourceParser
     AddMetric(target, MetricIdentifier.AltCoverSequenceCoverage, summary.Attribute("sequenceCoverage"));
     AddMetric(target, MetricIdentifier.AltCoverBranchCoverage, summary.Attribute("branchCoverage"));
 
-    AddMetric(target, MetricIdentifier.AltCoverCyclomaticComplexity, summary.Attribute("maxCyclomaticComplexity"), unit: "count");
-    AddMetric(target, MetricIdentifier.AltCoverNPathComplexity, summary.Attribute("maxNPathComplexity"), unit: "count");
+    AddMetric(target, MetricIdentifier.AltCoverCyclomaticComplexity, summary.Attribute("maxCyclomaticComplexity"));
+    AddMetric(target, MetricIdentifier.AltCoverNPathComplexity, summary.Attribute("maxNPathComplexity"));
   }
 
   private static void PopulateMethodMetrics(IDictionary<MetricIdentifier, MetricValue> target, XElement method)
   {
     AddMetric(target, MetricIdentifier.AltCoverSequenceCoverage, method.Attribute("sequenceCoverage"));
     AddMetric(target, MetricIdentifier.AltCoverBranchCoverage, method.Attribute("branchCoverage"));
-    AddMetric(target, MetricIdentifier.AltCoverCyclomaticComplexity, method.Attribute("cyclomaticComplexity"), unit: "count");
-    AddMetric(target, MetricIdentifier.AltCoverNPathComplexity, method.Attribute("nPathComplexity"), unit: "count");
+    AddMetric(target, MetricIdentifier.AltCoverCyclomaticComplexity, method.Attribute("cyclomaticComplexity"));
+    AddMetric(target, MetricIdentifier.AltCoverNPathComplexity, method.Attribute("nPathComplexity"));
   }
 
-  private static void AddMetric(IDictionary<MetricIdentifier, MetricValue> target, MetricIdentifier identifier, XAttribute? attribute, string unit = "percent")
+  private static void AddMetric(IDictionary<MetricIdentifier, MetricValue> target, MetricIdentifier identifier, XAttribute? attribute)
   {
     if (attribute is null)
     {
@@ -219,7 +219,6 @@ public sealed class AltCoverMetricsParser : IMetricsSourceParser
     target[identifier] = new MetricValue
     {
       Value = value,
-      Unit = unit,
       Status = ThresholdStatus.NotApplicable
     };
   }

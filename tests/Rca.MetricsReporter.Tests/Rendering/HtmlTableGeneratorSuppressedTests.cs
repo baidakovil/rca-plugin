@@ -29,7 +29,6 @@ public sealed class HtmlTableGeneratorSuppressedTests
         [MetricIdentifier.RoslynClassCoupling] = new()
         {
           Value = 42,
-          Unit = "score",
           Status = ThresholdStatus.Warning
         }
       }
@@ -83,6 +82,9 @@ public sealed class HtmlTableGeneratorSuppressedTests
     var generator = new HtmlTableGenerator(new[]
     {
       MetricIdentifier.RoslynClassCoupling
+    }, new Dictionary<MetricIdentifier, string?>
+    {
+      [MetricIdentifier.RoslynClassCoupling] = "score"
     });
 
     // Act

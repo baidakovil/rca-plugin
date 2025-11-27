@@ -38,6 +38,12 @@ public sealed class ReportMetadata
       = new Dictionary<MetricIdentifier, string?>();
 
   /// <summary>
+  /// Descriptor metadata (unit of measurement etc.) for each metric.
+  /// </summary>
+  public IDictionary<MetricIdentifier, MetricDescriptor> MetricDescriptors { get; init; }
+      = new Dictionary<MetricIdentifier, MetricDescriptor>();
+
+  /// <summary>
   /// Comma-separated list of excluded member name patterns used when generating this report.
   /// </summary>
   /// <remarks>

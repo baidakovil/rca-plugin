@@ -482,7 +482,6 @@ internal sealed class StructuralElementMerger
           target[pair.Key] = new MetricValue
           {
             Value = sum,
-            Unit = existing.Unit ?? pair.Value.Unit,
             Status = ThresholdStatus.NotApplicable,
             Breakdown = mergedBreakdown
           };
@@ -497,7 +496,6 @@ internal sealed class StructuralElementMerger
             Value = pair.Value.Value,
             Delta = pair.Value.Delta,
             Status = pair.Value.Status,
-            Unit = pair.Value.Unit,
             Breakdown = pair.Value.Breakdown is not null && pair.Value.Breakdown.Count > 0
                 ? new Dictionary<string, int>(pair.Value.Breakdown)
                 : null
@@ -515,7 +513,6 @@ internal sealed class StructuralElementMerger
           Value = pair.Value.Value,
           Delta = pair.Value.Delta,
           Status = pair.Value.Status,
-          Unit = pair.Value.Unit,
           Breakdown = pair.Value.Breakdown is not null && pair.Value.Breakdown.Count > 0
               ? new Dictionary<string, int>(pair.Value.Breakdown)
               : null

@@ -17,6 +17,7 @@ using Rca.Tools.MetricsReporter.Model;
 internal sealed class HtmlTableGenerator
 {
   private readonly MetricIdentifier[] _metricOrder;
+  private readonly IReadOnlyDictionary<MetricIdentifier, string?> _metricUnits;
   private int _idCounter;
   private CoverageLinkBuilder? _coverageLinkBuilder;
   private Dictionary<(string Fqn, MetricIdentifier Metric), SuppressedSymbolInfo>? _suppressedIndex;
@@ -26,9 +27,11 @@ internal sealed class HtmlTableGenerator
   /// Initializes a new instance of the <see cref="HtmlTableGenerator"/> class.
   /// </summary>
   /// <param name="metricOrder">The order of metrics to display in columns.</param>
-  public HtmlTableGenerator(MetricIdentifier[] metricOrder)
+  /// <param name="metricUnits">Units associated with each metric.</param>
+  public HtmlTableGenerator(MetricIdentifier[] metricOrder, IReadOnlyDictionary<MetricIdentifier, string?> metricUnits)
   {
     _metricOrder = metricOrder ?? throw new ArgumentNullException(nameof(metricOrder));
+    _metricUnits = metricUnits ?? throw new ArgumentNullException(nameof(metricUnits));
   }
 
   /// <summary>
@@ -535,13 +538,14 @@ internal sealed class HtmlTableGenerator
     foreach (var mid in _metricOrder)
     {
       node.Metrics.TryGetValue(mid, out var val);
+      _metricUnits.TryGetValue(mid, out var unit);
       var status = val is null ? "na" : val.Status.ToString().ToLowerInvariant();
       var hasDelta = val is not null && val.Delta.HasValue && val.Delta.Value != 0;
       var suppression = TryGetSuppression(node, mid);
       var suppressedAttr = suppression is null ? string.Empty : " data-suppressed=\"true\"";
       var suppressionDataAttr = BuildSuppressionDataAttribute(suppression);
       var breakdownAttr = BuildBreakdownDataAttribute(mid, val);
-      builder.AppendLine($"      <{metricTag} class=\"metric\" data-col=\"{mid}\" data-status=\"{status}\" data-has-delta=\"{(hasDelta ? "true" : "false")}\" data-metric-id=\"{mid}\"{suppressedAttr}{suppressionDataAttr}{breakdownAttr}>{MetricValueRenderer.Render(val)}</{metricTag}>");
+      builder.AppendLine($"      <{metricTag} class=\"metric\" data-col=\"{mid}\" data-status=\"{status}\" data-has-delta=\"{(hasDelta ? "true" : "false")}\" data-metric-id=\"{mid}\"{suppressedAttr}{suppressionDataAttr}{breakdownAttr}>{MetricValueRenderer.Render(val, unit)}</{metricTag}>");
     }
   }
 

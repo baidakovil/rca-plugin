@@ -146,7 +146,6 @@ internal sealed class BaselineEvaluator
       {
         Value = value,
         Delta = delta,
-        Unit = current?.Unit ?? baseline?.Unit,
         Status = status,
         Breakdown = current?.Breakdown is not null && current.Breakdown.Count > 0
             ? new Dictionary<string, int>(current.Breakdown)

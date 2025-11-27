@@ -196,7 +196,6 @@ internal sealed class IteratorCoverageReconciler
     targetMetrics[identifier] = new MetricValue
     {
       Value = sourceValue.Value,
-      Unit = sourceValue.Unit,
       Status = sourceValue.Status,
       Delta = sourceValue.Delta
     };

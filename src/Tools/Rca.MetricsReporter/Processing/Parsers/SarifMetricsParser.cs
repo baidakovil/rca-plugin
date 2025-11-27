@@ -130,7 +130,6 @@ public sealed class SarifMetricsParser : IMetricsSourceParser
         [identifier] = new MetricValue
         {
           Value = 1,
-          Unit = "count",
           Status = ThresholdStatus.NotApplicable,
           Breakdown = breakdown
         }

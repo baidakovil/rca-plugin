@@ -1014,7 +1014,6 @@ public sealed class MetricsAggregationServiceTests
             [MetricIdentifier.SarifCaRuleViolations] = new MetricValue
             {
               Value = 1,
-              Unit = "count",
               Status = ThresholdStatus.NotApplicable,
               Breakdown = new Dictionary<string, int>
               {
@@ -1522,7 +1521,6 @@ public sealed class MetricsAggregationServiceTests
             {
               Value = null,
               Delta = null,
-              Unit = "score",
               Status = ThresholdStatus.NotApplicable
             }
           }
@@ -1574,7 +1572,6 @@ public sealed class MetricsAggregationServiceTests
             [MetricIdentifier.RoslynSourceLines] = new MetricValue
             {
               Value = 120,
-              Unit = "count",
               Status = ThresholdStatus.NotApplicable
             }
           }
@@ -1603,11 +1600,49 @@ public sealed class MetricsAggregationServiceTests
     type.Metrics[MetricIdentifier.RoslynSourceLines].Value.Should().Be(120);
   }
 
-  private static MetricValue Metric(decimal value, string unit)
+  [Test]
+  public void BuildReport_PopulatesMetricDescriptorsWithUnits()
+  {
+    // Arrange
+    var roslynDocument = new ParsedMetricsDocument
+    {
+      Elements = new List<ParsedCodeElement>
+      {
+        new(CodeElementKind.Assembly, "Sample.Assembly", "Sample.Assembly"),
+        new(CodeElementKind.Namespace, "Sample.Namespace", "Sample.Namespace")
+        {
+          ParentFullyQualifiedName = "Sample.Assembly"
+        },
+        new(CodeElementKind.Type, "Sample.Namespace.SampleType", "Sample.Namespace.SampleType")
+        {
+          ParentFullyQualifiedName = "Sample.Namespace"
+        }
+      }
+    };
+
+    var input = new MetricsAggregationInput
+    {
+      SolutionName = "SampleSolution",
+      RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
+      AltCoverDocuments = new List<ParsedMetricsDocument>(),
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
+
+    // Act
+    var report = service.BuildReport(input);
+
+    // Assert
+    report.Metadata.MetricDescriptors.Should().ContainKey(MetricIdentifier.AltCoverSequenceCoverage);
+    report.Metadata.MetricDescriptors[MetricIdentifier.AltCoverSequenceCoverage].Unit.Should().Be("percent");
+    report.Metadata.MetricDescriptors[MetricIdentifier.RoslynMaintainabilityIndex].Unit.Should().Be("score");
+  }
+
+  private static MetricValue Metric(decimal value, string _)
       => new()
       {
         Value = value,
-        Unit = unit,
         Status = ThresholdStatus.NotApplicable
       };
 
@@ -1622,7 +1657,6 @@ public sealed class MetricsAggregationServiceTests
         [MetricIdentifier.RoslynMaintainabilityIndex] = new MetricValue
         {
           Value = maintainability,
-          Unit = "score",
           Status = ThresholdStatus.NotApplicable
         }
       }

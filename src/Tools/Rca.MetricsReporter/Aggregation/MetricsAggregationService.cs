@@ -504,7 +504,6 @@ public sealed class MetricsAggregationService
         Value = value.Value,
         Delta = value.Delta,
         Status = value.Status,
-        Unit = value.Unit,
         Breakdown = value.Breakdown is not null && value.Breakdown.Count > 0
             ? new Dictionary<string, int>(value.Breakdown)
             : null
@@ -525,7 +524,6 @@ public sealed class MetricsAggregationService
       node.Metrics[identifier] = new MetricValue
       {
         Value = sum,
-        Unit = existing.Unit ?? value.Unit,
         Status = ThresholdStatus.NotApplicable,
         Breakdown = mergedBreakdown
       };
@@ -540,7 +538,6 @@ public sealed class MetricsAggregationService
         Value = value.Value,
         Delta = value.Delta,
         Status = value.Status,
-        Unit = value.Unit,
         Breakdown = value.Breakdown is not null && value.Breakdown.Count > 0
             ? new Dictionary<string, int>(value.Breakdown)
             : null
@@ -594,6 +591,7 @@ public sealed class MetricsAggregationService
         Paths = input.Paths,
         ThresholdsByLevel = input.ThresholdMetadata.ThresholdsByLevel,
         ThresholdDescriptions = input.ThresholdMetadata.Descriptions,
+        MetricDescriptors = input.MetricDescriptors,
         ExcludedMemberNamesPatterns = input.ExcludedMemberNamesPatterns,
         ExcludedAssemblyNames = input.ExcludedAssemblyNames,
         ExcludedTypeNamePatterns = input.ExcludedTypeNamePatterns,
@@ -616,6 +614,7 @@ public sealed class MetricsAggregationService
 
       var thresholdMetadata = CreateThresholdMetadata(input.Thresholds);
       var allRuleDescriptions = MergeRuleDescriptions(input.SarifDocuments);
+      var metricDescriptors = MetricDescriptorCatalog.CreateDescriptors();
       
       // Filter rule descriptions to only include rules that are actually used in breakdown
       var ruleDescriptions = usedRuleIds is not null
@@ -630,7 +629,8 @@ public sealed class MetricsAggregationService
           assemblyFilter.GetExcludedAssemblyPatternsString(),
           typeFilter.GetExcludedTypePatternsString(),
           input.SuppressedSymbols,
-          ruleDescriptions);
+          ruleDescriptions,
+          metricDescriptors);
     }
 
     /// <summary>
@@ -723,7 +723,8 @@ public sealed class MetricsAggregationService
       string? ExcludedAssemblyNames,
       string? ExcludedTypeNamePatterns,
       IList<SuppressedSymbolInfo> SuppressedSymbols,
-      Dictionary<string, RuleDescription> RuleDescriptions);
+      Dictionary<string, RuleDescription> RuleDescriptions,
+      IDictionary<MetricIdentifier, MetricDescriptor> MetricDescriptors);
 
   private sealed class ReportThresholdMetadata
   {

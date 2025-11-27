@@ -1,6 +1,7 @@
 namespace Rca.Tools.MetricsReporter.Model;
 
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 /// <summary>
 /// Represents a single metric value, its delta compared to baseline, and the threshold status.
@@ -23,8 +24,9 @@ public sealed class MetricValue
   public ThresholdStatus Status { get; init; } = ThresholdStatus.NotApplicable;
 
   /// <summary>
-  /// Optional unit (for example <c>percent</c>, <c>count</c>, <c>score</c>).
+  /// Legacy per-metric unit. JSON serialization ignores this value; use metadata descriptors instead.
   /// </summary>
+  [JsonIgnore]
   public string? Unit { get; init; }
 
   /// <summary>

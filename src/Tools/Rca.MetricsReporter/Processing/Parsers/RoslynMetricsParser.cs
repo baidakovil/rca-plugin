@@ -197,14 +197,9 @@ public sealed class RoslynMetricsParser : IMetricsSourceParser
         continue;
       }
 
-      var unit = identifier is MetricIdentifier.RoslynSourceLines or MetricIdentifier.RoslynExecutableLines
-          ? "count"
-          : "score";
-
       result[identifier] = new MetricValue
       {
         Value = value,
-        Unit = unit,
         Status = ThresholdStatus.NotApplicable
       };
     }

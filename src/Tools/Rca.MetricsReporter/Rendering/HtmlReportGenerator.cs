@@ -65,7 +65,8 @@ public sealed class HtmlReportGenerator
     builder.Append(HtmlHeaderGenerator.Generate(report));
 
     // Table section
-    var tableGenerator = new HtmlTableGenerator(MetricOrder);
+    var metricUnits = BuildMetricUnits(report.Metadata);
+    var tableGenerator = new HtmlTableGenerator(MetricOrder, metricUnits);
     builder.Append(tableGenerator.Generate(report, coverageHtmlDir));
 
     var thresholdPayload = CreateThresholdPayload(report.Metadata);
@@ -92,6 +93,24 @@ public sealed class HtmlReportGenerator
     builder.AppendLine("</body>");
     builder.AppendLine("</html>");
     return builder.ToString();
+  }
+
+  private static IReadOnlyDictionary<MetricIdentifier, string?> BuildMetricUnits(ReportMetadata metadata)
+  {
+    var result = new Dictionary<MetricIdentifier, string?>();
+    foreach (var metric in MetricOrder)
+    {
+      if (metadata.MetricDescriptors.TryGetValue(metric, out var descriptor))
+      {
+        result[metric] = descriptor.Unit;
+      }
+      else
+      {
+        result[metric] = MetricDescriptorCatalog.TryGetUnit(metric);
+      }
+    }
+
+    return result;
   }
 
   /// <summary>
