@@ -616,7 +616,7 @@ public sealed class MetricsAggregationService
       var allRuleDescriptions = MergeRuleDescriptions(input.SarifDocuments);
       
       // Filter rule descriptions to only include rules that are actually used in breakdown
-      var ruleDescriptions = usedRuleIds is not null && usedRuleIds.Count > 0
+      var ruleDescriptions = usedRuleIds is not null
           ? FilterRuleDescriptions(allRuleDescriptions, usedRuleIds)
           : allRuleDescriptions;
 

@@ -95,9 +95,7 @@ function initTooltips(ctx){
     if(!breakdown || typeof breakdown !== 'object' || Object.keys(breakdown).length === 0){
       return null;
     }
-    if(!ruleDescriptionsData){
-      return null;
-    }
+    const descriptions = ruleDescriptionsData || {};
 
     // Extract rule IDs and sort by number after CA/IDE prefix
     const ruleIds = Object.keys(breakdown).filter(function(ruleId){
@@ -126,7 +124,7 @@ function initTooltips(ctx){
     const parts = [];
     ruleIds.forEach(function(ruleId){
       const count = breakdown[ruleId];
-      const description = ruleDescriptionsData[ruleId];
+      const description = descriptions[ruleId];
       
       if(!description){
         // Fallback if description is missing
