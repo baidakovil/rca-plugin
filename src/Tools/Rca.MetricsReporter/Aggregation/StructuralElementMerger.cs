@@ -176,7 +176,7 @@ internal sealed class StructuralElementMerger
       return;
     }
 
-    var assemblyName = ResolveAssemblyNameFromFqn(typeFqn);
+    var assemblyName = element.ContainingAssemblyName ?? ResolveAssemblyNameFromFqn(typeFqn);
     if (_assemblyFilter.ShouldExcludeAssembly(assemblyName))
     {
       return;
@@ -585,6 +585,11 @@ internal sealed class StructuralElementMerger
 
   private string ResolveAssemblyForType(ParsedCodeElement element)
   {
+    if (!string.IsNullOrWhiteSpace(element.ContainingAssemblyName))
+    {
+      return element.ContainingAssemblyName!;
+    }
+
     if (element.ParentFullyQualifiedName is not null && _assemblies.ContainsKey(element.ParentFullyQualifiedName))
     {
       return element.ParentFullyQualifiedName;

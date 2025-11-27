@@ -89,6 +89,7 @@ public sealed class RoslynMetricsParser : IMetricsSourceParser
     var namespaceNode = new ParsedCodeElement(CodeElementKind.Namespace, namespaceName, namespaceName)
     {
       ParentFullyQualifiedName = assemblyNode.FullyQualifiedName,
+      ContainingAssemblyName = assemblyNode.FullyQualifiedName ?? assemblyNode.Name,
       Metrics = ExtractMetrics(namespaceElement.Element(XmlNamespace + "Metrics"))
     };
 
@@ -96,7 +97,8 @@ public sealed class RoslynMetricsParser : IMetricsSourceParser
 
     var types = namespaceElement.Element(XmlNamespace + "Types")?.Elements() ?? Enumerable.Empty<XElement>();
 
-    foreach (var typeNode in types.SelectMany(type => ParseType(type, namespaceNode, namespaceName)))
+    var assemblyName = assemblyNode.FullyQualifiedName ?? assemblyNode.Name;
+    foreach (var typeNode in types.SelectMany(type => ParseType(type, namespaceNode, namespaceName, assemblyName)))
     {
       yield return typeNode;
     }
@@ -105,7 +107,8 @@ public sealed class RoslynMetricsParser : IMetricsSourceParser
   private static IEnumerable<ParsedCodeElement> ParseType(
       XElement typeElement,
       ParsedCodeElement namespaceNode,
-      string namespaceName)
+      string namespaceName,
+      string? assemblyName)
   {
     var typeName = typeElement.Attribute("Name")?.Value ?? "<unknown-type>";
     var typeFqn = string.IsNullOrWhiteSpace(namespaceName) || namespaceName == "<global>"
@@ -116,6 +119,7 @@ public sealed class RoslynMetricsParser : IMetricsSourceParser
     var typeNode = new ParsedCodeElement(CodeElementKind.Type, typeName, typeFqn)
     {
       ParentFullyQualifiedName = namespaceNode.FullyQualifiedName,
+      ContainingAssemblyName = assemblyName,
       Metrics = ExtractMetrics(typeElement.Element(XmlNamespace + "Metrics")),
       Source = source
     };
@@ -143,6 +147,7 @@ public sealed class RoslynMetricsParser : IMetricsSourceParser
     return new ParsedCodeElement(CodeElementKind.Member, methodNameOnly, normalizedMemberFqn)
     {
       ParentFullyQualifiedName = typeNode.FullyQualifiedName,
+      ContainingAssemblyName = typeNode.ContainingAssemblyName,
       Metrics = ExtractMetrics(memberElement.Element(XmlNamespace + "Metrics")),
       Source = source
     };

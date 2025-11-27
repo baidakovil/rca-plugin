@@ -42,6 +42,11 @@ public sealed class ParsedCodeElement
   public string? ParentFullyQualifiedName { get; init; }
 
   /// <summary>
+  /// Fully qualified name of the assembly that contains this element, when known.
+  /// </summary>
+  public string? ContainingAssemblyName { get; init; }
+
+  /// <summary>
   /// Source location (if available).
   /// </summary>
   public SourceLocation? Source { get; init; }

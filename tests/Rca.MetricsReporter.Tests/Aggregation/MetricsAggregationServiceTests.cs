@@ -918,6 +918,140 @@ public sealed class MetricsAggregationServiceTests
   }
 
   [Test]
+  public void BuildReport_SarifViolationsFromExcludedAssembly_DoNotLeakIntoIncludedAssembly()
+  {
+    // Arrange
+    const string includedAssembly = "Rca.Network";
+    const string excludedAssembly = "Rca.Integration.Revit.Tests";
+    const string namespaceFqn = "<global namespace>";
+    const string includedTypeFqn = "<global namespace>.AllowedComponent";
+    const string excludedTypeFqn = "<global namespace>.TestLogger";
+    const string includedFilePath = @"C:\Repo\src\Rca.Network\AllowedComponent.cs";
+    const string excludedFilePath = @"C:\Repo\tests\Rca.Integration.Revit.Tests\TestLogger.cs";
+
+    var assemblyFilter = AssemblyFilter.FromString("Tests");
+    var serviceWithFilter = new MetricsAggregationService(new MemberFilter(), assemblyFilter, new TypeFilter());
+
+    var roslynDocument = new ParsedMetricsDocument
+    {
+      SolutionName = "SampleSolution",
+      Elements = new List<ParsedCodeElement>
+      {
+        new(CodeElementKind.Assembly, includedAssembly, includedAssembly),
+        new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
+        {
+          ParentFullyQualifiedName = includedAssembly
+        },
+        new(CodeElementKind.Type, "AllowedComponent", includedTypeFqn)
+        {
+          ParentFullyQualifiedName = namespaceFqn,
+          ContainingAssemblyName = includedAssembly,
+          Source = new SourceLocation
+          {
+            Path = includedFilePath,
+            StartLine = 10,
+            EndLine = 10
+          }
+        },
+        new(CodeElementKind.Assembly, excludedAssembly, excludedAssembly),
+        new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
+        {
+          ParentFullyQualifiedName = excludedAssembly
+        },
+        new(CodeElementKind.Type, "TestLogger", excludedTypeFqn)
+        {
+          ParentFullyQualifiedName = namespaceFqn,
+          ContainingAssemblyName = excludedAssembly,
+          Source = new SourceLocation
+          {
+            Path = excludedFilePath,
+            StartLine = 14,
+            EndLine = 20
+          }
+        },
+        new(CodeElementKind.Member, "AllowedComponent.Ctor", $"{includedTypeFqn}.Ctor(...)")
+        {
+          ParentFullyQualifiedName = includedTypeFqn,
+          ContainingAssemblyName = includedAssembly,
+          Source = new SourceLocation
+          {
+            Path = includedFilePath,
+            StartLine = 10,
+            EndLine = 10
+          },
+          Metrics = new Dictionary<MetricIdentifier, MetricValue>()
+        },
+        new(CodeElementKind.Member, "TestLogger.Log", $"{excludedTypeFqn}.Log(...)")
+        {
+          ParentFullyQualifiedName = excludedTypeFqn,
+          ContainingAssemblyName = excludedAssembly,
+          Source = new SourceLocation
+          {
+            Path = excludedFilePath,
+            StartLine = 18,
+            EndLine = 18
+          },
+          Metrics = new Dictionary<MetricIdentifier, MetricValue>()
+        }
+      }
+    };
+
+    var sarifDocument = new ParsedMetricsDocument
+    {
+      SolutionName = "SampleSolution",
+      Elements = new List<ParsedCodeElement>
+      {
+        new(CodeElementKind.Member, "CA1050", null)
+        {
+          Source = new SourceLocation
+          {
+            Path = excludedFilePath,
+            StartLine = 14,
+            EndLine = 14
+          },
+          Metrics = new Dictionary<MetricIdentifier, MetricValue>
+          {
+            [MetricIdentifier.SarifCaRuleViolations] = new MetricValue
+            {
+              Value = 1,
+              Unit = "count",
+              Status = ThresholdStatus.NotApplicable,
+              Breakdown = new Dictionary<string, int>
+              {
+                ["CA1050"] = 1
+              }
+            }
+          }
+        }
+      }
+    };
+
+    var input = new MetricsAggregationInput
+    {
+      SolutionName = "SampleSolution",
+      AltCoverDocuments = new List<ParsedMetricsDocument>(),
+      RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
+      SarifDocuments = new List<ParsedMetricsDocument> { sarifDocument },
+      Baseline = null,
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
+
+    // Act
+    var report = serviceWithFilter.BuildReport(input);
+
+    // Assert
+    var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == includedAssembly).Subject;
+    assembly.Namespaces.SelectMany(n => n.Types)
+        .Should().NotContain(t => t.FullyQualifiedName == excludedTypeFqn, "types from excluded assemblies must not appear under included assemblies");
+    if (assembly.Metrics.TryGetValue(MetricIdentifier.SarifCaRuleViolations, out var assemblySarifMetric))
+    {
+      assemblySarifMetric.Value.Should().BeNull("excluded assemblies must not contribute violation counts to included assemblies");
+      assemblySarifMetric.Breakdown.Should().BeNull("excluded assemblies must not contribute rule breakdowns to included assemblies");
+    }
+  }
+
+  [Test]
   public void BuildReport_IteratorTypeCoverage_IsTransferredToMethodAndTypeIsHidden()
   {
     // Arrange
