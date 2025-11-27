@@ -47,14 +47,20 @@ public sealed class SarifMetricsParser : IMetricsSourceParser
       return EmptyDocument();
     }
 
-    var elements = runs.EnumerateArray()
-        .SelectMany(ParseRun)
-        .ToList();
+    var elements = new List<ParsedCodeElement>();
+    var ruleDescriptions = new Dictionary<string, RuleDescription>();
+
+    foreach (var run in runs.EnumerateArray())
+    {
+      elements.AddRange(ParseRun(run));
+      ExtractRuleDescriptions(run, ruleDescriptions);
+    }
 
     return new ParsedMetricsDocument
     {
       SolutionName = string.Empty,
-      Elements = elements
+      Elements = elements,
+      RuleDescriptions = ruleDescriptions
     };
   }
 
@@ -133,11 +139,68 @@ public sealed class SarifMetricsParser : IMetricsSourceParser
     };
   }
 
+  /// <summary>
+  /// Extracts rule descriptions from a SARIF run element.
+  /// </summary>
+  /// <param name="run">The SARIF run JSON element.</param>
+  /// <param name="ruleDescriptions">Dictionary to populate with extracted rule descriptions.</param>
+  private static void ExtractRuleDescriptions(JsonElement run, Dictionary<string, RuleDescription> ruleDescriptions)
+  {
+    var tool = run.GetPropertyOrDefault("tool");
+    if (tool is null)
+    {
+      return;
+    }
+
+    var driver = tool.Value.GetPropertyOrDefault("driver");
+    if (driver is null)
+    {
+      return;
+    }
+
+    var rules = driver.Value.GetPropertyOrDefault("rules");
+    if (rules is null || rules.Value.ValueKind != JsonValueKind.Array)
+    {
+      return;
+    }
+
+    foreach (var rule in rules.Value.EnumerateArray())
+    {
+      var ruleId = rule.GetPropertyOrDefault("id")?.GetString();
+      if (string.IsNullOrWhiteSpace(ruleId))
+      {
+        continue;
+      }
+
+      // Only extract descriptions for CA and IDE rules
+      if (!TryResolveMetric(ruleId, out _))
+      {
+        continue;
+      }
+
+      var shortDescription = rule.GetPropertyOrDefault("shortDescription")?.GetPropertyOrDefault("text")?.GetString() ?? string.Empty;
+      var fullDescription = rule.GetPropertyOrDefault("fullDescription")?.GetPropertyOrDefault("text")?.GetString();
+      var helpUri = rule.GetPropertyOrDefault("helpUri")?.GetString();
+      var category = rule.GetPropertyOrDefault("properties")?.GetPropertyOrDefault("category")?.GetString();
+
+      var description = new RuleDescription
+      {
+        ShortDescription = shortDescription,
+        FullDescription = fullDescription,
+        HelpUri = helpUri,
+        Category = category
+      };
+
+      ruleDescriptions[ruleId] = description;
+    }
+  }
+
   private static ParsedMetricsDocument EmptyDocument()
       => new()
       {
         SolutionName = string.Empty,
-        Elements = Array.Empty<ParsedCodeElement>()
+        Elements = Array.Empty<ParsedCodeElement>(),
+        RuleDescriptions = new Dictionary<string, RuleDescription>()
       };
 
   private static bool TryResolveMetric(string ruleId, out MetricIdentifier identifier)

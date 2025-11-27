@@ -180,6 +180,17 @@
       },
       "additionalProperties": false
     },
+    "ruleDescription": {
+      "type": "object",
+      "properties": {
+        "shortDescription": { "type": "string" },
+        "fullDescription": { "type": ["string", "null"] },
+        "helpUri": { "type": ["string", "null"] },
+        "category": { "type": ["string", "null"] }
+      },
+      "required": ["shortDescription"],
+      "additionalProperties": false
+    },
     "reportMetadata": {
       "type": "object",
       "properties": {
@@ -219,6 +230,16 @@
             "required": ["filePath", "fullyQualifiedName", "ruleId", "metric"],
             "additionalProperties": false
           }
+        },
+        "ruleDescriptions": {
+          "type": "object",
+          "description": "Rule descriptions extracted from SARIF files, keyed by rule ID (e.g., CA1502, IDE0051).",
+          "patternProperties": {
+            "^(CA|IDE)\\d{4}$": {
+              "$ref": "#/definitions/ruleDescription"
+            }
+          },
+          "additionalProperties": false
         }
       },
       "required": ["generatedAtUtc", "paths"],

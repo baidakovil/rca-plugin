@@ -521,7 +521,8 @@ public sealed class MetricsAggregationService
         ExcludedMemberNamesPatterns = input.ExcludedMemberNamesPatterns,
         ExcludedAssemblyNames = input.ExcludedAssemblyNames,
         ExcludedTypeNamePatterns = input.ExcludedTypeNamePatterns,
-        SuppressedSymbols = input.SuppressedSymbols
+        SuppressedSymbols = input.SuppressedSymbols,
+        RuleDescriptions = input.RuleDescriptions
       };
     }
 
@@ -537,6 +538,7 @@ public sealed class MetricsAggregationService
       ArgumentNullException.ThrowIfNull(typeFilter);
 
       var thresholdMetadata = CreateThresholdMetadata(input.Thresholds);
+      var ruleDescriptions = MergeRuleDescriptions(input.SarifDocuments);
 
       return new ReportMetadataInput(
           input.BaselineReference,
@@ -545,7 +547,57 @@ public sealed class MetricsAggregationService
           memberFilter.GetExcludedMemberNamesPatternsString(),
           assemblyFilter.GetExcludedAssemblyPatternsString(),
           typeFilter.GetExcludedTypePatternsString(),
-          input.SuppressedSymbols);
+          input.SuppressedSymbols,
+          ruleDescriptions);
+    }
+
+    /// <summary>
+    /// Merges rule descriptions from all SARIF documents, detecting and warning about conflicts.
+    /// </summary>
+    /// <param name="sarifDocuments">The SARIF documents to merge rule descriptions from.</param>
+    /// <returns>A dictionary of merged rule descriptions keyed by rule ID.</returns>
+    private static Dictionary<string, RuleDescription> MergeRuleDescriptions(IList<ParsedMetricsDocument> sarifDocuments)
+    {
+      var merged = new Dictionary<string, RuleDescription>();
+
+      foreach (var document in sarifDocuments)
+      {
+        foreach (var (ruleId, description) in document.RuleDescriptions)
+        {
+          if (merged.TryGetValue(ruleId, out var existing))
+          {
+            // Check for differences and warn if found
+            if (!AreRuleDescriptionsEqual(existing, description))
+            {
+              Console.Error.WriteLine(
+                  $"WARNING: Rule {ruleId} has different descriptions across SARIF files. " +
+                  $"Using first encountered description. " +
+                  $"Existing: Short='{existing.ShortDescription}', " +
+                  $"Incoming: Short='{description.ShortDescription}'");
+            }
+          }
+          else
+          {
+            merged[ruleId] = description;
+          }
+        }
+      }
+
+      return merged;
+    }
+
+    /// <summary>
+    /// Compares two rule descriptions for equality.
+    /// </summary>
+    /// <param name="first">The first rule description.</param>
+    /// <param name="second">The second rule description.</param>
+    /// <returns><see langword="true"/> if the descriptions are equal; otherwise, <see langword="false"/>.</returns>
+    private static bool AreRuleDescriptionsEqual(RuleDescription first, RuleDescription second)
+    {
+      return string.Equals(first.ShortDescription, second.ShortDescription, StringComparison.Ordinal)
+          && string.Equals(first.FullDescription ?? string.Empty, second.FullDescription ?? string.Empty, StringComparison.Ordinal)
+          && string.Equals(first.HelpUri ?? string.Empty, second.HelpUri ?? string.Empty, StringComparison.Ordinal)
+          && string.Equals(first.Category ?? string.Empty, second.Category ?? string.Empty, StringComparison.Ordinal);
     }
 
     private static ReportThresholdMetadata CreateThresholdMetadata(
@@ -565,7 +617,8 @@ public sealed class MetricsAggregationService
       string? ExcludedMemberNamesPatterns,
       string? ExcludedAssemblyNames,
       string? ExcludedTypeNamePatterns,
-      IList<SuppressedSymbolInfo> SuppressedSymbols);
+      IList<SuppressedSymbolInfo> SuppressedSymbols,
+      Dictionary<string, RuleDescription> RuleDescriptions);
 
   private sealed class ReportThresholdMetadata
   {

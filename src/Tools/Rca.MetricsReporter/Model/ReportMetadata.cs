@@ -76,5 +76,18 @@ public sealed class ReportMetadata
   /// justification text as a tooltip on hover without re-running analysis.
   /// </remarks>
   public IList<SuppressedSymbolInfo> SuppressedSymbols { get; init; } = new List<SuppressedSymbolInfo>();
+
+  /// <summary>
+  /// Rule descriptions extracted from SARIF files.
+  /// Keyed by rule ID (e.g., "CA1502", "IDE0051").
+  /// </summary>
+  /// <remarks>
+  /// This dictionary contains metadata about code analysis rules that appear in the report.
+  /// Descriptions are extracted from SARIF files during parsing and are used to provide
+  /// context about rule violations when displaying breakdown information. Each rule ID
+  /// maps to its description, help URI, and category information.
+  /// </remarks>
+  public IDictionary<string, RuleDescription> RuleDescriptions { get; init; }
+      = new Dictionary<string, RuleDescription>();
 }
 
