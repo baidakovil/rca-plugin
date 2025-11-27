@@ -24,7 +24,24 @@
             "Error"
           ]
         },
-        "unit": { "type": ["string", "null"], "enum": ["percent", "count", "score", null] }
+        "unit": { "type": ["string", "null"], "enum": ["percent", "count", "score", null] },
+        "breakdown": {
+          "type": ["object", "null"],
+          "description": "Optional breakdown of rule violations by rule ID (e.g., CA1502, IDE0051). Only present for SarifCaRuleViolations and SarifIdeRuleViolations metrics.",
+          "patternProperties": {
+            "^CA\\d{4}$": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "CA rule violations count"
+            },
+            "^IDE\\d{4}$": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "IDE rule violations count"
+            }
+          },
+          "additionalProperties": false
+        }
       },
       "required": ["status"],
       "additionalProperties": false

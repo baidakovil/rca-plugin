@@ -419,20 +419,90 @@ public sealed class MetricsAggregationService
   {
     if (!node.Metrics.TryGetValue(identifier, out var existing))
     {
-      node.Metrics[identifier] = value;
+      // WHY: When adding a metric for the first time, we preserve the breakdown if present.
+      // This ensures that SARIF metrics with breakdown information are correctly stored
+      // even on the first assignment, which is important for metrics applied via LineIndex.
+      // We create a new MetricValue to ensure the breakdown dictionary is properly copied.
+      node.Metrics[identifier] = new MetricValue
+      {
+        Value = value.Value,
+        Delta = value.Delta,
+        Status = value.Status,
+        Unit = value.Unit,
+        Breakdown = value.Breakdown is not null && value.Breakdown.Count > 0
+            ? new Dictionary<string, int>(value.Breakdown)
+            : null
+      };
       return;
     }
 
     if (aggregate && value.Value.HasValue)
     {
       var sum = (existing.Value ?? 0m) + value.Value.Value;
+      
+      // WHY: We merge breakdown dictionaries when aggregating SARIF metrics to preserve
+      // the detailed breakdown of rule violations. This allows the report to show which
+      // specific rules are violated at each level of the hierarchy (Member, Type, etc.).
+      // If both values have breakdowns, we sum the counts for each rule ID.
+      var mergedBreakdown = MergeBreakdown(existing.Breakdown, value.Breakdown);
+      
       node.Metrics[identifier] = new MetricValue
       {
         Value = sum,
         Unit = existing.Unit ?? value.Unit,
-        Status = ThresholdStatus.NotApplicable
+        Status = ThresholdStatus.NotApplicable,
+        Breakdown = mergedBreakdown
       };
     }
+    else if (!existing.Value.HasValue && value.Value.HasValue)
+    {
+      // WHY: When replacing a null value with a real value, we preserve the breakdown
+      // from the incoming value to ensure SARIF breakdown information is not lost.
+      // We create a new MetricValue to ensure the breakdown dictionary is properly copied.
+      node.Metrics[identifier] = new MetricValue
+      {
+        Value = value.Value,
+        Delta = value.Delta,
+        Status = value.Status,
+        Unit = value.Unit,
+        Breakdown = value.Breakdown is not null && value.Breakdown.Count > 0
+            ? new Dictionary<string, int>(value.Breakdown)
+            : null
+      };
+    }
+  }
+
+  /// <summary>
+  /// Merges two breakdown dictionaries by summing counts for matching rule IDs.
+  /// </summary>
+  /// <param name="existing">The existing breakdown dictionary, may be <see langword="null"/>.</param>
+  /// <param name="incoming">The incoming breakdown dictionary to merge, may be <see langword="null"/>.</param>
+  /// <returns>
+  /// A merged breakdown dictionary, or <see langword="null"/> if both inputs are <see langword="null"/> or empty.
+  /// </returns>
+  private static Dictionary<string, int>? MergeBreakdown(Dictionary<string, int>? existing, Dictionary<string, int>? incoming)
+  {
+    if (incoming is null || incoming.Count == 0)
+    {
+      return existing;
+    }
+
+    if (existing is null || existing.Count == 0)
+    {
+      return incoming;
+    }
+
+    // WHY: We create a new dictionary to avoid mutating the existing one, which may be shared
+    // across multiple nodes in the hierarchy. We sum counts for matching rule IDs and preserve
+    // all unique rule IDs from both dictionaries.
+    var merged = new Dictionary<string, int>(existing);
+    foreach (var pair in incoming)
+    {
+      merged.TryGetValue(pair.Key, out var existingCount);
+      merged[pair.Key] = existingCount + pair.Value;
+    }
+
+    return merged;
   }
 
   private static class ReportMetadataComposer

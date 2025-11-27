@@ -133,12 +133,19 @@ internal sealed class BaselineEvaluator
 
       var status = EvaluateStatus(identifier, value, thresholds, symbolLevel);
 
+      // WHY: We preserve the breakdown from the current metric when applying baseline,
+      // as breakdown information (e.g., SARIF rule violation details) should not be
+      // lost during baseline processing. We copy the breakdown dictionary to avoid
+      // sharing references across nodes.
       result[identifier] = new MetricValue
       {
         Value = value,
         Delta = delta,
         Unit = current?.Unit ?? baseline?.Unit,
-        Status = status
+        Status = status,
+        Breakdown = current?.Breakdown is not null && current.Breakdown.Count > 0
+            ? new Dictionary<string, int>(current.Breakdown)
+            : null
       };
     }
 

@@ -473,23 +473,88 @@ internal sealed class StructuralElementMerger
         if (IsAggregatableMetric(pair.Key) && pair.Value.Value.HasValue)
         {
           var sum = (existing.Value ?? 0m) + pair.Value.Value.Value;
+          
+          // WHY: We merge breakdown dictionaries when aggregating metrics to preserve
+          // the detailed breakdown of rule violations. This is especially important for
+          // SARIF metrics where we want to track individual rule IDs across the hierarchy.
+          var mergedBreakdown = MergeBreakdown(existing.Breakdown, pair.Value.Breakdown);
+          
           target[pair.Key] = new MetricValue
           {
             Value = sum,
             Unit = existing.Unit ?? pair.Value.Unit,
-            Status = ThresholdStatus.NotApplicable
+            Status = ThresholdStatus.NotApplicable,
+            Breakdown = mergedBreakdown
           };
         }
         else if (!existing.Value.HasValue && pair.Value.Value.HasValue)
         {
-          target[pair.Key] = pair.Value;
+          // WHY: When replacing a null value with a real value, we preserve the breakdown
+          // from the incoming value to ensure SARIF breakdown information is not lost.
+          // We create a new MetricValue to ensure the breakdown dictionary is properly copied.
+          target[pair.Key] = new MetricValue
+          {
+            Value = pair.Value.Value,
+            Delta = pair.Value.Delta,
+            Status = pair.Value.Status,
+            Unit = pair.Value.Unit,
+            Breakdown = pair.Value.Breakdown is not null && pair.Value.Breakdown.Count > 0
+                ? new Dictionary<string, int>(pair.Value.Breakdown)
+                : null
+          };
         }
       }
       else
       {
-        target[pair.Key] = pair.Value;
+        // WHY: When adding a metric for the first time, we preserve the breakdown if present.
+        // This ensures that SARIF metrics with breakdown information are correctly stored
+        // even on the first assignment. We create a new MetricValue to ensure the breakdown
+        // dictionary is properly copied.
+        target[pair.Key] = new MetricValue
+        {
+          Value = pair.Value.Value,
+          Delta = pair.Value.Delta,
+          Status = pair.Value.Status,
+          Unit = pair.Value.Unit,
+          Breakdown = pair.Value.Breakdown is not null && pair.Value.Breakdown.Count > 0
+              ? new Dictionary<string, int>(pair.Value.Breakdown)
+              : null
+        };
       }
     }
+  }
+
+  /// <summary>
+  /// Merges two breakdown dictionaries by summing counts for matching rule IDs.
+  /// </summary>
+  /// <param name="existing">The existing breakdown dictionary, may be <see langword="null"/>.</param>
+  /// <param name="incoming">The incoming breakdown dictionary to merge, may be <see langword="null"/>.</param>
+  /// <returns>
+  /// A merged breakdown dictionary, or <see langword="null"/> if both inputs are <see langword="null"/> or empty.
+  /// </returns>
+  private static Dictionary<string, int>? MergeBreakdown(Dictionary<string, int>? existing, Dictionary<string, int>? incoming)
+  {
+    if (incoming is null || incoming.Count == 0)
+    {
+      return existing;
+    }
+
+    if (existing is null || existing.Count == 0)
+    {
+      return incoming;
+    }
+
+    // WHY: We create a new dictionary to avoid mutating the existing one, which may be shared
+    // across multiple nodes in the hierarchy. We sum counts for matching rule IDs and preserve
+    // all unique rule IDs from both dictionaries.
+    var merged = new Dictionary<string, int>(existing);
+    foreach (var pair in incoming)
+    {
+      merged.TryGetValue(pair.Key, out var existingCount);
+      merged[pair.Key] = existingCount + pair.Value;
+    }
+
+    return merged;
   }
 
   private static void MergeSource(MetricsNode node, SourceLocation? source)

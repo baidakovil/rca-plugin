@@ -1,5 +1,7 @@
 namespace Rca.Tools.MetricsReporter.Model;
 
+using System.Collections.Generic;
+
 /// <summary>
 /// Represents a single metric value, its delta compared to baseline, and the threshold status.
 /// </summary>
@@ -24,5 +26,13 @@ public sealed class MetricValue
   /// Optional unit (for example <c>percent</c>, <c>count</c>, <c>score</c>).
   /// </summary>
   public string? Unit { get; init; }
+
+  /// <summary>
+  /// Optional breakdown of rule violations by rule ID (e.g., CA1502, IDE0051).
+  /// Only present for <see cref="MetricIdentifier.SarifCaRuleViolations"/> and
+  /// <see cref="MetricIdentifier.SarifIdeRuleViolations"/> metrics.
+  /// Keys must match the pattern <c>CA####</c> or <c>IDE####</c> where <c>####</c> is a 4-digit number.
+  /// </summary>
+  public Dictionary<string, int>? Breakdown { get; init; }
 }
 

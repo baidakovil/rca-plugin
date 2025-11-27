@@ -107,6 +107,16 @@ public sealed class SarifMetricsParser : IMetricsSourceParser
   /// <returns>A parsed code element representing the violation.</returns>
   private static ParsedCodeElement CreateCodeElement(string ruleId, MetricIdentifier identifier, SourceLocation location)
   {
+    // WHY: We create a breakdown dictionary only for SARIF metrics to track individual rule violations.
+    // This allows the report to show which specific rules (CA1502, IDE0051, etc.) are violated
+    // and in what quantity, not just the total count. We validate the ruleId to ensure
+    // only properly formatted rule IDs are stored, preventing schema violations.
+    Dictionary<string, int>? breakdown = null;
+    if (RuleIdValidator.IsValidRuleId(ruleId))
+    {
+      breakdown = new Dictionary<string, int> { [ruleId] = 1 };
+    }
+
     return new ParsedCodeElement(CodeElementKind.Member, ruleId, null)
     {
       Metrics = new Dictionary<MetricIdentifier, MetricValue>
@@ -115,7 +125,8 @@ public sealed class SarifMetricsParser : IMetricsSourceParser
         {
           Value = 1,
           Unit = "count",
-          Status = ThresholdStatus.NotApplicable
+          Status = ThresholdStatus.NotApplicable,
+          Breakdown = breakdown
         }
       },
       Source = location
