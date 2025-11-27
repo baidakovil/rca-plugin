@@ -64,10 +64,24 @@ internal sealed class LineIndex
   /// <summary>
   /// Finds a metrics node that contains the specified line.
   /// </summary>
+  /// <remarks>
+  /// This method prefers members over types. If a member starts exactly at the specified line,
+  /// it will be selected even if a type also contains that line. This ensures that SARIF violations
+  /// on method declaration lines are correctly attributed to the method rather than the containing type.
+  /// </remarks>
   public MetricsNode? FindNode(string normalizedPath, int line)
   {
-    var node = FindNodeInIndex(_memberLineIndex, normalizedPath, line);
-    return node ?? FindNodeInIndex(_typeLineIndex, normalizedPath, line);
+    // WHY: We check for members first and prioritize exact start line matches. This ensures that
+    // when a SARIF violation is on a method declaration line (e.g., line 159 where the method starts),
+    // we correctly map it to the method rather than falling back to the type. Without this prioritization,
+    // methods that start at the violation line might be missed if the index lookup doesn't find them first.
+    var memberNode = FindNodeInIndex(_memberLineIndex, normalizedPath, line);
+    if (memberNode is not null)
+    {
+      return memberNode;
+    }
+
+    return FindNodeInIndex(_typeLineIndex, normalizedPath, line);
   }
 
   /// <summary>
@@ -99,25 +113,56 @@ internal sealed class LineIndex
       return null;
     }
 
-    MetricsNode? bestNode = null;
-    var bestLength = int.MaxValue;
+    // WHY: We prioritize nodes that start exactly at the specified line or one line after it.
+    // This handles cases where SARIF reports violations on method declaration lines (line N),
+    // but the method index may start at line N+1 due to how Roslyn determines method boundaries.
+    // For example, if SARIF reports a violation on line 159 (method declaration), but the method
+    // is indexed starting at line 160 (method body start), we should still match it to the method.
+    MetricsNode? bestExactStartMatch = null;
+    var bestExactStartLength = int.MaxValue;
+    MetricsNode? bestNearStartMatch = null;
+    var bestNearStartLength = int.MaxValue;
+    MetricsNode? bestContainingNode = null;
+    var bestContainingLength = int.MaxValue;
 
     foreach (var node in list)
     {
-      if (line < node.StartLine || line > node.EndLine)
-      {
-        continue;
-      }
-
       var length = node.EndLine - node.StartLine;
-      if (length < bestLength)
+
+      // Prefer exact start line match (e.g., method declaration line)
+      if (line == node.StartLine)
       {
-        bestLength = length;
-        bestNode = node.Node;
+        // Among nodes starting at this line, prefer the shortest one
+        if (length < bestExactStartLength)
+        {
+          bestExactStartLength = length;
+          bestExactStartMatch = node.Node;
+        }
+      }
+      else if (line == node.StartLine - 1)
+      {
+        // Handle case where SARIF reports violation on declaration line (N), but method indexed at body start (N+1)
+        // This handles the common case where Roslyn indexes method body start, but SARIF reports on declaration.
+        // Prefer shorter nodes among those starting one line after the violation.
+        if (length < bestNearStartLength)
+        {
+          bestNearStartLength = length;
+          bestNearStartMatch = node.Node;
+        }
+      }
+      else if (line >= node.StartLine && line <= node.EndLine)
+      {
+        // Track the shortest containing node as fallback
+        if (length < bestContainingLength)
+        {
+          bestContainingLength = length;
+          bestContainingNode = node.Node;
+        }
       }
     }
 
-    return bestNode;
+    // Return in priority order: exact start match > near start match > shortest containing node
+    return bestExactStartMatch ?? bestNearStartMatch ?? bestContainingNode;
   }
 
   private readonly record struct IndexedNode(MetricsNode Node, int StartLine, int EndLine);
