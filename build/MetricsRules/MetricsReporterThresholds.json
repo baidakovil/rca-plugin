@@ -256,19 +256,19 @@
       "higherIsBetter": false,
       "symbolThresholds": {
         "Assembly": {
-          "warning": 1,
+          "warning": 0,
           "error": 24
         },
         "Namespace": {
-          "warning": 1,
+          "warning": 0,
           "error": 12
         },
         "Type": {
-          "warning": 1,
+          "warning": 0,
           "error": 6
         },
         "Member": {
-          "warning": 1,
+          "warning": 0,
           "error": 3,
           "notes": "Consider CA rules more strict than IDE rules."
         }
@@ -280,19 +280,19 @@
       "higherIsBetter": false,
       "symbolThresholds": {
         "Assembly": {
-          "warning": 1,
+          "warning": 0,
           "error": 48
         },
         "Namespace": {
-          "warning": 1,
+          "warning": 0,
           "error": 24
         },
         "Type": {
-          "warning": 1,
+          "warning": 0,
           "error": 12
         },
         "Member": {
-          "warning": 1,
+          "warning": 0,
           "error": 6,
           "notes": "Consider IDE rules less strict than CA rules."
         }

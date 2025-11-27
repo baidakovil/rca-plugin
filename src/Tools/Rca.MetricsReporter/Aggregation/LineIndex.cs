@@ -161,8 +161,77 @@ internal sealed class LineIndex
       }
     }
 
+    // If no containing node found, handle single-line indexed methods (Roslyn parser limitation)
+    // When a method is indexed as StartLine=EndLine (single line), violations after that line
+    // may belong to the method if no other method starts before the violation.
+    if (bestExactStartMatch is null && bestNearStartMatch is null && bestContainingNode is null)
+    {
+      return FindNodeForSingleLineIndexedMethod(list, line);
+    }
+
     // Return in priority order: exact start match > near start match > shortest containing node
     return bestExactStartMatch ?? bestNearStartMatch ?? bestContainingNode;
+  }
+
+  /// <summary>
+  /// Finds a method when methods are indexed as single lines (StartLine == EndLine).
+  /// </summary>
+  /// <remarks>
+  /// This handles the case where Roslyn Metrics Parser only provides the method declaration line,
+  /// not the full method range. When a violation is on a line after the method declaration,
+  /// we attribute it to the closest preceding method that doesn't have another method between it and the violation.
+  /// </remarks>
+  private static MetricsNode? FindNodeForSingleLineIndexedMethod(List<IndexedNode> sortedList, int line)
+  {
+    // Find the last method that starts before or at the violation line
+    IndexedNode? candidate = null;
+    int candidateStartLine = -1;
+
+    foreach (var node in sortedList)
+    {
+      // Only consider single-line indexed methods (Roslyn limitation)
+      if (node.StartLine != node.EndLine)
+      {
+        continue;
+      }
+
+      // Method must start before or at the violation line
+      if (node.StartLine > line)
+      {
+        break; // List is sorted, so we can stop here
+      }
+
+      // Keep track of the method that starts closest to (but not after) the violation line
+      if (node.StartLine > candidateStartLine)
+      {
+        candidate = node;
+        candidateStartLine = node.StartLine;
+      }
+    }
+
+    // If we found a candidate, verify no other method starts between it and the violation
+    if (candidate.HasValue)
+    {
+      foreach (var node in sortedList)
+      {
+        // Check if there's another method between candidate and violation
+        if (node.StartLine > candidateStartLine && node.StartLine < line)
+        {
+          // Another method exists between candidate and violation - don't attribute to candidate
+          return null;
+        }
+
+        // Stop searching once we've passed the violation line
+        if (node.StartLine > line)
+        {
+          break;
+        }
+      }
+
+      return candidate.Value.Node;
+    }
+
+    return null;
   }
 
   private readonly record struct IndexedNode(MetricsNode Node, int StartLine, int EndLine);
