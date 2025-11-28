@@ -37,16 +37,21 @@ internal abstract class MetricsReaderCommandTestsBase
     string @namespace,
     bool includeSuppressed = false,
     MetricsReaderSymbolKind symbolKind = MetricsReaderSymbolKind.Type,
-    string? thresholdsFile = null)
+    string? thresholdsFile = null,
+    bool showAll = false,
+    string metricName = "Complexity",
+    string? ruleId = null)
   {
     var settings = new NamespaceMetricSettings
     {
       ReportPath = reportPath,
       Namespace = @namespace,
-      Metric = "Complexity",
+      Metric = metricName,
       IncludeSuppressed = includeSuppressed,
       SymbolKind = symbolKind,
-      ThresholdsFile = thresholdsFile
+      ThresholdsFile = thresholdsFile,
+      ShowAll = showAll,
+      RuleId = ruleId
     };
 
     var validation = settings.Validate();

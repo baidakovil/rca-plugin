@@ -78,7 +78,7 @@ public sealed class BreakdownAggregationTests
             {
               Value = 1,
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["CA1502"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("CA1502")
             }
           }
         }
@@ -109,7 +109,7 @@ public sealed class BreakdownAggregationTests
     metric.Value.Should().Be(1);
     metric.Breakdown.Should().NotBeNull();
     metric.Breakdown.Should().NotBeNull().And.ContainKey("CA1502");
-    metric.Breakdown!["CA1502"].Should().Be(1);
+    metric.Breakdown!["CA1502"].Count.Should().Be(1);
   }
 
   [Test]
@@ -153,7 +153,7 @@ public sealed class BreakdownAggregationTests
               Value = 1,
               Unit = "count",
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["CA1502"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("CA1502")
             }
           }
         },
@@ -167,7 +167,7 @@ public sealed class BreakdownAggregationTests
               Value = 1,
               Unit = "count",
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["CA1506"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("CA1506")
             }
           }
         },
@@ -181,7 +181,7 @@ public sealed class BreakdownAggregationTests
               Value = 1,
               Unit = "count",
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["CA1502"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("CA1502")
             }
           }
         }
@@ -210,9 +210,11 @@ public sealed class BreakdownAggregationTests
     var metric = type.Metrics[MetricIdentifier.SarifCaRuleViolations];
     metric.Value.Should().Be(3, "Total violations should be 3");
     metric.Breakdown.Should().NotBeNull().And.ContainKey("CA1502");
-    metric.Breakdown!["CA1502"].Should().Be(2, "CA1502 should appear twice");
+    metric.Breakdown!["CA1502"].Count.Should().Be(2, "CA1502 should appear twice");
+    metric.Breakdown["CA1502"].Violations.Should().HaveCount(2, "Each CA1502 violation should surface in tooltip data.");
     metric.Breakdown.Should().ContainKey("CA1506");
-    metric.Breakdown["CA1506"].Should().Be(1, "CA1506 should appear once");
+    metric.Breakdown["CA1506"].Count.Should().Be(1, "CA1506 should appear once");
+    metric.Breakdown["CA1506"].Violations.Should().HaveCount(1);
   }
 
   [Test]
@@ -257,7 +259,7 @@ public sealed class BreakdownAggregationTests
               Value = 1,
               Unit = "count",
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["IDE0051"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("IDE0051")
             }
           }
         },
@@ -271,7 +273,7 @@ public sealed class BreakdownAggregationTests
               Value = 1,
               Unit = "count",
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["IDE0028"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("IDE0028")
             }
           }
         }
@@ -296,9 +298,11 @@ public sealed class BreakdownAggregationTests
     var metric = assembly.Metrics[MetricIdentifier.SarifIdeRuleViolations];
     metric.Value.Should().Be(2);
     metric.Breakdown.Should().NotBeNull().And.ContainKey("IDE0051");
-    metric.Breakdown!["IDE0051"].Should().Be(1);
+    metric.Breakdown!["IDE0051"].Count.Should().Be(1);
+    metric.Breakdown["IDE0051"].Violations.Should().HaveCount(1);
     metric.Breakdown.Should().ContainKey("IDE0028");
-    metric.Breakdown["IDE0028"].Should().Be(1);
+    metric.Breakdown["IDE0028"].Count.Should().Be(1);
+    metric.Breakdown["IDE0028"].Violations.Should().HaveCount(1);
   }
 
   [Test]
@@ -343,7 +347,7 @@ public sealed class BreakdownAggregationTests
               Value = 1,
               Unit = "count",
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["CA1502"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("CA1502")
             }
           }
         },
@@ -357,7 +361,7 @@ public sealed class BreakdownAggregationTests
               Value = 1,
               Unit = "count",
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["IDE0051"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("IDE0051")
             }
           }
         }
@@ -384,13 +388,13 @@ public sealed class BreakdownAggregationTests
     var caMetric = assembly.Metrics[MetricIdentifier.SarifCaRuleViolations];
     caMetric.Value.Should().Be(1);
     caMetric.Breakdown.Should().NotBeNull().And.ContainKey("CA1502");
-    caMetric.Breakdown!["CA1502"].Should().Be(1);
+    caMetric.Breakdown!["CA1502"].Count.Should().Be(1);
     
     // IDE rules breakdown
     var ideMetric = assembly.Metrics[MetricIdentifier.SarifIdeRuleViolations];
     ideMetric.Value.Should().Be(1);
     ideMetric.Breakdown.Should().NotBeNull().And.ContainKey("IDE0051");
-    ideMetric.Breakdown!["IDE0051"].Should().Be(1);
+    ideMetric.Breakdown!["IDE0051"].Count.Should().Be(1);
   }
 
   [Test]
@@ -449,7 +453,7 @@ public sealed class BreakdownAggregationTests
               Value = 1,
               Unit = "count",
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["CA1506"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("CA1506")
             }
           }
         }
@@ -475,7 +479,7 @@ public sealed class BreakdownAggregationTests
     metric.Value.Should().Be(2);
     // When one breakdown is null, the other should be preserved
     metric.Breakdown.Should().NotBeNull().And.ContainKey("CA1506");
-    metric.Breakdown!["CA1506"].Should().Be(1);
+    metric.Breakdown!["CA1506"].Count.Should().Be(1);
   }
 
   [Test]
@@ -520,7 +524,7 @@ public sealed class BreakdownAggregationTests
               Value = 1,
               Unit = "count",
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int>() // Empty breakdown
+              Breakdown = SarifBreakdownTestHelper.Empty() // Empty breakdown
             }
           }
         },
@@ -534,7 +538,7 @@ public sealed class BreakdownAggregationTests
               Value = 1,
               Unit = "count",
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["CA1506"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("CA1506")
             }
           }
         }
@@ -560,7 +564,7 @@ public sealed class BreakdownAggregationTests
     metric.Value.Should().Be(2);
     // Empty breakdown should be ignored, non-empty should be preserved
     metric.Breakdown.Should().NotBeNull().And.ContainKey("CA1506");
-    metric.Breakdown!["CA1506"].Should().Be(1);
+    metric.Breakdown!["CA1506"].Count.Should().Be(1);
   }
 
   [Test]
@@ -604,7 +608,7 @@ public sealed class BreakdownAggregationTests
               Value = 1,
               Unit = "count",
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["CA1502"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("CA1502")
             }
           }
         },
@@ -618,7 +622,7 @@ public sealed class BreakdownAggregationTests
               Value = 1,
               Unit = "count",
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["CA1506"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("CA1506")
             }
           }
         },
@@ -632,7 +636,7 @@ public sealed class BreakdownAggregationTests
               Value = 1,
               Unit = "count",
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["CA1502"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("CA1502")
             }
           }
         }
@@ -661,9 +665,11 @@ public sealed class BreakdownAggregationTests
     var typeMetric = type.Metrics[MetricIdentifier.SarifCaRuleViolations];
     typeMetric.Value.Should().Be(3);
     typeMetric.Breakdown.Should().NotBeNull().And.ContainKey("CA1502");
-    typeMetric.Breakdown!["CA1502"].Should().Be(2);
+    typeMetric.Breakdown!["CA1502"].Count.Should().Be(2);
+    typeMetric.Breakdown["CA1502"].Violations.Should().HaveCount(2);
     typeMetric.Breakdown.Should().ContainKey("CA1506");
-    typeMetric.Breakdown["CA1506"].Should().Be(1);
+    typeMetric.Breakdown["CA1506"].Count.Should().Be(1);
+    typeMetric.Breakdown["CA1506"].Violations.Should().HaveCount(1);
   }
 
   [Test]
@@ -709,7 +715,7 @@ public sealed class BreakdownAggregationTests
               Value = 1,
               Unit = "count",
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["CA1502"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("CA1502")
             }
           }
         },
@@ -723,7 +729,7 @@ public sealed class BreakdownAggregationTests
               Value = 1,
               Unit = "count",
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["CA1502"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("CA1502")
             }
           }
         },
@@ -738,7 +744,7 @@ public sealed class BreakdownAggregationTests
               Value = 1,
               Unit = "count",
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["CA1506"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("CA1506")
             }
           }
         },
@@ -753,7 +759,7 @@ public sealed class BreakdownAggregationTests
               Value = 1,
               Unit = "count",
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["IDE0051"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("IDE0051")
             }
           }
         },
@@ -767,7 +773,7 @@ public sealed class BreakdownAggregationTests
               Value = 1,
               Unit = "count",
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["IDE0051"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("IDE0051")
             }
           }
         },
@@ -781,7 +787,7 @@ public sealed class BreakdownAggregationTests
               Value = 1,
               Unit = "count",
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["IDE0028"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("IDE0028")
             }
           }
         }
@@ -808,17 +814,21 @@ public sealed class BreakdownAggregationTests
     var caMetric = assembly.Metrics[MetricIdentifier.SarifCaRuleViolations];
     caMetric.Value.Should().Be(3);
     caMetric.Breakdown.Should().NotBeNull().And.ContainKey("CA1502");
-    caMetric.Breakdown!["CA1502"].Should().Be(2);
+    caMetric.Breakdown!["CA1502"].Count.Should().Be(2);
+    caMetric.Breakdown["CA1502"].Violations.Should().HaveCount(2);
     caMetric.Breakdown.Should().ContainKey("CA1506");
-    caMetric.Breakdown["CA1506"].Should().Be(1);
+    caMetric.Breakdown["CA1506"].Count.Should().Be(1);
+    caMetric.Breakdown["CA1506"].Violations.Should().HaveCount(1);
     
     // IDE rules breakdown
     var ideMetric = assembly.Metrics[MetricIdentifier.SarifIdeRuleViolations];
     ideMetric.Value.Should().Be(3);
     ideMetric.Breakdown.Should().NotBeNull().And.ContainKey("IDE0051");
-    ideMetric.Breakdown!["IDE0051"].Should().Be(2);
+    ideMetric.Breakdown!["IDE0051"].Count.Should().Be(2);
+    ideMetric.Breakdown["IDE0051"].Violations.Should().HaveCount(2);
     ideMetric.Breakdown.Should().ContainKey("IDE0028");
-    ideMetric.Breakdown["IDE0028"].Should().Be(1);
+    ideMetric.Breakdown["IDE0028"].Count.Should().Be(1);
+    ideMetric.Breakdown["IDE0028"].Violations.Should().HaveCount(1);
   }
 }
 

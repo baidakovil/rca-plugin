@@ -76,6 +76,24 @@ internal static class MetricsReaderCommandTestData
     };
   }
 
+  public static TypeMetricsNode CreateTypeNode(
+    string fullyQualifiedName,
+    IDictionary<MetricIdentifier, MetricValue> metrics,
+    IEnumerable<MemberMetricsNode>? members = null)
+  {
+    return new TypeMetricsNode
+    {
+      Name = fullyQualifiedName.Split('.').Last(),
+      FullyQualifiedName = fullyQualifiedName,
+      Source = new SourceLocation
+      {
+        Path = $"src/{fullyQualifiedName.Replace('.', Path.DirectorySeparatorChar)}.cs"
+      },
+      Metrics = metrics,
+      Members = members?.ToList() ?? new List<MemberMetricsNode>()
+    };
+  }
+
   public static MemberMetricsNode CreateMemberNode(
     string fullyQualifiedName,
     decimal value,
@@ -98,6 +116,22 @@ internal static class MetricsReaderCommandTestData
           Unit = "count"
         }
       }
+    };
+  }
+
+  public static MemberMetricsNode CreateMemberNode(
+    string fullyQualifiedName,
+    IDictionary<MetricIdentifier, MetricValue> metrics)
+  {
+    return new MemberMetricsNode
+    {
+      Name = fullyQualifiedName.Split('.').Last(),
+      FullyQualifiedName = fullyQualifiedName,
+      Source = new SourceLocation
+      {
+        Path = $"src/{fullyQualifiedName.Replace('.', Path.DirectorySeparatorChar)}.cs"
+      },
+      Metrics = metrics
     };
   }
 

@@ -477,7 +477,7 @@ internal sealed class StructuralElementMerger
           // WHY: We merge breakdown dictionaries when aggregating metrics to preserve
           // the detailed breakdown of rule violations. This is especially important for
           // SARIF metrics where we want to track individual rule IDs across the hierarchy.
-          var mergedBreakdown = MergeBreakdown(existing.Breakdown, pair.Value.Breakdown);
+          var mergedBreakdown = SarifBreakdownHelper.Merge(existing.Breakdown, pair.Value.Breakdown);
           
           target[pair.Key] = new MetricValue
           {
@@ -496,9 +496,7 @@ internal sealed class StructuralElementMerger
             Value = pair.Value.Value,
             Delta = pair.Value.Delta,
             Status = pair.Value.Status,
-            Breakdown = pair.Value.Breakdown is not null && pair.Value.Breakdown.Count > 0
-                ? new Dictionary<string, int>(pair.Value.Breakdown)
-                : null
+            Breakdown = SarifBreakdownHelper.Clone(pair.Value.Breakdown)
           };
         }
       }
@@ -513,45 +511,10 @@ internal sealed class StructuralElementMerger
           Value = pair.Value.Value,
           Delta = pair.Value.Delta,
           Status = pair.Value.Status,
-          Breakdown = pair.Value.Breakdown is not null && pair.Value.Breakdown.Count > 0
-              ? new Dictionary<string, int>(pair.Value.Breakdown)
-              : null
+          Breakdown = SarifBreakdownHelper.Clone(pair.Value.Breakdown)
         };
       }
     }
-  }
-
-  /// <summary>
-  /// Merges two breakdown dictionaries by summing counts for matching rule IDs.
-  /// </summary>
-  /// <param name="existing">The existing breakdown dictionary, may be <see langword="null"/>.</param>
-  /// <param name="incoming">The incoming breakdown dictionary to merge, may be <see langword="null"/>.</param>
-  /// <returns>
-  /// A merged breakdown dictionary, or <see langword="null"/> if both inputs are <see langword="null"/> or empty.
-  /// </returns>
-  private static Dictionary<string, int>? MergeBreakdown(Dictionary<string, int>? existing, Dictionary<string, int>? incoming)
-  {
-    if (incoming is null || incoming.Count == 0)
-    {
-      return existing;
-    }
-
-    if (existing is null || existing.Count == 0)
-    {
-      return incoming;
-    }
-
-    // WHY: We create a new dictionary to avoid mutating the existing one, which may be shared
-    // across multiple nodes in the hierarchy. We sum counts for matching rule IDs and preserve
-    // all unique rule IDs from both dictionaries.
-    var merged = new Dictionary<string, int>(existing);
-    foreach (var pair in incoming)
-    {
-      merged.TryGetValue(pair.Key, out var existingCount);
-      merged[pair.Key] = existingCount + pair.Value;
-    }
-
-    return merged;
   }
 
   private static void MergeSource(MetricsNode node, SourceLocation? source)

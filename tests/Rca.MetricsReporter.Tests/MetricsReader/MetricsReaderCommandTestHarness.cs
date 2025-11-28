@@ -59,6 +59,17 @@ internal static class MetricsReaderCommandTestHarness
       "--symbol-kind", settings.SymbolKind.ToString()
     };
 
+    if (!string.IsNullOrWhiteSpace(settings.RuleId))
+    {
+      args.Add("--ruleid");
+      args.Add(settings.RuleId!);
+    }
+
+    if (settings.ShowAll)
+    {
+      args.Add("--all");
+    }
+
     AppendCommonArguments(args, settings.IncludeSuppressed, settings.ThresholdsFile, settings.Update);
     return args.ToArray();
   }

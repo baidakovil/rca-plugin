@@ -30,6 +30,20 @@ internal sealed class NamespaceMetricSettings : MetricsReaderSettingsBase
   public MetricsReaderSymbolKind SymbolKind { get; init; } = MetricsReaderSymbolKind.Type;
 
   /// <summary>
+  /// Gets a value indicating whether all matching entries should be emitted instead of the single most severe one.
+  /// </summary>
+  [CommandOption("--all")]
+  [Description("When specified, emits all matching entries instead of only the most severe one.")]
+  public bool ShowAll { get; init; }
+
+  /// <summary>
+  /// Gets or sets an optional SARIF rule filter (e.g. CA1506) used by readsarif.
+  /// </summary>
+  [CommandOption("--ruleid <ID>")]
+  [Description("Optional SARIF rule identifier filter (e.g. CA1506, IDE0051).")]
+  public string? RuleId { get; init; }
+
+  /// <summary>
   /// Gets the resolved metric identifier after validation succeeds.
   /// </summary>
   public MetricIdentifier ResolvedMetric { get; private set; }

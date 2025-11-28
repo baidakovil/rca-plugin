@@ -504,9 +504,7 @@ public sealed class MetricsAggregationService
         Value = value.Value,
         Delta = value.Delta,
         Status = value.Status,
-        Breakdown = value.Breakdown is not null && value.Breakdown.Count > 0
-            ? new Dictionary<string, int>(value.Breakdown)
-            : null
+        Breakdown = SarifBreakdownHelper.Clone(value.Breakdown)
       };
       return;
     }
@@ -519,7 +517,7 @@ public sealed class MetricsAggregationService
       // the detailed breakdown of rule violations. This allows the report to show which
       // specific rules are violated at each level of the hierarchy (Member, Type, etc.).
       // If both values have breakdowns, we sum the counts for each rule ID.
-      var mergedBreakdown = MergeBreakdown(existing.Breakdown, value.Breakdown);
+      var mergedBreakdown = SarifBreakdownHelper.Merge(existing.Breakdown, value.Breakdown);
       
       node.Metrics[identifier] = new MetricValue
       {
@@ -538,45 +536,11 @@ public sealed class MetricsAggregationService
         Value = value.Value,
         Delta = value.Delta,
         Status = value.Status,
-        Breakdown = value.Breakdown is not null && value.Breakdown.Count > 0
-            ? new Dictionary<string, int>(value.Breakdown)
-            : null
+        Breakdown = SarifBreakdownHelper.Clone(value.Breakdown)
       };
     }
   }
 
-  /// <summary>
-  /// Merges two breakdown dictionaries by summing counts for matching rule IDs.
-  /// </summary>
-  /// <param name="existing">The existing breakdown dictionary, may be <see langword="null"/>.</param>
-  /// <param name="incoming">The incoming breakdown dictionary to merge, may be <see langword="null"/>.</param>
-  /// <returns>
-  /// A merged breakdown dictionary, or <see langword="null"/> if both inputs are <see langword="null"/> or empty.
-  /// </returns>
-  private static Dictionary<string, int>? MergeBreakdown(Dictionary<string, int>? existing, Dictionary<string, int>? incoming)
-  {
-    if (incoming is null || incoming.Count == 0)
-    {
-      return existing;
-    }
-
-    if (existing is null || existing.Count == 0)
-    {
-      return incoming;
-    }
-
-    // WHY: We create a new dictionary to avoid mutating the existing one, which may be shared
-    // across multiple nodes in the hierarchy. We sum counts for matching rule IDs and preserve
-    // all unique rule IDs from both dictionaries.
-    var merged = new Dictionary<string, int>(existing);
-    foreach (var pair in incoming)
-    {
-      merged.TryGetValue(pair.Key, out var existingCount);
-      merged[pair.Key] = existingCount + pair.Value;
-    }
-
-    return merged;
-  }
 
   private static class ReportMetadataComposer
   {

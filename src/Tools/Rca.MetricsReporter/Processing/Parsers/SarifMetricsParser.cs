@@ -98,10 +98,16 @@ public sealed class SarifMetricsParser : IMetricsSourceParser
       yield break;
     }
 
-    foreach (var location in EnumerateLocations(result))
+    if (!TryGetPrimaryLocation(result, out var location))
     {
-      yield return CreateCodeElement(ruleId, identifier, location);
+      yield break;
     }
+
+    var messageText = result.GetPropertyOrDefault("message")
+        ?.GetPropertyOrDefault("text")
+        ?.GetString();
+
+    yield return CreateCodeElement(ruleId, identifier, location, messageText);
   }
 
   /// <summary>
@@ -111,16 +117,36 @@ public sealed class SarifMetricsParser : IMetricsSourceParser
   /// <param name="identifier">The resolved metric identifier.</param>
   /// <param name="location">The source location of the violation.</param>
   /// <returns>A parsed code element representing the violation.</returns>
-  private static ParsedCodeElement CreateCodeElement(string ruleId, MetricIdentifier identifier, SourceLocation location)
+  private static ParsedCodeElement CreateCodeElement(
+      string ruleId,
+      MetricIdentifier identifier,
+      SarifLocation location,
+      string? messageText)
   {
     // WHY: We create a breakdown dictionary only for SARIF metrics to track individual rule violations.
     // This allows the report to show which specific rules (CA1502, IDE0051, etc.) are violated
     // and in what quantity, not just the total count. We validate the ruleId to ensure
     // only properly formatted rule IDs are stored, preventing schema violations.
-    Dictionary<string, int>? breakdown = null;
+    Dictionary<string, SarifRuleBreakdownEntry>? breakdown = null;
     if (RuleIdValidator.IsValidRuleId(ruleId))
     {
-      breakdown = new Dictionary<string, int> { [ruleId] = 1 };
+      breakdown = new Dictionary<string, SarifRuleBreakdownEntry>(StringComparer.Ordinal)
+      {
+        [ruleId] = new SarifRuleBreakdownEntry
+        {
+          Count = 1,
+          Violations = new List<SarifRuleViolationDetail>
+          {
+            new()
+            {
+              Message = messageText,
+              Uri = location.OriginalUri,
+              StartLine = location.Source.StartLine,
+              EndLine = location.Source.EndLine
+            }
+          }
+        }
+      };
     }
 
     return new ParsedCodeElement(CodeElementKind.Member, ruleId, null)
@@ -134,7 +160,7 @@ public sealed class SarifMetricsParser : IMetricsSourceParser
           Breakdown = breakdown
         }
       },
-      Source = location
+      Source = location.Source
     };
   }
 
@@ -220,54 +246,52 @@ public sealed class SarifMetricsParser : IMetricsSourceParser
     return false;
   }
 
-  private static IEnumerable<SourceLocation> EnumerateLocations(JsonElement result)
+  private static bool TryGetPrimaryLocation(JsonElement result, out SarifLocation location)
   {
+    location = default!;
     if (!result.TryGetProperty("locations", out var locations) || locations.ValueKind != JsonValueKind.Array)
     {
-      yield break;
+      return false;
     }
 
-    foreach (var location in locations.EnumerateArray())
+    foreach (var entry in locations.EnumerateArray())
     {
-      if (!location.TryGetProperty("physicalLocation", out var physicalLocation) || physicalLocation.ValueKind != JsonValueKind.Object)
+      if (!entry.TryGetProperty("physicalLocation", out var physicalLocation) || physicalLocation.ValueKind != JsonValueKind.Object)
       {
         continue;
       }
 
       var uriElement = physicalLocation.GetPropertyOrDefault("artifactLocation")?.GetPropertyOrDefault("uri");
-      var path = uriElement?.GetString();
-      if (path is null)
+      var uri = uriElement?.GetString();
+      if (uri is null)
       {
         continue;
       }
 
-      var resolvedPath = NormalizePath(path);
+      var resolvedPath = NormalizePath(uri);
       var region = physicalLocation.GetPropertyOrDefault("region");
 
-      int? startLine = null;
-      int? endLine = null;
+      var startLine = TryGetLine(region, "startLine");
+      var endLine = TryGetLine(region, "endLine") ?? startLine;
 
-      if (region is not null)
-      {
-        if (region.Value.TryGetIntProperty("startLine", out var sLine))
-        {
-          startLine = sLine;
-        }
-
-        if (region.Value.TryGetIntProperty("endLine", out var eLine))
-        {
-          endLine = eLine;
-        }
-      }
-
-      yield return new SourceLocation
+      var sourceLocation = new SourceLocation
       {
         Path = resolvedPath,
         StartLine = startLine,
-        EndLine = endLine ?? startLine
+        EndLine = endLine
       };
+
+      location = new SarifLocation(sourceLocation, uri);
+      return true;
     }
+
+    return false;
   }
+
+  private static int? TryGetLine(JsonElement? region, string propertyName)
+      => region is not null && region.Value.TryGetIntProperty(propertyName, out var line)
+          ? line
+          : null;
 
   private static string NormalizePath(string path)
   {
@@ -278,6 +302,8 @@ public sealed class SarifMetricsParser : IMetricsSourceParser
 
     return path.Replace('/', Path.DirectorySeparatorChar);
   }
+
+  private sealed record SarifLocation(SourceLocation Source, string? OriginalUri);
 }
 
 file static class JsonElementExtensions

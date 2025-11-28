@@ -234,13 +234,13 @@ dotnet run --project src/Tools/Rca.MetricsReporter/Rca.MetricsReporter.csproj --
 
 ```powershell
 dotnet run --project src/Tools/Rca.MetricsReporter/Rca.MetricsReporter.csproj -- `
-  metrics-reader list --namespace Rca.Loader --metric Complexity
+  metrics-reader readany --namespace Rca.Loader --metric Complexity --all
 ```
 
 ```powershell
 # если инструмент уже собран
 .\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe `
-  metrics-reader most-problematic --namespace Rca.Loader --metric Coupling --symbol-kind Member
+  metrics-reader readsarif --namespace Rca.Loader.Infrastructure --metric SarifCaRuleViolations
 ```
 
 ### Общие параметры
@@ -254,40 +254,46 @@ dotnet run --project src/Tools/Rca.MetricsReporter/Rca.MetricsReporter.csproj --
 
 ### Команды и параметры
 
-#### `metrics-reader most-problematic`
+#### `metrics-reader readany`
 
 ```
-metrics-reader most-problematic --namespace <NamespacePrefix> --metric <MetricAlias>
-                                [--symbol-kind <Type|Member>] [общие параметры]
+metrics-reader readany --namespace <NamespacePrefix> --metric <MetricAlias>
+                       [--symbol-kind <Type|Member>] [--all] [общие параметры]
 ```
 
 - **Обязательные:** `--namespace`, `--metric`.
-- **Опциональные:** `--symbol-kind` (по умолчанию `Type`), все общие параметры.
-- Возвращает один самый критичный символ (`symbolFqn`, `symbolType`, `metric`, `value`, `threshold`, `delta`, `filePath`, `status`, `isSuppressed`).
+- **Опциональные:** `--symbol-kind` (по умолчанию `Type`), `--all`, общие параметры.
+- Без `--all` возвращает один самый критичный символ (`symbolFqn`, `symbolType`, `metric`, `value`, `threshold`, `delta`, `filePath`, `status`, `isSuppressed`).  
+  С `--all` выводит массив всех символов, отсортированный по серьёзности и величине превышения (это объединяет старые команды `most-problematic` и `list`).
+- Если подходящих символов нет, команда выводит сообщение с причинами вместо `[]` или `null`.
 
 **Пример:**
 
 ```powershell
-metrics-reader most-problematic --namespace Rca.Loader --metric Coupling
-metrics-reader most-problematic --namespace Rca.Loader.Infrastructure --metric Complexity --symbol-kind Member
+metrics-reader readany --namespace Rca.Loader --metric Coupling
+metrics-reader readany --namespace Rca.Loader.Infrastructure --metric Complexity --symbol-kind Member --all --include-suppressed
 ```
 
-#### `metrics-reader list`
+#### `metrics-reader readsarif`
 
 ```
-metrics-reader list --namespace <NamespacePrefix> --metric <MetricAlias>
-                    [--symbol-kind <Type|Member>] [общие параметры]
+metrics-reader readsarif --namespace <NamespacePrefix> --metric <SarifCaRuleViolations|SarifIdeRuleViolations>
+                         [--symbol-kind <Type|Member>] [--all] [общие параметры]
 ```
 
-- **Обязательные:** `--namespace`, `--metric`.
-- **Опциональные:** `--symbol-kind` (по умолчанию `Type`), общие параметры.
-- Выводит массив всех символов, у которых `status = Warning/Error`, отсортированный по серьёзности (Error → Warning) и величине превышения.  
-  Если нужен вывод по методам, добавьте `--symbol-kind Member`.
+- Агрегирует SARIF-метрики по `ruleId` и выводит группы в порядке убывания количества нарушений.
+- Каждая группа содержит `ruleId`, `shortDescription`, общее `count` и массив `violations` со сведениями: `symbol`, `message`, `uri`, `startLine`, `endLine`.
+- Без `--all` возвращается только самая проблемная группа. С `--all` — все группы.
+- Команда поддерживает только метрики `SarifCaRuleViolations` и `SarifIdeRuleViolations`. Для остальных метрик возвращается сообщение о том, что breakdown-данные отсутствуют.
+- Если для выбранного namespace не найдены нарушения, команда возвращает сообщение вместо пустого массива.
+- Дополнительно доступен фильтр `--ruleid <CAxxxx|IDExxxx>`, который ограничивает вывод конкретным правилом (регистр не важен). Если совпадений для такого ruleId нет, также выводится сообщение.
 
 **Пример:**
 
 ```powershell
-metrics-reader list --namespace Rca.Loader --metric Coupling --symbol-kind Member --include-suppressed
+metrics-reader readsarif --namespace Rca.Loader --metric SarifCaRuleViolations
+metrics-reader readsarif --namespace Rca.Loader --metric SarifIdeRuleViolations --symbol-kind Member --all
+metrics-reader readsarif --namespace Rca.Loader --metric SarifCaRuleViolations --ruleid CA1506
 ```
 
 #### `metrics-reader test`

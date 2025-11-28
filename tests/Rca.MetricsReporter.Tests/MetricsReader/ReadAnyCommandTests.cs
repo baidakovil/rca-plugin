@@ -10,17 +10,16 @@ using Rca.Tools.MetricsReporter.MetricsReader.Settings;
 using Rca.Tools.MetricsReporter.Model;
 
 /// <summary>
-/// Integration-style tests for <see cref="ListWarningsCommand"/>.
+/// Integration-style tests for the readany command.
 /// </summary>
 [TestFixture]
 [Category("Unit")]
 [Parallelizable(ParallelScope.None)]
-internal sealed class ListWarningsCommandTests : MetricsReaderCommandTestsBase
+internal sealed class ReadAnyCommandTests : MetricsReaderCommandTestsBase
 {
   [Test]
-  public async Task ExecuteAsync_WhenViolationsPresent_ReturnsSortedList()
+  public async Task ExecuteAsync_ShowAllTrue_ReturnsSortedList()
   {
-    // Arrange
     var report = MetricsReaderCommandTestData.CreateReport(new[]
     {
       MetricsReaderCommandTestData.CreateTypeNode("Rca.Loader.Services.Warning", 12, ThresholdStatus.Warning),
@@ -29,90 +28,104 @@ internal sealed class ListWarningsCommandTests : MetricsReaderCommandTestsBase
     });
 
     var reportPath = WriteReport(report);
-    var settings = CreateNamespaceSettings(reportPath, "Rca.Loader.Services");
+    var settings = CreateNamespaceSettings(reportPath, "Rca.Loader.Services", showAll: true);
 
-    // Act
     var (exitCode, output) = await MetricsReaderCommandTestHarness
-      .RunNamespaceCommandAsync<ListWarningsCommand>(settings)
+      .RunNamespaceCommandAsync<ReadAnyCommand>(settings)
       .ConfigureAwait(false);
 
-    // Assert
     exitCode.Should().Be(0);
     using var json = JsonDocument.Parse(output);
     json.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
     var rows = json.RootElement.EnumerateArray().ToList();
     rows.Should().HaveCount(3);
-    rows[0].GetProperty("symbolFqn").GetString().Should().Be("Rca.Loader.Services.ErrorMajor");
-    rows[1].GetProperty("symbolFqn").GetString().Should().Be("Rca.Loader.Services.ErrorMinor");
-    rows[2].GetProperty("symbolFqn").GetString().Should().Be("Rca.Loader.Services.Warning");
+    rows.Select(r => r.GetProperty("symbolFqn").GetString()).Should().ContainInOrder(
+      "Rca.Loader.Services.ErrorMajor",
+      "Rca.Loader.Services.ErrorMinor",
+      "Rca.Loader.Services.Warning");
   }
 
   [Test]
-  public async Task ExecuteAsync_WhenSuppressedIgnored_DoesNotReturnSuppressedEntries()
+  public async Task ExecuteAsync_ShowAllFalse_ReturnsSingleMostSevereSymbol()
   {
-    // Arrange
-    const string suppressedFqn = "Rca.Loader.Services.SuppressedType";
+    var report = MetricsReaderCommandTestData.CreateReport(new[]
+    {
+      MetricsReaderCommandTestData.CreateTypeNode("Rca.Loader.Services.Warning", 12, ThresholdStatus.Warning),
+      MetricsReaderCommandTestData.CreateTypeNode("Rca.Loader.Services.Error", 35, ThresholdStatus.Error)
+    });
+
+    var reportPath = WriteReport(report);
+    var settings = CreateNamespaceSettings(reportPath, "Rca.Loader.Services");
+
+    var (exitCode, output) = await MetricsReaderCommandTestHarness
+      .RunNamespaceCommandAsync<ReadAnyCommand>(settings)
+      .ConfigureAwait(false);
+
+    exitCode.Should().Be(0);
+    using var json = JsonDocument.Parse(output);
+    json.RootElement.ValueKind.Should().Be(JsonValueKind.Object);
+    json.RootElement.GetProperty("symbolFqn").GetString().Should().Be("Rca.Loader.Services.Error");
+    json.RootElement.GetProperty("status").GetString().Should().Be("Error");
+  }
+
+  [Test]
+  public async Task ExecuteAsync_IgnoresSuppressedSymbolsWhenIncludeSuppressedFalse()
+  {
+    const string suppressedFqn = "Rca.Loader.Services.SuppressedService";
     var suppressedInfo = new SuppressedSymbolInfo
     {
       FullyQualifiedName = suppressedFqn,
       Metric = MetricIdentifier.RoslynCyclomaticComplexity.ToString(),
       RuleId = "CA1502",
-      FilePath = "src/Rca.Loader/SuppressedType.cs"
+      FilePath = "src/Rca.Loader/SuppressedService.cs"
     };
 
     var report = MetricsReaderCommandTestData.CreateReport(
       new[]
       {
-        MetricsReaderCommandTestData.CreateTypeNode(suppressedFqn, 50, ThresholdStatus.Error),
-        MetricsReaderCommandTestData.CreateTypeNode("Rca.Loader.Services.ActiveType", 25, ThresholdStatus.Warning)
+        MetricsReaderCommandTestData.CreateTypeNode(suppressedFqn, 40, ThresholdStatus.Error),
+        MetricsReaderCommandTestData.CreateTypeNode("Rca.Loader.Services.Active", 25, ThresholdStatus.Warning)
       },
       new[] { suppressedInfo });
 
     var reportPath = WriteReport(report);
     var settings = CreateNamespaceSettings(reportPath, "Rca.Loader.Services");
 
-    // Act
     var (exitCode, output) = await MetricsReaderCommandTestHarness
-      .RunNamespaceCommandAsync<ListWarningsCommand>(settings)
+      .RunNamespaceCommandAsync<ReadAnyCommand>(settings)
       .ConfigureAwait(false);
 
-    // Assert
     exitCode.Should().Be(0);
     using var json = JsonDocument.Parse(output);
-    var rows = json.RootElement.EnumerateArray().ToList();
-    rows.Should().HaveCount(1);
-    rows[0].GetProperty("symbolFqn").GetString().Should().Be("Rca.Loader.Services.ActiveType");
+    json.RootElement.GetProperty("symbolFqn").GetString().Should().Be("Rca.Loader.Services.Active");
   }
 
   [Test]
-  public async Task ExecuteAsync_WhenIncludeSuppressedTrue_ReturnsSuppressedEntries()
+  public async Task ExecuteAsync_ShowAllTrue_IncludesSuppressedEntriesWhenRequested()
   {
-    // Arrange
-    const string suppressedFqn = "Rca.Loader.Services.SuppressedType";
+    const string suppressedFqn = "Rca.Loader.Services.Suppressed";
     var suppressedInfo = new SuppressedSymbolInfo
     {
       FullyQualifiedName = suppressedFqn,
       Metric = MetricIdentifier.RoslynCyclomaticComplexity.ToString(),
       RuleId = "CA1502",
-      FilePath = "src/Rca.Loader/SuppressedType.cs"
+      FilePath = "src/Rca.Loader/Suppressed.cs"
     };
 
     var report = MetricsReaderCommandTestData.CreateReport(
       new[]
       {
-        MetricsReaderCommandTestData.CreateTypeNode(suppressedFqn, 50, ThresholdStatus.Error)
+        MetricsReaderCommandTestData.CreateTypeNode(suppressedFqn, 40, ThresholdStatus.Error)
       },
       new[] { suppressedInfo });
 
     var reportPath = WriteReport(report);
-    var settings = CreateNamespaceSettings(reportPath, "Rca.Loader.Services", includeSuppressed: true);
+    var settings = CreateNamespaceSettings(reportPath, "Rca.Loader.Services", includeSuppressed: true, showAll: true);
 
-    // Act
     var (exitCode, output) = await MetricsReaderCommandTestHarness
-      .RunNamespaceCommandAsync<ListWarningsCommand>(settings)
+      .RunNamespaceCommandAsync<ReadAnyCommand>(settings)
       .ConfigureAwait(false);
 
-    // Assert
     exitCode.Should().Be(0);
     using var json = JsonDocument.Parse(output);
     json.RootElement.GetArrayLength().Should().Be(1);
@@ -121,27 +134,19 @@ internal sealed class ListWarningsCommandTests : MetricsReaderCommandTestsBase
   }
 
   [Test]
-  public async Task ExecuteAsync_WithMemberSymbolKind_ReturnsMemberViolations()
+  public async Task ExecuteAsync_MemberSymbolKind_ReturnsMembers()
   {
-    // Arrange
-    var member = MetricsReaderCommandTestData.CreateMemberNode(
-      "Rca.Loader.Services.MemberType.Execute(...)", 30, ThresholdStatus.Error);
-    var type = MetricsReaderCommandTestData.CreateTypeNode(
-      "Rca.Loader.Services.MemberType",
-      5,
-      ThresholdStatus.Success,
-      new[] { member });
+    var member = MetricsReaderCommandTestData.CreateMemberNode("Rca.Loader.Services.Type.Execute(...)", 30, ThresholdStatus.Error);
+    var type = MetricsReaderCommandTestData.CreateTypeNode("Rca.Loader.Services.Type", 5, ThresholdStatus.Success, new[] { member });
     var report = MetricsReaderCommandTestData.CreateReport(new[] { type });
 
     var reportPath = WriteReport(report);
-    var settings = CreateNamespaceSettings(reportPath, "Rca.Loader.Services", symbolKind: MetricsReaderSymbolKind.Member);
+    var settings = CreateNamespaceSettings(reportPath, "Rca.Loader.Services", symbolKind: MetricsReaderSymbolKind.Member, showAll: true);
 
-    // Act
     var (exitCode, output) = await MetricsReaderCommandTestHarness
-      .RunNamespaceCommandAsync<ListWarningsCommand>(settings)
+      .RunNamespaceCommandAsync<ReadAnyCommand>(settings)
       .ConfigureAwait(false);
 
-    // Assert
     exitCode.Should().Be(0);
     using var json = JsonDocument.Parse(output);
     json.RootElement.GetArrayLength().Should().Be(1);
@@ -150,9 +155,8 @@ internal sealed class ListWarningsCommandTests : MetricsReaderCommandTestsBase
   }
 
   [Test]
-  public async Task ExecuteAsync_WithThresholdOverride_EmitsOverrideValue()
+  public async Task ExecuteAsync_ThresholdOverride_IsApplied()
   {
-    // Arrange
     var report = MetricsReaderCommandTestData.CreateReport(new[]
     {
       MetricsReaderCommandTestData.CreateTypeNode("Rca.Loader.Services.Target", 12, ThresholdStatus.Warning)
@@ -162,62 +166,58 @@ internal sealed class ListWarningsCommandTests : MetricsReaderCommandTestsBase
     var overridePath = WriteThresholdOverride(5, 6);
     var settings = CreateNamespaceSettings(reportPath, "Rca.Loader.Services", thresholdsFile: overridePath);
 
-    // Act
     var (exitCode, output) = await MetricsReaderCommandTestHarness
-      .RunNamespaceCommandAsync<ListWarningsCommand>(settings)
+      .RunNamespaceCommandAsync<ReadAnyCommand>(settings)
       .ConfigureAwait(false);
 
-    // Assert
     exitCode.Should().Be(0);
     using var json = JsonDocument.Parse(output);
-    var row = json.RootElement[0];
-    row.GetProperty("threshold").GetDecimal().Should().Be(5);
-    row.GetProperty("thresholdKind").GetString().Should().Be("Warning");
+    json.RootElement.GetProperty("threshold").GetDecimal().Should().Be(5);
+    json.RootElement.GetProperty("thresholdKind").GetString().Should().Be("Warning");
   }
 
   [Test]
-  public async Task ExecuteAsync_WhenNamespaceDoesNotMatch_ReturnsEmptyArray()
+  public async Task ExecuteAsync_ShowAllTrue_EmptyNamespace_PrintsMessage()
   {
-    // Arrange
     var report = MetricsReaderCommandTestData.CreateReport(new[]
     {
       MetricsReaderCommandTestData.CreateTypeNode("Rca.Loader.Services.SomeType", 40, ThresholdStatus.Error)
     });
 
     var reportPath = WriteReport(report);
-    var settings = CreateNamespaceSettings(reportPath, "Rca.Other.Namespace");
+    var settings = CreateNamespaceSettings(reportPath, "Rca.Other.Namespace", showAll: true);
 
-    // Act
     var (exitCode, output) = await MetricsReaderCommandTestHarness
-      .RunNamespaceCommandAsync<ListWarningsCommand>(settings)
+      .RunNamespaceCommandAsync<ReadAnyCommand>(settings)
       .ConfigureAwait(false);
 
-    // Assert
     exitCode.Should().Be(0);
     using var json = JsonDocument.Parse(output);
-    json.RootElement.GetArrayLength().Should().Be(0);
+    json.RootElement.GetProperty("metric").GetString().Should().Be("Complexity");
+    json.RootElement.GetProperty("namespace").GetString().Should().Be("Rca.Other.Namespace");
+    json.RootElement.GetProperty("message").GetString().Should().Contain("No violations were found");
   }
 
   [Test]
-  public async Task ExecuteAsync_WhenNoViolations_ReturnsEmptyArray()
+  public async Task ExecuteAsync_NoViolations_PrintsMessage()
   {
-    // Arrange
     var report = MetricsReaderCommandTestData.CreateReport(new[]
     {
       MetricsReaderCommandTestData.CreateTypeNode("Rca.Loader.Services.Clean", 5, ThresholdStatus.Success)
     });
+
     var reportPath = WriteReport(report);
     var settings = CreateNamespaceSettings(reportPath, "Rca.Loader.Services");
 
-    // Act
     var (exitCode, output) = await MetricsReaderCommandTestHarness
-      .RunNamespaceCommandAsync<ListWarningsCommand>(settings)
+      .RunNamespaceCommandAsync<ReadAnyCommand>(settings)
       .ConfigureAwait(false);
 
-    // Assert
     exitCode.Should().Be(0);
     using var json = JsonDocument.Parse(output);
-    json.RootElement.GetArrayLength().Should().Be(0);
+    json.RootElement.GetProperty("metric").GetString().Should().Be("Complexity");
+    json.RootElement.GetProperty("namespace").GetString().Should().Be("Rca.Loader.Services");
+    json.RootElement.GetProperty("message").GetString().Should().Contain("No violations were found");
   }
 }
 

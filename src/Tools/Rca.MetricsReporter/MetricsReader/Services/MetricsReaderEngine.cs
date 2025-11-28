@@ -42,6 +42,62 @@ internal sealed class MetricsReaderEngine
     return null;
   }
 
+  public SarifViolationAggregationResult GetSarifViolationGroups(SymbolFilter filter)
+  {
+    var groups = new Dictionary<string, SarifViolationGroupBuilder>(StringComparer.OrdinalIgnoreCase);
+    var ruleDescriptions = _context.Report.Metadata.RuleDescriptions ?? new Dictionary<string, RuleDescription>();
+
+    foreach (var node in EnumerateNodes(filter))
+    {
+      if (!node.Metrics.TryGetValue(filter.Metric, out var metricValue) || metricValue is null)
+      {
+        continue;
+      }
+
+      if (metricValue.Breakdown is null)
+      {
+        continue;
+      }
+
+      if (metricValue.Breakdown.Count == 0)
+      {
+        continue;
+      }
+
+      if (!filter.IncludeSuppressed
+          && _context.SuppressedSymbolIndex.IsSuppressed(node.FullyQualifiedName, filter.Metric))
+      {
+        continue;
+      }
+
+      foreach (var pair in metricValue.Breakdown)
+      {
+        var entry = pair.Value;
+        if (entry is null)
+        {
+          continue;
+        }
+
+        if (!groups.TryGetValue(pair.Key, out var builder))
+        {
+          ruleDescriptions.TryGetValue(pair.Key, out var description);
+          builder = new SarifViolationGroupBuilder(pair.Key, description?.ShortDescription);
+          groups[pair.Key] = builder;
+        }
+
+        builder.Add(entry.Count, entry.Violations, node);
+      }
+    }
+
+    var ordered = groups.Values
+      .Select(builder => builder.Build())
+      .OrderByDescending(group => group.Count)
+      .ThenBy(group => group.RuleId, StringComparer.OrdinalIgnoreCase)
+      .ToList();
+
+    return new SarifViolationAggregationResult(ordered);
+  }
+
   private IEnumerable<SymbolMetricSnapshot> EnumerateSymbols(SymbolFilter filter)
   {
     return filter.SymbolKind switch
@@ -57,6 +113,20 @@ internal sealed class MetricsReaderEngine
         .Where(snapshot => snapshot is not null)
         .Select(snapshot => snapshot!),
       _ => Enumerable.Empty<SymbolMetricSnapshot>()
+    };
+  }
+
+  private IEnumerable<MetricsNode> EnumerateNodes(SymbolFilter filter)
+  {
+    return filter.SymbolKind switch
+    {
+      MetricsReaderSymbolKind.Type => EnumerateTypeNodes()
+        .Where(type => NamespaceMatches(type.FullyQualifiedName, filter.Namespace))
+        .Cast<MetricsNode>(),
+      MetricsReaderSymbolKind.Member => EnumerateMemberNodes()
+        .Where(member => NamespaceMatches(member.FullyQualifiedName, filter.Namespace))
+        .Cast<MetricsNode>(),
+      _ => Enumerable.Empty<MetricsNode>()
     };
   }
 
@@ -190,6 +260,66 @@ internal sealed record SymbolMetricSnapshot(
         : Value.Value - ThresholdValue.Value;
 
       return Math.Abs(delta);
+    }
+  }
+}
+
+internal sealed record SarifViolationAggregationResult(
+  IReadOnlyList<SarifViolationGroup> Groups);
+
+internal sealed record SarifViolationGroup(
+  string RuleId,
+  string? ShortDescription,
+  int Count,
+  IReadOnlyList<SarifViolationRecord> Violations);
+
+internal sealed record SarifViolationRecord(
+  string Symbol,
+  string? Message,
+  string? Uri,
+  int? StartLine,
+  int? EndLine);
+
+file sealed class SarifViolationGroupBuilder
+{
+  public SarifViolationGroupBuilder(string ruleId, string? shortDescription)
+  {
+    RuleId = ruleId;
+    ShortDescription = shortDescription;
+  }
+
+  public string RuleId { get; }
+
+  public string? ShortDescription { get; }
+
+  public int Count { get; private set; }
+
+  public List<SarifViolationRecord> Violations { get; } = new();
+
+  public SarifViolationGroup Build()
+    => new(RuleId, ShortDescription, Count, Violations);
+
+  public void Add(int count, IReadOnlyList<SarifRuleViolationDetail> violations, MetricsNode node)
+  {
+    if (count > 0)
+    {
+      Count += count;
+    }
+
+    if (violations is null || violations.Count == 0)
+    {
+      return;
+    }
+
+    var symbol = node.FullyQualifiedName ?? node.Name ?? string.Empty;
+    foreach (var violation in violations)
+    {
+      Violations.Add(new SarifViolationRecord(
+        symbol,
+        violation.Message,
+        violation.Uri,
+        violation.StartLine,
+        violation.EndLine));
     }
   }
 }

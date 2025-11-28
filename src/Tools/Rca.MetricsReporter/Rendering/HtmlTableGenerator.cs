@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Rca.Tools.MetricsReporter.Model;
 
@@ -22,6 +23,10 @@ internal sealed class HtmlTableGenerator
   private CoverageLinkBuilder? _coverageLinkBuilder;
   private Dictionary<(string Fqn, MetricIdentifier Metric), SuppressedSymbolInfo>? _suppressedIndex;
   private Dictionary<MetricsNode, int>? _descendantCountIndex;
+  private static readonly JsonSerializerOptions BreakdownSerializerOptions = new()
+  {
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+  };
 
   /// <summary>
   /// Initializes a new instance of the <see cref="HtmlTableGenerator"/> class.
@@ -573,7 +578,7 @@ internal sealed class HtmlTableGenerator
     }
 
     // Serialize breakdown to JSON and HTML-encode it
-    var json = System.Text.Json.JsonSerializer.Serialize(value.Breakdown);
+    var json = JsonSerializer.Serialize(value.Breakdown, BreakdownSerializerOptions);
     var encoded = WebUtility.HtmlEncode(json);
     return $" data-breakdown=\"{encoded}\"";
   }

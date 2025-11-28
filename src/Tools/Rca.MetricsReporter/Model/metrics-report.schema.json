@@ -26,17 +26,10 @@
         },
         "breakdown": {
           "type": ["object", "null"],
-          "description": "Optional breakdown of rule violations by rule ID (e.g., CA1502, IDE0051). Only present for SarifCaRuleViolations and SarifIdeRuleViolations metrics.",
+          "description": "Optional breakdown of rule violations by rule ID (e.g., CA1502, IDE0051). Only present for SarifCaRuleViolations and SarifIdeRuleViolations metrics and includes both aggregated counts and violation metadata.",
           "patternProperties": {
-            "^CA\\d{4}$": {
-              "type": "integer",
-              "minimum": 0,
-              "description": "CA rule violations count"
-            },
-            "^IDE\\d{4}$": {
-              "type": "integer",
-              "minimum": 0,
-              "description": "IDE rule violations count"
+            "^(CA|IDE)\\d{4}$": {
+              "$ref": "#/definitions/sarifRuleBreakdownEntry"
             }
           },
           "additionalProperties": false
@@ -265,6 +258,34 @@
         }
       },
       "required": ["generatedAtUtc", "paths"],
+      "additionalProperties": false
+    },
+    "sarifRuleBreakdownEntry": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of SARIF results aggregated under this rule."
+        },
+        "violations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/sarifRuleViolationDetail"
+          }
+        }
+      },
+      "required": ["count"],
+      "additionalProperties": false
+    },
+    "sarifRuleViolationDetail": {
+      "type": "object",
+      "properties": {
+        "message": { "type": ["string", "null"] },
+        "uri": { "type": ["string", "null"] },
+        "startLine": { "type": ["integer", "null"], "minimum": 1 },
+        "endLine": { "type": ["integer", "null"], "minimum": 1 }
+      },
       "additionalProperties": false
     }
   }

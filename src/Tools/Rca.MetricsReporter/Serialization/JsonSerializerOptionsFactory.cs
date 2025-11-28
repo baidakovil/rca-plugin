@@ -1,5 +1,6 @@
 namespace Rca.Tools.MetricsReporter.Serialization;
 
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -17,9 +18,11 @@ public static class JsonSerializerOptionsFactory
     {
       WriteIndented = true,
       PropertyNameCaseInsensitive = true,
-      DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+      DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+      Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
+    options.Converters.Add(new SarifBreakdownDictionaryConverter());
     options.Converters.Add(new JsonStringEnumConverter());
     return options;
   }

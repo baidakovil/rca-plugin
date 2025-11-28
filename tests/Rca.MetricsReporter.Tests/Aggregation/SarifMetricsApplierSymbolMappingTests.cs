@@ -8,6 +8,7 @@ using Rca.Tools.MetricsReporter.Aggregation;
 using Rca.Tools.MetricsReporter.Model;
 using Rca.Tools.MetricsReporter.Processing;
 using Rca.Tools.MetricsReporter.Processing.Parsers;
+using Rca.MetricsReporter.Tests.TestHelpers;
 
 /// <summary>
 /// Unit tests for <see cref="SarifMetricsApplier"/> focusing on symbol mapping accuracy.
@@ -451,7 +452,7 @@ public sealed class SarifMetricsApplierSymbolMappingTests
         {
           Value = 1,
           Status = ThresholdStatus.NotApplicable,
-          Breakdown = new Dictionary<string, int> { ["CA1822"] = 1 }
+          Breakdown = SarifBreakdownTestHelper.Single("CA1822")
         }
       }
     };

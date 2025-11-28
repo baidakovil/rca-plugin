@@ -78,7 +78,7 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
             {
               Value = 1,
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["CA1502"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("CA1502")
             }
           }
         }
@@ -177,7 +177,7 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
             {
               Value = 1,
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["CA1502"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("CA1502")
             }
           }
         },
@@ -190,7 +190,7 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
             {
               Value = 1,
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["CA1506"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("CA1506")
             }
           }
         }
@@ -292,7 +292,7 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
             {
               Value = 1,
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["IDE0051"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("IDE0051")
             }
           }
         }
@@ -388,7 +388,7 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
             {
               Value = 1,
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["CA1502"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("CA1502")
             }
           }
         },
@@ -401,7 +401,7 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
             {
               Value = 1,
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["IDE0051"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("IDE0051")
             }
           }
         }
@@ -496,7 +496,7 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
             {
               Value = 1,
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["CA1502"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("CA1502")
             }
           }
         },
@@ -509,7 +509,7 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
             {
               Value = 1,
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["CA1506"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("CA1506")
             }
           }
         }
@@ -649,7 +649,7 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
             {
               Value = 0,
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int>() // Empty breakdown
+              Breakdown = SarifBreakdownTestHelper.Empty() // Empty breakdown
             }
           }
         }
@@ -736,7 +736,7 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
             {
               Value = 1,
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["CA1502"] = 1, ["CA9999"] = 1 } // CA9999 not in descriptions
+              Breakdown = SarifBreakdownTestHelper.Create(("CA1502", 1), ("CA9999", 1)) // CA9999 not in descriptions
             }
           }
         }
@@ -839,7 +839,7 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
             {
               Value = 1,
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["CA1502"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("CA1502")
             }
           }
         },
@@ -852,7 +852,7 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
             {
               Value = 1,
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int> { ["CA1506"] = 1 }
+              Breakdown = SarifBreakdownTestHelper.Single("CA1506")
             }
           }
         }

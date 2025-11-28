@@ -1015,10 +1015,7 @@ public sealed class MetricsAggregationServiceTests
             {
               Value = 1,
               Status = ThresholdStatus.NotApplicable,
-              Breakdown = new Dictionary<string, int>
-              {
-                ["CA1050"] = 1
-              }
+              Breakdown = SarifBreakdownTestHelper.Single("CA1050")
             }
           }
         }

@@ -18,7 +18,7 @@ using Rca.Tools.MetricsReporter.Model;
 internal sealed class MetricsReaderConsoleHostTests : MetricsReaderCommandTestsBase
 {
   [Test]
-  public async Task ExecuteAsync_ListCommand_RunsSuccessfully()
+  public async Task ExecuteAsync_ReadAnyCommand_RunsSuccessfully()
   {
     // Arrange
     var report = MetricsReaderCommandTestData.CreateReport(new[]
@@ -28,10 +28,11 @@ internal sealed class MetricsReaderConsoleHostTests : MetricsReaderCommandTestsB
     var reportPath = WriteReport(report);
     var args = new[]
     {
-      "list",
+      "readany",
       "--namespace", "Rca.Loader.Services",
       "--metric", "Complexity",
-      "--report", reportPath
+      "--report", reportPath,
+      "--all"
     };
 
     // Act

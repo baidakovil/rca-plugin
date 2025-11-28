@@ -33,8 +33,9 @@ public sealed class MetricValue
   /// Optional breakdown of rule violations by rule ID (e.g., CA1502, IDE0051).
   /// Only present for <see cref="MetricIdentifier.SarifCaRuleViolations"/> and
   /// <see cref="MetricIdentifier.SarifIdeRuleViolations"/> metrics.
-  /// Keys must match the pattern <c>CA####</c> or <c>IDE####</c> where <c>####</c> is a 4-digit number.
+  /// Keys must match the pattern <c>CA####</c> or <c>IDE####</c> where <c>####</c> is a 4-digit number,
+  /// and values expose both aggregated counts and violation metadata required for tooltips.
   /// </summary>
-  public Dictionary<string, int>? Breakdown { get; init; }
+  public Dictionary<string, SarifRuleBreakdownEntry>? Breakdown { get; init; }
 }
 

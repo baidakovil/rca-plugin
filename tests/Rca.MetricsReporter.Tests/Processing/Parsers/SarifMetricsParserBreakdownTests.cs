@@ -49,7 +49,14 @@ public sealed class SarifMetricsParserBreakdownTests
       var metric = element.Metrics[MetricIdentifier.SarifCaRuleViolations];
       metric.Value.Should().Be(1);
       metric.Breakdown.Should().NotBeNull().And.ContainKey("CA1502");
-      metric.Breakdown!["CA1502"].Should().Be(1);
+      var entry = metric.Breakdown!["CA1502"];
+      entry.Count.Should().Be(1);
+      entry.Violations.Should().HaveCount(1);
+      var violation = entry.Violations.Single();
+      violation.Message.Should().Be("Test message");
+      violation.Uri.Should().Be("file:///C:/Repo/Sample.cs");
+      violation.StartLine.Should().Be(10);
+      violation.EndLine.Should().Be(10);
     }
     finally
     {
@@ -81,7 +88,14 @@ public sealed class SarifMetricsParserBreakdownTests
       var metric = element.Metrics[MetricIdentifier.SarifIdeRuleViolations];
       metric.Value.Should().Be(1);
       metric.Breakdown.Should().NotBeNull().And.ContainKey("IDE0051");
-      metric.Breakdown!["IDE0051"].Should().Be(1);
+      var entry = metric.Breakdown!["IDE0051"];
+      entry.Count.Should().Be(1);
+      entry.Violations.Should().HaveCount(1);
+      var violation = entry.Violations.Single();
+      violation.Message.Should().Be("Test message");
+      violation.Uri.Should().Be("file:///C:/Repo/Sample.cs");
+      violation.StartLine.Should().Be(15);
+      violation.EndLine.Should().Be(15);
     }
     finally
     {
@@ -110,7 +124,7 @@ public sealed class SarifMetricsParserBreakdownTests
         var metric = element.Metrics[MetricIdentifier.SarifCaRuleViolations];
         metric.Value.Should().Be(1);
         metric.Breakdown.Should().NotBeNull().And.ContainKey("CA1502");
-        metric.Breakdown!["CA1502"].Should().Be(1);
+        metric.Breakdown!["CA1502"].Count.Should().Be(1);
       }
     }
     finally
@@ -230,7 +244,7 @@ public sealed class SarifMetricsParserBreakdownTests
   }
 
   [Test]
-  public async Task ParseAsync_MultipleLocationsInSingleResult_CreatesMultipleElements()
+  public async Task ParseAsync_MultipleLocationsInSingleResult_UsesPrimaryLocationOnly()
   {
     // Arrange - Single result with multiple locations
     var sarif = @"{
@@ -277,15 +291,22 @@ public sealed class SarifMetricsParserBreakdownTests
       // Act
       var result = await parser.ParseAsync(tempFile, CancellationToken.None);
 
-      // Assert
-      result.Elements.Should().HaveCount(2);
-      foreach (var element in result.Elements)
-      {
-        var metric = element.Metrics[MetricIdentifier.SarifCaRuleViolations];
-        metric.Value.Should().Be(1);
-        metric.Breakdown.Should().NotBeNull().And.ContainKey("CA1502");
-        metric.Breakdown!["CA1502"].Should().Be(1);
-      }
+    // Assert - Only a single violation should be emitted and its metadata should use the first location
+    result.Elements.Should().HaveCount(1);
+
+    var element = result.Elements.Single();
+    element.Source.Should().NotBeNull();
+    element.Source!.StartLine.Should().Be(10);
+
+    var metric = element.Metrics[MetricIdentifier.SarifCaRuleViolations];
+    metric.Value.Should().Be(1);
+    metric.Breakdown.Should().NotBeNull().And.ContainKey("CA1502");
+    var breakdownEntry = metric.Breakdown!["CA1502"];
+    breakdownEntry.Count.Should().Be(1);
+    breakdownEntry.Violations.Should().HaveCount(1);
+    var violation = breakdownEntry.Violations.Single();
+    violation.StartLine.Should().Be(10);
+    violation.EndLine.Should().Be(10);
     }
     finally
     {

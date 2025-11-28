@@ -91,15 +91,54 @@ function initTooltips(ctx){
     return '<p class=""metric-tooltip__desc"">' + escapeHtml(text) + '</p>';
   }
 
+  function getBreakdownCount(entry){
+    if(typeof entry === 'number'){
+      return entry;
+    }
+    if(entry && typeof entry.count === 'number'){
+      return entry.count;
+    }
+    if(entry && Array.isArray(entry.violations)){
+      return entry.violations.length;
+    }
+    return 0;
+  }
+
+  function normalizeViolationPath(violation){
+    if(!violation || !violation.uri){
+      return null;
+    }
+    let uri = violation.uri;
+    const fileScheme = 'file:' + '//';
+    if(uri.startsWith(fileScheme + '/')){
+      let path = uri.substring((fileScheme + '/').length);
+      if(/^[A-Za-z]:/i.test(path)){
+        path = path.replace(/\//g, '\\');
+      }else{
+        path = '/' + path;
+      }
+      return path;
+    }
+    return uri;
+  }
+
+  function formatLineRange(violation){
+    const start = Number.isFinite(violation.startLine) ? violation.startLine : null;
+    const end = Number.isFinite(violation.endLine) ? violation.endLine : start;
+    if(start){
+      return start + '-' + (end ?? start);
+    }
+    return null;
+  }
+
   function buildBreakdownTooltip(breakdown, metricId){
     if(!breakdown || typeof breakdown !== 'object' || Object.keys(breakdown).length === 0){
       return null;
     }
-    const descriptions = ruleDescriptionsData || {};
 
     // Extract rule IDs and sort by number after CA/IDE prefix
     const ruleIds = Object.keys(breakdown).filter(function(ruleId){
-      return breakdown[ruleId] > 0;
+      return getBreakdownCount(breakdown[ruleId]) > 0;
     });
 
     if(ruleIds.length === 0){
@@ -123,37 +162,22 @@ function initTooltips(ctx){
 
     const parts = [];
     ruleIds.forEach(function(ruleId){
-      const count = breakdown[ruleId];
-      const description = descriptions[ruleId];
-      
-      if(!description){
-        // Fallback if description is missing
-        parts.push('<p><strong>' + escapeHtml(ruleId) + ':</strong> <span style=""color: #0066cc;"">' + escapeHtml(String(count)) + '</span></p>');
-        return;
-      }
-
-      const category = description.category || '';
-      const shortDesc = description.shortDescription || '';
-      const fullDesc = description.fullDescription || '';
-
-      // Build description line: Category: Short description
-      let descLine = '';
-      if(category && shortDesc){
-        descLine = escapeHtml(category) + ': ' + escapeHtml(shortDesc);
-      } else if(shortDesc){
-        descLine = escapeHtml(shortDesc);
-      } else if(category){
-        descLine = escapeHtml(category);
-      }
-
+      const entry = breakdown[ruleId];
+      const count = getBreakdownCount(entry);
       parts.push('<p><strong>' + escapeHtml(ruleId) + ':</strong> <span style=""color: #0066cc;"">' + escapeHtml(String(count)) + '</span></p>');
-      
-      if(descLine){
-        parts.push('<p style=""margin-left: 8px; margin-top: 2px; margin-bottom: 4px;""><em>' + descLine + '</em></p>');
-      }
-      
-      if(fullDesc){
-        parts.push('<p style=""margin-left: 8px; margin-top: 2px; margin-bottom: 8px;""><em>' + escapeHtml(fullDesc) + '</em></p>');
+
+      if(entry && Array.isArray(entry.violations) && entry.violations.length > 0){
+        entry.violations.forEach(function(violation){
+          const path = normalizeViolationPath(violation);
+          const lineRange = formatLineRange(violation);
+          if(path){
+            const rangeText = lineRange ? '<span>:' + escapeHtml(lineRange) + '</span>' : '';
+            parts.push('<p class=""metric-tooltip__desc""><strong>Path:</strong> <code>' + escapeHtml(path) + '</code>' + rangeText + '</p>');
+          }
+          if(violation.message){
+            parts.push('<p class=""metric-tooltip__desc""><strong>Message:</strong> ' + escapeHtml(violation.message) + '</p><br/>');
+          }
+        });
       }
     });
 

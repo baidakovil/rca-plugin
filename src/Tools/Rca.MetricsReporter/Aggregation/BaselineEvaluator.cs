@@ -151,9 +151,7 @@ internal sealed class BaselineEvaluator
         Value = value,
         Delta = delta,
         Status = status,
-        Breakdown = current?.Breakdown is not null && current.Breakdown.Count > 0
-            ? new Dictionary<string, int>(current.Breakdown)
-            : null
+        Breakdown = SarifBreakdownHelper.Clone(current?.Breakdown)
       };
     }
 
