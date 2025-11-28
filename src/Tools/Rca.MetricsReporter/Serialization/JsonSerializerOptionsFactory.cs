@@ -22,7 +22,6 @@ public static class JsonSerializerOptionsFactory
       Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
-    options.Converters.Add(new SarifBreakdownDictionaryConverter());
     options.Converters.Add(new JsonStringEnumConverter());
     return options;
   }
