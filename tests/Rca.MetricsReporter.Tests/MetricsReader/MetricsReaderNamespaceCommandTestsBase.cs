@@ -36,7 +36,7 @@ internal abstract class MetricsReaderCommandTestsBase
     string reportPath,
     string @namespace,
     bool includeSuppressed = false,
-    MetricsReaderSymbolKind symbolKind = MetricsReaderSymbolKind.Type,
+    MetricsReaderSymbolKind symbolKind = MetricsReaderSymbolKind.Any,
     string? thresholdsFile = null,
     bool showAll = false,
     string metricName = "Complexity",

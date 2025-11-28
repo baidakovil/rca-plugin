@@ -155,6 +155,32 @@ internal sealed class ReadAnyCommandTests : MetricsReaderCommandTestsBase
   }
 
   [Test]
+  public async Task ExecuteAsync_SymbolKindAny_WithAll_PrefersTypesBeforeMembers()
+  {
+    var member = MetricsReaderCommandTestData.CreateMemberNode("Rca.Loader.Services.MixedType.Execute(...)", 30, ThresholdStatus.Error);
+    var type = MetricsReaderCommandTestData.CreateTypeNode("Rca.Loader.Services.MixedType", 50, ThresholdStatus.Error, new[] { member });
+    var report = MetricsReaderCommandTestData.CreateReport(new[] { type });
+
+    var reportPath = WriteReport(report);
+    var settings = CreateNamespaceSettings(
+      reportPath,
+      "Rca.Loader.Services",
+      symbolKind: MetricsReaderSymbolKind.Any,
+      showAll: true);
+
+    var (exitCode, output) = await MetricsReaderCommandTestHarness
+      .RunNamespaceCommandAsync<ReadAnyCommand>(settings)
+      .ConfigureAwait(false);
+
+    exitCode.Should().Be(0);
+    using var json = JsonDocument.Parse(output);
+    var rows = json.RootElement.EnumerateArray().ToList();
+    rows.Should().HaveCount(2);
+    rows[0].GetProperty("symbolType").GetString().Should().Be("Type");
+    rows[1].GetProperty("symbolType").GetString().Should().Be("Member");
+  }
+
+  [Test]
   public async Task ExecuteAsync_ThresholdOverride_IsApplied()
   {
     var report = MetricsReaderCommandTestData.CreateReport(new[]

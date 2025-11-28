@@ -5,6 +5,7 @@ namespace Rca.Tools.MetricsReporter.MetricsReader.Settings;
 /// </summary>
 public enum MetricsReaderSymbolKind
 {
+  Any,
   Type,
   Member
 }

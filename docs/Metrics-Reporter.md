@@ -258,13 +258,13 @@ dotnet run --project src/Tools/Rca.MetricsReporter/Rca.MetricsReporter.csproj --
 
 ```
 metrics-reader readany --namespace <NamespacePrefix> --metric <MetricAlias>
-                       [--symbol-kind <Type|Member>] [--all] [общие параметры]
+                       [--symbol-kind <Any|Type|Member>] [--all] [общие параметры]
 ```
 
 - **Обязательные:** `--namespace`, `--metric`.
-- **Опциональные:** `--symbol-kind` (по умолчанию `Type`), `--all`, общие параметры.
+- **Опциональные:** `--symbol-kind` (по умолчанию `Any`, что означает типы + члены), `--all`, общие параметры.
 - Без `--all` возвращает один самый критичный символ (`symbolFqn`, `symbolType`, `metric`, `value`, `threshold`, `delta`, `filePath`, `status`, `isSuppressed`).  
-  С `--all` выводит массив всех символов, отсортированный по серьёзности и величине превышения (это объединяет старые команды `most-problematic` и `list`).
+  С `--all` выводит массив всех символов, отсортированный по серьёзности и величине превышения. Для режима `--symbol-kind Any` типы всегда выводятся раньше членов.
 - Если подходящих символов нет, команда выводит сообщение с причинами вместо `[]` или `null`.
 
 **Пример:**
@@ -278,12 +278,12 @@ metrics-reader readany --namespace Rca.Loader.Infrastructure --metric Complexity
 
 ```
 metrics-reader readsarif --namespace <NamespacePrefix> --metric <SarifCaRuleViolations|SarifIdeRuleViolations>
-                         [--symbol-kind <Type|Member>] [--all] [общие параметры]
+                         [--symbol-kind <Any|Type|Member>] [--all] [--ruleid <CAxxxx|IDExxxx>] [общие параметры]
 ```
 
 - Агрегирует SARIF-метрики по `ruleId` и выводит группы в порядке убывания количества нарушений.
 - Каждая группа содержит `ruleId`, `shortDescription`, общее `count` и массив `violations` со сведениями: `symbol`, `message`, `uri`, `startLine`, `endLine`.
-- Без `--all` возвращается только самая проблемная группа. С `--all` — все группы.
+- Без `--all` возвращается только самая проблемная группа. С `--all` — все группы (при `--symbol-kind Any` данные от типов появляются раньше данных от членов).
 - Команда поддерживает только метрики `SarifCaRuleViolations` и `SarifIdeRuleViolations`. Для остальных метрик возвращается сообщение о том, что breakdown-данные отсутствуют.
 - Если для выбранного namespace не найдены нарушения, команда возвращает сообщение вместо пустого массива.
 - Дополнительно доступен фильтр `--ruleid <CAxxxx|IDExxxx>`, который ограничивает вывод конкретным правилом (регистр не важен). Если совпадений для такого ruleId нет, также выводится сообщение.

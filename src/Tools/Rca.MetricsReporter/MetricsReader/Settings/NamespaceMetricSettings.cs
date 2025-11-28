@@ -25,9 +25,9 @@ internal sealed class NamespaceMetricSettings : MetricsReaderSettingsBase
   [Description("Metric identifier or alias (Complexity, Coupling, Maintainability, etc.).")]
   public string Metric { get; init; } = string.Empty;
 
-  [CommandOption("--symbol-kind <Type|Member>")]
-  [Description("Symbol level to inspect. Defaults to Type.")]
-  public MetricsReaderSymbolKind SymbolKind { get; init; } = MetricsReaderSymbolKind.Type;
+  [CommandOption("--symbol-kind <Any|Type|Member>")]
+  [Description("Symbol level to inspect. Defaults to Any, which includes both types and members (types are listed first when using --all).")]
+  public MetricsReaderSymbolKind SymbolKind { get; init; } = MetricsReaderSymbolKind.Any;
 
   /// <summary>
   /// Gets a value indicating whether all matching entries should be emitted instead of the single most severe one.

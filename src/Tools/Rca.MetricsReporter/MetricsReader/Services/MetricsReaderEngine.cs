@@ -102,16 +102,9 @@ internal sealed class MetricsReaderEngine
   {
     return filter.SymbolKind switch
     {
-      MetricsReaderSymbolKind.Type => EnumerateTypeNodes()
-        .Where(type => NamespaceMatches(type.FullyQualifiedName, filter.Namespace))
-        .Select(node => BuildSnapshot(node, filter.Metric))
-        .Where(snapshot => snapshot is not null)
-        .Select(snapshot => snapshot!),
-      MetricsReaderSymbolKind.Member => EnumerateMemberNodes()
-        .Where(member => NamespaceMatches(member.FullyQualifiedName, filter.Namespace))
-        .Select(node => BuildSnapshot(node, filter.Metric))
-        .Where(snapshot => snapshot is not null)
-        .Select(snapshot => snapshot!),
+      MetricsReaderSymbolKind.Type => EnumerateTypeSnapshots(filter),
+      MetricsReaderSymbolKind.Member => EnumerateMemberSnapshots(filter),
+      MetricsReaderSymbolKind.Any => EnumerateTypeSnapshots(filter).Concat(EnumerateMemberSnapshots(filter)),
       _ => Enumerable.Empty<SymbolMetricSnapshot>()
     };
   }
@@ -126,9 +119,29 @@ internal sealed class MetricsReaderEngine
       MetricsReaderSymbolKind.Member => EnumerateMemberNodes()
         .Where(member => NamespaceMatches(member.FullyQualifiedName, filter.Namespace))
         .Cast<MetricsNode>(),
+      MetricsReaderSymbolKind.Any => EnumerateTypeNodes()
+        .Where(type => NamespaceMatches(type.FullyQualifiedName, filter.Namespace))
+        .Cast<MetricsNode>()
+        .Concat(EnumerateMemberNodes()
+          .Where(member => NamespaceMatches(member.FullyQualifiedName, filter.Namespace))
+          .Cast<MetricsNode>()),
       _ => Enumerable.Empty<MetricsNode>()
     };
   }
+
+  private IEnumerable<SymbolMetricSnapshot> EnumerateTypeSnapshots(SymbolFilter filter)
+    => EnumerateTypeNodes()
+      .Where(type => NamespaceMatches(type.FullyQualifiedName, filter.Namespace))
+      .Select(node => BuildSnapshot(node, filter.Metric))
+      .Where(snapshot => snapshot is not null)
+      .Select(snapshot => snapshot!);
+
+  private IEnumerable<SymbolMetricSnapshot> EnumerateMemberSnapshots(SymbolFilter filter)
+    => EnumerateMemberNodes()
+      .Where(member => NamespaceMatches(member.FullyQualifiedName, filter.Namespace))
+      .Select(node => BuildSnapshot(node, filter.Metric))
+      .Where(snapshot => snapshot is not null)
+      .Select(snapshot => snapshot!);
 
   private IEnumerable<TypeMetricsNode> EnumerateTypeNodes()
   {

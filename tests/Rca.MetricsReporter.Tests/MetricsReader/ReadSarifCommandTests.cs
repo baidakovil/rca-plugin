@@ -296,6 +296,43 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
   }
 
   [Test]
+  public async Task ExecuteAsync_DefaultSymbolKindAny_IncludesMemberViolations()
+  {
+    var member = MetricsReaderCommandTestData.CreateMemberNode(
+      "Rca.Loader.Services.RuleConsumer.Process(...)",
+      new Dictionary<MetricIdentifier, MetricValue>
+      {
+        [MetricIdentifier.SarifCaRuleViolations] = CreateSarifMetric(("CA1502", new[]
+        {
+          ("Avoid complexity", "file:///src/Consumer.cs", 10)
+        }))
+      });
+
+    var type = MetricsReaderCommandTestData.CreateTypeNode(
+      "Rca.Loader.Services.RuleConsumer",
+      new Dictionary<MetricIdentifier, MetricValue>(),
+      new[] { member });
+
+    var report = MetricsReaderCommandTestData.CreateReport(new[] { type });
+    var reportPath = WriteReport(report);
+    var settings = CreateNamespaceSettings(
+      reportPath,
+      "Rca.Loader.Services",
+      showAll: true,
+      metricName: "SarifCaRuleViolations");
+
+    var (exitCode, output) = await MetricsReaderCommandTestHarness
+      .RunNamespaceCommandAsync<ReadSarifCommand>(settings)
+      .ConfigureAwait(false);
+
+    exitCode.Should().Be(0);
+    using var json = JsonDocument.Parse(output);
+    var group = json.RootElement.GetProperty("violationsGroups")[0];
+    group.GetProperty("ruleId").GetString().Should().Be("CA1502");
+    group.GetProperty("violations")[0].GetProperty("symbol").GetString().Should().Contain("Process(...)");
+  }
+
+  [Test]
   public async Task ExecuteAsync_MemberSymbolKind_UsesMemberSymbols()
   {
     var memberMetric = CreateSarifMetric(("IDE0060", new[]
