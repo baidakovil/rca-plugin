@@ -29,6 +29,14 @@ internal sealed class HtmlTableGenerator
     PropertyNamingPolicy = JsonNamingPolicy.CamelCase
   };
 
+  private static readonly JsonSerializerOptions SymbolTooltipSerializerOptions = new()
+  {
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+  };
+
+  private static readonly string[] ParagraphSeparators = { "\r\n\r\n", "\n\n", "\r\r" };
+
   /// <summary>
   /// Initializes a new instance of the <see cref="HtmlTableGenerator"/> class.
   /// </summary>
@@ -208,13 +216,7 @@ internal sealed class HtmlTableGenerator
       sourceEndLine = source?.EndLine
     };
 
-    var json = System.Text.Json.JsonSerializer.Serialize(
-        data,
-        new System.Text.Json.JsonSerializerOptions
-        {
-          PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
-          DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-        });
+    var json = System.Text.Json.JsonSerializer.Serialize(data, SymbolTooltipSerializerOptions);
 
     return $" data-symbol-info=\"{WebUtility.HtmlEncode(json)}\"";
   }
@@ -435,7 +437,7 @@ internal sealed class HtmlTableGenerator
     return $" data-has-error=\"{error}\" data-has-warning=\"{warning}\" data-has-suppressed=\"{suppressed}\" data-has-delta=\"{delta}\"";
   }
 
-  private Dictionary<MetricsNode, int> BuildDescendantCountIndex(MetricsReport report)
+  private static Dictionary<MetricsNode, int> BuildDescendantCountIndex(MetricsReport report)
   {
     var index = new Dictionary<MetricsNode, int>(MetricsNodeReferenceComparer.Instance);
     if (report.Solution is MetricsNode root)
@@ -588,7 +590,7 @@ internal sealed class HtmlTableGenerator
     return $" data-breakdown=\"{encoded}\"";
   }
 
-  private Dictionary<(string Fqn, MetricIdentifier Metric), SuppressedSymbolInfo> BuildSuppressedIndex(MetricsReport report)
+  private static Dictionary<(string Fqn, MetricIdentifier Metric), SuppressedSymbolInfo> BuildSuppressedIndex(MetricsReport report)
   {
     var result = new Dictionary<(string Fqn, MetricIdentifier Metric), SuppressedSymbolInfo>();
     foreach (var entry in report.Metadata.SuppressedSymbols)
@@ -642,10 +644,7 @@ internal sealed class HtmlTableGenerator
       justification = formattedJustification
     };
 
-    var json = System.Text.Json.JsonSerializer.Serialize(data, new System.Text.Json.JsonSerializerOptions
-    {
-      PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
-    });
+    var json = System.Text.Json.JsonSerializer.Serialize(data, BreakdownSerializerOptions);
 
     return $" data-suppression-info=\"{WebUtility.HtmlEncode(json)}\"";
   }
@@ -665,7 +664,7 @@ internal sealed class HtmlTableGenerator
     var parts = new System.Collections.Generic.List<string>();
 
     // Split by double newlines to preserve paragraph structure
-    var paragraphs = text.Split(new[] { "\r\n\r\n", "\n\n", "\r\r" }, StringSplitOptions.RemoveEmptyEntries);
+    var paragraphs = text.Split(ParagraphSeparators, StringSplitOptions.RemoveEmptyEntries);
 
     foreach (var paragraph in paragraphs)
     {
