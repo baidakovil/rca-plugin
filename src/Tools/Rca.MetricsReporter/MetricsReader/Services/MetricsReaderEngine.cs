@@ -64,16 +64,16 @@ internal sealed class MetricsReaderEngine
         continue;
       }
 
-      if (!filter.IncludeSuppressed
-          && _context.SuppressedSymbolIndex.IsSuppressed(node.FullyQualifiedName, filter.Metric))
-      {
-        continue;
-      }
-
       foreach (var pair in metricValue.Breakdown)
       {
         var entry = pair.Value;
         if (entry is null)
+        {
+          continue;
+        }
+
+        if (!filter.IncludeSuppressed
+            && _context.SuppressedSymbolIndex.IsSuppressed(node.FullyQualifiedName, filter.Metric, pair.Key))
         {
           continue;
         }

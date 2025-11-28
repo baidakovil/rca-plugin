@@ -333,6 +333,123 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
   }
 
   [Test]
+  public async Task ExecuteAsync_SuppressedSymbolsExcludedByDefault()
+  {
+    const string suppressedFqn = "Rca.Loader.Services.RuleConsumer";
+    var type = MetricsReaderCommandTestData.CreateTypeNode(
+      suppressedFqn,
+      new Dictionary<MetricIdentifier, MetricValue>
+      {
+        [MetricIdentifier.SarifCaRuleViolations] = CreateSarifMetric(
+          ("CA1502", new[]
+          {
+            ("Avoid complexity", "file:///src/Consumer.cs", 10)
+          }))
+      });
+
+    var suppressedInfo = new SuppressedSymbolInfo
+    {
+      FullyQualifiedName = suppressedFqn,
+      Metric = MetricIdentifier.SarifCaRuleViolations.ToString(),
+      RuleId = "CA1502",
+      FilePath = "src/Rca.Loader/RuleConsumer.cs"
+    };
+
+    var report = MetricsReaderCommandTestData.CreateReport(new[] { type }, new[] { suppressedInfo });
+    var reportPath = WriteReport(report);
+    var settings = CreateNamespaceSettings(reportPath, "Rca.Loader.Services", metricName: "SarifCaRuleViolations");
+
+    var (exitCode, output) = await MetricsReaderCommandTestHarness
+      .RunNamespaceCommandAsync<ReadSarifCommand>(settings)
+      .ConfigureAwait(false);
+
+    exitCode.Should().Be(0);
+    using var json = JsonDocument.Parse(output);
+    json.RootElement.GetProperty("metric").GetString().Should().Be("SarifCaRuleViolations");
+    json.RootElement.GetProperty("message").GetString().Should().Contain("No SARIF violations");
+  }
+
+  [Test]
+  public async Task ExecuteAsync_SuppressedSymbolsIncludedWhenRequested()
+  {
+    const string suppressedFqn = "Rca.Loader.Services.RuleConsumer";
+    var type = MetricsReaderCommandTestData.CreateTypeNode(
+      suppressedFqn,
+      new Dictionary<MetricIdentifier, MetricValue>
+      {
+        [MetricIdentifier.SarifCaRuleViolations] = CreateSarifMetric(
+          ("CA1502", new[]
+          {
+            ("Avoid complexity", "file:///src/Consumer.cs", 10)
+          }))
+      });
+
+    var suppressedInfo = new SuppressedSymbolInfo
+    {
+      FullyQualifiedName = suppressedFqn,
+      Metric = MetricIdentifier.SarifCaRuleViolations.ToString(),
+      RuleId = "CA1502",
+      FilePath = "src/Rca.Loader/RuleConsumer.cs"
+    };
+
+    var report = MetricsReaderCommandTestData.CreateReport(new[] { type }, new[] { suppressedInfo });
+    var reportPath = WriteReport(report);
+    var settings = CreateNamespaceSettings(
+      reportPath,
+      "Rca.Loader.Services",
+      includeSuppressed: true,
+      showAll: true,
+      metricName: "SarifCaRuleViolations");
+
+    var (exitCode, output) = await MetricsReaderCommandTestHarness
+      .RunNamespaceCommandAsync<ReadSarifCommand>(settings)
+      .ConfigureAwait(false);
+
+    exitCode.Should().Be(0);
+    using var json = JsonDocument.Parse(output);
+    var groups = json.RootElement.GetProperty("violationsGroups").EnumerateArray().ToList();
+    groups.Should().HaveCount(1);
+    groups[0].GetProperty("ruleId").GetString().Should().Be("CA1502");
+  }
+
+  [Test]
+  public async Task ExecuteAsync_SuppressedViaRuleIdMapping_ExcludedByDefault()
+  {
+    const string suppressedFqn = "Rca.Loader.Services.RuleConsumer";
+    var type = MetricsReaderCommandTestData.CreateTypeNode(
+      suppressedFqn,
+      new Dictionary<MetricIdentifier, MetricValue>
+      {
+        [MetricIdentifier.SarifCaRuleViolations] = CreateSarifMetric(
+          ("CA1506", new[]
+          {
+            ("Avoid excessive class coupling", "file:///src/Consumer.cs", 10)
+          }))
+      });
+
+    var suppressedInfo = new SuppressedSymbolInfo
+    {
+      FullyQualifiedName = suppressedFqn,
+      Metric = MetricIdentifier.RoslynClassCoupling.ToString(),
+      RuleId = "CA1506",
+      FilePath = "src/Rca.Loader/RuleConsumer.cs"
+    };
+
+    var report = MetricsReaderCommandTestData.CreateReport(new[] { type }, new[] { suppressedInfo });
+    var reportPath = WriteReport(report);
+    var settings = CreateNamespaceSettings(reportPath, "Rca.Loader.Services", metricName: "SarifCaRuleViolations");
+
+    var (exitCode, output) = await MetricsReaderCommandTestHarness
+      .RunNamespaceCommandAsync<ReadSarifCommand>(settings)
+      .ConfigureAwait(false);
+
+    exitCode.Should().Be(0);
+    using var json = JsonDocument.Parse(output);
+    json.RootElement.GetProperty("metric").GetString().Should().Be("SarifCaRuleViolations");
+    json.RootElement.GetProperty("message").GetString().Should().Contain("No SARIF violations");
+  }
+
+  [Test]
   public async Task ExecuteAsync_MemberSymbolKind_UsesMemberSymbols()
   {
     var memberMetric = CreateSarifMetric(("IDE0060", new[]
