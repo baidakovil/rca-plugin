@@ -40,7 +40,8 @@ internal sealed class ReadSarifCommand : MetricsReaderCommandBase<NamespaceMetri
         metric = settings.Metric,
         @namespace = trimmedNamespace,
         symbolKind = settings.SymbolKind.ToString(),
-        message = $"No SARIF violations for metric '{settings.Metric}' were found within namespace '{trimmedNamespace}'."
+        ruleId = settings.RuleId,
+        message = BuildSarifNotFoundMessage(settings.Metric, trimmedNamespace, settings.RuleId)
       });
       return 0;
     }
@@ -70,6 +71,16 @@ internal sealed class ReadSarifCommand : MetricsReaderCommandBase<NamespaceMetri
     }
 
     return query.ToList();
+  }
+
+  private static string BuildSarifNotFoundMessage(string metric, string @namespace, string? ruleId)
+  {
+    if (string.IsNullOrWhiteSpace(ruleId))
+    {
+      return $"No SARIF violations for metric '{metric}' were found within namespace '{@namespace}'.";
+    }
+
+    return $"No SARIF violations for metric '{metric}' and rule '{ruleId}' were found within namespace '{@namespace}'.";
   }
 }
 

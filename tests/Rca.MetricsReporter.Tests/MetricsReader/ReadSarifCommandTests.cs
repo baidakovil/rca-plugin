@@ -292,7 +292,7 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
     exitCode.Should().Be(0);
     using var json = JsonDocument.Parse(output);
     json.RootElement.GetProperty("metric").GetString().Should().Be("SarifCaRuleViolations");
-    json.RootElement.GetProperty("message").GetString().Should().Contain("No SARIF violations");
+    json.RootElement.GetProperty("message").GetString().Should().Contain("rule 'CA9999'");
   }
 
   [Test]
@@ -366,7 +366,9 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
     exitCode.Should().Be(0);
     using var json = JsonDocument.Parse(output);
     json.RootElement.GetProperty("metric").GetString().Should().Be("SarifCaRuleViolations");
-    json.RootElement.GetProperty("message").GetString().Should().Contain("No SARIF violations");
+    var message = json.RootElement.GetProperty("message").GetString();
+    message.Should().Contain("No SARIF violations");
+    message.Should().NotContain("rule");
   }
 
   [Test]
