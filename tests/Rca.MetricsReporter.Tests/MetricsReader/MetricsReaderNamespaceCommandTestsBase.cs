@@ -40,7 +40,8 @@ internal abstract class MetricsReaderCommandTestsBase
     string? thresholdsFile = null,
     bool showAll = false,
     string metricName = "Complexity",
-    string? ruleId = null)
+    string? ruleId = null,
+    bool noUpdate = true)
   {
     var settings = new NamespaceMetricSettings
     {
@@ -51,7 +52,8 @@ internal abstract class MetricsReaderCommandTestsBase
       SymbolKind = symbolKind,
       ThresholdsFile = thresholdsFile,
       ShowAll = showAll,
-      RuleId = ruleId
+      RuleId = ruleId,
+      NoUpdate = noUpdate
     };
 
     var validation = settings.Validate();
@@ -64,7 +66,8 @@ internal abstract class MetricsReaderCommandTestsBase
     string symbol,
     bool includeSuppressed = false,
     string metric = "Complexity",
-    string? thresholdsFile = null)
+    string? thresholdsFile = null,
+    bool noUpdate = true)
   {
     var settings = new TestMetricSettings
     {
@@ -72,7 +75,8 @@ internal abstract class MetricsReaderCommandTestsBase
       Symbol = symbol,
       Metric = metric,
       IncludeSuppressed = includeSuppressed,
-      ThresholdsFile = thresholdsFile
+      ThresholdsFile = thresholdsFile,
+      NoUpdate = noUpdate
     };
 
     var validation = settings.Validate();

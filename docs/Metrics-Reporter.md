@@ -250,7 +250,7 @@ dotnet run --project src/Tools/Rca.MetricsReporter/Rca.MetricsReporter.csproj --
 | `--report <PATH>`     | Нет            | `build/Metrics/Report/MetricsReport.g.json` | Путь к агрегированному отчёту. |
 | `--thresholds-file`   | Нет            | Пороги из отчёта       | Позволяет временно переопределить предупреждения/ошибки. |
 | `--include-suppressed`| Нет            | `false`                | Включает символы, подавленные через `[SuppressMessage]`. |
-| `--update`            | Нет            | `false`                | Перед выполнением пересчитывает метрики (`GenerateMetricsDashboard`). |
+| `--no-update`         | Нет            | `false`                | Пропускает предварительное обновление метрик (по умолчанию перед чтением запускается `GenerateMetricsDashboard`). |
 
 ### Команды и параметры
 

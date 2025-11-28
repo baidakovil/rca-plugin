@@ -23,9 +23,9 @@ internal abstract class MetricsReaderSettingsBase : CommandSettings
   [Description("Include metrics that have been suppressed via SuppressMessage attributes.")]
   public bool IncludeSuppressed { get; init; }
 
-  [CommandOption("--update")]
-  [Description("Rebuilds metrics via GenerateMetricsDashboard before reading the report.")]
-  public bool Update { get; init; }
+  [CommandOption("--no-update")]
+  [Description("Skips rebuilding metrics before reading the report. By default metrics are regenerated.")]
+  public bool NoUpdate { get; init; }
 
   /// <inheritdoc />
   public override ValidationResult Validate()

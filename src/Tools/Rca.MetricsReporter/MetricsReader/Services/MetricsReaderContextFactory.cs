@@ -22,8 +22,9 @@ internal static class MetricsReaderContextFactory
   {
     ArgumentNullException.ThrowIfNull(settings);
 
-    var reportPath = ResolveReportPath(settings.ReportPath, allowMissing: settings.Update);
-    if (settings.Update)
+    var shouldUpdate = !settings.NoUpdate;
+    var reportPath = ResolveReportPath(settings.ReportPath, allowMissing: shouldUpdate);
+    if (shouldUpdate)
     {
       var solutionPath = SolutionLocator.FindSolutionPath(reportPath);
       var updater = new MetricsUpdater(solutionPath);

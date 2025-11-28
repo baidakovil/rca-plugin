@@ -32,6 +32,7 @@ internal sealed class MetricsReaderConsoleHostTests : MetricsReaderCommandTestsB
       "--namespace", "Rca.Loader.Services",
       "--metric", "Complexity",
       "--report", reportPath,
+      "--no-update",
       "--all"
     };
 

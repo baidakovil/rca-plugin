@@ -70,7 +70,7 @@ internal static class MetricsReaderCommandTestHarness
       args.Add("--all");
     }
 
-    AppendCommonArguments(args, settings.IncludeSuppressed, settings.ThresholdsFile, settings.Update);
+    AppendCommonArguments(args, settings.IncludeSuppressed, settings.ThresholdsFile, settings.NoUpdate);
     return args.ToArray();
   }
 
@@ -83,7 +83,7 @@ internal static class MetricsReaderCommandTestHarness
       "--metric", settings.Metric
     };
 
-    AppendCommonArguments(args, settings.IncludeSuppressed, settings.ThresholdsFile, settings.Update);
+    AppendCommonArguments(args, settings.IncludeSuppressed, settings.ThresholdsFile, settings.NoUpdate);
     return args.ToArray();
   }
 
@@ -91,7 +91,7 @@ internal static class MetricsReaderCommandTestHarness
     List<string> args,
     bool includeSuppressed,
     string? thresholdsFile,
-    bool update)
+    bool noUpdate)
   {
     if (includeSuppressed)
     {
@@ -104,9 +104,9 @@ internal static class MetricsReaderCommandTestHarness
       args.Add(thresholdsFile!);
     }
 
-    if (update)
+    if (noUpdate)
     {
-      args.Add("--update");
+      args.Add("--no-update");
     }
   }
 }
