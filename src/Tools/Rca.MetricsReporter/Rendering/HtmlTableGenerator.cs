@@ -1,6 +1,7 @@
 namespace Rca.Tools.MetricsReporter.Rendering;
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -45,6 +46,10 @@ internal sealed class HtmlTableGenerator
   /// <param name="report">The metrics report.</param>
   /// <param name="coverageHtmlDir">Optional path to HTML coverage reports directory for generating hyperlinks.</param>
   /// <returns>HTML markup for the table.</returns>
+  [SuppressMessage(
+    "Microsoft.Maintainability",
+    "CA1506:Avoid excessive class coupling",
+    Justification = "HtmlTableGenerator.Generate is responsible for orchestrating rendering and index building, which inherently requires coupling to various domain and utility types to produce the full HTML report output. Refactoring for lower coupling would harm maintainability and clarity of overall rendering orchestration.")]
   public string Generate(MetricsReport report, string? coverageHtmlDir = null)
   {
     ArgumentNullException.ThrowIfNull(report);
