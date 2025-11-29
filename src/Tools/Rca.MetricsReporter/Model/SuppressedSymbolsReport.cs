@@ -35,7 +35,15 @@ public sealed class SuppressedSymbolsReport
   /// <summary>
   /// Collection of suppressed symbols discovered during analysis.
   /// </summary>
-  public List<SuppressedSymbolInfo> SuppressedSymbols { get; init; } = new();
+  public List<SuppressedSymbolInfo> SuppressedSymbols { get; init; }
+
+  /// <summary>
+  /// Initializes a new instance of the <see cref="SuppressedSymbolsReport"/> class.
+  /// </summary>
+  public SuppressedSymbolsReport()
+  {
+    SuppressedSymbols = new();
+  }
 }
 
 

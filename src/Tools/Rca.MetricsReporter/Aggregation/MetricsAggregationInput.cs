@@ -1,6 +1,7 @@
 namespace Rca.Tools.MetricsReporter.Aggregation;
 
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Rca.Tools.MetricsReporter.Model;
 using Rca.Tools.MetricsReporter.Processing;
 
@@ -60,6 +61,14 @@ public sealed class MetricsAggregationInput
   /// so that the HTML renderer and external tools can adjust visualisation and
   /// tooling behaviour without altering the underlying metrics.
   /// </remarks>
-  public List<SuppressedSymbolInfo> SuppressedSymbols { get; init; } = new();
+  public List<SuppressedSymbolInfo> SuppressedSymbols { get; init; }
+
+  /// <summary>
+  /// Initializes a new instance of <see cref="MetricsAggregationInput"/>.
+  /// </summary>
+  public MetricsAggregationInput()
+  {
+    SuppressedSymbols = new List<SuppressedSymbolInfo>();
+  }
 }
 

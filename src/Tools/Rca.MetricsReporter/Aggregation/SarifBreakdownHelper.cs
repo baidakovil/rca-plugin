@@ -2,6 +2,7 @@ namespace Rca.Tools.MetricsReporter.Aggregation;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Rca.Tools.MetricsReporter.Model;
 
 /// <summary>
@@ -70,15 +71,24 @@ internal static class SarifBreakdownHelper
   }
 
   private static SarifRuleBreakdownEntry CloneEntry(SarifRuleBreakdownEntry? source)
-      => source is null
-          ? new SarifRuleBreakdownEntry()
-          : new SarifRuleBreakdownEntry
-          {
-            Count = source.Count,
-          Violations = source.Violations.Count > 0
-              ? CloneViolations(source.Violations)
-              : new()
-          };
+  {
+    if (source is null)
+    {
+      return new SarifRuleBreakdownEntry();
+    }
+
+    var entry = new SarifRuleBreakdownEntry
+    {
+      Count = source.Count
+    };
+
+    if (source.Violations.Count > 0)
+    {
+      entry.Violations.AddRange(CloneViolations(source.Violations));
+    }
+
+    return entry;
+  }
 
   private static List<SarifRuleViolationDetail> CloneViolations(List<SarifRuleViolationDetail> source)
   {

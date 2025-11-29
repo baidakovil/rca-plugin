@@ -368,12 +368,6 @@ internal sealed class StructuralElementMerger
           FullyQualifiedName = assemblyName,
           Metrics = new Dictionary<MetricIdentifier, MetricValue>()
         };
-        var dummyNamespace = new NamespaceMetricsNode
-        {
-          Name = namespaceName,
-          FullyQualifiedName = namespaceName,
-          Metrics = new Dictionary<MetricIdentifier, MetricValue>()
-        };
         var dummyType = new TypeMetricsNode
         {
           Name = displayName,
@@ -392,12 +386,6 @@ internal sealed class StructuralElementMerger
       {
         Name = assemblyName,
         FullyQualifiedName = assemblyName,
-        Metrics = new Dictionary<MetricIdentifier, MetricValue>()
-      };
-      var dummyNamespace2 = new NamespaceMetricsNode
-      {
-        Name = namespaceName,
-        FullyQualifiedName = namespaceName,
         Metrics = new Dictionary<MetricIdentifier, MetricValue>()
       };
       var dummyType2 = new TypeMetricsNode
