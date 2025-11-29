@@ -62,31 +62,21 @@ internal sealed class HtmlTableGenerator
 
   private void InitializeRenderers(MetricsReport report, string? coverageHtmlDir)
   {
-    TableRendererInitializer.InitializeAndAssign(
+    var components = TableRendererInitializer.Initialize(
       _metricOrder,
       _metricUnits,
       report,
-      coverageHtmlDir,
-      out var coverageLinkBuilder,
-      out var suppressedIndex,
-      out var stateCalculator,
-      out var attributeBuilder,
-      out var metricCellRenderer);
-    AssignRenderers(coverageLinkBuilder, suppressedIndex, stateCalculator, attributeBuilder, metricCellRenderer);
+      coverageHtmlDir);
+    AssignRenderers(components);
   }
 
-  private void AssignRenderers(
-    CoverageLinkBuilder? coverageLinkBuilder,
-    Dictionary<(string Fqn, MetricIdentifier Metric), SuppressedSymbolInfo>? suppressedIndex,
-    RowStateCalculator stateCalculator,
-    RowAttributeBuilder attributeBuilder,
-    MetricCellRenderer metricCellRenderer)
+  private void AssignRenderers(RendererComponents components)
   {
-    _coverageLinkBuilder = coverageLinkBuilder;
-    _suppressedIndex = suppressedIndex;
-    _stateCalculator = stateCalculator;
-    _attributeBuilder = attributeBuilder;
-    _metricCellRenderer = metricCellRenderer;
+    _coverageLinkBuilder = components.CoverageLinkBuilder;
+    _suppressedIndex = components.SuppressedIndex;
+    _stateCalculator = components.StateCalculator;
+    _attributeBuilder = components.AttributeBuilder;
+    _metricCellRenderer = components.MetricCellRenderer;
     _childrenRenderer = new NodeChildrenRenderer(this);
   }
 
