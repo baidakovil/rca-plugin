@@ -56,12 +56,7 @@ internal sealed class RevitTestRunCoordinator : ITestRunCoordinator
   }
 
   [SuppressMessage(
-      "    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Microsoft.Maintainability",
-        "CA1506:Avoid excessive class coupling",
-        Justification = "Coupling of 13-14 is expected for a method that assembles ReportMetadataInput with 9 constructor parameters. " +
-                        "The method acts as a builder that combines multiple data sources (input, components) into a single DTO. " +
-                        "Further decomposition would only add unnecessary indirection without reducing actual dependencies.")]",
+      "Microsoft.Maintainability",
       "CA1506:Avoid excessive class coupling",
       Justification = "Revit test run coordinator is an orchestration point over VSTest abstractions and RCA execution services; low-level details are already delegated to dedicated components.")]
   public void ExecuteTests(
