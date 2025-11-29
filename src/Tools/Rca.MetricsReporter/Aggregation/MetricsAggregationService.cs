@@ -49,22 +49,34 @@ public sealed class MetricsAggregationService
   {
     ArgumentNullException.ThrowIfNull(input);
 
+    var workspace = CreateWorkspace(input);
+    var usedRuleIds = CollectUsedRuleIds(workspace.Solution);
+    var filteredRuleIds = usedRuleIds.Count == 0 ? null : usedRuleIds;
+    var metadata = ComposeMetadata(input, filteredRuleIds);
+
+    return CreateMetricsReport(workspace, metadata);
+  }
+
+  private AggregationWorkspace CreateWorkspace(MetricsAggregationInput input)
+  {
     var workspace = new AggregationWorkspace(input.SolutionName, _memberFilter, _assemblyFilter, _typeFilter);
     workspace.PrepareReport(input);
-    
-    // Collect rule IDs that are actually used in breakdown across all metrics
-    var usedRuleIds = CollectUsedRuleIds(workspace.Solution);
-    
-    var filteredRuleIds = usedRuleIds.Count == 0 ? null : usedRuleIds;
+    return workspace;
+  }
 
+  private ReportMetadata ComposeMetadata(MetricsAggregationInput input, HashSet<string>? filteredRuleIds)
+  {
     var metadataInput = ReportMetadataComposer.CreateInput(
         input,
         _memberFilter,
         _assemblyFilter,
         _typeFilter,
         filteredRuleIds);
-    var metadata = ReportMetadataComposer.Compose(metadataInput);
+    return ReportMetadataComposer.Compose(metadataInput);
+  }
 
+  private static MetricsReport CreateMetricsReport(AggregationWorkspace workspace, ReportMetadata metadata)
+  {
     return new MetricsReport
     {
       Metadata = metadata,
@@ -540,30 +552,28 @@ public sealed class MetricsAggregationService
       return BuildReportMetadata(input);
     }
 
+    [SuppressMessage(
+        "Microsoft.Maintainability",
+        "CA1506:Avoid excessive class coupling",
+        Justification = "This composer method only maps the pre-built metadata DTO into the final <see cref=\"ReportMetadata\"/> structure so it must mention all DTO slots to keep the report complete. Splitting dependencies further would either reintroduce the same types or scatter metadata among meaningless helpers, so suppression preserves clarity.")]
     private static ReportMetadata BuildReportMetadata(ReportMetadataInput input)
     {
+      var content = input.Content;
       return new ReportMetadata
       {
         GeneratedAtUtc = DateTime.UtcNow,
         BaselineReference = input.BaselineReference,
         Paths = input.Paths,
-        ThresholdsByLevel = GetThresholdsByLevel(input),
-        ThresholdDescriptions = GetThresholdDescriptions(input),
-        MetricDescriptors = input.MetricDescriptors,
-        ExcludedMemberNamesPatterns = input.ExcludedMemberNamesPatterns,
-        ExcludedAssemblyNames = input.ExcludedAssemblyNames,
-        ExcludedTypeNamePatterns = input.ExcludedTypeNamePatterns,
-        SuppressedSymbols = input.SuppressedSymbols,
-        RuleDescriptions = input.RuleDescriptions
+        ThresholdsByLevel = content.ThresholdMetadata.ThresholdsByLevel,
+        ThresholdDescriptions = content.ThresholdMetadata.Descriptions,
+        MetricDescriptors = content.MetricDescriptors,
+        ExcludedMemberNamesPatterns = content.MemberNamesPatterns,
+        ExcludedAssemblyNames = content.AssemblyNamesPatterns,
+        ExcludedTypeNamePatterns = content.TypeNamesPatterns,
+        SuppressedSymbols = content.SuppressedSymbols,
+        RuleDescriptions = content.RuleDescriptions
       };
     }
-
-    private static Dictionary<MetricIdentifier, IDictionary<MetricSymbolLevel, MetricThreshold>> GetThresholdsByLevel(
-        ReportMetadataInput input)
-        => input.ThresholdMetadata.ThresholdsByLevel;
-
-    private static Dictionary<MetricIdentifier, string?> GetThresholdDescriptions(ReportMetadataInput input)
-        => input.ThresholdMetadata.Descriptions;
 
     public static ReportMetadataInput CreateInput(
         MetricsAggregationInput input,
@@ -652,12 +662,6 @@ public sealed class MetricsAggregationService
         TypeFilter typeFilter)
         => FilterPatternExtractor.Extract(memberFilter, assemblyFilter, typeFilter);
 
-    [SuppressMessage(
-        "Microsoft.Maintainability",
-        "CA1506:Avoid excessive class coupling",
-        Justification = "Coupling of 13-14 is expected for a method that assembles ReportMetadataInput with 9 constructor parameters. " +
-                        "The method acts as a builder that combines multiple data sources (input, components) into a single DTO. " +
-                        "Further decomposition would only add unnecessary indirection without reducing actual dependencies.")]
     private static ReportMetadataInput AssembleMetadataInput(
         MetricsAggregationInput input,
         MetadataComponents components)
@@ -666,41 +670,33 @@ public sealed class MetricsAggregationService
       return new ReportMetadataInput(
           metadataInputData.BaselineReference,
           metadataInputData.Paths,
-          metadataInputData.ThresholdMetadata,
-          metadataInputData.MemberNamesPatterns,
-          metadataInputData.AssemblyNamesPatterns,
-          metadataInputData.TypeNamesPatterns,
-          metadataInputData.SuppressedSymbols,
-          metadataInputData.RuleDescriptions,
-          metadataInputData.MetricDescriptors);
+          metadataInputData.Content);
     }
 
+    [SuppressMessage(
+        "Microsoft.Maintainability",
+        "CA1506:Avoid excessive class coupling",
+        Justification = "This helper assembles the metadata DTO using the various components collected earlier, so it must reference thresholds, descriptors, filters, suppressions and rule descriptions together. Each dependency is required to build a coherent <see cref=\"ReportMetadataContent\"/>, so suppression keeps the mapper focused without scattering the data.")]
     private static MetadataInputData CreateMetadataInputData(
         MetricsAggregationInput input,
         MetadataComponents components)
     {
-      return new MetadataInputData(
-          input.BaselineReference,
-          input.Paths,
+      var content = new ReportMetadataContent(
           components.ThresholdMetadata,
+          components.MetricDescriptors,
           components.FilterPatterns.MemberNamesPatterns,
           components.FilterPatterns.AssemblyNamesPatterns,
           components.FilterPatterns.TypeNamesPatterns,
           input.SuppressedSymbols,
-          components.RuleDescriptions,
-          components.MetricDescriptors);
+          components.RuleDescriptions);
+
+      return new MetadataInputData(input.BaselineReference, input.Paths, content);
     }
 
     private sealed record MetadataInputData(
         string? BaselineReference,
         ReportPaths Paths,
-        ReportThresholdMetadata ThresholdMetadata,
-        string? MemberNamesPatterns,
-        string? AssemblyNamesPatterns,
-        string? TypeNamesPatterns,
-        IList<SuppressedSymbolInfo> SuppressedSymbols,
-        Dictionary<string, RuleDescription> RuleDescriptions,
-        IDictionary<MetricIdentifier, MetricDescriptor> MetricDescriptors);
+        ReportMetadataContent Content);
 
     private sealed record MetadataComponents(
         ReportThresholdMetadata ThresholdMetadata,
@@ -719,16 +715,19 @@ public sealed class MetricsAggregationService
     }
   }
 
-  private sealed record ReportMetadataInput(
-      string? BaselineReference,
-      ReportPaths Paths,
-      ReportThresholdMetadata ThresholdMetadata,
-      string? ExcludedMemberNamesPatterns,
-      string? ExcludedAssemblyNames,
-      string? ExcludedTypeNamePatterns,
-      IList<SuppressedSymbolInfo> SuppressedSymbols,
-      Dictionary<string, RuleDescription> RuleDescriptions,
-      IDictionary<MetricIdentifier, MetricDescriptor> MetricDescriptors);
+    private sealed record ReportMetadataInput(
+        string? BaselineReference,
+        ReportPaths Paths,
+        ReportMetadataContent Content);
+
+    private sealed record ReportMetadataContent(
+        ReportThresholdMetadata ThresholdMetadata,
+        IDictionary<MetricIdentifier, MetricDescriptor> MetricDescriptors,
+        string? MemberNamesPatterns,
+        string? AssemblyNamesPatterns,
+        string? TypeNamesPatterns,
+        IList<SuppressedSymbolInfo> SuppressedSymbols,
+        Dictionary<string, RuleDescription> RuleDescriptions);
 
   private sealed class ReportThresholdMetadata
   {

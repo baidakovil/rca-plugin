@@ -2,6 +2,7 @@ namespace Rca.Tools.MetricsReporter.Aggregation;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Rca.Tools.MetricsReporter.Model;
 using Rca.Tools.MetricsReporter.Processing;
@@ -118,6 +119,10 @@ internal sealed class StructuralElementMerger
   /// Adds or updates a type node, respecting the configured filters.
   /// </summary>
   /// <param name="element">The parsed type element to merge.</param>
+  [SuppressMessage(
+      "Microsoft.Maintainability",
+      "CA1506:Avoid excessive class coupling",
+      Justification = "Merging types requires coordination between filters, namespace lookups, display name resolution, and node creation, so the method naturally touches the same nodes and filters that keep the tree consistent.")]
   public void MergeType(ParsedCodeElement element)
   {
     var typeFqn = element.FullyQualifiedName ?? element.Name;
@@ -158,41 +163,60 @@ internal sealed class StructuralElementMerger
   /// <param name="element">The parsed member element to merge.</param>
   public void MergeMember(ParsedCodeElement element)
   {
-    if (element.FullyQualifiedName is null)
+    if (!TryResolveMemberContext(element, out var context))
     {
       return;
     }
 
-    var memberFqn = element.FullyQualifiedName;
-
-    if (_memberFilter.ShouldExcludeMethodByFqn(memberFqn))
+    var typeEntry = EnsureTypeForMember(context.TypeFqn);
+    if (!_assemblies.ContainsKey(context.AssemblyName))
     {
       return;
+    }
+
+    var memberNode = GetOrCreateMember(typeEntry, context.MemberFqn, element.Name);
+    MergeMetrics(memberNode.Metrics, element.Metrics);
+    MergeSource(memberNode, element.Source);
+  }
+
+  private bool TryResolveMemberContext(
+      ParsedCodeElement element,
+      [NotNullWhen(true)] out MemberResolutionContext? context)
+  {
+    context = null;
+    if (element.FullyQualifiedName is null)
+    {
+      return false;
+    }
+
+    var memberFqn = element.FullyQualifiedName;
+    if (_memberFilter.ShouldExcludeMethodByFqn(memberFqn))
+    {
+      return false;
     }
 
     var typeFqn = element.ParentFullyQualifiedName ?? ResolveDeclaringType(memberFqn);
     if (typeFqn is null || _typeFilter.ShouldExcludeType(typeFqn))
     {
-      return;
+      return false;
     }
 
     var assemblyName = element.ContainingAssemblyName ?? ResolveAssemblyNameFromFqn(typeFqn);
     if (_assemblyFilter.ShouldExcludeAssembly(assemblyName))
     {
-      return;
+      return false;
     }
 
-    var typeEntry = EnsureTypeForMember(typeFqn);
-    if (!_assemblies.ContainsKey(assemblyName))
-    {
-      return;
-    }
-
-    var memberNode = GetOrCreateMember(typeEntry, memberFqn, element.Name);
-    MergeMetrics(memberNode.Metrics, element.Metrics);
-    MergeSource(memberNode, element.Source);
+    context = new MemberResolutionContext(memberFqn, typeFqn, assemblyName);
+    return true;
   }
 
+  private sealed record MemberResolutionContext(string MemberFqn, string TypeFqn, string AssemblyName);
+
+  [SuppressMessage(
+      "Microsoft.Maintainability",
+      "CA1506:Avoid excessive class coupling",
+      Justification = "This merger must orchestrate assembly lookup, indexing, dummy node creation, and filter checks to keep the namespace tree consistent, so it interacts with assemblies, filters, indexes, and metrics nodes. Splitting the logic would scatter related steps and reintroduce the same dependencies elsewhere.")]
   private NamespaceEntry GetOrCreateNamespace(string assemblyName, string namespaceFqn, string displayName)
   {
     if (string.IsNullOrEmpty(assemblyName))
