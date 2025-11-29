@@ -19,7 +19,8 @@ public sealed class NodeChildrenRendererTests
   private static void InitializeTableGenerator(HtmlTableGenerator generator, MetricsReport report)
   {
     var method = typeof(HtmlTableGenerator).GetMethod("InitializeRenderers", BindingFlags.NonPublic | BindingFlags.Instance);
-    method!.Invoke(generator, new object[] { report, null });
+    string? coverageHtmlDir = null;
+    method!.Invoke(generator, new object[] { report, coverageHtmlDir });
   }
   [Test]
   public void Constructor_WithNullTableGenerator_ThrowsArgumentNullException()
@@ -67,7 +68,7 @@ public sealed class NodeChildrenRendererTests
     var builder = new StringBuilder();
 
     // Act
-    renderer.Render(solution, 0, null, builder, null, null);
+    renderer.Render(solution, 0, null!, builder, null, null);
 
     // Assert
     var result = builder.ToString();
@@ -243,7 +244,7 @@ public sealed class NodeChildrenRendererTests
     var builder = new StringBuilder();
 
     // Act
-    FluentActions.Invoking(() => renderer.Render(solution, 0, null, builder, null, null))
+    FluentActions.Invoking(() => renderer.Render(solution, 0, null!, builder, null, null))
       .Should().NotThrow();
   }
 
@@ -298,7 +299,7 @@ public sealed class NodeChildrenRendererTests
     var builder = new StringBuilder();
 
     // Act
-    renderer.Render(solution, 0, null, builder, null, null);
+    renderer.Render(solution, 0, null!, builder, null, null);
 
     // Assert
     var result = builder.ToString();
@@ -326,7 +327,7 @@ public sealed class NodeChildrenRendererTests
     var builder = new StringBuilder();
 
     // Act
-    FluentActions.Invoking(() => renderer.Render(solution, 0, null, builder, null, null))
+    FluentActions.Invoking(() => renderer.Render(solution, 0, null!, builder, null, null))
       .Should().NotThrow();
   }
 

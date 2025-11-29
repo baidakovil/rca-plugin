@@ -256,7 +256,7 @@ public sealed class DescendantCountIndexBuilderTests
     var report = new MetricsReport
     {
       Metadata = new ReportMetadata(),
-      Solution = null
+      Solution = null!
     };
 
     // Act

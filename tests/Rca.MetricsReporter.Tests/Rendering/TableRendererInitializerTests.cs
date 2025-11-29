@@ -453,7 +453,7 @@ public sealed class TableRendererInitializerTests
     var report = new MetricsReport
     {
       Metadata = new ReportMetadata { SuppressedSymbols = new List<SuppressedSymbolInfo>() },
-      Solution = null
+      Solution = null!
     };
 
     // Act

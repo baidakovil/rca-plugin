@@ -18,7 +18,8 @@ public sealed class TableContentBuilderTests
   private static void InitializeTableGenerator(HtmlTableGenerator generator, MetricsReport report)
   {
     var method = typeof(HtmlTableGenerator).GetMethod("InitializeRenderers", BindingFlags.NonPublic | BindingFlags.Instance);
-    method!.Invoke(generator, new object[] { report, null });
+    string? coverageHtmlDir = null;
+    method!.Invoke(generator, new object[] { report, coverageHtmlDir });
   }
   [Test]
   public void Build_WithValidReport_BuildsTableContent()
