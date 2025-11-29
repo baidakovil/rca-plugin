@@ -1,29 +1,31 @@
-Проведи рефакторинг кода в namespace `Rca.Tools.MetricsReporter.Processing.Parsers.SarifMetricsParser` для достижения требуемой метрики Class Coupling: значение метрики должно быть не более 11. Рефакторинг выполняется для символов уровня Member (методы), не для классов.
+Refactor code in the `Rca.Tools.MetricsReporter.Rendering` namespace to achieve the required Class Coupling metric: the metric value must be no more than 40 for classes and no more than 11 for methods. The corresponding levels are called Type and Member.
 
-## Требования
+## Requirements
 
-- Используй в работе специальную утилиту `metrics-reader`, которая позволяет по одному запросу обновлять и получать значения метрик для символов, требующих рефакторинга. Описание и примеры использования даны в `@docs/Metrics-Reporter.md`.
-- Строго следуй порядку работы, описанному ниже, чтобы достичь требуемой цели: снизить метрику для всех символов в указанном выше namespace до допустимых пределов.
-- При снижении Coupling используй приёмы снижения связности, которые предоставляет C# и .NET: Interfaces, Dependency Injection, DTO, деление методов на более мелкие методы.
-- Следуй принципам SOLID и правилам, установленным в проекте.
+- Use the `metrics-reader` utility to update and retrieve metric values for symbols requiring refactoring, one request at a time. Description and usage examples are provided in `@docs/Metrics-Reporter.md`.
+- Strictly follow the workflow described below to achieve the goal: reduce the metric for all symbols in the namespace mentioned above to acceptable limits.
+- When reducing Coupling, use decoupling techniques provided by C# and .NET: Interfaces, Dependency Injection, DTOs, splitting classes/methods into smaller classes/methods and creating new ones.
+- It is forbidden to use "dummy" classes and methods, i.e., delegation wrapper methods created solely to reduce the metric but lacking architectural meaning.
+- Follow SOLID principles and the rules established in the project.
+- Maintain nullable reference type annotations correctly when refactoring.
 
-## Строго следуй этой инструкции, пока не исправишь все символы
+## Strictly follow this instruction until all symbols are fixed
 
-### 1. Получение проблемного символа
+### 1. Get problematic symbol
 
-Используя команду `metrics-reader readany`, получи первый "проблемный" символ, который требует рефакторинга. Проблемный — такой символ, у которого threshold превышен (`metrics-reader` заботится об этом сравнении сам). Пример запроса к `metrics-reader` с нужными опциями:
+Using the `metrics-reader readany` command, get the first "problematic" symbol that requires refactoring. A problematic symbol is one where the threshold is exceeded (`metrics-reader` handles this comparison automatically). Use `--symbol-kind Any` to first automatically get and refactor classes, as this is logical from an architectural perspective, and then automatically get methods. Example request to `metrics-reader` with the required options:
 
 ```powershell
-.\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe metrics-reader readany --namespace Rca.Tools.MetricsReporter.Processing.Parsers.SarifMetricsParser --metric Coupling --symbol-kind Member
+.\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe metrics-reader readany --namespace Rca.Tools.MetricsReporter.Rendering --metric Coupling --symbol-kind Any
 ```
 
-Если получаешь сообщение о том, что подходящих символов нет (вместо объекта с полями `symbolFqn`, `symbolType`, `metric`, `value`, `threshold`, `delta`, `filePath`, `status`, `isSuppressed`), это значит, что проблемных символов нет: закончи работу.
+If you receive a message that no suitable symbols are found (instead of an object with fields `symbolFqn`, `symbolType`, `metric`, `value`, `threshold`, `delta`, `filePath`, `status`, `isSuppressed`), this means there are no problematic symbols: complete the task.
 
-### 2. Анализ символа
+### 2. Analyze symbol
 
-Возьми символ в работу. Изучи код метода и связанных с ним методов, класса, в котором они определены. Прими решение о возможности рефакторинга.
+Begin working on the symbol. Study the code of the class or method and related classes and methods. Make a decision about the possibility of refactoring.
 
-Есть только одна причина для отмены рефакторинга: рефакторинг не нужно проводить, если дальнейшие приёмы снижения связности приводят к ухудшению читаемости и поддержки кода. В случае отмены рефакторинга нужно сделать suppression для символа. Пример suppression:
+There is only one reason to cancel refactoring: refactoring should not be performed if further decoupling techniques lead to deterioration in code readability and maintainability. If refactoring is canceled, make a suppression for the symbol. Example suppression:
 
 ```csharp
 [SuppressMessage(
@@ -32,25 +34,26 @@
     Justification = "Revit test run coordinator is an orchestration point over VSTest abstractions and RCA execution services; low-level details are already delegated to dedicated components.")]
 ```
 
-При отмене рефакторинга внеси suppression в код и начинай с пункта 1.
+If refactoring is canceled, add the suppression to the code and start from step 1.
 
-### 3. Выполнение рефакторинга
+### 3. Perform refactoring
 
-Если рефакторинг возможен, поступай так:
+If refactoring is possible, proceed as follows:
 
-1. Спланируй рефакторинг.
-2. Выполни рефакторинг.
-3. Проверь, что билд проекта успешен. Используй билд всего solution `dotnet build --no-incremental` или билд отдельно взятого проекта для экономии времени. Если билд падает, исправляй код, пока билд не станет зелёным. Используй метод test-driven-development (red-refactor-green).
-4. После проверки билда проверь, что тесты проходят. Используй тесты всего solution `dotnet test --no-build` или тесты для отдельно взятого проекта для экономии времени. Если тесты падают, исправляй код, как описано в предыдущем пункте.
+1. Plan the refactoring.
+2. Perform the refactoring. Update XML documentation for all modified public members according to project rules.
+3. Verify that the solution build is successful: `dotnet build --no-incremental`. If the build fails, fix the code until the build is green. Use the test-driven-development method (red-refactor-green).
+4. Check that there are no compiler warnings or errors in the modified files. If there are, fix them.
+5. After verifying the build, check that tests pass: `dotnet test --no-build`. If tests fail, fix the code as described in the previous step.
 
-### 4. Проверка результата
+### 4. Verify result
 
-С помощью команды `metrics-reader test` проверь, что символ, над которым ты работал, исправлен. Пример запроса к `metrics-reader` с нужными опциями:
+Using the `metrics-reader test` command, verify that the symbol you worked on is fixed. Example request to `metrics-reader` with the required options:
 
 ```powershell
-.\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe metrics-reader test --symbol "Rca.Tools.MetricsReporter.Processing.Parsers.SarifMetricsParser.ParseAsync(...)" --metric Coupling
+.\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe metrics-reader test --symbol "Rca.Tools.MetricsReporter.Rendering.HtmlTableGenerator" --metric Coupling
 ```
 
-Если в ответе видишь `"isOk": false`, то возвращайся к пункту 2 с данным символом. Количество дополнительных попыток рефакторинга для достижения требуемой метрики: 2 попытки на каждый метод. Если после второй дополнительной попытки не удалось добиться требуемой метрики, то следует сделать Suppression с сообщением Justification на английском языке, полностью раскрывающим суть проблемы, если она есть (например, что трёх попыток было недостаточно для полноценного рефакторинга), или просто описание причины, по которой этот символ не может быть отрефакторен (например, что он — оркестратор, и поэтому вынужден хранить много ссылок на другие методы).
+If you see `"isOk": false` in the response, return to step 2 with this symbol. The number of additional refactoring attempts to achieve the required metric: 5 attempts per symbol (applies to both classes and methods). If after the fifth additional attempt the required metric is not achieved, then add a suppression attribute with a Justification message in English that fully explains the essence of the problem, if any (for example, that five attempts were insufficient for a proper refactoring), or simply a description of the reason why this symbol cannot be refactored (for example, that it is an orchestrator and therefore must maintain many references to other methods).
 
-Если `"isOk": true`, то приступай к следующему символу, как описано в пункте 1.
+If `"isOk": true`, proceed to the next symbol as described in step 1.
