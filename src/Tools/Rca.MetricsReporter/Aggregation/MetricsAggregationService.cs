@@ -2,6 +2,7 @@ namespace Rca.Tools.MetricsReporter.Aggregation;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Rca.Tools.MetricsReporter.Model;
 using Rca.Tools.MetricsReporter.Processing;
 
@@ -79,65 +80,8 @@ public sealed class MetricsAggregationService
   private static HashSet<string> CollectUsedRuleIds(SolutionMetricsNode solution)
   {
     var usedRuleIds = new HashSet<string>(StringComparer.Ordinal);
-    CollectUsedRuleIdsRecursive(solution, usedRuleIds);
+    RuleIdCollector.CollectRecursive(solution, usedRuleIds);
     return usedRuleIds;
-  }
-
-  /// <summary>
-  /// Recursively traverses the metrics tree and collects rule IDs from breakdown dictionaries.
-  /// </summary>
-  /// <param name="node">The current node to process.</param>
-  /// <param name="usedRuleIds">The set to accumulate rule IDs into.</param>
-  private static void CollectUsedRuleIdsRecursive(MetricsNode node, HashSet<string> usedRuleIds)
-  {
-    // Collect rule IDs from SARIF metrics breakdown
-    if (node.Metrics.TryGetValue(MetricIdentifier.SarifCaRuleViolations, out var caMetric)
-        && caMetric.Breakdown is not null)
-    {
-      foreach (var ruleId in caMetric.Breakdown.Keys)
-      {
-        usedRuleIds.Add(ruleId);
-      }
-    }
-
-    if (node.Metrics.TryGetValue(MetricIdentifier.SarifIdeRuleViolations, out var ideMetric)
-        && ideMetric.Breakdown is not null)
-    {
-      foreach (var ruleId in ideMetric.Breakdown.Keys)
-      {
-        usedRuleIds.Add(ruleId);
-      }
-    }
-
-    // Recursively process child nodes
-    if (node is SolutionMetricsNode solutionNode)
-    {
-      foreach (var assembly in solutionNode.Assemblies)
-      {
-        CollectUsedRuleIdsRecursive(assembly, usedRuleIds);
-      }
-    }
-    else if (node is AssemblyMetricsNode assemblyNode)
-    {
-      foreach (var ns in assemblyNode.Namespaces)
-      {
-        CollectUsedRuleIdsRecursive(ns, usedRuleIds);
-      }
-    }
-    else if (node is NamespaceMetricsNode namespaceNode)
-    {
-      foreach (var type in namespaceNode.Types)
-      {
-        CollectUsedRuleIdsRecursive(type, usedRuleIds);
-      }
-    }
-    else if (node is TypeMetricsNode typeNode)
-    {
-      foreach (var member in typeNode.Members)
-      {
-        CollectUsedRuleIdsRecursive(member, usedRuleIds);
-      }
-    }
   }
 
   private sealed class AggregationWorkspace
@@ -178,20 +122,66 @@ public sealed class MetricsAggregationService
         AssemblyFilter assemblyFilter,
         TypeFilter typeFilter)
     {
-      var documentProcessor = new AggregationDocumentProcessor(state, memberFilter, assemblyFilter, typeFilter);
-      var lineIndexProcessor = new AggregationLineIndexProcessor(state, assemblyFilter);
-      var sarifProcessor = new AggregationSarifProcessor(state, assemblyFilter);
-      var baselineProcessor = new AggregationBaselineAndThresholdProcessor(state);
-      var reconciliationProcessor = new AggregationReconciliationProcessor(state);
+      var processors = CreateProcessors(state, memberFilter, assemblyFilter, typeFilter);
+      return AssembleWorkflow(state, processors);
+    }
 
+    private static WorkflowProcessors CreateProcessors(
+        AggregationWorkspaceState state,
+        MemberFilter memberFilter,
+        AssemblyFilter assemblyFilter,
+        TypeFilter typeFilter)
+    {
+      return new WorkflowProcessors(
+          CreateDocumentProcessor(state, memberFilter, assemblyFilter, typeFilter),
+          CreateLineIndexProcessor(state, assemblyFilter),
+          CreateSarifProcessor(state, assemblyFilter),
+          CreateBaselineProcessor(state),
+          CreateReconciliationProcessor(state));
+    }
+
+    private static IAggregationDocumentProcessor CreateDocumentProcessor(
+        AggregationWorkspaceState state,
+        MemberFilter memberFilter,
+        AssemblyFilter assemblyFilter,
+        TypeFilter typeFilter)
+        => new AggregationDocumentProcessor(state, memberFilter, assemblyFilter, typeFilter);
+
+    private static IAggregationLineIndexProcessor CreateLineIndexProcessor(
+        AggregationWorkspaceState state,
+        AssemblyFilter assemblyFilter)
+        => new AggregationLineIndexProcessor(state, assemblyFilter);
+
+    private static IAggregationSarifProcessor CreateSarifProcessor(
+        AggregationWorkspaceState state,
+        AssemblyFilter assemblyFilter)
+        => new AggregationSarifProcessor(state, assemblyFilter);
+
+    private static IAggregationBaselineAndThresholdProcessor CreateBaselineProcessor(AggregationWorkspaceState state)
+        => new AggregationBaselineAndThresholdProcessor(state);
+
+    private static IAggregationReconciliationProcessor CreateReconciliationProcessor(AggregationWorkspaceState state)
+        => new AggregationReconciliationProcessor(state);
+
+    private static AggregationWorkspaceWorkflow AssembleWorkflow(
+        AggregationWorkspaceState state,
+        WorkflowProcessors processors)
+    {
       return new AggregationWorkspaceWorkflow(
           state,
-          documentProcessor,
-          lineIndexProcessor,
-          sarifProcessor,
-          baselineProcessor,
-          reconciliationProcessor);
+          processors.DocumentProcessor,
+          processors.LineIndexProcessor,
+          processors.SarifProcessor,
+          processors.BaselineProcessor,
+          processors.ReconciliationProcessor);
     }
+
+    private sealed record WorkflowProcessors(
+        IAggregationDocumentProcessor DocumentProcessor,
+        IAggregationLineIndexProcessor LineIndexProcessor,
+        IAggregationSarifProcessor SarifProcessor,
+        IAggregationBaselineAndThresholdProcessor BaselineProcessor,
+        IAggregationReconciliationProcessor ReconciliationProcessor);
   }
 
   private sealed class AggregationWorkspaceState
@@ -547,14 +537,18 @@ public sealed class MetricsAggregationService
     public static ReportMetadata Compose(ReportMetadataInput input)
     {
       ArgumentNullException.ThrowIfNull(input);
+      return BuildReportMetadata(input);
+    }
 
+    private static ReportMetadata BuildReportMetadata(ReportMetadataInput input)
+    {
       return new ReportMetadata
       {
         GeneratedAtUtc = DateTime.UtcNow,
         BaselineReference = input.BaselineReference,
         Paths = input.Paths,
-        ThresholdsByLevel = input.ThresholdMetadata.ThresholdsByLevel,
-        ThresholdDescriptions = input.ThresholdMetadata.Descriptions,
+        ThresholdsByLevel = GetThresholdsByLevel(input),
+        ThresholdDescriptions = GetThresholdDescriptions(input),
         MetricDescriptors = input.MetricDescriptors,
         ExcludedMemberNamesPatterns = input.ExcludedMemberNamesPatterns,
         ExcludedAssemblyNames = input.ExcludedAssemblyNames,
@@ -564,6 +558,13 @@ public sealed class MetricsAggregationService
       };
     }
 
+    private static Dictionary<MetricIdentifier, IDictionary<MetricSymbolLevel, MetricThreshold>> GetThresholdsByLevel(
+        ReportMetadataInput input)
+        => input.ThresholdMetadata.ThresholdsByLevel;
+
+    private static Dictionary<MetricIdentifier, string?> GetThresholdDescriptions(ReportMetadataInput input)
+        => input.ThresholdMetadata.Descriptions;
+
     public static ReportMetadataInput CreateInput(
         MetricsAggregationInput input,
         MemberFilter memberFilter,
@@ -571,103 +572,142 @@ public sealed class MetricsAggregationService
         TypeFilter typeFilter,
         HashSet<string>? usedRuleIds = null)
     {
+      return BuildMetadataInput(input, memberFilter, assemblyFilter, typeFilter, usedRuleIds);
+    }
+
+    private static ReportMetadataInput BuildMetadataInput(
+        MetricsAggregationInput input,
+        MemberFilter memberFilter,
+        AssemblyFilter assemblyFilter,
+        TypeFilter typeFilter,
+        HashSet<string>? usedRuleIds)
+    {
+      var components = GatherMetadataComponents(input, memberFilter, assemblyFilter, typeFilter, usedRuleIds);
+      return AssembleMetadataInput(input, components);
+    }
+
+    private static MetadataComponents GatherMetadataComponents(
+        MetricsAggregationInput input,
+        MemberFilter memberFilter,
+        AssemblyFilter assemblyFilter,
+        TypeFilter typeFilter,
+        HashSet<string>? usedRuleIds)
+    {
+      var context = CreateGatheringContext(input, memberFilter, assemblyFilter, typeFilter, usedRuleIds);
+      return GatherComponents(context);
+    }
+
+    private static GatheringContext CreateGatheringContext(
+        MetricsAggregationInput input,
+        MemberFilter memberFilter,
+        AssemblyFilter assemblyFilter,
+        TypeFilter typeFilter,
+        HashSet<string>? usedRuleIds)
+    {
       ArgumentNullException.ThrowIfNull(input);
       ArgumentNullException.ThrowIfNull(memberFilter);
       ArgumentNullException.ThrowIfNull(assemblyFilter);
       ArgumentNullException.ThrowIfNull(typeFilter);
 
-      var thresholdMetadata = CreateThresholdMetadata(input.Thresholds);
-      var allRuleDescriptions = MergeRuleDescriptions(input.SarifDocuments);
-      var metricDescriptors = MetricDescriptorCatalog.CreateDescriptors();
-      
-      // Filter rule descriptions to only include rules that are actually used in breakdown
-      var ruleDescriptions = usedRuleIds is not null
-          ? FilterRuleDescriptions(allRuleDescriptions, usedRuleIds)
-          : allRuleDescriptions;
+      return new GatheringContext(input, memberFilter, assemblyFilter, typeFilter, usedRuleIds);
+    }
 
+    private static MetadataComponents GatherComponents(GatheringContext context)
+    {
+      var thresholdMetadata = GatherThresholdMetadata(context);
+      var ruleDescriptions = GatherRuleDescriptions(context);
+      var metricDescriptors = GetMetricDescriptors();
+      var filterPatterns = GatherFilterPatterns(context);
+
+      return new MetadataComponents(thresholdMetadata, ruleDescriptions, metricDescriptors, filterPatterns);
+    }
+
+    private static ReportThresholdMetadata GatherThresholdMetadata(GatheringContext context)
+        => CreateThresholdMetadata(context.Input.Thresholds);
+
+    private static Dictionary<string, RuleDescription> GatherRuleDescriptions(GatheringContext context)
+        => ProcessRuleDescriptions(context.Input.SarifDocuments, context.UsedRuleIds);
+
+    private static FilterPatternExtractor.FilterPatterns GatherFilterPatterns(GatheringContext context)
+        => ExtractFilterPatterns(context.MemberFilter, context.AssemblyFilter, context.TypeFilter);
+
+    private sealed record GatheringContext(
+        MetricsAggregationInput Input,
+        MemberFilter MemberFilter,
+        AssemblyFilter AssemblyFilter,
+        TypeFilter TypeFilter,
+        HashSet<string>? UsedRuleIds);
+
+    private static Dictionary<string, RuleDescription> ProcessRuleDescriptions(
+        IList<ParsedMetricsDocument> sarifDocuments,
+        HashSet<string>? usedRuleIds)
+        => RuleDescriptionProcessor.Process(sarifDocuments, usedRuleIds);
+
+    private static IDictionary<MetricIdentifier, MetricDescriptor> GetMetricDescriptors()
+        => MetricDescriptorCatalog.CreateDescriptors();
+
+    private static FilterPatternExtractor.FilterPatterns ExtractFilterPatterns(
+        MemberFilter memberFilter,
+        AssemblyFilter assemblyFilter,
+        TypeFilter typeFilter)
+        => FilterPatternExtractor.Extract(memberFilter, assemblyFilter, typeFilter);
+
+    [SuppressMessage(
+        "Microsoft.Maintainability",
+        "CA1506:Avoid excessive class coupling",
+        Justification = "Coupling of 13-14 is expected for a method that assembles ReportMetadataInput with 9 constructor parameters. " +
+                        "The method acts as a builder that combines multiple data sources (input, components) into a single DTO. " +
+                        "Further decomposition would only add unnecessary indirection without reducing actual dependencies.")]
+    private static ReportMetadataInput AssembleMetadataInput(
+        MetricsAggregationInput input,
+        MetadataComponents components)
+    {
+      var metadataInputData = CreateMetadataInputData(input, components);
       return new ReportMetadataInput(
+          metadataInputData.BaselineReference,
+          metadataInputData.Paths,
+          metadataInputData.ThresholdMetadata,
+          metadataInputData.MemberNamesPatterns,
+          metadataInputData.AssemblyNamesPatterns,
+          metadataInputData.TypeNamesPatterns,
+          metadataInputData.SuppressedSymbols,
+          metadataInputData.RuleDescriptions,
+          metadataInputData.MetricDescriptors);
+    }
+
+    private static MetadataInputData CreateMetadataInputData(
+        MetricsAggregationInput input,
+        MetadataComponents components)
+    {
+      return new MetadataInputData(
           input.BaselineReference,
           input.Paths,
-          thresholdMetadata,
-          memberFilter.GetExcludedMemberNamesPatternsString(),
-          assemblyFilter.GetExcludedAssemblyPatternsString(),
-          typeFilter.GetExcludedTypePatternsString(),
+          components.ThresholdMetadata,
+          components.FilterPatterns.MemberNamesPatterns,
+          components.FilterPatterns.AssemblyNamesPatterns,
+          components.FilterPatterns.TypeNamesPatterns,
           input.SuppressedSymbols,
-          ruleDescriptions,
-          metricDescriptors);
+          components.RuleDescriptions,
+          components.MetricDescriptors);
     }
 
-    /// <summary>
-    /// Filters rule descriptions to only include rules that are actually used in breakdown.
-    /// </summary>
-    /// <param name="allRuleDescriptions">All rule descriptions from SARIF files.</param>
-    /// <param name="usedRuleIds">Set of rule IDs that are actually used in breakdown.</param>
-    /// <returns>A filtered dictionary containing only used rule descriptions.</returns>
-    private static Dictionary<string, RuleDescription> FilterRuleDescriptions(
-        Dictionary<string, RuleDescription> allRuleDescriptions,
-        HashSet<string> usedRuleIds)
-    {
-      var filtered = new Dictionary<string, RuleDescription>();
-      
-      foreach (var (ruleId, description) in allRuleDescriptions)
-      {
-        if (usedRuleIds.Contains(ruleId))
-        {
-          filtered[ruleId] = description;
-        }
-      }
-      
-      return filtered;
-    }
+    private sealed record MetadataInputData(
+        string? BaselineReference,
+        ReportPaths Paths,
+        ReportThresholdMetadata ThresholdMetadata,
+        string? MemberNamesPatterns,
+        string? AssemblyNamesPatterns,
+        string? TypeNamesPatterns,
+        IList<SuppressedSymbolInfo> SuppressedSymbols,
+        Dictionary<string, RuleDescription> RuleDescriptions,
+        IDictionary<MetricIdentifier, MetricDescriptor> MetricDescriptors);
 
-    /// <summary>
-    /// Merges rule descriptions from all SARIF documents, detecting and warning about conflicts.
-    /// </summary>
-    /// <param name="sarifDocuments">The SARIF documents to merge rule descriptions from.</param>
-    /// <returns>A dictionary of merged rule descriptions keyed by rule ID.</returns>
-    private static Dictionary<string, RuleDescription> MergeRuleDescriptions(IList<ParsedMetricsDocument> sarifDocuments)
-    {
-      var merged = new Dictionary<string, RuleDescription>();
+    private sealed record MetadataComponents(
+        ReportThresholdMetadata ThresholdMetadata,
+        Dictionary<string, RuleDescription> RuleDescriptions,
+        IDictionary<MetricIdentifier, MetricDescriptor> MetricDescriptors,
+        FilterPatternExtractor.FilterPatterns FilterPatterns);
 
-      foreach (var document in sarifDocuments)
-      {
-        foreach (var (ruleId, description) in document.RuleDescriptions)
-        {
-          if (merged.TryGetValue(ruleId, out var existing))
-          {
-            // Check for differences and warn if found
-            if (!AreRuleDescriptionsEqual(existing, description))
-            {
-              Console.Error.WriteLine(
-                  $"WARNING: Rule {ruleId} has different descriptions across SARIF files. " +
-                  $"Using first encountered description. " +
-                  $"Existing: Short='{existing.ShortDescription}', " +
-                  $"Incoming: Short='{description.ShortDescription}'");
-            }
-          }
-          else
-          {
-            merged[ruleId] = description;
-          }
-        }
-      }
-
-      return merged;
-    }
-
-    /// <summary>
-    /// Compares two rule descriptions for equality.
-    /// </summary>
-    /// <param name="first">The first rule description.</param>
-    /// <param name="second">The second rule description.</param>
-    /// <returns><see langword="true"/> if the descriptions are equal; otherwise, <see langword="false"/>.</returns>
-    private static bool AreRuleDescriptionsEqual(RuleDescription first, RuleDescription second)
-    {
-      return string.Equals(first.ShortDescription, second.ShortDescription, StringComparison.Ordinal)
-          && string.Equals(first.FullDescription ?? string.Empty, second.FullDescription ?? string.Empty, StringComparison.Ordinal)
-          && string.Equals(first.HelpUri ?? string.Empty, second.HelpUri ?? string.Empty, StringComparison.Ordinal)
-          && string.Equals(first.Category ?? string.Empty, second.Category ?? string.Empty, StringComparison.Ordinal);
-    }
 
     private static ReportThresholdMetadata CreateThresholdMetadata(
         IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds)

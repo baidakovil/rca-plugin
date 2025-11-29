@@ -1,11 +1,11 @@
-Refactor code in the `Rca.Tools.MetricsReporter.Rendering` namespace to achieve the required Class Coupling metric: the metric value must be no more than 40 for classes and no more than 11 for methods. The corresponding levels are called Type and Member.
+Refactor code in the given namespace to achieve the required Class Coupling metric: the metric value must be no more than 40 for classes and no more than 11 for methods. The corresponding levels are called Type and Member.
 
 ## Requirements
 
 - Use the `metrics-reader` utility to update and retrieve metric values for symbols requiring refactoring, one request at a time. Description and usage examples are provided in `@docs/Metrics-Reporter.md`.
 - Strictly follow the workflow described below to achieve the goal: reduce the metric for all symbols in the namespace mentioned above to acceptable limits.
 - When reducing Coupling, use decoupling techniques provided by C# and .NET: Interfaces, Dependency Injection, DTOs, splitting classes/methods into smaller classes/methods and creating new ones.
-- It is forbidden to use "dummy" classes and methods, i.e., delegation wrapper methods created solely to reduce the metric but lacking architectural meaning.
+- It is **forbidden to use "dummy" classes and methods**, i.e., delegation wrapper methods created solely to reduce the metric but lacking architectural meaning. Prefer suppression in case when there is no way to reduce metrics further.
 - Follow SOLID principles and the rules established in the project.
 - Maintain nullable reference type annotations correctly when refactoring.
 
@@ -16,7 +16,7 @@ Refactor code in the `Rca.Tools.MetricsReporter.Rendering` namespace to achieve 
 Using the `metrics-reader readany` command, get the first "problematic" symbol that requires refactoring. A problematic symbol is one where the threshold is exceeded (`metrics-reader` handles this comparison automatically). Use `--symbol-kind Any` to first automatically get and refactor classes, as this is logical from an architectural perspective, and then automatically get methods. Example request to `metrics-reader` with the required options:
 
 ```powershell
-.\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe metrics-reader readany --namespace Rca.Tools.MetricsReporter.Rendering --metric Coupling --symbol-kind Any
+.\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe metrics-reader readany --namespace <given_namespace> --metric Coupling --symbol-kind Any
 ```
 
 If you receive a message that no suitable symbols are found (instead of an object with fields `symbolFqn`, `symbolType`, `metric`, `value`, `threshold`, `delta`, `filePath`, `status`, `isSuppressed`), this means there are no problematic symbols: complete the task.
@@ -51,7 +51,7 @@ If refactoring is possible, proceed as follows:
 Using the `metrics-reader test` command, verify that the symbol you worked on is fixed. Example request to `metrics-reader` with the required options:
 
 ```powershell
-.\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe metrics-reader test --symbol "Rca.Tools.MetricsReporter.Rendering.HtmlTableGenerator" --metric Coupling
+.\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe metrics-reader test --symbol <symbol_been_refactored> --metric Coupling
 ```
 
 If you see `"isOk": false` in the response, return to step 2 with this symbol. The number of additional refactoring attempts to achieve the required metric: 5 attempts per symbol (applies to both classes and methods). If after the fifth additional attempt the required metric is not achieved, then add a suppression attribute with a Justification message in English that fully explains the essence of the problem, if any (for example, that five attempts were insufficient for a proper refactoring), or simply a description of the reason why this symbol cannot be refactored (for example, that it is an orchestrator and therefore must maintain many references to other methods).

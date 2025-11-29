@@ -67,7 +67,23 @@ internal sealed class BaselineEvaluator
       IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds,
       string path)
   {
-    baselineLookup.TryGetValue(path, out var baselineNode);
+    var context = new ApplyContext(baselineLookup, thresholds);
+    ApplyRecursiveWithContext(node, context, path);
+  }
+
+  private void ApplyRecursiveWithContext(MetricsNode node, ApplyContext context, string path)
+  {
+    ApplyToNode(node, context, path);
+    ApplyToChildren(node, context, path);
+  }
+
+  private sealed record ApplyContext(
+      IReadOnlyDictionary<string, MetricsNode> BaselineLookup,
+      IDictionary<MetricIdentifier, MetricThresholdDefinition> Thresholds);
+
+  private void ApplyToNode(MetricsNode node, ApplyContext context, string path)
+  {
+    context.BaselineLookup.TryGetValue(path, out var baselineNode);
 
     if (node is not SolutionMetricsNode)
     {
@@ -75,162 +91,64 @@ internal sealed class BaselineEvaluator
     }
 
     var symbolLevel = DetermineSymbolLevel(node);
-    node.Metrics = ApplyMetricsBaseline(
+    node.Metrics = MetricsBaselineProcessor.Process(
         node.Metrics,
         baselineNode?.Metrics ?? new Dictionary<MetricIdentifier, MetricValue>(),
-        thresholds,
+        context.Thresholds,
         symbolLevel);
+  }
 
+  private void ApplyToChildren(MetricsNode node, ApplyContext context, string path)
+  {
     switch (node)
     {
       case SolutionMetricsNode solution:
-        foreach (var assembly in solution.Assemblies)
-        {
-          ApplyRecursive(assembly, baselineLookup, thresholds, $"{path}/{assembly.Name}");
-        }
-
+        ApplyToAssemblies(solution, context, path);
         break;
       case AssemblyMetricsNode assembly:
-        foreach (var ns in assembly.Namespaces)
-        {
-          ApplyRecursive(ns, baselineLookup, thresholds, $"{path}/{ns.Name}");
-        }
-
+        ApplyToNamespaces(assembly, context, path);
         break;
       case NamespaceMetricsNode @namespace:
-        foreach (var type in @namespace.Types)
-        {
-          ApplyRecursive(type, baselineLookup, thresholds, $"{path}/{type.Name}");
-        }
-
+        ApplyToTypes(@namespace, context, path);
         break;
       case TypeMetricsNode type:
-        foreach (var member in type.Members)
-        {
-          ApplyRecursive(member, baselineLookup, thresholds, $"{path}/{member.Name}");
-        }
-
+        ApplyToMembers(type, context, path);
         break;
     }
   }
 
-  private static IDictionary<MetricIdentifier, MetricValue> ApplyMetricsBaseline(
-      IDictionary<MetricIdentifier, MetricValue> metrics,
-      IDictionary<MetricIdentifier, MetricValue> baselineMetrics,
-      IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds,
-      MetricSymbolLevel symbolLevel)
+  private void ApplyToAssemblies(SolutionMetricsNode solution, ApplyContext context, string path)
   {
-    var result = new Dictionary<MetricIdentifier, MetricValue>();
-    foreach (var identifier in Enum.GetValues<MetricIdentifier>())
+    foreach (var assembly in solution.Assemblies)
     {
-      metrics.TryGetValue(identifier, out var current);
-      baselineMetrics.TryGetValue(identifier, out var baseline);
-
-      var value = current?.Value;
-      var delta = value.HasValue && baseline?.Value is decimal baselineValue
-          ? value.Value - baselineValue
-          : (decimal?)null;
-      if (delta.HasValue && delta.Value == 0)
-      {
-        delta = null;
-      }
-
-      var status = EvaluateStatus(identifier, value, thresholds, symbolLevel);
-
-      if (status == ThresholdStatus.NotApplicable)
-      {
-        continue;
-      }
-
-      // WHY: We preserve the breakdown from the current metric when applying baseline,
-      // as breakdown information (e.g., SARIF rule violation details) should not be
-      // lost during baseline processing. We copy the breakdown dictionary to avoid
-      // sharing references across nodes.
-      result[identifier] = new MetricValue
-      {
-        Value = value,
-        Delta = delta,
-        Status = status,
-        Breakdown = SarifBreakdownHelper.Clone(current?.Breakdown)
-      };
+      ApplyRecursiveWithContext(assembly, context, $"{path}/{assembly.Name}");
     }
-
-    return result;
   }
 
-  private static ThresholdStatus EvaluateStatus(
-      MetricIdentifier identifier,
-      decimal? value,
-      IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds,
-      MetricSymbolLevel symbolLevel)
+  private void ApplyToNamespaces(AssemblyMetricsNode assembly, ApplyContext context, string path)
   {
-    if (!value.HasValue)
+    foreach (var ns in assembly.Namespaces)
     {
-      return ThresholdStatus.NotApplicable;
+      ApplyRecursiveWithContext(ns, context, $"{path}/{ns.Name}");
     }
-
-    if (!thresholds.TryGetValue(identifier, out var definition))
-    {
-      return ThresholdStatus.Success;
-    }
-
-    if (!TryGetThresholdForLevel(definition.Levels, symbolLevel, out var threshold))
-    {
-      return ThresholdStatus.Success;
-    }
-
-    if (!threshold.Warning.HasValue && !threshold.Error.HasValue)
-    {
-      return ThresholdStatus.Success;
-    }
-
-    return threshold.HigherIsBetter
-        ? EvaluateHigherIsBetter(value.Value, threshold)
-        : EvaluateLowerIsBetter(value.Value, threshold);
   }
 
-  private static bool TryGetThresholdForLevel(
-      IDictionary<MetricSymbolLevel, MetricThreshold> levels,
-      MetricSymbolLevel requestedLevel,
-      out MetricThreshold threshold)
+  private void ApplyToTypes(NamespaceMetricsNode @namespace, ApplyContext context, string path)
   {
-    if (levels.TryGetValue(requestedLevel, out threshold))
+    foreach (var type in @namespace.Types)
     {
-      return true;
+      ApplyRecursiveWithContext(type, context, $"{path}/{type.Name}");
     }
-
-    return levels.TryGetValue(MetricSymbolLevel.Type, out threshold);
   }
 
-  private static ThresholdStatus EvaluateHigherIsBetter(decimal value, MetricThreshold threshold)
+  private void ApplyToMembers(TypeMetricsNode type, ApplyContext context, string path)
   {
-    if (threshold.Error.HasValue && value < threshold.Error)
+    foreach (var member in type.Members)
     {
-      return ThresholdStatus.Error;
+      ApplyRecursiveWithContext(member, context, $"{path}/{member.Name}");
     }
-
-    if (threshold.Warning.HasValue && value < threshold.Warning)
-    {
-      return ThresholdStatus.Warning;
-    }
-
-    return ThresholdStatus.Success;
   }
 
-  private static ThresholdStatus EvaluateLowerIsBetter(decimal value, MetricThreshold threshold)
-  {
-    if (threshold.Error.HasValue && value > threshold.Error)
-    {
-      return ThresholdStatus.Error;
-    }
-
-    if (threshold.Warning.HasValue && value > threshold.Warning)
-    {
-      return ThresholdStatus.Warning;
-    }
-
-    return ThresholdStatus.Success;
-  }
 
   private static MetricSymbolLevel DetermineSymbolLevel(MetricsNode node)
       => node switch

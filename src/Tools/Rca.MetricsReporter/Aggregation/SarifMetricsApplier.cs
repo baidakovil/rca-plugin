@@ -2,6 +2,7 @@ namespace Rca.Tools.MetricsReporter.Aggregation;
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Rca.Tools.MetricsReporter.Model;
 using Rca.Tools.MetricsReporter.Processing;
 
@@ -76,22 +77,42 @@ internal sealed class SarifMetricsApplier
     {
       foreach (var element in document.Elements)
       {
-        if (element.Source?.Path is null || element.Metrics.Count == 0)
+        if (!IsValidElement(element))
         {
           continue;
         }
 
-        var metric = element.Metrics.First();
-        if (metric.Value.Value is null)
+        var metricPair = ExtractFirstMetric(element);
+        if (metricPair is null)
         {
           continue;
         }
 
-        var line = element.Source.StartLine ?? element.Source.EndLine;
-        var normalizedPath = PathNormalizer.Normalize(element.Source.Path);
-        yield return new SarifMetric(normalizedPath, line, metric.Key, metric.Value);
+        yield return CreateSarifMetric(element, metricPair.Value);
       }
     }
+
+    private static bool IsValidElement(ParsedCodeElement element)
+        => element.Source?.Path is not null && element.Metrics.Count > 0;
+
+    private static KeyValuePair<MetricIdentifier, MetricValue>? ExtractFirstMetric(ParsedCodeElement element)
+    {
+      var firstMetric = element.Metrics.First();
+      return firstMetric.Value.Value is not null ? firstMetric : null;
+    }
+
+    private static SarifMetric CreateSarifMetric(
+        ParsedCodeElement element,
+        KeyValuePair<MetricIdentifier, MetricValue> metric)
+    {
+      var source = element.Source!;
+      var line = GetLineFromSource(source);
+      var normalizedPath = PathNormalizer.Normalize(source.Path);
+      return new SarifMetric(normalizedPath, line, metric.Key, metric.Value);
+    }
+
+    private static int? GetLineFromSource(SourceLocation source)
+        => source.StartLine ?? source.EndLine;
   }
 
   private sealed record SarifMetric(
