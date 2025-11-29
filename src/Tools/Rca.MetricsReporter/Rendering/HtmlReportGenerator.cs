@@ -61,6 +61,15 @@ public sealed class HtmlReportGenerator
     builder.AppendLine("</head>");
     builder.AppendLine("<body>");
 
+    AppendBodyContent(builder, report, coverageHtmlDir);
+
+    builder.AppendLine("</body>");
+    builder.AppendLine("</html>");
+    return builder.ToString();
+  }
+
+  private static void AppendBodyContent(StringBuilder builder, MetricsReport report, string? coverageHtmlDir)
+  {
     // Header section (title, metadata, legend, controls)
     builder.Append(HtmlHeaderGenerator.Generate(report));
 
@@ -69,30 +78,13 @@ public sealed class HtmlReportGenerator
     var tableGenerator = new HtmlTableGenerator(MetricOrder, metricUnits);
     builder.Append(tableGenerator.Generate(report, coverageHtmlDir));
 
-    var thresholdPayload = CreateThresholdPayload(report.Metadata);
-    if (!string.IsNullOrEmpty(thresholdPayload))
-    {
-      builder.AppendLine("<script id=\"threshold-data\" type=\"application/json\">");
-      builder.AppendLine(thresholdPayload);
-      builder.AppendLine("</script>");
-    }
-
-    var ruleDescriptionsPayload = CreateRuleDescriptionsPayload(report.Metadata);
-    if (!string.IsNullOrEmpty(ruleDescriptionsPayload))
-    {
-      builder.AppendLine("<script id=\"rule-descriptions-data\" type=\"application/json\">");
-      builder.AppendLine(ruleDescriptionsPayload);
-      builder.AppendLine("</script>");
-    }
+    AppendScriptTagIfNotEmpty(builder, "threshold-data", CreateThresholdPayload(report.Metadata));
+    AppendScriptTagIfNotEmpty(builder, "rule-descriptions-data", CreateRuleDescriptionsPayload(report.Metadata));
 
     // JavaScript section
     builder.AppendLine("<script>");
     builder.AppendLine(HtmlScriptGenerator.Generate());
     builder.AppendLine("</script>");
-
-    builder.AppendLine("</body>");
-    builder.AppendLine("</html>");
-    return builder.ToString();
   }
 
   private static IReadOnlyDictionary<MetricIdentifier, string?> BuildMetricUnits(ReportMetadata metadata)
@@ -286,5 +278,23 @@ public sealed class HtmlReportGenerator
   /// <returns>A JSON string representation of the payload.</returns>
   private static string SerializeRuleDescriptionsPayload(Dictionary<string, object?> payload)
       => JsonSerializer.Serialize(payload, JsonSerializerOptionsFactory.Create());
+
+  /// <summary>
+  /// Appends a script tag with JSON data to the string builder if the payload is not empty.
+  /// </summary>
+  /// <param name="builder">The string builder to append to.</param>
+  /// <param name="scriptId">The ID attribute value for the script tag.</param>
+  /// <param name="payload">The JSON payload to embed, or <see langword="null"/> or empty to skip.</param>
+  private static void AppendScriptTagIfNotEmpty(StringBuilder builder, string scriptId, string? payload)
+  {
+    if (string.IsNullOrEmpty(payload))
+    {
+      return;
+    }
+
+    builder.AppendLine($"<script id=\"{scriptId}\" type=\"application/json\">");
+    builder.AppendLine(payload);
+    builder.AppendLine("</script>");
+  }
 }
 

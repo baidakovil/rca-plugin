@@ -1,0 +1,363 @@
+Test run for C:\Users\baidakov\rca-plugin\tests\Rca.Core.Tests\bin\Debug\net8.0-windows\Rca.Core.Tests.dll (.NETCoreApp,Version=v8.0)
+Test run for C:\Users\baidakov\rca-plugin\tests\Rca.Contracts.Tests\bin\Debug\net8.0-windows\Rca.Contracts.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.14.1 (arm64)
+
+VSTest version 17.14.1 (arm64)
+
+Test run for C:\Users\baidakov\rca-plugin\tests\Rca.Network.Tests\bin\Debug\net8.0-windows\Rca.Network.Tests.dll (.NETCoreApp,Version=v8.0)
+Test run for C:\Users\baidakov\rca-plugin\tests\Rca.Integration.Revit.Tests\bin\Debug\net8.0-windows\Rca.Integration.Revit.Tests.dll (.NETCoreApp,Version=v8.0)
+Starting test execution, please wait...
+VSTest version 17.14.1 (arm64)
+VSTest version 17.14.1 (arm64)
+
+
+A total of 1 test files matched the specified pattern.
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Starting test execution, please wait...
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+No test matches the given testcase filter `FullyQualifiedName~Rendering` in C:\Users\baidakov\rca-plugin\tests\Rca.Contracts.Tests\bin\Debug\net8.0-windows\Rca.Contracts.Tests.dll
+No test matches the given testcase filter `FullyQualifiedName~Rendering` in C:\Users\baidakov\rca-plugin\tests\Rca.Network.Tests\bin\Debug\net8.0-windows\Rca.Network.Tests.dll
+No test matches the given testcase filter `FullyQualifiedName~Rendering` in C:\Users\baidakov\rca-plugin\tests\Rca.Core.Tests\bin\Debug\net8.0-windows\Rca.Core.Tests.dll
+
+
+
+Test run for C:\Users\baidakov\rca-plugin\tests\Rca.UI.Tests\bin\Debug\net8.0-windows\Rca.UI.Tests.dll (.NETCoreApp,Version=v8.0)
+Test run for C:\Users\baidakov\rca-plugin\tests\Rca.Loader.Tests\bin\Debug\net8.0-windows\Rca.Loader.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.14.1 (arm64)
+VSTest version 17.14.1 (arm64)
+
+
+Test run for C:\Users\baidakov\rca-plugin\tests\Rca.MetricsReporter.Tests\bin\Debug\net8.0-windows\Rca.MetricsReporter.Tests.dll (.NETCoreApp,Version=v8.0)
+Starting test execution, please wait...
+Starting test execution, please wait...
+VSTest version 17.14.1 (arm64)
+A total of 1 test files matched the specified pattern.
+
+A total of 1 test files matched the specified pattern.
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+No test matches the given testcase filter `FullyQualifiedName~Rendering` in C:\Users\baidakov\rca-plugin\tests\Rca.Loader.Tests\bin\Debug\net8.0-windows\Rca.Loader.Tests.dll
+No test matches the given testcase filter `FullyQualifiedName~Rendering` in C:\Users\baidakov\rca-plugin\tests\Rca.UI.Tests\bin\Debug\net8.0-windows\Rca.UI.Tests.dll
+
+
+Test run for C:\Users\baidakov\rca-plugin\tests\Rca.BuildMetadata.Generator.Tests\bin\Debug\net8.0-windows\Rca.BuildMetadata.Generator.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.14.1 (arm64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Failed BuildDataAttribute_WithValidBreakdown_EncodesHtml [104 ms]
+  Error Message:
+   Expected result " data-breakdown="{&quot;CA<test>1506&quot;:{&quot;count&quot;:1,&quot;violations&quot;:[]}}"" to contain "&lt;test&gt;".
+  Stack Trace:
+     at FluentAssertions.Execution.LateBoundTestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.StringAssertions`1.Contain(String expected, String because, Object[] becauseArgs)
+   at Rca.MetricsReporter.Tests.Rendering.BreakdownAttributeBuilderTests.BuildDataAttribute_WithValidBreakdown_EncodesHtml() in C:\Users\baidakov\rca-plugin\tests\Rca.MetricsReporter.Tests\Rendering\BreakdownAttributeBuilderTests.cs:line 192
+
+
+  Failed Build_WithSimpleHierarchy_CalculatesCorrectCounts [30 ms]
+  Error Message:
+   Expected result 
+{[Rca.Tools.MetricsReporter.Model.MemberMetricsNode
+    {
+        FullyQualifiedName = "Sample.Namespace.SampleType.DoWork()", 
+        IncludesIteratorStateMachineCoverage = False, 
+        IsNew = False, 
+        Kind = CodeElementKind.Member {value: 4}, 
+        Metrics = {empty}, 
+        Name = "DoWork", 
+        Source = <null>
+    }] = 0, [Rca.Tools.MetricsReporter.Model.TypeMetricsNode
+    {
+        FullyQualifiedName = "Sample.Namespace.SampleType", 
+        IsNew = False, 
+        Kind = CodeElementKind.Type {value: 3}, 
+        {
+        Members = Rca.Tools.MetricsReporter.Model.MemberMetricsNode
+            {
+                FullyQualifiedName = "Sample.Namespace.SampleType.DoWork()", 
+                IncludesIteratorStateMachineCoverage = False, 
+                IsNew = False, 
+                Kind = CodeElementKind.Member {value: 4}, 
+                Metrics = {empty}, 
+                Name = "DoWork", 
+                Source = <null>
+                    }
+        }, 
+        Metrics = {empty}, 
+        Name = "SampleType", 
+        Source = <null>
+    }] = 1, [Rca.Tools.MetricsReporter.Model.NamespaceMetricsNode
+    {
+        FullyQualifiedName = "Sample.Namespace", 
+        IsNew = False, 
+        Kind = CodeElementKind.Namespace {value: 2}, 
+        Metrics = {empty}, 
+        Name = "Sample.Namespace", 
+        Source = <null>, 
+        Types = Rca.Tools.MetricsReporter.Model.TypeMetricsNode
+        {
+            {
+                FullyQualifiedName = "Sample.Namespace.SampleType", 
+                IsNew = False, 
+                Kind = CodeElementKind.Type {value: 3}, 
+                Members = Rca.Tools.MetricsReporter.Model.MemberMetricsNode
+                {
+                    {
+                        FullyQualifiedName = 
+                    Maximum recursion depth of 5 was reached.  Increase MaxDepth on AssertionScope or AssertionOptions to get more details.
+                    , 
+                        IncludesIteratorStateMachineCoverage = 
+                    Maximum recursion depth of 5 was reached.  Increase MaxDepth on AssertionScope or AssertionOptions to get more details.
+                    , 
+                        IsNew = 
+                    Maximum recursion depth of 5 was reached.  Increase MaxDepth on AssertionScope or AssertionOptions to get more details.
+                    , 
+                        Kind = 
+                    Maximum recursion depth of 5 was reached.  Increase MaxDepth on AssertionScope or AssertionOptions to get more details.
+                    , 
+                        Metrics = 
+                    Maximum recursion depth of 5 was reached.  Increase MaxDepth on AssertionScope or AssertionOptions to get more details.
+                    , 
+                        Name = 
+                    Maximum recursion depth of 5 was reached.  Increase MaxDepth on AssertionScope or AssertionOptions to get more details.
+                    , 
+                        Source = 
+                    Maximum recursion depth of 5 was reached.  Increase MaxDepth on AssertionScope or AssertionOptions to get more details.
+                    }
+                }, 
+                Metrics = {empty}, 
+                Name = "SampleType", 
+                Source = <null>
+            }
+        }
+    }] = 2, [Rca.Tools.MetricsReporter.Model.AssemblyMetricsNode
+    {
+        FullyQualifiedName = "Sample.Assembly", 
+        IsNew = False, 
+        Kind = CodeElementKind.Assembly {value: 1}, 
+        Metrics = {empty}, 
+        Name = "Sample.Assembly", 
+        Namespaces = Rca.Tools.MetricsReporter.Model.NamespaceMetricsNode
+            {
+                FullyQualifiedName = "Sample.Namespace", 
+                IsNew = False, 
+                Kind = CodeElementKind.Namespace {value: 2}, 
+                Metrics = {empty}, 
+                Name = "Sample.Namespace", 
+                Source = <null>, 
+                Types = Rca.Tools.MetricsReporter.Model.TypeMetricsNode
+                    {
+                        FullyQualifiedName = 
+                    Maximum recursion depth of 5 was reached.  Increase MaxDepth on AssertionScope or AssertionOptions to get more details.
+                    , 
+                        IsNew = 
+                    Maximum recursion depth of 5 was reached.  Increase MaxDepth on AssertionScope or AssertionOptions to get more details.
+                    , 
+                        Kind = 
+                    Maximum recursion depth of 5 was reached.  Increase MaxDepth on AssertionScope or AssertionOptions to get more details.
+                    , 
+
+(Output has exceeded the maximum of 100 lines. Increase FormattingOptions.MaxLines on AssertionScope or AssertionOptions to include more lines.)
+                        Members =  not to contain key Rca.Tools.MetricsReporter.Model.MemberMetricsNode
+{
+    FullyQualifiedName = "Sample.Namespace.SampleType.DoWork()", 
+    IncludesIteratorStateMachineCoverage = False, 
+    IsNew = False, 
+    Kind = CodeElementKind.Member {value: 4}, 
+    Metrics = {empty}, 
+    Name = "DoWork", 
+    Source = <null>
+}, but found it anyhow.
+  Stack Trace:
+     at FluentAssertions.Execution.LateBoundTestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Collections.GenericDictionaryAssertions`4.NotContainKey(TKey unexpected, String because, Object[] becauseArgs)
+   at Rca.MetricsReporter.Tests.Rendering.DescendantCountIndexBuilderTests.Build_WithSimpleHierarchy_CalculatesCorrectCounts() in C:\Users\baidakov\rca-plugin\tests\Rca.MetricsReporter.Tests\Rendering\DescendantCountIndexBuilderTests.cs:line 81
+
+
+  Failed BuildDataAttribute_WithHtmlInJustification_EscapesHtml [2 ms]
+  Error Message:
+   Expected result " data-suppression-info="{&quot;ruleId&quot;:&quot;CA1506&quot;,&quot;justification&quot;:&quot;This is &lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt; dangerous&quot;}"" to contain "&lt;script&gt;".
+  Stack Trace:
+     at FluentAssertions.Execution.LateBoundTestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.StringAssertions`1.Contain(String expected, String because, Object[] becauseArgs)
+   at Rca.MetricsReporter.Tests.Rendering.SuppressionAttributeBuilderTests.BuildDataAttribute_WithHtmlInJustification_EscapesHtml() in C:\Users\baidakov\rca-plugin\tests\Rca.MetricsReporter.Tests\Rendering\SuppressionAttributeBuilderTests.cs:line 162
+
+
+  Failed BuildDataAttribute_WithMultipleParagraphs_JoinsWithBrTags [3 ms]
+  Error Message:
+   Expected brCount to be 2, but found 0 (difference of -2).
+  Stack Trace:
+     at FluentAssertions.Execution.LateBoundTestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Numeric.NumericAssertions`2.Be(T expected, String because, Object[] becauseArgs)
+   at Rca.MetricsReporter.Tests.Rendering.SuppressionAttributeBuilderTests.BuildDataAttribute_WithMultipleParagraphs_JoinsWithBrTags() in C:\Users\baidakov\rca-plugin\tests\Rca.MetricsReporter.Tests\Rendering\SuppressionAttributeBuilderTests.cs:line 205
+
+
+  Failed BuildDataAttribute_WithParagraphBreaks_PreservesParagraphs [1 ms]
+  Error Message:
+   Expected result " data-suppression-info="{&quot;ruleId&quot;:&quot;CA1506&quot;,&quot;justification&quot;:&quot;First paragraph.<br/><br/>Second paragraph.&quot;}"" to contain "<br/><br/>".
+  Stack Trace:
+     at FluentAssertions.Execution.LateBoundTestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.StringAssertions`1.Contain(String expected, String because, Object[] becauseArgs)
+   at Rca.MetricsReporter.Tests.Rendering.SuppressionAttributeBuilderTests.BuildDataAttribute_WithParagraphBreaks_PreservesParagraphs() in C:\Users\baidakov\rca-plugin\tests\Rca.MetricsReporter.Tests\Rendering\SuppressionAttributeBuilderTests.cs:line 121
+
+
+  Failed BuildDataAttribute_WithQuotesInJustification_EscapesQuotes [1 ms]
+  Error Message:
+   Expected result " data-suppression-info="{&quot;ruleId&quot;:&quot;CA1506&quot;,&quot;justification&quot;:&quot;This has &quot;quotes&quot; in it&quot;}"" to contain "&quot;quotes&quot;".
+  Stack Trace:
+     at FluentAssertions.Execution.LateBoundTestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.StringAssertions`1.Contain(String expected, String because, Object[] becauseArgs)
+   at Rca.MetricsReporter.Tests.Rendering.SuppressionAttributeBuilderTests.BuildDataAttribute_WithQuotesInJustification_EscapesQuotes() in C:\Users\baidakov\rca-plugin\tests\Rca.MetricsReporter.Tests\Rendering\SuppressionAttributeBuilderTests.cs:line 184
+
+
+  Failed BuildDataAttribute_WithUnixLineBreaks_PreservesParagraphs [1 ms]
+  Error Message:
+   Expected result " data-suppression-info="{&quot;ruleId&quot;:&quot;CA1506&quot;,&quot;justification&quot;:&quot;First paragraph.<br/><br/>Second paragraph.&quot;}"" to contain "<br/><br/>".
+  Stack Trace:
+     at FluentAssertions.Execution.LateBoundTestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.StringAssertions`1.Contain(String expected, String because, Object[] becauseArgs)
+   at Rca.MetricsReporter.Tests.Rendering.SuppressionAttributeBuilderTests.BuildDataAttribute_WithUnixLineBreaks_PreservesParagraphs() in C:\Users\baidakov\rca-plugin\tests\Rca.MetricsReporter.Tests\Rendering\SuppressionAttributeBuilderTests.cs:line 142
+
+
+  Failed BuildDataAttribute_WithCamelCaseProperties_UsesCamelCase [3 ms]
+  Error Message:
+   Expected result " data-symbol-info="{&quot;role&quot;:&quot;TYPE&quot;,&quot;fullyQualifiedName&quot;:&quot;Sample.Namespace.SampleType&quot;}"" to contain "&quot;sourcePath&quot;".
+  Stack Trace:
+     at FluentAssertions.Execution.LateBoundTestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.StringAssertions`1.Contain(String expected, String because, Object[] becauseArgs)
+   at Rca.MetricsReporter.Tests.Rendering.SymbolTooltipBuilderTests.BuildDataAttribute_WithCamelCaseProperties_UsesCamelCase() in C:\Users\baidakov\rca-plugin\tests\Rca.MetricsReporter.Tests\Rendering\SymbolTooltipBuilderTests.cs:line 308
+
+
+  Failed BuildDataAttribute_WithHtmlInFqn_EscapesHtml [1 ms]
+  Error Message:
+   Expected result " data-symbol-info="{&quot;role&quot;:&quot;TYPE&quot;,&quot;fullyQualifiedName&quot;:&quot;Sample.Namespace<Test>.SampleType&quot;}"" to contain "&lt;Test&gt;".
+  Stack Trace:
+     at FluentAssertions.Execution.LateBoundTestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.StringAssertions`1.Contain(String expected, String because, Object[] becauseArgs)
+   at Rca.MetricsReporter.Tests.Rendering.SymbolTooltipBuilderTests.BuildDataAttribute_WithHtmlInFqn_EscapesHtml() in C:\Users\baidakov\rca-plugin\tests\Rca.MetricsReporter.Tests\Rendering\SymbolTooltipBuilderTests.cs:line 260
+
+
+  Failed BuildDataAttribute_WithHtmlInPath_EscapesHtml [1 ms]
+  Error Message:
+   Expected result " data-symbol-info="{&quot;role&quot;:&quot;TYPE&quot;,&quot;fullyQualifiedName&quot;:&quot;Sample.Namespace.SampleType&quot;,&quot;sourcePath&quot;:&quot;C:\\Source\\File<script>.cs&quot;,&quot;sourceStartLine&quot;:10,&quot;sourceEndLine&quot;:20}"" to contain "&lt;script&gt;".
+  Stack Trace:
+     at FluentAssertions.Execution.LateBoundTestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.StringAssertions`1.Contain(String expected, String because, Object[] becauseArgs)
+   at Rca.MetricsReporter.Tests.Rendering.SymbolTooltipBuilderTests.BuildDataAttribute_WithHtmlInPath_EscapesHtml() in C:\Users\baidakov\rca-plugin\tests\Rca.MetricsReporter.Tests\Rendering\SymbolTooltipBuilderTests.cs:line 286
+
+
+  Failed BuildDataAttribute_WithPartialSource_IncludesAvailableInfo [2 ms]
+  Error Message:
+   Expected result " data-symbol-info="{&quot;role&quot;:&quot;TYPE&quot;,&quot;fullyQualifiedName&quot;:&quot;Sample.Namespace.SampleType&quot;,&quot;sourcePath&quot;:&quot;C:\\Source\\File.cs&quot;,&quot;sourceStartLine&quot;:10}"" to contain "C:\Source\File.cs".
+  Stack Trace:
+     at FluentAssertions.Execution.LateBoundTestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.StringAssertions`1.Contain(String expected, String because, Object[] becauseArgs)
+   at Rca.MetricsReporter.Tests.Rendering.SymbolTooltipBuilderTests.BuildDataAttribute_WithPartialSource_IncludesAvailableInfo() in C:\Users\baidakov\rca-plugin\tests\Rca.MetricsReporter.Tests\Rendering\SymbolTooltipBuilderTests.cs:line 239
+
+
+  Failed BuildDataAttribute_WithSourceLocation_IncludesSourceInfo [1 ms]
+  Error Message:
+   Expected result " data-symbol-info="{&quot;role&quot;:&quot;TYPE&quot;,&quot;fullyQualifiedName&quot;:&quot;Sample.Namespace.SampleType&quot;,&quot;sourcePath&quot;:&quot;C:\\Source\\File.cs&quot;,&quot;sourceStartLine&quot;:10,&quot;sourceEndLine&quot;:20}"" to contain "C:\Source\File.cs".
+  Stack Trace:
+     at FluentAssertions.Execution.LateBoundTestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.StringAssertions`1.Contain(String expected, String because, Object[] becauseArgs)
+   at Rca.MetricsReporter.Tests.Rendering.SymbolTooltipBuilderTests.BuildDataAttribute_WithSourceLocation_IncludesSourceInfo() in C:\Users\baidakov\rca-plugin\tests\Rca.MetricsReporter.Tests\Rendering\SymbolTooltipBuilderTests.cs:line 191
+
+
+
+Failed!  - Failed:    12, Passed:   153, Skipped:     0, Total:   165, Duration: 624 ms - Rca.MetricsReporter.Tests.dll (net8.0)
+No test matches the given testcase filter `FullyQualifiedName~Rendering` in C:\Users\baidakov\rca-plugin\tests\Rca.BuildMetadata.Generator.Tests\bin\Debug\net8.0-windows\Rca.BuildMetadata.Generator.Tests.dll
+
+RCA Test Adapter: Revit is not initialized. Revit integration tests will be skipped. Start Autodesk Revit with the RCA plugin loaded to enable these tests.
+  Skipped GetLatestTempDllFolder_ShouldReturnValidPath
+  Skipped CurrentInfo_LoaderComponents_ShouldHaveHashOrMissingMarker
+  Skipped CurrentInfo_LoaderComponents_ShouldHavePathOrMissingMarker
+  Skipped DetermineEventType_ShouldReturnCorrectEventTypes
+  Skipped CurrentInfo_LastMSBuildSignal_ShouldHaveDefaultOrValidTime
+  Skipped ProcessMsBuildSignal_WithValidPath_ShouldUpdateSignalInfo
+  Skipped CurrentInfo_RuntimeAssembly_ShouldBeTracked
+  Skipped CurrentInfo_LoadedRuntimeAssembly_ShouldBeTrackedSeparately
+  Skipped LoaderApp_Instance_ShouldBeInitialized
+  Skipped LoaderApp_UIApplication_ShouldMatchTestContext
+  Skipped LoaderApp_RuntimeManager_ShouldBeInitialized
+  Skipped LoaderApp_AssemblyStatusManager_ShouldBeInitialized
+  Skipped LoaderApp_AssemblyStatusManager_ShouldHaveCurrentInfo
+  Skipped LoaderApp_PanelHost_ShouldBeInitialized
+  Skipped ExecuteSync_EmptyCode_ReturnsEmpty
+  Skipped ExecuteSync_SimpleCode_ReturnsOutput
+  Skipped ExecuteSync_RevitApiCode_AccessesRevitContext
+  Skipped ExecuteAsync_SimpleCode_ReturnsOutput
+  Skipped RevitVersion_MatchesExpected
+  Skipped RuntimeManager_ShouldBeAccessibleFromLoaderApp
+  Skipped IsRuntimeLoaded_ShouldReturnBooleanWithoutError
+  Skipped CurrentRuntimePath_WhenRuntimeLoaded_ShouldBeValid
+  Skipped CreateRuntimeDockableContent_ShouldAttemptCreation
+  Skipped LoadSettings_ShouldLoadActualSettingsFile
+  Skipped LoadSettings_ShouldCache_MultipleCalls
+  Skipped LoadSettings_AfterClearCache_ShouldReload
+  Skipped SettingsFilePath_ShouldReturnValidPath
+
+Skipped! - Failed:     0, Passed:     0, Skipped:    27, Total:    27, Duration: 109 ms - Rca.Integration.Revit.Tests.dll (net8.0)
