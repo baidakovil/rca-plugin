@@ -595,6 +595,43 @@ public sealed class RoslynMetricsParserTests
     }
   }
 
+  [Test]
+  public async Task ParseAsync_NestedTypeMethod_NormalizesWithoutDuplicatedTypeName()
+  {
+    // Arrange
+    // Emulates real Roslyn data for:
+    // Namespace: Rca.Tools.MetricsReporter.Aggregation
+    // Type: MetricsAggregationService.ReportMetadataComposer (nested type)
+    // Member: ReportMetadataComposer.AssembleMetadataInput(MetricsAggregationInput input, MetadataComponents components)
+    //
+    // The expected normalized FQN must NOT contain a duplicated "ReportMetadataComposer" segment.
+    var xml = CreateRoslynXml(
+        assemblyName: "Rca.MetricsReporter, Version=1.0.0.0",
+        namespaceName: "Rca.Tools.MetricsReporter.Aggregation",
+        typeName: "MetricsAggregationService.ReportMetadataComposer",
+        memberName: "ReportMetadataInput ReportMetadataComposer.AssembleMetadataInput(MetricsAggregationInput input, MetadataComponents components)",
+        maintainabilityIndex: 77);
+
+    var tempFile = CreateTempFile(xml);
+
+    try
+    {
+      // Act
+      var result = await parser.ParseAsync(tempFile, CancellationToken.None);
+
+      // Assert
+      result.Elements.Should().NotBeEmpty();
+      var member = result.Elements.FirstOrDefault(e => e.Kind == CodeElementKind.Member);
+      member.Should().NotBeNull();
+      member!.FullyQualifiedName.Should().Be("Rca.Tools.MetricsReporter.Aggregation.MetricsAggregationService.ReportMetadataComposer.AssembleMetadataInput(...)");
+      member.Name.Should().Be("AssembleMetadataInput");
+    }
+    finally
+    {
+      File.Delete(tempFile);
+    }
+  }
+
   private static string CreateRoslynXml(
       string assemblyName,
       string namespaceName,

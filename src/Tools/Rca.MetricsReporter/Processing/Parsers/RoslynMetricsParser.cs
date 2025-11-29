@@ -286,9 +286,43 @@ public sealed class RoslynMetricsParser : IMetricsSourceParser
       return memberDisplayName;
     }
 
-    var suffix = memberDisplayName.StartsWith(typeName + ".", StringComparison.Ordinal)
-        ? memberDisplayName[(typeName.Length + 1)..]
-        : memberDisplayName;
+    // WHY: Roslyn encodes member display names differently depending on context:
+    // - For top-level types, memberDisplayName typically starts with the simple type name,
+    //   for example "ServiceContainer.Instance.get".
+    // - For nested types, the <Type Name> attribute already contains the outer type, e.g.
+    //   "MetricsAggregationService.ReportMetadataComposer", while memberDisplayName only
+    //   uses the innermost type name prefix, e.g.
+    //   "ReportMetadataComposer.AssembleMetadataInput(...)". If we naïvely prepend the
+    //   full type FQN to memberDisplayName we end up with duplicated segments:
+    //   "MetricsAggregationService.ReportMetadataComposer.ReportMetadataComposer.AssembleMetadataInput(...)".
+    //
+    // To keep member FQNs consistent with SuppressedSymbolsAnalyzer (which builds
+    // "Namespace.MetricsAggregationService.ReportMetadataComposer.AssembleMetadataInput(...)"),
+    // we strip a leading "<SimpleTypeName>." prefix when present, where SimpleTypeName is
+    // the last segment of the Roslyn type name. As a first step we still support the old
+    // behaviour for cases where memberDisplayName starts with the full type name.
+    var suffix = memberDisplayName;
+
+    // Case 1: memberDisplayName starts with the full Roslyn type name
+    var fullTypePrefix = typeName + ".";
+    if (memberDisplayName.StartsWith(fullTypePrefix, StringComparison.Ordinal))
+    {
+      suffix = memberDisplayName[fullTypePrefix.Length..];
+    }
+    else
+    {
+      // Case 2: memberDisplayName starts only with the simple (innermost) type name,
+      // which happens for nested types such as "ReportMetadataComposer.AssembleMetadataInput(...)"
+      // when the Type Name is "MetricsAggregationService.ReportMetadataComposer".
+      var lastDotIndex = typeName.LastIndexOf('.');
+      var simpleTypeName = lastDotIndex >= 0 ? typeName[(lastDotIndex + 1)..] : typeName;
+      var simpleTypePrefix = simpleTypeName + ".";
+
+      if (memberDisplayName.StartsWith(simpleTypePrefix, StringComparison.Ordinal))
+      {
+        suffix = memberDisplayName[simpleTypePrefix.Length..];
+      }
+    }
 
     return $"{typeFqn}.{suffix}";
   }
