@@ -37,10 +37,7 @@ internal sealed class SarifMetricsApplier
   /// </summary>
   public void Apply(ParsedMetricsDocument document, SolutionMetricsNode solution)
   {
-    if (document is null)
-    {
-      throw new ArgumentNullException(nameof(document));
-    }
+    ArgumentNullException.ThrowIfNull(document);
 
     foreach (var metric in SarifMetricExtractor.Extract(document))
     {

@@ -37,11 +37,7 @@ internal sealed class LineIndex
   /// </summary>
   public void RegisterFileAssembly(string normalizedPath, AssemblyMetricsNode assembly)
   {
-    if (assembly is null)
-    {
-      throw new ArgumentNullException(nameof(assembly));
-    }
-
+    ArgumentNullException.ThrowIfNull(assembly);
     _fileAssemblyMap[normalizedPath] = assembly;
   }
 

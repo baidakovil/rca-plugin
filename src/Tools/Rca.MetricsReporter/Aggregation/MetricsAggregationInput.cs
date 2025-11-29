@@ -60,6 +60,6 @@ public sealed class MetricsAggregationInput
   /// so that the HTML renderer and external tools can adjust visualisation and
   /// tooling behaviour without altering the underlying metrics.
   /// </remarks>
-  public IList<SuppressedSymbolInfo> SuppressedSymbols { get; init; } = new List<SuppressedSymbolInfo>();
+  public List<SuppressedSymbolInfo> SuppressedSymbols { get; init; } = new();
 }
 

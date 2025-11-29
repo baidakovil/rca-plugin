@@ -81,7 +81,7 @@ internal sealed class BaselineEvaluator
       IReadOnlyDictionary<string, MetricsNode> BaselineLookup,
       IDictionary<MetricIdentifier, MetricThresholdDefinition> Thresholds);
 
-  private void ApplyToNode(MetricsNode node, ApplyContext context, string path)
+  private static void ApplyToNode(MetricsNode node, ApplyContext context, string path)
   {
     context.BaselineLookup.TryGetValue(path, out var baselineNode);
 

@@ -1,4 +1,4 @@
-Проведи рефакторинг кода в namespace `Rca.Tools.MetricsReporter.Rendering.HtmlTableGenerator` для устранения нарушений правил анализатора кода (SARIF). Рефакторинг выполняется для символов уровня Member (методы), не для классов.
+Проведи рефакторинг кода в данном тебе namespace для устранения нарушений правил анализатора кода (SARIF). Рефакторинг выполняется для символов уровня Member (методы), не для классов.
 
 ## Требования
 
@@ -14,7 +14,7 @@
 Используя команду `metrics-reader readsarif`, получи первую проблемную группу нарушений по `ruleId`. Пример запроса к `metrics-reader` с нужными опциями:
 
 ```powershell
-.\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe metrics-reader readsarif --namespace Rca.Tools.MetricsReporter.Rendering.HtmlTableGenerator --metric SarifCaRuleViolations --symbol-kind Member
+.\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe metrics-reader readsarif --namespace <данный_namespace> --metric SarifCaRuleViolations --symbol-kind Member
 ```
 
 Если получаешь сообщение о том, что нарушений не найдено (вместо объекта с полями `ruleId`, `shortDescription`, `count`, `violations`), это значит, что проблемных нарушений нет: закончи работу.
@@ -48,7 +48,7 @@
 С помощью команды `metrics-reader readsarif` с фильтром `--ruleid` проверь, что нарушения по данному правилу устранены для всех символов в namespace. Пример запроса к `metrics-reader` с нужными опциями (используй `ruleId` из обработанной группы):
 
 ```powershell
-.\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe metrics-reader readsarif --namespace Rca.Tools.MetricsReporter.Rendering.HtmlTableGenerator --metric SarifCaRuleViolations --ruleid CA1822 --symbol-kind Member
+.\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe metrics-reader readsarif --namespace <данный_namespace> --metric SarifCaRuleViolations --ruleid CA1822 --symbol-kind Member
 ```
 
 Если получаешь сообщение о том, что нарушений не найдено (вместо объекта с полями `ruleId`, `shortDescription`, `count`, `violations`), это значит, что все нарушения по данному правилу устранены: переходи к следующей группе, как описано в пункте 1.

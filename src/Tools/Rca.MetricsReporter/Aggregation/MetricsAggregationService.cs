@@ -14,6 +14,8 @@ public sealed class MetricsAggregationService
   private readonly MemberFilter _memberFilter;
   private readonly AssemblyFilter _assemblyFilter;
   private readonly TypeFilter _typeFilter;
+  private readonly IAggregationWorkspaceFactory _workspaceFactory;
+  private readonly IReportMetadataComposer _metadataComposer;
 
   /// <summary>
   /// Initializes a new instance of the <see cref="MetricsAggregationService"/> class with default filters.
@@ -31,13 +33,26 @@ public sealed class MetricsAggregationService
   /// <param name="typeFilter">The type filter to use for excluding types. Cannot be null.</param>
   /// <exception cref="ArgumentNullException">Thrown when any of the filters are null.</exception>
   public MetricsAggregationService(MemberFilter memberFilter, AssemblyFilter assemblyFilter, TypeFilter typeFilter)
+      : this(memberFilter, assemblyFilter, typeFilter, null, null)
+  {
+  }
+
+  private MetricsAggregationService(
+      MemberFilter memberFilter,
+      AssemblyFilter assemblyFilter,
+      TypeFilter typeFilter,
+      IAggregationWorkspaceFactory? workspaceFactory,
+      IReportMetadataComposer? metadataComposer)
   {
     ArgumentNullException.ThrowIfNull(memberFilter);
     ArgumentNullException.ThrowIfNull(assemblyFilter);
     ArgumentNullException.ThrowIfNull(typeFilter);
+
     _memberFilter = memberFilter;
     _assemblyFilter = assemblyFilter;
     _typeFilter = typeFilter;
+    _workspaceFactory = workspaceFactory ?? new AggregationWorkspaceFactory(memberFilter, assemblyFilter, typeFilter);
+    _metadataComposer = metadataComposer ?? new ReportMetadataComposerAdapter(memberFilter, assemblyFilter, typeFilter);
   }
 
   /// <summary>
@@ -49,40 +64,80 @@ public sealed class MetricsAggregationService
   {
     ArgumentNullException.ThrowIfNull(input);
 
-    var workspace = CreateWorkspace(input);
+    var workspace = _workspaceFactory.Create(input);
     var usedRuleIds = CollectUsedRuleIds(workspace.Solution);
     var filteredRuleIds = usedRuleIds.Count == 0 ? null : usedRuleIds;
-    var metadata = ComposeMetadata(input, filteredRuleIds);
+    var metadata = _metadataComposer.Compose(input, filteredRuleIds);
 
-    return CreateMetricsReport(workspace, metadata);
-  }
-
-  private AggregationWorkspace CreateWorkspace(MetricsAggregationInput input)
-  {
-    var workspace = new AggregationWorkspace(input.SolutionName, _memberFilter, _assemblyFilter, _typeFilter);
-    workspace.PrepareReport(input);
-    return workspace;
-  }
-
-  private ReportMetadata ComposeMetadata(MetricsAggregationInput input, HashSet<string>? filteredRuleIds)
-  {
-    var metadataInput = ReportMetadataComposer.CreateInput(
-        input,
-        _memberFilter,
-        _assemblyFilter,
-        _typeFilter,
-        filteredRuleIds);
-    return ReportMetadataComposer.Compose(metadataInput);
-  }
-
-  private static MetricsReport CreateMetricsReport(AggregationWorkspace workspace, ReportMetadata metadata)
-  {
     return new MetricsReport
     {
       Metadata = metadata,
       Solution = workspace.Solution
     };
   }
+
+  private interface IAggregationWorkspaceFactory
+  {
+    AggregationWorkspace Create(MetricsAggregationInput input);
+  }
+
+  private sealed class AggregationWorkspaceFactory : IAggregationWorkspaceFactory
+  {
+    private readonly MemberFilter _memberFilter;
+    private readonly AssemblyFilter _assemblyFilter;
+    private readonly TypeFilter _typeFilter;
+
+    public AggregationWorkspaceFactory(MemberFilter memberFilter, AssemblyFilter assemblyFilter, TypeFilter typeFilter)
+    {
+      _memberFilter = memberFilter ?? throw new ArgumentNullException(nameof(memberFilter));
+      _assemblyFilter = assemblyFilter ?? throw new ArgumentNullException(nameof(assemblyFilter));
+      _typeFilter = typeFilter ?? throw new ArgumentNullException(nameof(typeFilter));
+    }
+
+    public AggregationWorkspace Create(MetricsAggregationInput input)
+    {
+      var workspace = new AggregationWorkspace(input.SolutionName, _memberFilter, _assemblyFilter, _typeFilter);
+      workspace.PrepareReport(input);
+      return workspace;
+    }
+  }
+
+    private interface IReportMetadataComposer
+    {
+      ReportMetadata Compose(
+          MetricsAggregationInput input,
+          HashSet<string>? usedRuleIds);
+    }
+
+    private sealed class ReportMetadataComposerAdapter : IReportMetadataComposer
+    {
+      private readonly MemberFilter _memberFilter;
+      private readonly AssemblyFilter _assemblyFilter;
+      private readonly TypeFilter _typeFilter;
+
+      public ReportMetadataComposerAdapter(
+          MemberFilter memberFilter,
+          AssemblyFilter assemblyFilter,
+          TypeFilter typeFilter)
+      {
+        _memberFilter = memberFilter ?? throw new ArgumentNullException(nameof(memberFilter));
+        _assemblyFilter = assemblyFilter ?? throw new ArgumentNullException(nameof(assemblyFilter));
+        _typeFilter = typeFilter ?? throw new ArgumentNullException(nameof(typeFilter));
+      }
+
+      public ReportMetadata Compose(
+          MetricsAggregationInput input,
+          HashSet<string>? usedRuleIds)
+      {
+        var metadataInput = ReportMetadataComposer.CreateInput(
+            input,
+            _memberFilter,
+            _assemblyFilter,
+            _typeFilter,
+            usedRuleIds);
+        return ReportMetadataComposer.Compose(metadataInput);
+      }
+    }
 
   /// <summary>
   /// Recursively collects all rule IDs from breakdown dictionaries in SARIF metrics across the entire metrics tree.
@@ -152,27 +207,27 @@ public sealed class MetricsAggregationService
           CreateReconciliationProcessor(state));
     }
 
-    private static IAggregationDocumentProcessor CreateDocumentProcessor(
+    private static AggregationDocumentProcessor CreateDocumentProcessor(
         AggregationWorkspaceState state,
         MemberFilter memberFilter,
         AssemblyFilter assemblyFilter,
         TypeFilter typeFilter)
         => new AggregationDocumentProcessor(state, memberFilter, assemblyFilter, typeFilter);
 
-    private static IAggregationLineIndexProcessor CreateLineIndexProcessor(
+    private static AggregationLineIndexProcessor CreateLineIndexProcessor(
         AggregationWorkspaceState state,
         AssemblyFilter assemblyFilter)
         => new AggregationLineIndexProcessor(state, assemblyFilter);
 
-    private static IAggregationSarifProcessor CreateSarifProcessor(
+    private static AggregationSarifProcessor CreateSarifProcessor(
         AggregationWorkspaceState state,
         AssemblyFilter assemblyFilter)
         => new AggregationSarifProcessor(state, assemblyFilter);
 
-    private static IAggregationBaselineAndThresholdProcessor CreateBaselineProcessor(AggregationWorkspaceState state)
+    private static AggregationBaselineAndThresholdProcessor CreateBaselineProcessor(AggregationWorkspaceState state)
         => new AggregationBaselineAndThresholdProcessor(state);
 
-    private static IAggregationReconciliationProcessor CreateReconciliationProcessor(AggregationWorkspaceState state)
+    private static AggregationReconciliationProcessor CreateReconciliationProcessor(AggregationWorkspaceState state)
         => new AggregationReconciliationProcessor(state);
 
     private static AggregationWorkspaceWorkflow AssembleWorkflow(
@@ -189,11 +244,11 @@ public sealed class MetricsAggregationService
     }
 
     private sealed record WorkflowProcessors(
-        IAggregationDocumentProcessor DocumentProcessor,
-        IAggregationLineIndexProcessor LineIndexProcessor,
-        IAggregationSarifProcessor SarifProcessor,
-        IAggregationBaselineAndThresholdProcessor BaselineProcessor,
-        IAggregationReconciliationProcessor ReconciliationProcessor);
+        AggregationDocumentProcessor DocumentProcessor,
+        AggregationLineIndexProcessor LineIndexProcessor,
+        AggregationSarifProcessor SarifProcessor,
+        AggregationBaselineAndThresholdProcessor BaselineProcessor,
+        AggregationReconciliationProcessor ReconciliationProcessor);
   }
 
   private sealed class AggregationWorkspaceState
@@ -570,7 +625,7 @@ public sealed class MetricsAggregationService
         ExcludedMemberNamesPatterns = content.MemberNamesPatterns,
         ExcludedAssemblyNames = content.AssemblyNamesPatterns,
         ExcludedTypeNamePatterns = content.TypeNamesPatterns,
-        SuppressedSymbols = content.SuppressedSymbols,
+        SuppressedSymbols = input.SuppressedSymbols,
         RuleDescriptions = content.RuleDescriptions
       };
     }
@@ -582,54 +637,14 @@ public sealed class MetricsAggregationService
         TypeFilter typeFilter,
         HashSet<string>? usedRuleIds = null)
     {
-      return BuildMetadataInput(input, memberFilter, assemblyFilter, typeFilter, usedRuleIds);
-    }
+      var specification = ReportMetadataSpecificationBuilder.Build(
+          input,
+          memberFilter,
+          assemblyFilter,
+          typeFilter,
+          usedRuleIds);
 
-    private static ReportMetadataInput BuildMetadataInput(
-        MetricsAggregationInput input,
-        MemberFilter memberFilter,
-        AssemblyFilter assemblyFilter,
-        TypeFilter typeFilter,
-        HashSet<string>? usedRuleIds)
-    {
-      var components = GatherMetadataComponents(input, memberFilter, assemblyFilter, typeFilter, usedRuleIds);
-      return AssembleMetadataInput(input, components);
-    }
-
-    private static MetadataComponents GatherMetadataComponents(
-        MetricsAggregationInput input,
-        MemberFilter memberFilter,
-        AssemblyFilter assemblyFilter,
-        TypeFilter typeFilter,
-        HashSet<string>? usedRuleIds)
-    {
-      var context = CreateGatheringContext(input, memberFilter, assemblyFilter, typeFilter, usedRuleIds);
-      return GatherComponents(context);
-    }
-
-    private static GatheringContext CreateGatheringContext(
-        MetricsAggregationInput input,
-        MemberFilter memberFilter,
-        AssemblyFilter assemblyFilter,
-        TypeFilter typeFilter,
-        HashSet<string>? usedRuleIds)
-    {
-      ArgumentNullException.ThrowIfNull(input);
-      ArgumentNullException.ThrowIfNull(memberFilter);
-      ArgumentNullException.ThrowIfNull(assemblyFilter);
-      ArgumentNullException.ThrowIfNull(typeFilter);
-
-      return new GatheringContext(input, memberFilter, assemblyFilter, typeFilter, usedRuleIds);
-    }
-
-    private static MetadataComponents GatherComponents(GatheringContext context)
-    {
-      var thresholdMetadata = GatherThresholdMetadata(context);
-      var ruleDescriptions = GatherRuleDescriptions(context);
-      var metricDescriptors = GetMetricDescriptors();
-      var filterPatterns = GatherFilterPatterns(context);
-
-      return new MetadataComponents(thresholdMetadata, ruleDescriptions, metricDescriptors, filterPatterns);
+      return specification.CreateInput(input.SuppressedSymbols);
     }
 
     private static ReportThresholdMetadata GatherThresholdMetadata(GatheringContext context)
@@ -662,47 +677,44 @@ public sealed class MetricsAggregationService
         TypeFilter typeFilter)
         => FilterPatternExtractor.Extract(memberFilter, assemblyFilter, typeFilter);
 
-    private static ReportMetadataInput AssembleMetadataInput(
-        MetricsAggregationInput input,
-        MetadataComponents components)
+    private sealed class ReportMetadataSpecificationBuilder
     {
-      var metadataInputData = CreateMetadataInputData(input, components);
-      return new ReportMetadataInput(
-          metadataInputData.BaselineReference,
-          metadataInputData.Paths,
-          metadataInputData.Content);
+      [SuppressMessage(
+          "Microsoft.Maintainability",
+          "CA1506:Avoid excessive class coupling",
+          Justification = "Building the metadata specification for reporting necessarily touches multiple domain objects (filters, descriptors, thresholds, SARIF rule descriptions) because it aggregates them into a single DTO. Splitting it further would only push the same dependencies elsewhere.")]
+      public static ReportMetadataSpecification Build(
+          MetricsAggregationInput input,
+          MemberFilter memberFilter,
+          AssemblyFilter assemblyFilter,
+          TypeFilter typeFilter,
+          HashSet<string>? usedRuleIds)
+      {
+        var context = CreateGatheringContext(input, memberFilter, assemblyFilter, typeFilter, usedRuleIds);
+        var content = new ReportMetadataContent(
+            GatherThresholdMetadata(context),
+            GetMetricDescriptors(),
+            GatherFilterPatterns(context),
+            GatherRuleDescriptions(context));
+
+        return new ReportMetadataSpecification(input.BaselineReference, input.Paths, content);
+      }
+
+      private static GatheringContext CreateGatheringContext(
+          MetricsAggregationInput input,
+          MemberFilter memberFilter,
+          AssemblyFilter assemblyFilter,
+          TypeFilter typeFilter,
+          HashSet<string>? usedRuleIds)
+      {
+        ArgumentNullException.ThrowIfNull(input);
+        ArgumentNullException.ThrowIfNull(memberFilter);
+        ArgumentNullException.ThrowIfNull(assemblyFilter);
+        ArgumentNullException.ThrowIfNull(typeFilter);
+
+        return new GatheringContext(input, memberFilter, assemblyFilter, typeFilter, usedRuleIds);
+      }
     }
-
-    [SuppressMessage(
-        "Microsoft.Maintainability",
-        "CA1506:Avoid excessive class coupling",
-        Justification = "This helper assembles the metadata DTO using the various components collected earlier, so it must reference thresholds, descriptors, filters, suppressions and rule descriptions together. Each dependency is required to build a coherent <see cref=\"ReportMetadataContent\"/>, so suppression keeps the mapper focused without scattering the data.")]
-    private static MetadataInputData CreateMetadataInputData(
-        MetricsAggregationInput input,
-        MetadataComponents components)
-    {
-      var content = new ReportMetadataContent(
-          components.ThresholdMetadata,
-          components.MetricDescriptors,
-          components.FilterPatterns.MemberNamesPatterns,
-          components.FilterPatterns.AssemblyNamesPatterns,
-          components.FilterPatterns.TypeNamesPatterns,
-          input.SuppressedSymbols,
-          components.RuleDescriptions);
-
-      return new MetadataInputData(input.BaselineReference, input.Paths, content);
-    }
-
-    private sealed record MetadataInputData(
-        string? BaselineReference,
-        ReportPaths Paths,
-        ReportMetadataContent Content);
-
-    private sealed record MetadataComponents(
-        ReportThresholdMetadata ThresholdMetadata,
-        Dictionary<string, RuleDescription> RuleDescriptions,
-        IDictionary<MetricIdentifier, MetricDescriptor> MetricDescriptors,
-        FilterPatternExtractor.FilterPatterns FilterPatterns);
 
 
     private static ReportThresholdMetadata CreateThresholdMetadata(
@@ -715,19 +727,62 @@ public sealed class MetricsAggregationService
     }
   }
 
+    private sealed class ReportMetadataSpecification
+    {
+      public ReportMetadataSpecification(string? baselineReference, ReportPaths paths, ReportMetadataContent content)
+      {
+        BaselineReference = baselineReference;
+        Paths = paths ?? throw new ArgumentNullException(nameof(paths));
+        Content = content ?? throw new ArgumentNullException(nameof(content));
+      }
+
+      public string? BaselineReference { get; }
+
+      public ReportPaths Paths { get; }
+
+      public ReportMetadataContent Content { get; }
+
+      public ReportMetadataInput CreateInput(IList<SuppressedSymbolInfo> suppressedSymbols)
+      {
+        ArgumentNullException.ThrowIfNull(suppressedSymbols);
+        return new ReportMetadataInput(BaselineReference, Paths, Content, suppressedSymbols);
+      }
+    }
+
+    private sealed class ReportMetadataContent
+    {
+      public ReportMetadataContent(
+          ReportThresholdMetadata thresholdMetadata,
+          IDictionary<MetricIdentifier, MetricDescriptor> metricDescriptors,
+          FilterPatternExtractor.FilterPatterns filterPatterns,
+          Dictionary<string, RuleDescription> ruleDescriptions)
+      {
+        ThresholdMetadata = thresholdMetadata ?? throw new ArgumentNullException(nameof(thresholdMetadata));
+        MetricDescriptors = metricDescriptors ?? throw new ArgumentNullException(nameof(metricDescriptors));
+        FilterPatterns = filterPatterns ?? throw new ArgumentNullException(nameof(filterPatterns));
+        RuleDescriptions = ruleDescriptions ?? throw new ArgumentNullException(nameof(ruleDescriptions));
+      }
+
+      public ReportThresholdMetadata ThresholdMetadata { get; }
+
+      public IDictionary<MetricIdentifier, MetricDescriptor> MetricDescriptors { get; }
+
+      public FilterPatternExtractor.FilterPatterns FilterPatterns { get; }
+
+      public Dictionary<string, RuleDescription> RuleDescriptions { get; }
+
+      public string? MemberNamesPatterns => FilterPatterns.MemberNamesPatterns;
+
+      public string? AssemblyNamesPatterns => FilterPatterns.AssemblyNamesPatterns;
+
+      public string? TypeNamesPatterns => FilterPatterns.TypeNamesPatterns;
+    }
+
     private sealed record ReportMetadataInput(
         string? BaselineReference,
         ReportPaths Paths,
-        ReportMetadataContent Content);
-
-    private sealed record ReportMetadataContent(
-        ReportThresholdMetadata ThresholdMetadata,
-        IDictionary<MetricIdentifier, MetricDescriptor> MetricDescriptors,
-        string? MemberNamesPatterns,
-        string? AssemblyNamesPatterns,
-        string? TypeNamesPatterns,
-        IList<SuppressedSymbolInfo> SuppressedSymbols,
-        Dictionary<string, RuleDescription> RuleDescriptions);
+        ReportMetadataContent Content,
+        IList<SuppressedSymbolInfo> SuppressedSymbols);
 
   private sealed class ReportThresholdMetadata
   {

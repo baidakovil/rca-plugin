@@ -35,7 +35,7 @@ public sealed class SuppressedSymbolsReport
   /// <summary>
   /// Collection of suppressed symbols discovered during analysis.
   /// </summary>
-  public IList<SuppressedSymbolInfo> SuppressedSymbols { get; init; } = new List<SuppressedSymbolInfo>();
+  public List<SuppressedSymbolInfo> SuppressedSymbols { get; init; } = new();
 }
 
 

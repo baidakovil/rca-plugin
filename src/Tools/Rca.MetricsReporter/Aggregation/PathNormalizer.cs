@@ -12,11 +12,7 @@ internal static class PathNormalizer
   /// </summary>
   public static string Normalize(string path)
   {
-    if (path is null)
-    {
-      throw new ArgumentNullException(nameof(path));
-    }
-
+    ArgumentNullException.ThrowIfNull(path);
     return path.Replace('/', '\\').Trim().ToUpperInvariant();
   }
 }

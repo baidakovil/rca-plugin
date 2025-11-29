@@ -125,7 +125,7 @@ public sealed class MetricsReporterApplication
 
     // Optionally compute suppressed symbol metadata before parsing metrics so that
     // both the standalone JSON artefact and the final report share the same view.
-    IList<SuppressedSymbolInfo> suppressedSymbols = new List<SuppressedSymbolInfo>();
+    List<SuppressedSymbolInfo> suppressedSymbols = new();
     if (options.AnalyzeSuppressedSymbols)
     {
       try
@@ -147,20 +147,20 @@ public sealed class MetricsReporterApplication
         }
 
         await SuppressedSymbolsWriter.WriteAsync(suppressedReport, options.SuppressedSymbolsPath, cancellationToken).ConfigureAwait(false);
-        suppressedSymbols = suppressedReport.SuppressedSymbols;
+        suppressedSymbols = suppressedReport.SuppressedSymbols.ToList();
         logger.LogInformation($"Suppressed symbols analysis completed. Entries: {suppressedSymbols.Count}");
       }
       catch (Exception ex)
       {
         logger.LogError("Failed to analyze suppressed symbols. Proceeding without suppression metadata.", ex);
-        suppressedSymbols = new List<SuppressedSymbolInfo>();
+        suppressedSymbols = new();
       }
     }
     else
     {
       // If analysis is disabled, still try to load pre-existing suppression metadata
       // so that manual or previous runs can be reused.
-      suppressedSymbols = await SuppressedSymbolsLoader.LoadAsync(options.SuppressedSymbolsPath, cancellationToken).ConfigureAwait(false);
+      suppressedSymbols = (await SuppressedSymbolsLoader.LoadAsync(options.SuppressedSymbolsPath, cancellationToken).ConfigureAwait(false)).ToList();
     }
 
     var documentsResult = await ParseAllDocumentsAsync(options, logger, cancellationToken).ConfigureAwait(false);
@@ -417,7 +417,7 @@ public sealed class MetricsReporterApplication
       (MetricsReporterExitCode ExitCode, IList<ParsedMetricsDocument> AltCoverDocuments, IList<ParsedMetricsDocument> RoslynDocuments, IList<ParsedMetricsDocument> SarifDocuments) documentsResult,
       IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds,
       MetricsReport? baseline,
-      IList<SuppressedSymbolInfo> suppressedSymbols)
+      List<SuppressedSymbolInfo> suppressedSymbols)
   {
     var memberFilter = MemberFilter.FromString(options.ExcludedMemberNamesPatterns);
     var assemblyFilter = AssemblyFilter.FromString(options.ExcludedAssemblyNames);

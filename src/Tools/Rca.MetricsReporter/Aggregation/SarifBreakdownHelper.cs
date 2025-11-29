@@ -75,12 +75,12 @@ internal static class SarifBreakdownHelper
           : new SarifRuleBreakdownEntry
           {
             Count = source.Count,
-            Violations = source.Violations.Count > 0
-                ? CloneViolations(source.Violations)
-                : new List<SarifRuleViolationDetail>()
+          Violations = source.Violations.Count > 0
+              ? CloneViolations(source.Violations)
+              : new()
           };
 
-  private static List<SarifRuleViolationDetail> CloneViolations(ICollection<SarifRuleViolationDetail> source)
+  private static List<SarifRuleViolationDetail> CloneViolations(List<SarifRuleViolationDetail> source)
   {
     var result = new List<SarifRuleViolationDetail>(source.Count);
     foreach (var violation in source)
