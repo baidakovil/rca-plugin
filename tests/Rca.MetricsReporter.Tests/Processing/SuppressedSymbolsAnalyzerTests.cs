@@ -105,6 +105,115 @@ public sealed class SuppressedSymbolsAnalyzerTests
         s.FullyQualifiedName == "Rca.TestAdapter.PipeTestExecutionTransport.Execute(...)",
       "CA1506 suppression on PipeTestExecutionTransport.Execute should be mapped to RoslynClassCoupling at member level");
   }
+
+  [Test]
+  public void Analyze_FullyQualifiedAttributeName_IsDiscovered()
+  {
+    // Arrange: Test that System.Diagnostics.CodeAnalysis.SuppressMessage works
+    var srcDir = Path.Combine(_rootDirectory, "src", "Sample.Assembly");
+    Directory.CreateDirectory(srcDir);
+
+    var code = """
+      namespace Sample.Namespace;
+
+      [System.Diagnostics.CodeAnalysis.SuppressMessage(
+          "Microsoft.Maintainability",
+          "CA1506:Avoid excessive class coupling",
+          Justification = "Test with fully qualified attribute name.")]
+      public class SampleType
+      {
+      }
+      """;
+
+    var filePath = Path.Combine(srcDir, "SampleType.cs");
+    File.WriteAllText(filePath, code);
+
+    // Act
+    var sourceCodeFolders = new[] { "src" };
+    var report = SuppressedSymbolsAnalyzer.Analyze(_rootDirectory, sourceCodeFolders, excludedAssemblyNames: null, CancellationToken.None);
+
+    // Assert
+    report.SuppressedSymbols.Should().NotBeEmpty("fully qualified SuppressMessage should be discovered");
+    var entry = report.SuppressedSymbols[0];
+    entry.RuleId.Should().Be("CA1506");
+    entry.Metric.Should().Be("RoslynClassCoupling");
+    entry.FullyQualifiedName.Should().Be("Sample.Namespace.SampleType");
+    entry.Justification.Should().Be("Test with fully qualified attribute name.");
+  }
+
+  [Test]
+  public void Analyze_ConcatenatedJustification_IsExtracted()
+  {
+    // Arrange: Test that string concatenation in justification works
+    var srcDir = Path.Combine(_rootDirectory, "src", "Sample.Assembly");
+    Directory.CreateDirectory(srcDir);
+
+    var code = """
+      using System.Diagnostics.CodeAnalysis;
+
+      namespace Sample.Namespace;
+
+      [SuppressMessage(
+          "Microsoft.Maintainability",
+          "CA1506:Avoid excessive class coupling",
+          Justification = "First part of justification. " +
+                          "Second part of justification. " +
+                          "Third part of justification.")]
+      public class SampleType
+      {
+      }
+      """;
+
+    var filePath = Path.Combine(srcDir, "SampleType.cs");
+    File.WriteAllText(filePath, code);
+
+    // Act
+    var sourceCodeFolders = new[] { "src" };
+    var report = SuppressedSymbolsAnalyzer.Analyze(_rootDirectory, sourceCodeFolders, excludedAssemblyNames: null, CancellationToken.None);
+
+    // Assert
+    report.SuppressedSymbols.Should().NotBeEmpty("suppression with concatenated justification should be discovered");
+    var entry = report.SuppressedSymbols[0];
+    entry.RuleId.Should().Be("CA1506");
+    entry.Metric.Should().Be("RoslynClassCoupling");
+    entry.FullyQualifiedName.Should().Be("Sample.Namespace.SampleType");
+    entry.Justification.Should().Be("First part of justification. Second part of justification. Third part of justification.");
+  }
+
+  [Test]
+  public void Analyze_FullyQualifiedWithConcatenatedJustification_Works()
+  {
+    // Arrange: Test both fully qualified name and concatenated justification together
+    var srcDir = Path.Combine(_rootDirectory, "src", "Sample.Assembly");
+    Directory.CreateDirectory(srcDir);
+
+    var code = """
+      namespace Sample.Namespace;
+
+      [System.Diagnostics.CodeAnalysis.SuppressMessage(
+          "Microsoft.Maintainability",
+          "CA1506:Avoid excessive class coupling",
+          Justification = "Part one. " + "Part two.")]
+      public class SampleType
+      {
+      }
+      """;
+
+    var filePath = Path.Combine(srcDir, "SampleType.cs");
+    File.WriteAllText(filePath, code);
+
+    // Act
+    var sourceCodeFolders = new[] { "src" };
+    var report = SuppressedSymbolsAnalyzer.Analyze(_rootDirectory, sourceCodeFolders, excludedAssemblyNames: null, CancellationToken.None);
+
+    // Assert
+    report.SuppressedSymbols.Should().NotBeEmpty("fully qualified attribute with concatenated justification should work");
+    var entry = report.SuppressedSymbols[0];
+    entry.RuleId.Should().Be("CA1506");
+    entry.Metric.Should().Be("RoslynClassCoupling");
+    entry.FullyQualifiedName.Should().Be("Sample.Namespace.SampleType");
+    entry.Justification.Should().Be("Part one. Part two.");
+  }
 }
 
 

@@ -438,22 +438,114 @@ internal static class SuppressedSymbolsAnalyzer
           continue;
         }
 
-        if (argument.Expression is LiteralExpressionSyntax justificationLiteral)
-        {
-          justification = justificationLiteral.Token.ValueText;
-        }
-
+        // WHY: Justification can be a single string literal or a concatenation of multiple
+        // string literals (e.g., "string1" + "string2" + "string3"). We need to handle both cases
+        // by recursively extracting string literals from binary expressions with the '+' operator.
+        justification = ExtractJustificationText(argument.Expression);
         break;
       }
 
       return !string.IsNullOrWhiteSpace(ruleId);
     }
 
+    /// <summary>
+    /// Extracts justification text from an expression, handling both single string literals
+    /// and string concatenation expressions (e.g., "string1" + "string2").
+    /// </summary>
+    /// <param name="expression">The expression to extract text from.</param>
+    /// <returns>
+    /// The extracted justification text, or <see langword="null"/> if the expression
+    /// does not contain string literals.
+    /// </returns>
+    private static string? ExtractJustificationText(ExpressionSyntax? expression)
+    {
+      if (expression is null)
+      {
+        return null;
+      }
+
+      // Single string literal case
+      if (expression is LiteralExpressionSyntax literal && literal.IsKind(SyntaxKind.StringLiteralExpression))
+      {
+        return literal.Token.ValueText;
+      }
+
+      // String concatenation case: "string1" + "string2" + ...
+      if (expression is BinaryExpressionSyntax binary && binary.IsKind(SyntaxKind.AddExpression))
+      {
+        var parts = new List<string>();
+
+        // WHY: Recursively collect all string literals from the left and right sides
+        // of the binary expression. This handles nested concatenations like:
+        // "string1" + ("string2" + "string3")
+        CollectStringLiterals(binary, parts);
+
+        return parts.Count > 0 ? string.Concat(parts) : null;
+      }
+
+      return null;
+    }
+
+    /// <summary>
+    /// Recursively collects string literals from a binary expression tree.
+    /// </summary>
+    /// <param name="expression">The expression to traverse.</param>
+    /// <param name="parts">The list to collect string literal values into.</param>
+    private static void CollectStringLiterals(ExpressionSyntax expression, List<string> parts)
+    {
+      if (expression is LiteralExpressionSyntax literal && literal.IsKind(SyntaxKind.StringLiteralExpression))
+      {
+        var text = literal.Token.ValueText;
+        if (!string.IsNullOrEmpty(text))
+        {
+          parts.Add(text);
+        }
+        return;
+      }
+
+      if (expression is BinaryExpressionSyntax binary && binary.IsKind(SyntaxKind.AddExpression))
+      {
+        // Traverse left and right subtrees
+        CollectStringLiterals(binary.Left, parts);
+        CollectStringLiterals(binary.Right, parts);
+      }
+    }
+
     private static bool IsSuppressMessageAttribute(AttributeSyntax attribute)
     {
-      var name = attribute.Name.ToString();
-      return name.EndsWith("SuppressMessage", StringComparison.Ordinal) ||
-             name.EndsWith("SuppressMessageAttribute", StringComparison.Ordinal);
+      // WHY: Support both short form (SuppressMessage) and fully qualified form
+      // (System.Diagnostics.CodeAnalysis.SuppressMessage). The attribute name can be parsed
+      // as a simple identifier, qualified name, or alias-qualified name by Roslyn.
+      // We need to handle all cases to ensure suppressions work regardless of using directives.
+      
+      // Check the simple name (last identifier in the qualified name chain)
+      string? simpleName = null;
+      
+      if (attribute.Name is SimpleNameSyntax simpleNameSyntax)
+      {
+        simpleName = simpleNameSyntax.Identifier.Text;
+      }
+      else if (attribute.Name is QualifiedNameSyntax qualifiedName)
+      {
+        // WHY: QualifiedNameSyntax has Left (NameSyntax) and Right (SimpleNameSyntax).
+        // For "System.Diagnostics.CodeAnalysis.SuppressMessage", it's parsed as:
+        // QualifiedName(QualifiedName(QualifiedName(System, Diagnostics), CodeAnalysis), SuppressMessage)
+        // The Right property always contains the rightmost SimpleNameSyntax, which is the actual attribute name.
+        // No traversal needed - Right is always the simple name we want.
+        simpleName = qualifiedName.Right.Identifier.Text;
+      }
+
+      if (string.IsNullOrEmpty(simpleName))
+      {
+        // Fallback to string comparison if structure parsing fails
+        var name = attribute.Name.ToString();
+        return name.EndsWith("SuppressMessage", StringComparison.Ordinal) ||
+               name.EndsWith("SuppressMessageAttribute", StringComparison.Ordinal);
+      }
+
+      // Check if the simple name matches (with or without "Attribute" suffix)
+      return simpleName.Equals("SuppressMessage", StringComparison.Ordinal) ||
+             simpleName.Equals("SuppressMessageAttribute", StringComparison.Ordinal);
     }
   }
 }
