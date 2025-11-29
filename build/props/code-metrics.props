@@ -16,13 +16,13 @@
     <!-- Target framework of test projects whose binaries participate in AltCover-based metrics -->
     <RcaTestTargetFramework Condition="'$(RcaTestTargetFramework)' == ''">net8.0-windows</RcaTestTargetFramework>
 
-      <!-- When true, MetricsReporter will analyze suppressed symbols via Roslyn before aggregating metrics. -->
-      <!-- The analysis is scoped to the solution source tree and respects ExcludedAssemblyNames. -->
-      <AnalyzeSuppressedSymbols Condition="'$(AnalyzeSuppressedSymbols)' == ''">true</AnalyzeSuppressedSymbols>
-      <!-- Comma- or semicolon-separated list of source code folder paths (relative to SolutionDir) -->
-      <!-- that contain assembly projects to scan for suppressed symbols. -->
-      <!-- Example: "src,src/Tools,tests" or "Source,Tests" -->
-      <SourceCodeFolders Condition="'$(SourceCodeFolders)' == ''">src,src/Tools,tests</SourceCodeFolders>
+    <!-- When true, MetricsReporter will analyze suppressed symbols via Roslyn before aggregating metrics. -->
+    <!-- The analysis is scoped to the solution source tree and respects ExcludedAssemblyNames. -->
+    <AnalyzeSuppressedSymbols Condition="'$(AnalyzeSuppressedSymbols)' == ''">true</AnalyzeSuppressedSymbols>
+    <!-- Comma- or semicolon-separated list of source code folder paths (relative to SolutionDir) -->
+    <!-- that contain assembly projects to scan for suppressed symbols. -->
+    <!-- Example: "src,src/Tools,tests" or "Source,Tests" -->
+    <SourceCodeFolders Condition="'$(SourceCodeFolders)' == ''">src,src/Tools,tests</SourceCodeFolders>
 
     <!-- Directory that contains Metrics.exe and its dependencies. -->
     <RoslynMetricsToolDir Condition="'$(RoslynMetricsToolDir)' == ''">$(SolutionDir)build\Resources\Metrics\win-arm64</RoslynMetricsToolDir>
@@ -53,7 +53,7 @@
          HTML-only mode must be enabled explicitly via /p:GenerateHtmlFromJson=true or an overriding props file. -->
     <GenerateHtmlFromJson Condition="'$(GenerateHtmlFromJson)' == ''">false</GenerateHtmlFromJson>
     <!-- Set to true to enable automatic baseline replacement when metrics-report.json differs from metrics-baseline.json -->
-    <ReplaceMetricsBaseline Condition="'$(ReplaceMetricsBaseline)' == ''">true</ReplaceMetricsBaseline>
+    <ReplaceMetricsBaseline Condition="'$(ReplaceMetricsBaseline)' == ''">false</ReplaceMetricsBaseline>
   </PropertyGroup>
 
   <ItemGroup>
