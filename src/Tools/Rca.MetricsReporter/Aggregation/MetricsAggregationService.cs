@@ -65,6 +65,7 @@ public sealed class MetricsAggregationService
     ArgumentNullException.ThrowIfNull(input);
 
     var workspace = _workspaceFactory.Create(input);
+    SuppressedSymbolMetricBinder.Bind(workspace.Solution, input.SuppressedSymbols);
     var usedRuleIds = CollectUsedRuleIds(workspace.Solution);
     var filteredRuleIds = usedRuleIds.Count == 0 ? null : usedRuleIds;
     var metadata = _metadataComposer.Compose(input, filteredRuleIds);

@@ -63,7 +63,7 @@ public sealed class SuppressedSymbolInfo
   /// exact enum surface. Consumers can convert it back to
   /// <see cref="MetricIdentifier"/> via <see cref="Enum.Parse(string)"/> if needed.
   /// </remarks>
-  public string Metric { get; init; } = string.Empty;
+  public string Metric { get; set; } = string.Empty;
 
   /// <summary>
   /// Human-readable justification text taken from the suppression attribute.

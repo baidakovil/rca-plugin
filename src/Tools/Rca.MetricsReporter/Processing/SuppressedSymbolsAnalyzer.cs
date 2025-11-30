@@ -325,6 +325,18 @@ internal static class SuppressedSymbolsAnalyzer
       base.VisitConstructorDeclaration(node);
     }
 
+    public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
+    {
+      if (node is null)
+      {
+        return;
+      }
+
+      var propertyFqn = BuildPropertyFqn(node.Identifier.Text);
+      TryRecordSuppression(node.AttributeLists, propertyFqn);
+      base.VisitPropertyDeclaration(node);
+    }
+
     private string? BuildTypeFqn()
     {
       if (_typeStack.Count == 0)
@@ -352,6 +364,17 @@ internal static class SuppressedSymbolsAnalyzer
       // them to "(...)" and only preserve the namespace/type/method name chain.
       var raw = $"{typeFqn}.{identifier}()";
       return NormalizeMemberFqn(raw);
+    }
+
+    private string? BuildPropertyFqn(string identifier)
+    {
+      var typeFqn = BuildTypeFqn();
+      if (string.IsNullOrWhiteSpace(typeFqn))
+      {
+        return null;
+      }
+
+      return $"{typeFqn}.{identifier}";
     }
 
     private void TryRecordSuppression(SyntaxList<AttributeListSyntax> attributeLists, string? fullyQualifiedName)

@@ -7,6 +7,7 @@ using FluentAssertions;
 using NUnit.Framework;
 using Rca.Tools.MetricsReporter.Processing;
 using Rca.Tools.MetricsReporter.Model;
+using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
 /// Integration-style tests for <see cref="SuppressedSymbolsAnalyzer"/> that verify
@@ -213,6 +214,41 @@ public sealed class SuppressedSymbolsAnalyzerTests
     entry.Metric.Should().Be("RoslynClassCoupling");
     entry.FullyQualifiedName.Should().Be("Sample.Namespace.SampleType");
     entry.Justification.Should().Be("Part one. Part two.");
+  }
+
+  [Test]
+  public void Analyze_PropertySuppression_IsDiscovered()
+  {
+    var srcDir = Path.Combine(_rootDirectory, "src", "Sample.Assembly");
+    Directory.CreateDirectory(srcDir);
+
+    var code = """
+      using System.Diagnostics.CodeAnalysis;
+
+      namespace Sample.Namespace;
+
+      public class SampleType
+      {
+        [SuppressMessage(
+            "Microsoft.Maintainability",
+            "CA1506:Avoid excessive class coupling",
+            Justification = "Property suppression test.")]
+        public string SuppressedProperty { get; set; }
+      }
+      """;
+
+    var filePath = Path.Combine(srcDir, "SampleType.cs");
+    File.WriteAllText(filePath, code);
+
+    var sourceCodeFolders = new[] { "src" };
+    var report = SuppressedSymbolsAnalyzer.Analyze(_rootDirectory, sourceCodeFolders, excludedAssemblyNames: null, CancellationToken.None);
+
+    report.SuppressedSymbols.Should().NotBeEmpty("property-level SuppressMessage should be discovered");
+    var entry = report.SuppressedSymbols[0];
+    entry.RuleId.Should().Be("CA1506");
+    entry.Metric.Should().Be("RoslynClassCoupling");
+    entry.FullyQualifiedName.Should().Be("Sample.Namespace.SampleType.SuppressedProperty");
+    entry.Justification.Should().Be("Property suppression test.");
   }
 }
 

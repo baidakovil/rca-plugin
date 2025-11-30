@@ -74,8 +74,7 @@ internal static class SarifBreakdownHelper
       "Style",
       "IDE0028:Collection initialization can be simplified",
       Justification = "We want to keep the ternary explicit so the entry always builds with or without violation details.")]
-  private static 
-   CloneEntry(SarifRuleBreakdownEntry? source)
+  private static SarifRuleBreakdownEntry CloneEntry(SarifRuleBreakdownEntry? source)
   {
     if (source is null)
     {
@@ -83,7 +82,7 @@ internal static class SarifBreakdownHelper
     }
 
     var entry = new SarifRuleBreakdownEntry
-    {
+          {
       Count = source.Count
     };
 
