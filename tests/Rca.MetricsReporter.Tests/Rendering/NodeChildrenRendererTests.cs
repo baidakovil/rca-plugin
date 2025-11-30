@@ -20,7 +20,8 @@ public sealed class NodeChildrenRendererTests
   {
     var method = typeof(HtmlTableGenerator).GetMethod("InitializeRenderers", BindingFlags.NonPublic | BindingFlags.Instance);
     string? coverageHtmlDir = null;
-    method!.Invoke(generator, new object[] { report, coverageHtmlDir });
+    var parameters = new object?[] { report, coverageHtmlDir };
+    method!.Invoke(generator, parameters);
   }
   [Test]
   public void Constructor_WithNullTableGenerator_ThrowsArgumentNullException()

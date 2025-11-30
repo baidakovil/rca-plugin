@@ -104,7 +104,9 @@ internal sealed class SarifMetricsApplier
     {
       var source = element.Source!;
       var line = GetLineFromSource(source);
-      var normalizedPath = PathNormalizer.Normalize(source.Path);
+      var path = source.Path;
+      ArgumentNullException.ThrowIfNull(path);
+      var normalizedPath = PathNormalizer.Normalize(path);
       return new SarifMetric(normalizedPath, line, metric.Key, metric.Value);
     }
 

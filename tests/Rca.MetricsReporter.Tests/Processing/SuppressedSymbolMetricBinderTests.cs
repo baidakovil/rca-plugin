@@ -10,6 +10,7 @@ using Rca.Tools.MetricsReporter.Model;
 [Category("Unit")]
 public sealed class SuppressedSymbolMetricBinderTests
 {
+  private const string MemberFullyQualifiedName = "Sample.Namespace.SampleType.SuppressedSymbols";
   [Test]
   public void Bind_AssignsMetricWhenNodeProvidesSarifMetric()
   {
@@ -20,7 +21,7 @@ public sealed class SuppressedSymbolMetricBinderTests
     {
       new()
       {
-        FullyQualifiedName = member.FullyQualifiedName,
+        FullyQualifiedName = MemberFullyQualifiedName,
         RuleId = "IDE0028"
       }
     };
@@ -40,7 +41,7 @@ public sealed class SuppressedSymbolMetricBinderTests
     {
       new()
       {
-        FullyQualifiedName = member.FullyQualifiedName,
+        FullyQualifiedName = MemberFullyQualifiedName,
         RuleId = "IDE0028",
         Metric = MetricIdentifier.SarifIdeRuleViolations.ToString()
       }
@@ -80,7 +81,8 @@ public sealed class SuppressedSymbolMetricBinderTests
     member = new MemberMetricsNode
     {
       Name = "SuppressedProperty",
-      FullyQualifiedName = "Sample.Namespace.SampleType.SuppressedSymbols"
+      FullyQualifiedName = MemberFullyQualifiedName,
+      Metrics = new Dictionary<MetricIdentifier, MetricValue>()
     };
 
     type.Members.Add(member);

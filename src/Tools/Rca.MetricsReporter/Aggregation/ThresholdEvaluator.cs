@@ -1,6 +1,7 @@
 namespace Rca.Tools.MetricsReporter.Aggregation;
 
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Rca.Tools.MetricsReporter.Model;
 
 /// <summary>
@@ -50,14 +51,22 @@ internal static class ThresholdEvaluator
   private static bool TryGetThresholdForLevel(
       IDictionary<MetricSymbolLevel, MetricThreshold> levels,
       MetricSymbolLevel requestedLevel,
-      out MetricThreshold threshold)
+      [NotNullWhen(true)] out MetricThreshold? threshold)
   {
-    if (levels.TryGetValue(requestedLevel, out threshold))
+    if (levels.TryGetValue(requestedLevel, out var foundThreshold))
     {
+      threshold = foundThreshold;
       return true;
     }
 
-    return levels.TryGetValue(MetricSymbolLevel.Type, out threshold);
+    if (levels.TryGetValue(MetricSymbolLevel.Type, out foundThreshold))
+    {
+      threshold = foundThreshold;
+      return true;
+    }
+
+    threshold = null;
+    return false;
   }
 
   private static ThresholdStatus EvaluateHigherIsBetter(decimal value, MetricThreshold threshold)

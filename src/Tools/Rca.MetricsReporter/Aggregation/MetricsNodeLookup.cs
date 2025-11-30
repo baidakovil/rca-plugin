@@ -2,6 +2,7 @@ namespace Rca.Tools.MetricsReporter.Aggregation;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Rca.Tools.MetricsReporter.Model;
 
 internal sealed class MetricsNodeLookup
@@ -52,15 +53,22 @@ internal sealed class MetricsNodeLookup
     return new MetricsNodeLookup(index);
   }
 
-  public bool TryGetNode(string fullyQualifiedName, out MetricsNode node)
+  public bool TryGetNode(string fullyQualifiedName, [NotNullWhen(true)] out MetricsNode? node)
   {
     if (string.IsNullOrWhiteSpace(fullyQualifiedName))
     {
-      node = null!;
+      node = null;
       return false;
     }
 
-    return _index.TryGetValue(fullyQualifiedName, out node);
+    if (_index.TryGetValue(fullyQualifiedName, out var foundNode))
+    {
+      node = foundNode;
+      return true;
+    }
+
+    node = null;
+    return false;
   }
 }
 

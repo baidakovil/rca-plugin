@@ -32,7 +32,7 @@ internal sealed class MetricsUpdaterTests
     await updater.UpdateAsync(CancellationToken.None).ConfigureAwait(false);
 
     updater.CapturedProjectPath.Should().Be(testsProjectPath);
-    updater.CapturedArguments.Should().Be($"msbuild \"{testsProjectPath}\" /t:GenerateMetricsDashboard /p:GenerateMetricsDashboard=true /p:BuildProjectReferences=false");
+    updater.CapturedArguments.Should().Be($"msbuild \"{testsProjectPath}\" /t:Build /p:GenerateMetricsDashboard=true /p:BuildProjectReferences=false /p:SkipMetricsReporterBuild=true /p:RoslynMetricsEnabled=true");
   }
 
   private sealed class TestMetricsUpdater(string solutionPath) : MetricsUpdater(solutionPath)
