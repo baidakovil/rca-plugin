@@ -123,44 +123,81 @@ public sealed class SarifMetricsParser : IMetricsSourceParser
       SarifLocation location,
       string? messageText)
   {
-    // WHY: We create a breakdown dictionary only for SARIF metrics to track individual rule violations.
-    // This allows the report to show which specific rules (CA1502, IDE0051, etc.) are violated
-    // and in what quantity, not just the total count. We validate the ruleId to ensure
-    // only properly formatted rule IDs are stored, preventing schema violations.
-    Dictionary<string, SarifRuleBreakdownEntry>? breakdown = null;
-    if (RuleIdValidator.IsValidRuleId(ruleId))
-    {
-      breakdown = new Dictionary<string, SarifRuleBreakdownEntry>(StringComparer.Ordinal)
-      {
-        [ruleId] = new SarifRuleBreakdownEntry
-        {
-          Count = 1,
-          Violations =
-          [
-            new SarifRuleViolationDetail
-            {
-              Message = messageText,
-              Uri = location.OriginalUri,
-              StartLine = location.Source.StartLine,
-              EndLine = location.Source.EndLine
-            }
-          ]
-        }
-      };
-    }
-
     return new ParsedCodeElement(CodeElementKind.Member, ruleId, null)
     {
-      Metrics = new Dictionary<MetricIdentifier, MetricValue>
-      {
-        [identifier] = new MetricValue
-        {
-          Value = 1,
-          Status = ThresholdStatus.NotApplicable,
-          Breakdown = breakdown
-        }
-      },
+      Metrics = CreateMetricDictionary(
+          identifier,
+          CreateRuleBreakdown(ruleId, location, messageText)),
       Source = location.Source
+    };
+  }
+
+  /// <summary>
+  /// Creates an initial SARIF rule breakdown dictionary for a single rule violation.
+  /// </summary>
+  /// <remarks>
+  /// The logic is kept separate from <see cref="CreateCodeElement"/> to reduce coupling for the
+  /// main factory method while preserving detailed violation metadata construction in a focused helper.
+  /// </remarks>
+  /// <param name="ruleId">The SARIF rule identifier.</param>
+  /// <param name="location">The source location of the violation.</param>
+  /// <param name="messageText">Optional analyzer message text.</param>
+  /// <returns>
+  /// A dictionary containing a single <see cref="SarifRuleBreakdownEntry"/> keyed by <paramref name="ruleId"/>,
+  /// or <see langword="null"/> when the rule id is not valid for aggregation.
+  /// </returns>
+  private static Dictionary<string, SarifRuleBreakdownEntry>? CreateRuleBreakdown(
+      string ruleId,
+      SarifLocation location,
+      string? messageText)
+  {
+    // WHY: We only build breakdown entries for well-formed rule identifiers so the resulting
+    // structure stays compatible with reporting and aggregation, and does not store arbitrary keys.
+    if (!RuleIdValidator.IsValidRuleId(ruleId))
+    {
+      return null;
+    }
+
+    var violation = new SarifRuleViolationDetail
+    {
+      Message = messageText,
+      Uri = location.OriginalUri,
+      StartLine = location.Source.StartLine,
+      EndLine = location.Source.EndLine
+    };
+
+    var entry = new SarifRuleBreakdownEntry
+    {
+      Count = 1,
+      Violations = [violation]
+    };
+
+    return new Dictionary<string, SarifRuleBreakdownEntry>(1, StringComparer.Ordinal)
+    {
+      [ruleId] = entry
+    };
+  }
+
+  /// <summary>
+  /// Creates a metrics dictionary for a single SARIF rule violation.
+  /// </summary>
+  /// <param name="identifier">The metric identifier to associate with the violation.</param>
+  /// <param name="breakdown">Optional detailed breakdown information.</param>
+  /// <returns>A dictionary with a single <see cref="MetricValue"/> entry.</returns>
+  private static IDictionary<MetricIdentifier, MetricValue> CreateMetricDictionary(
+      MetricIdentifier identifier,
+      Dictionary<string, SarifRuleBreakdownEntry>? breakdown)
+  {
+    var metricValue = new MetricValue
+    {
+      Value = 1,
+      Status = ThresholdStatus.NotApplicable,
+      Breakdown = breakdown
+    };
+
+    return new Dictionary<MetricIdentifier, MetricValue>
+    {
+      [identifier] = metricValue
     };
   }
 

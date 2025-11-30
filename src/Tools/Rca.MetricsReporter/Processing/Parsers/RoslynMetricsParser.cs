@@ -33,9 +33,18 @@ public sealed class RoslynMetricsParser : IMetricsSourceParser
   {
     ArgumentNullException.ThrowIfNull(path);
 
-    await using var stream = File.OpenRead(path);
-    var document = await XDocument.LoadAsync(stream, LoadOptions.None, cancellationToken).ConfigureAwait(false);
+    var document = await LoadDocumentAsync(path, cancellationToken).ConfigureAwait(false);
+    return ParseDocument(document);
+  }
 
+  private static async Task<XDocument> LoadDocumentAsync(string path, CancellationToken cancellationToken)
+  {
+    await using var stream = File.OpenRead(path);
+    return await XDocument.LoadAsync(stream, LoadOptions.None, cancellationToken).ConfigureAwait(false);
+  }
+
+  private static ParsedMetricsDocument ParseDocument(XDocument document)
+  {
     var targets = document
         .Element(XmlNamespace + "CodeMetricsReport")
         ?.Element(XmlNamespace + "Targets")

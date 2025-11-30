@@ -132,17 +132,32 @@ public sealed class AltCoverMetricsParser : IMetricsSourceParser
 
     foreach (var method in methods)
     {
-      var methodName = method.Element(XmlNamespace + "Name")?.Value ?? "<unknown-method>";
-      var methodNameForExtraction = methodName.Replace("::", ".", StringComparison.Ordinal);
-      var normalizedMethodFqn = NormalizeMethodName(methodName, classNode.FullyQualifiedName);
-      var methodDisplayName = SymbolNormalizer.ExtractMethodName(methodNameForExtraction) ?? "<unknown-method>";
-      var sourceLocation = ResolveSourceLocation(method, files);
-
-      var memberNode = CreateNode(CodeElementKind.Member, methodDisplayName, normalizedMethodFqn, classNode.FullyQualifiedName, sourceLocation);
-      PopulateMethodMetrics(memberNode.Metrics, method);
-
-      yield return memberNode;
+      yield return ParseMethod(method, classNode, files);
     }
+  }
+
+  /// <summary>
+  /// Parses a single method element from AltCover XML into a parsed code element.
+  /// </summary>
+  /// <param name="methodElement">The XML element representing the method.</param>
+  /// <param name="classNode">The parsed code element representing the containing class.</param>
+  /// <param name="files">Dictionary mapping file IDs to file paths.</param>
+  /// <returns>A parsed code element representing the method.</returns>
+  private static ParsedCodeElement ParseMethod(
+      XElement methodElement,
+      ParsedCodeElement classNode,
+      Dictionary<string, string> files)
+  {
+    var methodName = methodElement.Element(XmlNamespace + "Name")?.Value ?? "<unknown-method>";
+    var methodNameForExtraction = methodName.Replace("::", ".", StringComparison.Ordinal);
+    var normalizedMethodFqn = NormalizeMethodName(methodName, classNode.FullyQualifiedName);
+    var methodDisplayName = SymbolNormalizer.ExtractMethodName(methodNameForExtraction) ?? "<unknown-method>";
+    var sourceLocation = ResolveSourceLocation(methodElement, files);
+
+    var memberNode = CreateNode(CodeElementKind.Member, methodDisplayName, normalizedMethodFqn, classNode.FullyQualifiedName, sourceLocation);
+    PopulateMethodMetrics(memberNode.Metrics, methodElement);
+
+    return memberNode;
   }
 
   private static ParsedCodeElement CreateNode(CodeElementKind kind, string name, string? fqn, string? parentFqn, SourceLocation? source)
