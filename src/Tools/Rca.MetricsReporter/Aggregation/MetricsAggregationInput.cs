@@ -61,6 +61,10 @@ public sealed class MetricsAggregationInput
   /// so that the HTML renderer and external tools can adjust visualisation and
   /// tooling behaviour without altering the underlying metrics.
   /// </remarks>
+  [SuppressMessage(
+      "Style",
+      "IDE0028:Collection initialization can be simplified",
+      Justification = "The property must stay a concrete List<T> for serialization and downstream consumers, and we initialize it in the constructor rather than via inline collection syntax.")]
   public List<SuppressedSymbolInfo> SuppressedSymbols { get; init; }
 
   /// <summary>

@@ -370,8 +370,9 @@ internal static class SuppressedSymbolsAnalyzer
             continue;
           }
 
-          if (!SuppressedRuleMetricMapper.TryGetMetricName(ruleId, out var metricName) ||
-              string.IsNullOrWhiteSpace(metricName))
+          SuppressedRuleMetricMapper.TryGetMetricName(ruleId, out var metricName);
+          metricName ??= ruleId;
+          if (string.IsNullOrWhiteSpace(metricName))
           {
             continue;
           }
@@ -411,7 +412,9 @@ internal static class SuppressedSymbolsAnalyzer
 
       var categoryLiteral = args[0].Expression as LiteralExpressionSyntax;
       var category = categoryLiteral?.Token.ValueText;
-      if (!string.Equals(category, "Microsoft.Maintainability", StringComparison.OrdinalIgnoreCase))
+      if (string.IsNullOrWhiteSpace(category) ||
+          (!category.StartsWith("Microsoft.", StringComparison.OrdinalIgnoreCase) &&
+           !category.Equals("Style", StringComparison.OrdinalIgnoreCase)))
       {
         return false;
       }
