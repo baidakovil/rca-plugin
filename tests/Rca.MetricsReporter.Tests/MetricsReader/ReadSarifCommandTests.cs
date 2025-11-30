@@ -42,10 +42,10 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
     report.Metadata.RuleDescriptions["IDE0040"] = new RuleDescription { ShortDescription = "Await configure" };
 
     var reportPath = WriteReport(report);
-    var settings = CreateNamespaceSettings(reportPath, "Rca.Loader.Services", metricName: "SarifIdeRuleViolations");
+    var settings = CreateSarifSettings(reportPath, "Rca.Loader.Services", metricName: "SarifIdeRuleViolations");
 
     var (exitCode, output) = await MetricsReaderCommandTestHarness
-      .RunNamespaceCommandAsync<ReadSarifCommand>(settings)
+      .RunSarifCommandAsync<ReadSarifCommand>(settings)
       .ConfigureAwait(false);
 
     exitCode.Should().Be(0);
@@ -58,6 +58,42 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
     group.GetProperty("ruleId").GetString().Should().Be("IDE0060");
     group.GetProperty("count").GetInt32().Should().Be(2);
     group.GetProperty("shortDescription").GetString().Should().Be("Unused parameter");
+  }
+
+  [Test]
+  public async Task ExecuteAsync_DefaultMetricPicksMostSevereGroupAcrossSarifMetrics()
+  {
+    var type = MetricsReaderCommandTestData.CreateTypeNode(
+      "Rca.Loader.Services.RuleConsumer",
+      new Dictionary<MetricIdentifier, MetricValue>
+      {
+        [MetricIdentifier.SarifIdeRuleViolations] = CreateSarifMetric(
+          ("IDE0060", new[]
+          {
+            ("Unused parameter", "file:///src/Consumer.cs", 10),
+            ("Unused parameter", "file:///src/Consumer.cs", 15)
+          })),
+        [MetricIdentifier.SarifCaRuleViolations] = CreateSarifMetric(
+          ("CA1502", new[]
+          {
+            ("Avoid complexity", "file:///src/Consumer.cs", 20)
+          }))
+      });
+
+    var report = MetricsReaderCommandTestData.CreateReport(new[] { type });
+    var reportPath = WriteReport(report);
+    var settings = CreateSarifSettings(reportPath, "Rca.Loader.Services");
+
+    var (exitCode, output) = await MetricsReaderCommandTestHarness
+      .RunSarifCommandAsync<ReadSarifCommand>(settings)
+      .ConfigureAwait(false);
+
+    exitCode.Should().Be(0);
+    using var json = JsonDocument.Parse(output);
+    json.RootElement.GetProperty("metric").GetString().Should().Be("Any");
+    var group = json.RootElement.GetProperty("violationsGroups")[0];
+    group.GetProperty("ruleId").GetString().Should().Be("IDE0060");
+    group.GetProperty("count").GetInt32().Should().Be(2);
   }
 
   [Test]
@@ -81,14 +117,14 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
 
     var report = MetricsReaderCommandTestData.CreateReport(new[] { type });
     var reportPath = WriteReport(report);
-    var settings = CreateNamespaceSettings(
+    var settings = CreateSarifSettings(
       reportPath,
       "Rca.Loader.Services",
       showAll: true,
       metricName: "SarifIdeRuleViolations");
 
     var (exitCode, output) = await MetricsReaderCommandTestHarness
-      .RunNamespaceCommandAsync<ReadSarifCommand>(settings)
+      .RunSarifCommandAsync<ReadSarifCommand>(settings)
       .ConfigureAwait(false);
 
     exitCode.Should().Be(0);
@@ -110,10 +146,10 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
     });
 
     var reportPath = WriteReport(report);
-    var settings = CreateNamespaceSettings(reportPath, "Rca.Loader.Services", metricName: "Complexity");
+    var settings = CreateSarifSettings(reportPath, "Rca.Loader.Services", metricName: "Complexity");
 
     var (exitCode, output) = await MetricsReaderCommandTestHarness
-      .RunNamespaceCommandAsync<ReadSarifCommand>(settings)
+      .RunSarifCommandAsync<ReadSarifCommand>(settings)
       .ConfigureAwait(false);
 
     exitCode.Should().Be(0);
@@ -138,14 +174,14 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
 
     var report = MetricsReaderCommandTestData.CreateReport(new[] { type });
     var reportPath = WriteReport(report);
-    var settings = CreateNamespaceSettings(
+    var settings = CreateSarifSettings(
       reportPath,
       "Rca.Other.Namespace",
       metricName: "SarifIdeRuleViolations",
       showAll: true);
 
     var (exitCode, output) = await MetricsReaderCommandTestHarness
-      .RunNamespaceCommandAsync<ReadSarifCommand>(settings)
+      .RunSarifCommandAsync<ReadSarifCommand>(settings)
       .ConfigureAwait(false);
 
     exitCode.Should().Be(0);
@@ -171,7 +207,7 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
 
     var report = MetricsReaderCommandTestData.CreateReport(new[] { type });
     var reportPath = WriteReport(report);
-    var settings = CreateNamespaceSettings(
+    var settings = CreateSarifSettings(
       reportPath,
       "Rca.Loader.Services",
       symbolKind: MetricsReaderSymbolKind.Member,
@@ -179,7 +215,7 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
       showAll: true);
 
     var (exitCode, output) = await MetricsReaderCommandTestHarness
-      .RunNamespaceCommandAsync<ReadSarifCommand>(settings)
+      .RunSarifCommandAsync<ReadSarifCommand>(settings)
       .ConfigureAwait(false);
 
     exitCode.Should().Be(0);
@@ -210,7 +246,7 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
 
     var report = MetricsReaderCommandTestData.CreateReport(new[] { type });
     var reportPath = WriteReport(report);
-    var settings = CreateNamespaceSettings(
+    var settings = CreateSarifSettings(
       reportPath,
       "Rca.Loader.Services",
       showAll: true,
@@ -218,7 +254,7 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
       ruleId: "CA1506");
 
     var (exitCode, output) = await MetricsReaderCommandTestHarness
-      .RunNamespaceCommandAsync<ReadSarifCommand>(settings)
+      .RunSarifCommandAsync<ReadSarifCommand>(settings)
       .ConfigureAwait(false);
 
     exitCode.Should().Be(0);
@@ -227,6 +263,44 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
     groups.Should().HaveCount(1);
     groups[0].GetProperty("ruleId").GetString().Should().Be("CA1506");
     groups[0].GetProperty("count").GetInt32().Should().Be(2);
+  }
+
+  [Test]
+  public async Task ExecuteAsync_RuleIdFilterWithDefaultMetricFiltersGroups()
+  {
+    var type = MetricsReaderCommandTestData.CreateTypeNode(
+      "Rca.Loader.Services.RuleConsumer",
+      new Dictionary<MetricIdentifier, MetricValue>
+      {
+        [MetricIdentifier.SarifCaRuleViolations] = CreateSarifMetric(
+          ("CA1502", new[]
+          {
+            ("Avoid complexity", "file:///src/Consumer.cs", 10)
+          }),
+          ("CA1506", new[]
+          {
+            ("Reduce coupling", "file:///src/Consumer.cs", 20),
+            ("Reduce coupling", "file:///src/Consumer.cs", 25)
+          }))
+      });
+
+    var report = MetricsReaderCommandTestData.CreateReport(new[] { type });
+    var reportPath = WriteReport(report);
+    var settings = CreateSarifSettings(
+      reportPath,
+      "Rca.Loader.Services",
+      showAll: true,
+      ruleId: "CA1506");
+
+    var (exitCode, output) = await MetricsReaderCommandTestHarness
+      .RunSarifCommandAsync<ReadSarifCommand>(settings)
+      .ConfigureAwait(false);
+
+    exitCode.Should().Be(0);
+    using var json = JsonDocument.Parse(output);
+    var groups = json.RootElement.GetProperty("violationsGroups").EnumerateArray().ToList();
+    groups.Should().HaveCount(1);
+    groups[0].GetProperty("ruleId").GetString().Should().Be("CA1506");
   }
 
   [Test]
@@ -245,7 +319,7 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
 
     var report = MetricsReaderCommandTestData.CreateReport(new[] { type });
     var reportPath = WriteReport(report);
-    var settings = CreateNamespaceSettings(
+    var settings = CreateSarifSettings(
       reportPath,
       "Rca.Loader.Services",
       showAll: true,
@@ -253,7 +327,7 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
       ruleId: "ide0060");
 
     var (exitCode, output) = await MetricsReaderCommandTestHarness
-      .RunNamespaceCommandAsync<ReadSarifCommand>(settings)
+      .RunSarifCommandAsync<ReadSarifCommand>(settings)
       .ConfigureAwait(false);
 
     exitCode.Should().Be(0);
@@ -279,14 +353,14 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
 
     var report = MetricsReaderCommandTestData.CreateReport(new[] { type });
     var reportPath = WriteReport(report);
-    var settings = CreateNamespaceSettings(
+    var settings = CreateSarifSettings(
       reportPath,
       "Rca.Loader.Services",
       metricName: "SarifCaRuleViolations",
       ruleId: "CA9999");
 
     var (exitCode, output) = await MetricsReaderCommandTestHarness
-      .RunNamespaceCommandAsync<ReadSarifCommand>(settings)
+      .RunSarifCommandAsync<ReadSarifCommand>(settings)
       .ConfigureAwait(false);
 
     exitCode.Should().Be(0);
@@ -315,14 +389,14 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
 
     var report = MetricsReaderCommandTestData.CreateReport(new[] { type });
     var reportPath = WriteReport(report);
-    var settings = CreateNamespaceSettings(
+    var settings = CreateSarifSettings(
       reportPath,
       "Rca.Loader.Services",
       showAll: true,
       metricName: "SarifCaRuleViolations");
 
     var (exitCode, output) = await MetricsReaderCommandTestHarness
-      .RunNamespaceCommandAsync<ReadSarifCommand>(settings)
+      .RunSarifCommandAsync<ReadSarifCommand>(settings)
       .ConfigureAwait(false);
 
     exitCode.Should().Be(0);
@@ -357,10 +431,10 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
 
     var report = MetricsReaderCommandTestData.CreateReport(new[] { type }, new[] { suppressedInfo });
     var reportPath = WriteReport(report);
-    var settings = CreateNamespaceSettings(reportPath, "Rca.Loader.Services", metricName: "SarifCaRuleViolations");
+    var settings = CreateSarifSettings(reportPath, "Rca.Loader.Services", metricName: "SarifCaRuleViolations");
 
     var (exitCode, output) = await MetricsReaderCommandTestHarness
-      .RunNamespaceCommandAsync<ReadSarifCommand>(settings)
+      .RunSarifCommandAsync<ReadSarifCommand>(settings)
       .ConfigureAwait(false);
 
     exitCode.Should().Be(0);
@@ -396,7 +470,7 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
 
     var report = MetricsReaderCommandTestData.CreateReport(new[] { type }, new[] { suppressedInfo });
     var reportPath = WriteReport(report);
-    var settings = CreateNamespaceSettings(
+    var settings = CreateSarifSettings(
       reportPath,
       "Rca.Loader.Services",
       includeSuppressed: true,
@@ -404,7 +478,7 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
       metricName: "SarifCaRuleViolations");
 
     var (exitCode, output) = await MetricsReaderCommandTestHarness
-      .RunNamespaceCommandAsync<ReadSarifCommand>(settings)
+      .RunSarifCommandAsync<ReadSarifCommand>(settings)
       .ConfigureAwait(false);
 
     exitCode.Should().Be(0);
@@ -439,10 +513,10 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
 
     var report = MetricsReaderCommandTestData.CreateReport(new[] { type }, new[] { suppressedInfo });
     var reportPath = WriteReport(report);
-    var settings = CreateNamespaceSettings(reportPath, "Rca.Loader.Services", metricName: "SarifCaRuleViolations");
+    var settings = CreateSarifSettings(reportPath, "Rca.Loader.Services", metricName: "SarifCaRuleViolations");
 
     var (exitCode, output) = await MetricsReaderCommandTestHarness
-      .RunNamespaceCommandAsync<ReadSarifCommand>(settings)
+      .RunSarifCommandAsync<ReadSarifCommand>(settings)
       .ConfigureAwait(false);
 
     exitCode.Should().Be(0);
@@ -473,7 +547,7 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
 
     var report = MetricsReaderCommandTestData.CreateReport(new[] { type });
     var reportPath = WriteReport(report);
-    var settings = CreateNamespaceSettings(
+    var settings = CreateSarifSettings(
       reportPath,
       "Rca.Loader.Services",
       symbolKind: MetricsReaderSymbolKind.Member,
@@ -481,7 +555,7 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
       metricName: "SarifIdeRuleViolations");
 
     var (exitCode, output) = await MetricsReaderCommandTestHarness
-      .RunNamespaceCommandAsync<ReadSarifCommand>(settings)
+      .RunSarifCommandAsync<ReadSarifCommand>(settings)
       .ConfigureAwait(false);
 
     exitCode.Should().Be(0);

@@ -22,6 +22,14 @@ internal static class MetricsReaderCommandTestHarness
     return RunCommandAsync<TCommand>(args);
   }
 
+  public static Task<(int ExitCode, string Output)> RunSarifCommandAsync<TCommand>(SarifMetricSettings settings)
+    where TCommand : class, ICommand
+  {
+    ArgumentNullException.ThrowIfNull(settings);
+    var args = BuildSarifArguments(settings);
+    return RunCommandAsync<TCommand>(args);
+  }
+
   public static Task<(int ExitCode, string Output)> RunTestCommandAsync<TCommand>(TestMetricSettings settings)
     where TCommand : class, ICommand
   {
@@ -82,6 +90,36 @@ internal static class MetricsReaderCommandTestHarness
       "--symbol", settings.Symbol,
       "--metric", settings.Metric
     };
+
+    AppendCommonArguments(args, settings.IncludeSuppressed, settings.ThresholdsFile, settings.NoUpdate);
+    return args.ToArray();
+  }
+
+  private static string[] BuildSarifArguments(SarifMetricSettings settings)
+  {
+    var args = new List<string>
+    {
+      "--report", settings.ReportPath,
+      "--namespace", settings.Namespace,
+      "--symbol-kind", settings.SymbolKind.ToString()
+    };
+
+    if (settings.HasExplicitMetric && !string.IsNullOrWhiteSpace(settings.Metric))
+    {
+      args.Add("--metric");
+      args.Add(settings.Metric!);
+    }
+
+    if (!string.IsNullOrWhiteSpace(settings.RuleId))
+    {
+      args.Add("--ruleid");
+      args.Add(settings.RuleId!);
+    }
+
+    if (settings.ShowAll)
+    {
+      args.Add("--all");
+    }
 
     AppendCommonArguments(args, settings.IncludeSuppressed, settings.ThresholdsFile, settings.NoUpdate);
     return args.ToArray();

@@ -53,10 +53,10 @@ internal static class MetricsReaderConsoleHost
         .WithExample(new[] { "readany", "--namespace", "Rca.Loader", "--metric", "Complexity", "--all", "--symbol-kind", "Member" });
 
       config.AddCommand<ReadSarifCommand>("readsarif")
-        .WithDescription("Aggregates SARIF-based metrics (SarifCaRuleViolations, SarifIdeRuleViolations) by rule ID for the specified namespace.")
-        .WithExample(new[] { "readsarif", "--namespace", "Rca.Loader", "--metric", "SarifCaRuleViolations" })
+        .WithDescription("Aggregates SARIF-based metrics (SarifCaRuleViolations, SarifIdeRuleViolations) by rule ID for the specified namespace. --metric defaults to Any.")
+        .WithExample(new[] { "readsarif", "--namespace", "Rca.Loader" })
         .WithExample(new[] { "readsarif", "--namespace", "Rca.Loader", "--metric", "SarifIdeRuleViolations", "--all", "--symbol-kind", "Member" })
-        .WithExample(new[] { "readsarif", "--namespace", "Rca.Loader", "--metric", "SarifCaRuleViolations", "--ruleid", "CA1506" });
+        .WithExample(new[] { "readsarif", "--namespace", "Rca.Loader", "--metric", "Any", "--ruleid", "CA1506" });
 
       config.AddCommand<TestMetricCommand>("test")
         .WithDescription("Checks whether a symbol satisfies the specified metric after refactoring.")

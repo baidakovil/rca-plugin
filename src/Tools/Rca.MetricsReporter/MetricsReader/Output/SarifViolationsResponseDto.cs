@@ -20,10 +20,10 @@ internal sealed class SarifViolationsResponseDto
 
   public List<SarifViolationGroupDto> ViolationsGroups { get; init; } = new();
 
-  public static SarifViolationsResponseDto From(NamespaceMetricSettings settings, IEnumerable<SarifViolationGroup> groups)
+  public static SarifViolationsResponseDto From(SarifMetricSettings settings, IEnumerable<SarifViolationGroup> groups)
     => new()
     {
-      Metric = settings.ResolvedMetric.ToString(),
+      Metric = settings.EffectiveMetricName,
       Namespace = settings.Namespace.Trim(),
       SymbolKind = settings.SymbolKind.ToString(),
       IncludeSuppressed = settings.IncludeSuppressed,

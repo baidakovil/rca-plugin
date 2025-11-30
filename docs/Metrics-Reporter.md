@@ -278,9 +278,11 @@ metrics-reader readany --namespace Rca.Loader.Infrastructure --metric Complexity
 #### `metrics-reader readsarif`
 
 ```
-metrics-reader readsarif --namespace <NamespacePrefix> --metric <SarifCaRuleViolations|SarifIdeRuleViolations>
+metrics-reader readsarif --namespace <NamespacePrefix> [--metric <SarifCaRuleViolations|SarifIdeRuleViolations|Any>]
                          [--symbol-kind <Any|Type|Member>] [--all] [--ruleid <CAxxxx|IDExxxx>] [общие параметры]
 ```
+
+- Метрика по умолчанию — `Any`, то есть агрегируются одновременно `SarifCaRuleViolations` и `SarifIdeRuleViolations`. Укажите `--metric` только если хотите ужать вывод до одной категории.
 
 - Агрегирует SARIF-метрики по `ruleId` и выводит группы в порядке убывания количества нарушений.
 - Каждая группа содержит `ruleId`, `shortDescription`, общее `count` и массив `violations` со сведениями: `symbol`, `message`, `uri`, `startLine`, `endLine`.
@@ -292,7 +294,7 @@ metrics-reader readsarif --namespace <NamespacePrefix> --metric <SarifCaRuleViol
 **Пример:**
 
 ```powershell
-metrics-reader readsarif --namespace Rca.Loader --metric SarifCaRuleViolations
+metrics-reader readsarif --namespace Rca.Loader
 metrics-reader readsarif --namespace Rca.Loader --metric SarifIdeRuleViolations --symbol-kind Member --all
 metrics-reader readsarif --namespace Rca.Loader --metric SarifCaRuleViolations --ruleid CA1506
 ```

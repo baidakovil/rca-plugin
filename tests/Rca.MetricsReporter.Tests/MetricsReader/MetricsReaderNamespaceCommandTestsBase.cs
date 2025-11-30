@@ -61,6 +61,35 @@ internal abstract class MetricsReaderCommandTestsBase
     return settings;
   }
 
+  protected static SarifMetricSettings CreateSarifSettings(
+    string reportPath,
+    string @namespace,
+    bool includeSuppressed = false,
+    MetricsReaderSymbolKind symbolKind = MetricsReaderSymbolKind.Any,
+    string? thresholdsFile = null,
+    bool showAll = false,
+    string? metricName = null,
+    string? ruleId = null,
+    bool noUpdate = true)
+  {
+    var settings = new SarifMetricSettings
+    {
+      ReportPath = reportPath,
+      Namespace = @namespace,
+      Metric = metricName,
+      IncludeSuppressed = includeSuppressed,
+      SymbolKind = symbolKind,
+      ThresholdsFile = thresholdsFile,
+      ShowAll = showAll,
+      RuleId = ruleId,
+      NoUpdate = noUpdate
+    };
+
+    var validation = settings.Validate();
+    Assert.That(validation.Successful, Is.True, validation.Message ?? "Settings validation failed.");
+    return settings;
+  }
+
   protected static TestMetricSettings CreateTestSettings(
     string reportPath,
     string symbol,

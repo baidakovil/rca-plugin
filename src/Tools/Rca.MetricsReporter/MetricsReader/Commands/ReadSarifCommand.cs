@@ -1,5 +1,7 @@
 namespace Rca.Tools.MetricsReporter.MetricsReader.Commands;
 
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,36 +14,47 @@ using Spectre.Console.Cli;
 /// <summary>
 /// Aggregates SARIF-based metric breakdowns by rule identifier.
 /// </summary>
-internal sealed class ReadSarifCommand : MetricsReaderCommandBase<NamespaceMetricSettings>
+internal sealed class ReadSarifCommand : MetricsReaderCommandBase<SarifMetricSettings>
 {
   /// <inheritdoc />
-  protected override async Task<int> ExecuteAsync(CommandContext context, NamespaceMetricSettings settings, CancellationToken cancellationToken)
+  protected override async Task<int> ExecuteAsync(CommandContext context, SarifMetricSettings settings, CancellationToken cancellationToken)
   {
-    if (!SupportsSarifBreakdown(settings.ResolvedMetric))
+    if (!settings.TryResolveSarifMetrics(out var metrics))
     {
       JsonConsoleWriter.Write(new
       {
-        metric = settings.Metric,
-        message = $"Metric '{settings.Metric}' does not expose SARIF rule breakdown data. Use SarifCaRuleViolations or SarifIdeRuleViolations."
+        metric = settings.EffectiveMetricName,
+        message = $"Metric '{settings.EffectiveMetricName}' does not expose SARIF rule breakdown data. Use SarifCaRuleViolations or SarifIdeRuleViolations."
       });
       return 0;
     }
 
     var trimmedNamespace = settings.Namespace.Trim();
     var engine = await CreateEngineAsync(settings, cancellationToken).ConfigureAwait(false);
-    var filter = new SymbolFilter(trimmedNamespace, settings.ResolvedMetric, settings.SymbolKind, settings.IncludeSuppressed);
-    var aggregation = engine.GetSarifViolationGroups(filter);
-    var groups = FilterSarifGroups(aggregation.Groups, settings);
+    var aggregatedGroups = new List<SarifViolationGroup>();
+    foreach (var metric in metrics)
+    {
+      var filter = new SymbolFilter(trimmedNamespace, metric, settings.SymbolKind, settings.IncludeSuppressed);
+      var aggregation = engine.GetSarifViolationGroups(filter);
+      aggregatedGroups.AddRange(aggregation.Groups);
+    }
+
+    var sortedGroups = aggregatedGroups
+      .OrderByDescending(group => group.Count)
+      .ThenBy(group => group.RuleId, StringComparer.OrdinalIgnoreCase)
+      .ToList();
+
+    var groups = FilterSarifGroups(sortedGroups, settings);
 
     if (groups.Count == 0)
     {
       JsonConsoleWriter.Write(new
       {
-        metric = settings.Metric,
+        metric = settings.EffectiveMetricName,
         @namespace = trimmedNamespace,
         symbolKind = settings.SymbolKind.ToString(),
         ruleId = settings.RuleId,
-        message = BuildSarifNotFoundMessage(settings.Metric, trimmedNamespace, settings.RuleId)
+        message = BuildSarifNotFoundMessage(settings.EffectiveMetricName, trimmedNamespace, settings.RuleId)
       });
       return 0;
     }
@@ -50,14 +63,9 @@ internal sealed class ReadSarifCommand : MetricsReaderCommandBase<NamespaceMetri
     JsonConsoleWriter.Write(payload);
     return 0;
   }
-
-  private static bool SupportsSarifBreakdown(MetricIdentifier identifier)
-    => identifier == MetricIdentifier.SarifCaRuleViolations
-      || identifier == MetricIdentifier.SarifIdeRuleViolations;
-
   private static IReadOnlyList<SarifViolationGroup> FilterSarifGroups(
     IReadOnlyList<SarifViolationGroup> groups,
-    NamespaceMetricSettings settings)
+    SarifMetricSettings settings)
   {
     IEnumerable<SarifViolationGroup> query = groups;
     if (!string.IsNullOrWhiteSpace(settings.RuleId))
