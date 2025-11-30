@@ -419,10 +419,6 @@ public sealed class MetricsReporterApplication
       MetricsReport? baseline,
       List<SuppressedSymbolInfo> suppressedSymbols)
   {
-    var memberFilter = MemberFilter.FromString(options.ExcludedMemberNamesPatterns);
-    var assemblyFilter = AssemblyFilter.FromString(options.ExcludedAssemblyNames);
-    var typeFilter = TypeFilter.FromString(options.ExcludedTypeNamePatterns);
-
     return new MetricsAggregationInput
     {
       SolutionName = options.SolutionName,
@@ -563,7 +559,7 @@ public sealed class MetricsReporterApplication
   private static Dictionary<MetricIdentifier, MetricThresholdDefinition> ParseThresholds(
       MetricsReporterOptions options)
   {
-    string? payload = null;
+    string? payload;
 
     if (!string.IsNullOrWhiteSpace(options.ThresholdsPath))
     {

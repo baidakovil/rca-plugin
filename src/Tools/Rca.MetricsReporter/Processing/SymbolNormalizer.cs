@@ -156,7 +156,7 @@ public static class SymbolNormalizer
       // Check if there's a dot before "ctor" or "cctor" in the original string
       // Look for pattern like "..ctor" or "..cctor" (double dot indicates .ctor/.cctor)
       var beforeLastDot = lastDot > 0 ? methodNameWithoutGenerics[..lastDot] : string.Empty;
-      if (beforeLastDot.EndsWith(".", StringComparison.Ordinal))
+      if (beforeLastDot.EndsWith('.'))
       {
         // It's a constructor, add the leading dot
         extractedName = "." + extractedName;

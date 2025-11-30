@@ -76,7 +76,7 @@ public sealed class MemberFilter
     }
 
     // Handle constructor names with leading dot (e.g., ".ctor" -> "ctor")
-    var normalizedName = methodName.StartsWith(".", StringComparison.Ordinal)
+    var normalizedName = methodName.StartsWith('.')
         ? methodName[1..]
         : methodName;
 
@@ -165,7 +165,7 @@ public sealed class MemberFilter
         continue;
       }
 
-      var normalized = part.StartsWith(".", StringComparison.Ordinal) ? part[1..] : part;
+      var normalized = part.StartsWith('.') ? part[1..] : part;
       if (!string.IsNullOrWhiteSpace(normalized))
       {
         normalizedParts.Add(normalized);

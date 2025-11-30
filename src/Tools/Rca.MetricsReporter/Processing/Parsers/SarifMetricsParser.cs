@@ -135,16 +135,16 @@ public sealed class SarifMetricsParser : IMetricsSourceParser
         [ruleId] = new SarifRuleBreakdownEntry
         {
           Count = 1,
-          Violations = new List<SarifRuleViolationDetail>
-          {
-            new()
+          Violations =
+          [
+            new SarifRuleViolationDetail
             {
               Message = messageText,
               Uri = location.OriginalUri,
               StartLine = location.Source.StartLine,
               EndLine = location.Source.EndLine
             }
-          }
+          ]
         }
       };
     }

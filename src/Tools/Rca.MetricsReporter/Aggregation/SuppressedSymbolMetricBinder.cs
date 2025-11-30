@@ -9,10 +9,7 @@ internal static class SuppressedSymbolMetricBinder
 {
   public static void Bind(SolutionMetricsNode solution, IList<SuppressedSymbolInfo> suppressedSymbols)
   {
-    if (solution is null)
-    {
-      throw new ArgumentNullException(nameof(solution));
-    }
+    ArgumentNullException.ThrowIfNull(solution);
 
     if (suppressedSymbols.Count == 0)
     {

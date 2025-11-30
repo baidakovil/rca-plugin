@@ -14,10 +14,7 @@ internal static class SuppressedMetricResolver
 
   public static bool TryResolve(MetricsNode node, string? ruleId, out MetricIdentifier metricIdentifier)
   {
-    if (node is null)
-    {
-      throw new ArgumentNullException(nameof(node));
-    }
+    ArgumentNullException.ThrowIfNull(node);
 
     var preferredMetric = GetPreferredMetric(ruleId);
     if (preferredMetric.HasValue && NodeHasMetric(node, preferredMetric.Value))

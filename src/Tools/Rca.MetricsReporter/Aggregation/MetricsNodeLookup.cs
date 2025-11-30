@@ -16,10 +16,7 @@ internal sealed class MetricsNodeLookup
 
   public static MetricsNodeLookup Create(SolutionMetricsNode solution)
   {
-    if (solution is null)
-    {
-      throw new ArgumentNullException(nameof(solution));
-    }
+    ArgumentNullException.ThrowIfNull(solution);
 
     var index = new Dictionary<string, MetricsNode>(StringComparer.Ordinal);
 
