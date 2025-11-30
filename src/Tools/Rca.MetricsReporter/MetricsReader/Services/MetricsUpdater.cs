@@ -48,7 +48,7 @@ internal class MetricsUpdater
 
   protected virtual ProcessStartInfo CreateStartInfo(string projectPath, string solutionDirectory)
   {
-    var arguments = $"msbuild \"{projectPath}\" /t:GenerateMetricsDashboard /p:GenerateMetricsDashboard=true /p:BuildProjectReferences=false";
+    var arguments = $"msbuild \"{projectPath}\" /t:GenerateMetricsDashboard /p:GenerateMetricsDashboard=true /p:BuildProjectReferences=false /p:RoslynMetricsEnabled=true /p:SarifMetricsEnabled=true";
     return new ProcessStartInfo
     {
       FileName = "dotnet",
