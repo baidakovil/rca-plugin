@@ -23,14 +23,27 @@ public sealed class JsonReportLoader
   /// <exception cref="JsonException">Thrown when the JSON content is invalid.</exception>
   public static async Task<MetricsReport?> LoadAsync(string jsonPath, CancellationToken cancellationToken)
   {
-    ArgumentException.ThrowIfNullOrWhiteSpace(jsonPath);
+    ValidatePath(jsonPath);
+    await using var stream = OpenFile(jsonPath);
+    return await DeserializeReportAsync(stream, cancellationToken).ConfigureAwait(false);
+  }
 
+  private static void ValidatePath(string jsonPath)
+  {
+    ArgumentException.ThrowIfNullOrWhiteSpace(jsonPath);
     if (!File.Exists(jsonPath))
     {
       throw new FileNotFoundException($"JSON file not found: {jsonPath}", jsonPath);
     }
+  }
 
-    await using var stream = File.OpenRead(jsonPath);
+  private static FileStream OpenFile(string jsonPath)
+  {
+    return File.OpenRead(jsonPath);
+  }
+
+  private static async Task<MetricsReport?> DeserializeReportAsync(FileStream stream, CancellationToken cancellationToken)
+  {
     return await JsonSerializer.DeserializeAsync<MetricsReport>(
         stream,
         JsonSerializerOptionsFactory.Create(),

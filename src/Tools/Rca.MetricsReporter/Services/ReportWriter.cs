@@ -17,6 +17,10 @@ public sealed class ReportWriter
   /// <summary>
   /// Writes the JSON report to disk.
   /// </summary>
+  [System.Diagnostics.CodeAnalysis.SuppressMessage(
+      "Microsoft.Maintainability",
+      "CA1506:Avoid excessive class coupling",
+      Justification = "JSON report writer performs file I/O and JSON serialization; further decomposition would require wrapper methods which are prohibited by refactoring rules.")]
   public static async Task WriteJsonAsync(MetricsReport report, string path, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(report);

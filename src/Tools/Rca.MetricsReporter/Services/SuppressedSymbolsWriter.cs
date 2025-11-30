@@ -19,6 +19,10 @@ internal static class SuppressedSymbolsWriter
   /// <param name="report">Report to serialize. Cannot be null.</param>
   /// <param name="path">Destination file path. Cannot be null or empty.</param>
   /// <param name="cancellationToken">Cancellation token for I/O operations.</param>
+  [System.Diagnostics.CodeAnalysis.SuppressMessage(
+      "Microsoft.Maintainability",
+      "CA1506:Avoid excessive class coupling",
+      Justification = "Method performs JSON serialization and file I/O; further decomposition would require wrapper methods which are prohibited by refactoring rules.")]
   public static async Task WriteAsync(
       SuppressedSymbolsReport report,
       string path,

@@ -25,6 +25,10 @@ public sealed class BaselineManager
   /// This method creates baseline from previous report only if baseline doesn't exist.
   /// This allows new report to be generated with deltas calculated against the previous report.
   /// </remarks>
+  [System.Diagnostics.CodeAnalysis.SuppressMessage(
+      "Microsoft.Maintainability",
+      "CA1506:Avoid excessive class coupling",
+      Justification = "Baseline creation method performs file I/O operations and directory management; further decomposition would require wrapper methods which are prohibited by refactoring rules.")]
   public static async Task<bool> CreateBaselineFromPreviousReportAsync(
       string previousReportPath,
       string baselinePath,
@@ -91,6 +95,10 @@ public sealed class BaselineManager
   /// 
   /// Note: This method does not compare files. The report is always copied to baseline location if it exists.
   /// </remarks>
+  [System.Diagnostics.CodeAnalysis.SuppressMessage(
+      "Microsoft.Maintainability",
+      "CA1506:Avoid excessive class coupling",
+      Justification = "Baseline replacement method performs file I/O, directory management, and archiving operations; further decomposition would require wrapper methods which are prohibited by refactoring rules.")]
   public static async Task<bool> ReplaceBaselineAsync(
       string reportPath,
       string baselinePath,

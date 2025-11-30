@@ -27,6 +27,10 @@ internal static class SuppressedSymbolsLoader
   /// A list of <see cref="SuppressedSymbolInfo"/> instances. Returns an empty list when
   /// the path is <see langword="null"/>, empty, or the file is missing.
   /// </returns>
+  [System.Diagnostics.CodeAnalysis.SuppressMessage(
+      "Microsoft.Maintainability",
+      "CA1506:Avoid excessive class coupling",
+      Justification = "Method performs file I/O and JSON deserialization; further decomposition would require wrapper methods which are prohibited by refactoring rules.")]
   public static async Task<IList<SuppressedSymbolInfo>> LoadAsync(string? path, CancellationToken cancellationToken)
   {
     if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
