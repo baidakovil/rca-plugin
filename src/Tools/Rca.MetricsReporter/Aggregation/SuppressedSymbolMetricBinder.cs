@@ -7,12 +7,6 @@ using Rca.Tools.MetricsReporter.Model;
 
 internal static class SuppressedSymbolMetricBinder
 {
-  private static readonly MetricIdentifier[] FallbackMetrics =
-  {
-    MetricIdentifier.SarifIdeRuleViolations,
-    MetricIdentifier.SarifCaRuleViolations
-  };
-
   public static void Bind(SolutionMetricsNode solution, IList<SuppressedSymbolInfo> suppressedSymbols)
   {
     if (solution is null)
@@ -25,7 +19,8 @@ internal static class SuppressedSymbolMetricBinder
       return;
     }
 
-    var index = BuildNodeIndex(solution);
+    var lookup = MetricsNodeLookup.Create(solution);
+    var resolver = new SuppressedMetricResolver();
 
     foreach (var suppressed in suppressedSymbols)
     {
@@ -34,114 +29,21 @@ internal static class SuppressedSymbolMetricBinder
         continue;
       }
 
-      if (!index.TryGetValue(suppressed.FullyQualifiedName, out var node))
+      if (SuppressedMetricResolver.IsKnownMetric(suppressed.Metric))
       {
         continue;
       }
 
-      if (HasRecognizedMetric(suppressed))
+      if (!lookup.TryGetNode(suppressed.FullyQualifiedName, out var node))
       {
         continue;
       }
 
-      var metric = DetermineMetric(node, suppressed.RuleId);
-      if (metric is not null)
+      if (resolver.TryResolve(node, suppressed.RuleId, out var metricIdentifier))
       {
-        suppressed.Metric = metric;
+        suppressed.Metric = metricIdentifier.ToString();
       }
     }
-  }
-
-  private static string? DetermineMetric(MetricsNode node, string ruleId)
-  {
-    var preferred = DeterminePreferredMetric(ruleId);
-    if (preferred.HasValue && HasMetric(node, preferred.Value))
-    {
-      return preferred.Value.ToString();
-    }
-
-    foreach (var candidate in FallbackMetrics)
-    {
-      if (HasMetric(node, candidate))
-      {
-        return candidate.ToString();
-      }
-    }
-
-    return null;
-  }
-
-  private static MetricIdentifier? DeterminePreferredMetric(string? ruleId)
-  {
-    if (!string.IsNullOrWhiteSpace(ruleId))
-    {
-      if (ruleId.StartsWith("IDE", StringComparison.OrdinalIgnoreCase))
-      {
-        return MetricIdentifier.SarifIdeRuleViolations;
-      }
-
-      if (ruleId.StartsWith("CA", StringComparison.OrdinalIgnoreCase))
-      {
-        return MetricIdentifier.SarifCaRuleViolations;
-      }
-    }
-
-    return null;
-  }
-
-  private static bool HasMetric(MetricsNode node, MetricIdentifier identifier)
-      => node.Metrics.TryGetValue(identifier, out var value) && value?.Value is not null;
-
-  private static Dictionary<string, MetricsNode> BuildNodeIndex(SolutionMetricsNode solution)
-  {
-    var index = new Dictionary<string, MetricsNode>(StringComparer.Ordinal);
-
-    void AddNode(MetricsNode? node)
-    {
-      if (node is null)
-      {
-        return;
-      }
-
-      if (!string.IsNullOrWhiteSpace(node.FullyQualifiedName))
-      {
-        index[node.FullyQualifiedName] = node;
-      }
-    }
-
-    foreach (var assembly in solution.Assemblies)
-    {
-      AddNode(assembly);
-      foreach (var ns in assembly.Namespaces)
-      {
-        AddNode(ns);
-        foreach (var type in ns.Types)
-        {
-          AddNode(type);
-          foreach (var member in type.Members)
-          {
-            AddNode(member);
-          }
-        }
-      }
-    }
-
-    return index;
-  }
-
-  private static bool HasRecognizedMetric(SuppressedSymbolInfo suppressed)
-  {
-    if (suppressed is null)
-    {
-      throw new ArgumentNullException(nameof(suppressed));
-    }
-
-    if (string.IsNullOrWhiteSpace(suppressed.Metric))
-    {
-      return false;
-    }
-
-    return Enum.TryParse<MetricIdentifier>(suppressed.Metric, ignoreCase: true, out _);
   }
 }
 
