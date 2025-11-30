@@ -2,6 +2,7 @@
 
 ## Requirements
 
+- Always run a full build with `dotnet build --no-incremental` before querying metrics. SARIF violation data are generated during builds; without rebuilding, the reporter sees stale data and will never show the latest violations.
 - Use the `metrics-reader` helper to update metrics and fetch SARIF violation data for the symbols that require refactoring. Refer to `@docs/Metrics-Reporter.md` for CLI syntax and examples.
 - Follow the workflow below so that every analyzer violation reported within the provided namespace is either refactored or intentionally suppressed.
 - When you evaluate a violation, take guidance from the analyzer’s `message` and `shortDescription` and consult Microsoft’s documentation for the rule (for example, `https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/CAxxxx`).
@@ -10,6 +11,8 @@
 ## Follow this process until every violation is addressed
 
 ### 1. Fetch the current violation group
+
+Always precede this step with `dotnet build --no-incremental` so the SARIF metrics reader can see updated violation counts; metrics are only refreshed during a build, and skipping it leaves the data stale.
 
 Run `metrics-reader readsarif` for the target namespace to retrieve the first SARIF group. Because `--metric` defaults to `Any`, you do not need to specify it unless you want to focus on a single SARIF metric:
 
@@ -47,7 +50,7 @@ If refactoring is feasible:
 
 1. Plan the change in light of the analyzer’s recommendation.
 2. Implement the refactor.
-3. Run `dotnet build --no-incremental` (preferably the whole solution; focus on affected projects when time is constrained).
+3. Run `dotnet build --no-incremental` (preferably the whole solution; focus on affected projects when time is constrained). Remember that only this build refreshes the SARIF violation data, so skip it only if you intentionally want to reuse already captured metrics.
 4. Run `dotnet test --no-build` (solution-wide if possible; targeted tests are acceptable after localized changes) and fix any regressions.
 
 Steps 3 and 4 can cover an entire violation group once the required fixes are small.
