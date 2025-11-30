@@ -7,7 +7,7 @@ using Rca.Tools.MetricsReporter.Model;
 /// <summary>
 /// Provides efficient lookup for suppressed symbols by fully qualified name and metric.
 /// </summary>
-internal sealed class SuppressedSymbolIndex
+internal sealed class SuppressedSymbolIndex : ISuppressedSymbolChecker
 {
   private readonly Dictionary<(string Symbol, MetricIdentifier Metric), SuppressedSymbolInfo> _metricLookup;
   private readonly Dictionary<(string Symbol, string RuleId), SuppressedSymbolInfo> _ruleLookup;

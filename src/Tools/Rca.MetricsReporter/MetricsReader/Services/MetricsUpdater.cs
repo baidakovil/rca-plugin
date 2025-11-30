@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 /// <summary>
 /// Runs the MSBuild target that refreshes MetricsReport.g.json.
 /// </summary>
-internal class MetricsUpdater
+internal class MetricsUpdater : IMetricsUpdater
 {
   private readonly string _solutionPath;
 

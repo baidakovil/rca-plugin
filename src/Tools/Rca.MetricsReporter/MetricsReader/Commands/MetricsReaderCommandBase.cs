@@ -17,8 +17,28 @@ internal abstract class MetricsReaderCommandBase<TSettings> : AsyncCommand<TSett
   protected static async Task<MetricsReaderEngine> CreateEngineAsync(TSettings settings, CancellationToken cancellationToken)
   {
     using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, MetricsReaderCancellation.Token);
-    var context = await MetricsReaderContextFactory.CreateAsync(settings, linkedSource.Token).ConfigureAwait(false);
-    return new MetricsReaderEngine(context);
+    var factory = CreateFactory();
+    var context = await factory.CreateAsync(settings, linkedSource.Token).ConfigureAwait(false);
+    return CreateEngine(context);
+  }
+
+  private static MetricsReaderContextFactory CreateFactory()
+  {
+    var reportLoader = new JsonReportLoaderAdapter();
+    var thresholdsParser = new ThresholdsParserAdapter();
+    var thresholdsFileLoader = new ThresholdsFileLoader(thresholdsParser);
+    var solutionLocator = new SolutionLocatorAdapter();
+    var updaterFactory = new MetricsUpdaterFactory();
+    return new MetricsReaderContextFactory(reportLoader, thresholdsFileLoader, solutionLocator, updaterFactory);
+  }
+
+  private static MetricsReaderEngine CreateEngine(MetricsReaderContext context)
+  {
+    var nodeEnumerator = new MetricsNodeEnumerator(context.Report);
+    var snapshotBuilder = new SymbolSnapshotBuilder(context.ThresholdProvider, context.SuppressedSymbolIndex);
+    var violationAggregator = new SarifViolationAggregator(context.SuppressedSymbolIndex);
+    var violationOrderer = new SarifViolationOrderer();
+    return new MetricsReaderEngine(nodeEnumerator, snapshotBuilder, violationAggregator, violationOrderer, context.Report);
   }
 }
 

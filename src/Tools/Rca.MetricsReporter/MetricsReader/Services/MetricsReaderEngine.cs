@@ -9,32 +9,70 @@ using Rca.Tools.MetricsReporter.Model;
 /// <summary>
 /// Provides high-level queries over MetricsReport.g.json for CLI commands.
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage(
+  "Microsoft.Maintainability",
+  "CA1506:Avoid excessive class coupling",
+  Justification = "Engine orchestrates queries over metrics report by coordinating specialized services (node enumerator, snapshot builder, violation aggregator/orderer); further decomposition would fragment the coordination logic and degrade maintainability.")]
 internal sealed class MetricsReaderEngine
 {
-  private readonly MetricsReaderContext _context;
+  private readonly IMetricsNodeEnumerator _nodeEnumerator;
+  private readonly ISymbolSnapshotBuilder _snapshotBuilder;
+  private readonly ISarifViolationAggregator _violationAggregator;
+  private readonly ISarifViolationOrderer _violationOrderer;
+  private readonly MetricsReport _report;
 
-  public MetricsReaderEngine(MetricsReaderContext context)
-    => _context = context ?? throw new ArgumentNullException(nameof(context));
+  /// <summary>
+  /// Initializes a new instance of the <see cref="MetricsReaderEngine"/> class.
+  /// </summary>
+  /// <param name="nodeEnumerator">The node enumerator to use.</param>
+  /// <param name="snapshotBuilder">The snapshot builder to use.</param>
+  /// <param name="violationAggregator">The violation aggregator to use.</param>
+  /// <param name="violationOrderer">The violation orderer to use.</param>
+  /// <param name="report">The metrics report to query.</param>
+  public MetricsReaderEngine(
+    IMetricsNodeEnumerator nodeEnumerator,
+    ISymbolSnapshotBuilder snapshotBuilder,
+    ISarifViolationAggregator violationAggregator,
+    ISarifViolationOrderer violationOrderer,
+    MetricsReport report)
+  {
+    _nodeEnumerator = nodeEnumerator ?? throw new ArgumentNullException(nameof(nodeEnumerator));
+    _snapshotBuilder = snapshotBuilder ?? throw new ArgumentNullException(nameof(snapshotBuilder));
+    _violationAggregator = violationAggregator ?? throw new ArgumentNullException(nameof(violationAggregator));
+    _violationOrderer = violationOrderer ?? throw new ArgumentNullException(nameof(violationOrderer));
+    _report = report ?? throw new ArgumentNullException(nameof(report));
+  }
 
+  /// <summary>
+  /// Gets problematic symbols that exceed thresholds.
+  /// </summary>
+  /// <param name="filter">The filter to apply.</param>
+  /// <returns>An enumeration of problematic symbol snapshots.</returns>
   public IEnumerable<SymbolMetricSnapshot> GetProblematicSymbols(SymbolFilter filter)
     => EnumerateSymbols(filter)
       .Where(snapshot => snapshot.Status == ThresholdStatus.Warning || snapshot.Status == ThresholdStatus.Error)
       .Where(snapshot => filter.IncludeSuppressed || !snapshot.IsSuppressed);
 
+  /// <summary>
+  /// Tries to get a symbol snapshot by fully qualified name.
+  /// </summary>
+  /// <param name="fullyQualifiedName">The fully qualified name of the symbol.</param>
+  /// <param name="metric">The metric identifier.</param>
+  /// <returns>A snapshot if found; otherwise, <see langword="null"/>.</returns>
   public SymbolMetricSnapshot? TryGetSymbol(string fullyQualifiedName, MetricIdentifier metric)
   {
-    foreach (var type in EnumerateTypeNodes())
+    foreach (var type in _nodeEnumerator.EnumerateTypeNodes())
     {
       if (string.Equals(type.FullyQualifiedName, fullyQualifiedName, StringComparison.Ordinal))
       {
-        return BuildSnapshot(type, metric);
+        return _snapshotBuilder.BuildSnapshot(type, metric);
       }
 
       foreach (var member in type.Members)
       {
         if (string.Equals(member.FullyQualifiedName, fullyQualifiedName, StringComparison.Ordinal))
         {
-          return BuildSnapshot(member, metric);
+          return _snapshotBuilder.BuildSnapshot(member, metric);
         }
       }
     }
@@ -42,60 +80,30 @@ internal sealed class MetricsReaderEngine
     return null;
   }
 
+  /// <summary>
+  /// Gets SARIF violation groups aggregated by rule ID.
+  /// </summary>
+  /// <param name="filter">The filter to apply.</param>
+  /// <returns>An aggregation result containing ordered violation groups.</returns>
+  [System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Microsoft.Maintainability",
+    "CA1506:Avoid excessive class coupling",
+    Justification = "Method orchestrates violation aggregation by coordinating specialized services (aggregator, orderer, node enumerator) and accessing report metadata; further decomposition would fragment the coordination logic without meaningful architectural benefit.")]
   public SarifViolationAggregationResult GetSarifViolationGroups(SymbolFilter filter)
   {
-    var groups = new Dictionary<string, SarifViolationGroupBuilder>(StringComparer.OrdinalIgnoreCase);
-    var ruleDescriptions = _context.Report.Metadata.RuleDescriptions ?? new Dictionary<string, RuleDescription>();
+    var nodes = _nodeEnumerator.EnumerateNodes(filter);
+    var ruleDescriptions = ExtractRuleDescriptions();
 
-    foreach (var node in EnumerateNodes(filter))
-    {
-      if (!node.Metrics.TryGetValue(filter.Metric, out var metricValue) || metricValue is null)
-      {
-        continue;
-      }
-
-      if (metricValue.Breakdown is null)
-      {
-        continue;
-      }
-
-      if (metricValue.Breakdown.Count == 0)
-      {
-        continue;
-      }
-
-      foreach (var pair in metricValue.Breakdown)
-      {
-        var entry = pair.Value;
-        if (entry is null)
-        {
-          continue;
-        }
-
-        if (!filter.IncludeSuppressed
-            && _context.SuppressedSymbolIndex.IsSuppressed(node.FullyQualifiedName, filter.Metric, pair.Key))
-        {
-          continue;
-        }
-
-        if (!groups.TryGetValue(pair.Key, out var builder))
-        {
-          ruleDescriptions.TryGetValue(pair.Key, out var description);
-          builder = new SarifViolationGroupBuilder(pair.Key, description?.ShortDescription);
-          groups[pair.Key] = builder;
-        }
-
-        builder.Add(entry.Count, entry.Violations, node);
-      }
-    }
-
-    var ordered = groups.Values
-      .Select(builder => builder.Build())
-      .OrderByDescending(group => group.Count)
-      .ThenBy(group => group.RuleId, StringComparer.OrdinalIgnoreCase)
-      .ToList();
+    var groups = _violationAggregator.AggregateViolations(nodes, filter, ruleDescriptions);
+    var ordered = _violationOrderer.OrderGroups(groups.Values);
 
     return new SarifViolationAggregationResult(ordered);
+  }
+
+  private IReadOnlyDictionary<string, RuleDescription>? ExtractRuleDescriptions()
+  {
+    var ruleDescriptionsDict = _report.Metadata.RuleDescriptions;
+    return ruleDescriptionsDict is null ? null : (IReadOnlyDictionary<string, RuleDescription>?)ruleDescriptionsDict;
   }
 
   private IEnumerable<SymbolMetricSnapshot> EnumerateSymbols(SymbolFilter filter)
@@ -109,123 +117,19 @@ internal sealed class MetricsReaderEngine
     };
   }
 
-  private IEnumerable<MetricsNode> EnumerateNodes(SymbolFilter filter)
-  {
-    return filter.SymbolKind switch
-    {
-      MetricsReaderSymbolKind.Type => EnumerateTypeNodes()
-        .Where(type => NamespaceMatches(type.FullyQualifiedName, filter.Namespace))
-        .Cast<MetricsNode>(),
-      MetricsReaderSymbolKind.Member => EnumerateMemberNodes()
-        .Where(member => NamespaceMatches(member.FullyQualifiedName, filter.Namespace))
-        .Cast<MetricsNode>(),
-      MetricsReaderSymbolKind.Any => EnumerateTypeNodes()
-        .Where(type => NamespaceMatches(type.FullyQualifiedName, filter.Namespace))
-        .Cast<MetricsNode>()
-        .Concat(EnumerateMemberNodes()
-          .Where(member => NamespaceMatches(member.FullyQualifiedName, filter.Namespace))
-          .Cast<MetricsNode>()),
-      _ => Enumerable.Empty<MetricsNode>()
-    };
-  }
-
   private IEnumerable<SymbolMetricSnapshot> EnumerateTypeSnapshots(SymbolFilter filter)
-    => EnumerateTypeNodes()
-      .Where(type => NamespaceMatches(type.FullyQualifiedName, filter.Namespace))
-      .Select(node => BuildSnapshot(node, filter.Metric))
+    => _nodeEnumerator.EnumerateTypeNodes()
+      .Where(type => NamespaceMatcher.Matches(type.FullyQualifiedName, filter.Namespace))
+      .Select(node => _snapshotBuilder.BuildSnapshot(node, filter.Metric))
       .Where(snapshot => snapshot is not null)
       .Select(snapshot => snapshot!);
 
   private IEnumerable<SymbolMetricSnapshot> EnumerateMemberSnapshots(SymbolFilter filter)
-    => EnumerateMemberNodes()
-      .Where(member => NamespaceMatches(member.FullyQualifiedName, filter.Namespace))
-      .Select(node => BuildSnapshot(node, filter.Metric))
+    => _nodeEnumerator.EnumerateMemberNodes()
+      .Where(member => NamespaceMatcher.Matches(member.FullyQualifiedName, filter.Namespace))
+      .Select(node => _snapshotBuilder.BuildSnapshot(node, filter.Metric))
       .Where(snapshot => snapshot is not null)
       .Select(snapshot => snapshot!);
-
-  private IEnumerable<TypeMetricsNode> EnumerateTypeNodes()
-  {
-    foreach (var assembly in _context.Report.Solution.Assemblies)
-    {
-      foreach (var ns in assembly.Namespaces)
-      {
-        foreach (var type in ns.Types)
-        {
-          yield return type;
-        }
-      }
-    }
-  }
-
-  private IEnumerable<MemberMetricsNode> EnumerateMemberNodes()
-  {
-    foreach (var type in EnumerateTypeNodes())
-    {
-      foreach (var member in type.Members)
-      {
-        yield return member;
-      }
-    }
-  }
-
-  private SymbolMetricSnapshot? BuildSnapshot(MetricsNode node, MetricIdentifier metric)
-  {
-    if (!node.Metrics.TryGetValue(metric, out var metricValue) || metricValue is null || metricValue.Value is null)
-    {
-      return null;
-    }
-
-    var level = MapLevel(node.Kind);
-    if (level is null)
-    {
-      return null;
-    }
-
-    var threshold = _context.ThresholdProvider.GetThreshold(metric, level.Value);
-    var isSuppressed = _context.SuppressedSymbolIndex.IsSuppressed(node.FullyQualifiedName, metric);
-    return new SymbolMetricSnapshot(
-      node.FullyQualifiedName ?? string.Empty,
-      node.Kind,
-      node.Source?.Path,
-      metric,
-      metricValue,
-      threshold,
-      isSuppressed);
-  }
-
-  private static MetricSymbolLevel? MapLevel(CodeElementKind kind)
-    => kind switch
-    {
-      CodeElementKind.Type => MetricSymbolLevel.Type,
-      CodeElementKind.Member => MetricSymbolLevel.Member,
-      _ => null
-    };
-
-  private static bool NamespaceMatches(string? fullyQualifiedName, string namespaceFilter)
-  {
-    if (string.IsNullOrWhiteSpace(namespaceFilter))
-    {
-      return true;
-    }
-
-    if (string.IsNullOrWhiteSpace(fullyQualifiedName))
-    {
-      return false;
-    }
-
-    if (!fullyQualifiedName.StartsWith(namespaceFilter, StringComparison.Ordinal))
-    {
-      return false;
-    }
-
-    if (fullyQualifiedName.Length == namespaceFilter.Length)
-    {
-      return true;
-    }
-
-    var separator = fullyQualifiedName[namespaceFilter.Length];
-    return separator == '.' || separator == '+' || separator == ':';
-  }
 }
 
 internal sealed record SymbolMetricSnapshot(
@@ -293,47 +197,4 @@ internal sealed record SarifViolationRecord(
   int? StartLine,
   int? EndLine);
 
-file sealed class SarifViolationGroupBuilder
-{
-  public SarifViolationGroupBuilder(string ruleId, string? shortDescription)
-  {
-    RuleId = ruleId;
-    ShortDescription = shortDescription;
-  }
-
-  public string RuleId { get; }
-
-  public string? ShortDescription { get; }
-
-  public int Count { get; private set; }
-
-  public List<SarifViolationRecord> Violations { get; } = [];
-
-  public SarifViolationGroup Build()
-    => new(RuleId, ShortDescription, Count, Violations);
-
-  public void Add(int count, IReadOnlyList<SarifRuleViolationDetail> violations, MetricsNode node)
-  {
-    if (count > 0)
-    {
-      Count += count;
-    }
-
-    if (violations is null || violations.Count == 0)
-    {
-      return;
-    }
-
-    var symbol = node.FullyQualifiedName ?? node.Name ?? string.Empty;
-    foreach (var violation in violations)
-    {
-      Violations.Add(new SarifViolationRecord(
-        symbol,
-        violation.Message,
-        violation.Uri,
-        violation.StartLine,
-        violation.EndLine));
-    }
-  }
-}
 

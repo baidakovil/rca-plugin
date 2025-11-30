@@ -6,7 +6,7 @@ using Rca.Tools.MetricsReporter.Model;
 /// <summary>
 /// Resolves threshold metadata for a specific metric and symbol level.
 /// </summary>
-internal sealed class MetricsThresholdProvider
+internal sealed class MetricsThresholdProvider : IMetricsThresholdProvider
 {
   private readonly IReadOnlyDictionary<MetricIdentifier, IDictionary<MetricSymbolLevel, MetricThreshold>> _reportThresholds;
   private readonly IReadOnlyDictionary<MetricIdentifier, MetricThresholdDefinition>? _overrideDefinitions;
