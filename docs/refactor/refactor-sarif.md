@@ -1,57 +1,64 @@
-Проведи рефакторинг кода в данном тебе namespace для устранения нарушений правил анализатора кода (SARIF). Рефакторинг выполняется для символов уровня Member (методы), не для классов.
+# Perform SARIF-focused refactoring
 
-## Требования
+## Requirements
 
-- Используй в работе специальную утилиту `metrics-reader`, которая позволяет по одному запросу обновлять и получать значения метрик для символов, требующих рефакторинга. Описание и примеры использования даны в `@docs/Metrics-Reporter.md`.
-- Строго следуй порядку работы, описанному ниже, чтобы достичь требуемой цели: устранить все нарушения правил анализатора для всех символов в указанном выше namespace.
-- При устранении нарушений следуй рекомендациям анализатора из сообщения `message` и описания правила `shortDescription`. Для деталей по конкретному правилу обращайся к документации Microsoft (например, `https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/CAxxxx` для правил CAxxxx).
-- Следуй принципам SOLID и правилам, установленным в проекте.
+- Use the `metrics-reader` helper to update metrics and fetch SARIF violation data for the symbols that require refactoring. Refer to `@docs/Metrics-Reporter.md` for CLI syntax and examples.
+- Follow the workflow below so that every analyzer violation reported within the provided namespace is either refactored or intentionally suppressed.
+- When you evaluate a violation, take guidance from the analyzer’s `message` and `shortDescription` and consult Microsoft’s documentation for the rule (for example, `https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/CAxxxx`).
+- Keep SOLID principles and the repository’s coding conventions front and center while modifying code.
 
-## Строго следуй этой инструкции, пока не исправишь все нарушения
+## Follow this process until every violation is addressed
 
-### 1. Получение проблемной группы нарушений
+### 1. Fetch the current violation group
 
-Используя команду `metrics-reader readsarif`, получи первую проблемную группу нарушений по `ruleId`. Пример запроса к `metrics-reader` с нужными опциями:
+Run `metrics-reader readsarif` for the target namespace to retrieve the first SARIF group. Because `--metric` defaults to `Any`, you do not need to specify it unless you want to focus on a single SARIF metric:
 
 ```powershell
-.\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe metrics-reader readsarif --namespace <данный_namespace> --metric SarifCaRuleViolations --symbol-kind Member
+.\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe metrics-reader readsarif --namespace <target_namespace>
 ```
 
-Если получаешь сообщение о том, что нарушений не найдено (вместо объекта с полями `ruleId`, `shortDescription`, `count`, `violations`), это значит, что проблемных нарушений нет: закончи работу.
+If the command responds with a human-readable message (instead of an object containing `ruleId`, `shortDescription`, `count`, and `violations`), there are no violations left in this namespace—stop.
 
-### 2. Анализ нарушения
+### 2. Study one violation
 
-Возьми первое нарушение из массива `violations` в работу. Изучи код по пути `uri`, строкам `startLine`–`endLine`, сообщение `message` и описание правила `shortDescription`. Прими решение о возможности рефакторинга.
+Pick the first violation in the returned group and examine the code referenced by `uri`, `startLine`–`endLine`, `message`, and `shortDescription`. Determine whether refactoring can resolve the issue without making the code harder to read or maintain.
 
-Есть только одна причина для отмены рефакторинга: рефакторинг не нужно проводить, если исправление приводит к ухудшению читаемости и поддержки кода. В случае отмены рефакторинга нужно сделать suppression для символа с указанием `ruleId`. Не забудь добавить using директиву `using System.Diagnostics.CodeAnalysis;` в начало файла, если её там ещё нет. Пример suppression:
+Only suppress a violation after careful consideration (for example, after two failed refactoring attempts or when a change would degrade clarity). Add a `[SuppressMessage(...)]` attribute with an English justification (and `using System.Diagnostics.CodeAnalysis;` if missing). Examples:
 
 ```csharp
 [SuppressMessage(
     "Microsoft.CodeAnalysis.CSharp",
     "CA1506:Avoid excessive class coupling",
-    Justification = "Orchestration point that coordinates multiple services; coupling is inherent to the design.")]
+    Justification = "This orchestration point coordinates multiple services; splitting it would scatter closely related steps.")]
 ```
 
-При отмене рефакторинга внеси suppression в код и переходи к следующему нарушению из группы. Если группа обработана, начинай с пункта 1.
+```csharp
+[SuppressMessage(
+    "Style",
+    "IDE0028:Collection initialization can be simplified",
+    Justification = "The downstream serializer expects a concrete List<T>, so the explicit construction must be retained.")]
+```
 
-### 3. Выполнение рефакторинга
+When you add a suppression, continue with the next violation in the group. When the group is finished, return to step 1.
 
-Если рефакторинг возможен, поступай так:
+### 3. Refactor and verify
 
-1. Спланируй рефакторинг на основе сообщения анализатора.
-2. Выполни рефакторинг.
-3. Проверь, что билд проекта успешен. Используй билд всего solution `dotnet build --no-incremental` или билд отдельно взятого проекта для экономии времени. Если билд падает, исправляй код, пока билд не станет зелёным.
-4. После проверки билда проверь, что тесты проходят. Используй тесты всего solution `dotnet test --no-build` или тесты для отдельно взятого проекта для экономии времени. Если тесты падают, исправляй код, как описано в предыдущем пункте.
+If refactoring is feasible:
 
-### 4. Проверка результата
+1. Plan the change in light of the analyzer’s recommendation.
+2. Implement the refactor.
+3. Run `dotnet build --no-incremental` (preferably the whole solution; focus on affected projects when time is constrained).
+4. Run `dotnet test --no-build` (solution-wide if possible; targeted tests are acceptable after localized changes) and fix any regressions.
 
-С помощью команды `metrics-reader readsarif` с фильтром `--ruleid` проверь, что нарушения по данному правилу устранены для всех символов в namespace. Пример запроса к `metrics-reader` с нужными опциями (используй `ruleId` из обработанной группы):
+Steps 3 and 4 can cover an entire violation group once the required fixes are small.
+
+### 4. Validate and repeat
+
+After you have addressed all violations in a group, rerun `metrics-reader readsarif` with the namespace and the group’s `ruleId`:
 
 ```powershell
-.\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe metrics-reader readsarif --namespace <данный_namespace> --metric SarifCaRuleViolations --ruleid CA1822 --symbol-kind Member
+.\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe metrics-reader readsarif --namespace <target_namespace> --ruleid <ruleId>
 ```
 
-Если получаешь сообщение о том, что нарушений не найдено (вместо объекта с полями `ruleId`, `shortDescription`, `count`, `violations`), это значит, что все нарушения по данному правилу устранены: переходи к следующей группе, как описано в пункте 1.
-
-Если получаешь объект с нарушениями (то есть `count > 0`), то возвращайся к пункту 2 с данной группой нарушений. Количество дополнительных попыток рефакторинга: 2 попытки на каждую группу нарушений. Если после второй дополнительной попытки не удалось устранить все нарушения, то следует сделать Suppression для оставшихся символов с сообщением Justification на английском языке, полностью раскрывающим суть проблемы. Не забудь добавить using директиву `using System.Diagnostics.CodeAnalysis;` в начало файла, если её там ещё нет.
+If the command reports no violations, move on to the next group (return to step 1). If violations persist, go back to step 2. Two refactoring passes are allowed per group; after the second unsuccessful attempt, document the remaining issues with a suppression (English justification) and proceed.
 
