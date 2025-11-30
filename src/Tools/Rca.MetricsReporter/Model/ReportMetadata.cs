@@ -81,7 +81,7 @@ public sealed class ReportMetadata
   /// (for example, by rendering them in a light azure color) and to surface the
   /// justification text as a tooltip on hover without re-running analysis.
   /// </remarks>
-  public IList<SuppressedSymbolInfo> SuppressedSymbols { get; init; } = new List<SuppressedSymbolInfo>();
+  public IList<SuppressedSymbolInfo> SuppressedSymbols { get; init; } = [];
 
   /// <summary>
   /// Rule descriptions extracted from SARIF files.

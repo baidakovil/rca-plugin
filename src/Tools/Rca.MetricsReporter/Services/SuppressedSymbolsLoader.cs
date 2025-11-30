@@ -31,7 +31,7 @@ internal static class SuppressedSymbolsLoader
   {
     if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
     {
-      return new List<SuppressedSymbolInfo>();
+      return [];
     }
 
     await using var stream = File.OpenRead(path);
@@ -40,7 +40,7 @@ internal static class SuppressedSymbolsLoader
         .DeserializeAsync<SuppressedSymbolsReport>(stream, options, cancellationToken)
         .ConfigureAwait(false);
 
-    return report?.SuppressedSymbols ?? new List<SuppressedSymbolInfo>();
+    return report?.SuppressedSymbols ?? [];
   }
 }
 

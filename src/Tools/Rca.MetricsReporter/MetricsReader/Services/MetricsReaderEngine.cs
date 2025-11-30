@@ -307,7 +307,7 @@ file sealed class SarifViolationGroupBuilder
 
   public int Count { get; private set; }
 
-  public List<SarifViolationRecord> Violations { get; } = new();
+  public List<SarifViolationRecord> Violations { get; } = [];
 
   public SarifViolationGroup Build()
     => new(RuleId, ShortDescription, Count, Violations);

@@ -42,7 +42,7 @@ public sealed class SuppressedSymbolsReport
   /// </summary>
   public SuppressedSymbolsReport()
   {
-    SuppressedSymbols = new();
+    SuppressedSymbols = [];
   }
 }
 

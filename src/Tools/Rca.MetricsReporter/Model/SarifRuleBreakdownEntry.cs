@@ -19,7 +19,7 @@ public sealed class SarifRuleBreakdownEntry
   /// The collection can be empty when violation metadata is not available (for example,
   /// when metrics are loaded from a legacy report that did not capture details).
   /// </remarks>
-  public List<SarifRuleViolationDetail> Violations { get; set; } = new();
+  public List<SarifRuleViolationDetail> Violations { get; set; } = [];
 }
 
 

@@ -125,7 +125,7 @@ public sealed class MetricsReporterApplication
 
     // Optionally compute suppressed symbol metadata before parsing metrics so that
     // both the standalone JSON artefact and the final report share the same view.
-    List<SuppressedSymbolInfo> suppressedSymbols = new();
+    List<SuppressedSymbolInfo> suppressedSymbols = [];
     if (options.AnalyzeSuppressedSymbols)
     {
       try
@@ -153,7 +153,7 @@ public sealed class MetricsReporterApplication
       catch (Exception ex)
       {
         logger.LogError("Failed to analyze suppressed symbols. Proceeding without suppression metadata.", ex);
-        suppressedSymbols = new();
+        suppressedSymbols = [];
       }
     }
     else

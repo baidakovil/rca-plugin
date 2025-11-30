@@ -24,7 +24,7 @@ public sealed class NamePatternSet
   /// <summary>
   /// Gets an empty pattern set that never matches.
   /// </summary>
-  public static NamePatternSet Empty { get; } = new(new());
+  public static NamePatternSet Empty { get; } = new([]);
 
   /// <summary>
   /// Gets the raw pattern strings as provided by the user.

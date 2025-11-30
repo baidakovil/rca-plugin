@@ -18,7 +18,7 @@ internal sealed class SarifViolationsResponseDto
 
   public bool IncludeSuppressed { get; init; }
 
-  public List<SarifViolationGroupDto> ViolationsGroups { get; init; } = new();
+  public List<SarifViolationGroupDto> ViolationsGroups { get; init; } = [];
 
   public static SarifViolationsResponseDto From(SarifMetricSettings settings, IEnumerable<SarifViolationGroup> groups)
     => new()
@@ -41,7 +41,7 @@ internal sealed class SarifViolationGroupDto
 
   public int Count { get; init; }
 
-  public List<SarifViolationDetailDto> Violations { get; init; } = new();
+  public List<SarifViolationDetailDto> Violations { get; init; } = [];
 
   public static SarifViolationGroupDto FromModel(SarifViolationGroup group)
     => new()
