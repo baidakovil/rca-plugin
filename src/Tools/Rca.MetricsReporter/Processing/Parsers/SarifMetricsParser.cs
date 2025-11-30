@@ -2,7 +2,6 @@ namespace Rca.Tools.MetricsReporter.Processing.Parsers;
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using System.Threading;
@@ -42,27 +41,45 @@ public sealed class SarifMetricsParser : IMetricsSourceParser
   /// <returns>A parsed metrics document containing extracted elements.</returns>
   private static ParsedMetricsDocument ProcessDocument(JsonDocument document)
   {
-    if (!document.RootElement.TryGetProperty("runs", out var runs) || runs.ValueKind != JsonValueKind.Array)
+    var aggregation = SarifDocumentAggregator.Aggregate(document);
+    if (aggregation is null)
     {
       return EmptyDocument();
-    }
-
-    var elements = new List<ParsedCodeElement>();
-    var ruleDescriptions = new Dictionary<string, RuleDescription>();
-
-    foreach (var run in runs.EnumerateArray())
-    {
-      elements.AddRange(ParseRun(run));
-      ExtractRuleDescriptions(run, ruleDescriptions);
     }
 
     return new ParsedMetricsDocument
     {
       SolutionName = string.Empty,
-      Elements = elements,
-      RuleDescriptions = ruleDescriptions
+      Elements = aggregation.Elements,
+      RuleDescriptions = aggregation.RuleDescriptions
     };
   }
+
+  private static class SarifDocumentAggregator
+  {
+    internal static SarifAggregationResult? Aggregate(JsonDocument document)
+    {
+      if (!document.RootElement.TryGetProperty("runs", out var runs) || runs.ValueKind != JsonValueKind.Array)
+      {
+        return null;
+      }
+
+      var elements = new List<ParsedCodeElement>();
+      var ruleDescriptions = new Dictionary<string, RuleDescription>();
+
+      foreach (var run in runs.EnumerateArray())
+      {
+        elements.AddRange(ParseRun(run));
+        ExtractRuleDescriptions(run, ruleDescriptions);
+      }
+
+      return new SarifAggregationResult(elements, ruleDescriptions);
+    }
+  }
+
+  private sealed record SarifAggregationResult(
+      List<ParsedCodeElement> Elements,
+      Dictionary<string, RuleDescription> RuleDescriptions);
 
   private static IEnumerable<ParsedCodeElement> ParseRun(JsonElement run)
   {
@@ -107,98 +124,7 @@ public sealed class SarifMetricsParser : IMetricsSourceParser
         ?.GetPropertyOrDefault("text")
         ?.GetString();
 
-    yield return CreateCodeElement(ruleId, identifier, location, messageText);
-  }
-
-  /// <summary>
-  /// Creates a parsed code element from rule ID, metric identifier, and source location.
-  /// </summary>
-  /// <param name="ruleId">The SARIF rule identifier.</param>
-  /// <param name="identifier">The resolved metric identifier.</param>
-  /// <param name="location">The source location of the violation.</param>
-  /// <returns>A parsed code element representing the violation.</returns>
-  private static ParsedCodeElement CreateCodeElement(
-      string ruleId,
-      MetricIdentifier identifier,
-      SarifLocation location,
-      string? messageText)
-  {
-    return new ParsedCodeElement(CodeElementKind.Member, ruleId, null)
-    {
-      Metrics = CreateMetricDictionary(
-          identifier,
-          CreateRuleBreakdown(ruleId, location, messageText)),
-      Source = location.Source
-    };
-  }
-
-  /// <summary>
-  /// Creates an initial SARIF rule breakdown dictionary for a single rule violation.
-  /// </summary>
-  /// <remarks>
-  /// The logic is kept separate from <see cref="CreateCodeElement"/> to reduce coupling for the
-  /// main factory method while preserving detailed violation metadata construction in a focused helper.
-  /// </remarks>
-  /// <param name="ruleId">The SARIF rule identifier.</param>
-  /// <param name="location">The source location of the violation.</param>
-  /// <param name="messageText">Optional analyzer message text.</param>
-  /// <returns>
-  /// A dictionary containing a single <see cref="SarifRuleBreakdownEntry"/> keyed by <paramref name="ruleId"/>,
-  /// or <see langword="null"/> when the rule id is not valid for aggregation.
-  /// </returns>
-  private static Dictionary<string, SarifRuleBreakdownEntry>? CreateRuleBreakdown(
-      string ruleId,
-      SarifLocation location,
-      string? messageText)
-  {
-    // WHY: We only build breakdown entries for well-formed rule identifiers so the resulting
-    // structure stays compatible with reporting and aggregation, and does not store arbitrary keys.
-    if (!RuleIdValidator.IsValidRuleId(ruleId))
-    {
-      return null;
-    }
-
-    var violation = new SarifRuleViolationDetail
-    {
-      Message = messageText,
-      Uri = location.OriginalUri,
-      StartLine = location.Source.StartLine,
-      EndLine = location.Source.EndLine
-    };
-
-    var entry = new SarifRuleBreakdownEntry
-    {
-      Count = 1,
-      Violations = [violation]
-    };
-
-    return new Dictionary<string, SarifRuleBreakdownEntry>(1, StringComparer.Ordinal)
-    {
-      [ruleId] = entry
-    };
-  }
-
-  /// <summary>
-  /// Creates a metrics dictionary for a single SARIF rule violation.
-  /// </summary>
-  /// <param name="identifier">The metric identifier to associate with the violation.</param>
-  /// <param name="breakdown">Optional detailed breakdown information.</param>
-  /// <returns>A dictionary with a single <see cref="MetricValue"/> entry.</returns>
-  private static IDictionary<MetricIdentifier, MetricValue> CreateMetricDictionary(
-      MetricIdentifier identifier,
-      Dictionary<string, SarifRuleBreakdownEntry>? breakdown)
-  {
-    var metricValue = new MetricValue
-    {
-      Value = 1,
-      Status = ThresholdStatus.NotApplicable,
-      Breakdown = breakdown
-    };
-
-    return new Dictionary<MetricIdentifier, MetricValue>
-    {
-      [identifier] = metricValue
-    };
+    yield return SarifRuleViolationFactory.CreateCodeElement(ruleId, identifier, location, messageText);
   }
 
   /// <summary>
@@ -340,7 +266,6 @@ public sealed class SarifMetricsParser : IMetricsSourceParser
     return path.Replace('/', Path.DirectorySeparatorChar);
   }
 
-  private sealed record SarifLocation(SourceLocation Source, string? OriginalUri);
 }
 
 file static class JsonElementExtensions
