@@ -10,8 +10,22 @@ using Rca.Tools.MetricsReporter.Model;
 /// <summary>
 /// Manages baseline detection, initialization, loading, and replacement.
 /// </summary>
-internal sealed class BaselineLifecycleService
+internal sealed class BaselineLifecycleService : IBaselineLifecycleService
 {
+  private readonly IBaselineManager _baselineManager;
+
+  /// <summary>
+  /// Initializes a new instance of the <see cref="BaselineLifecycleService"/> class.
+  /// </summary>
+  public BaselineLifecycleService()
+    : this(new BaselineManager())
+  {
+  }
+
+  internal BaselineLifecycleService(IBaselineManager baselineManager)
+  {
+    _baselineManager = baselineManager;
+  }
   /// <summary>
   /// Captures the current state of the baseline artefacts before processing begins.
   /// </summary>
@@ -25,7 +39,7 @@ internal sealed class BaselineLifecycleService
   /// <summary>
   /// Logs diagnostic information about the captured baseline state.
   /// </summary>
-  public void LogContext(BaselineRunContext context, MetricsReporterOptions options, FileLogger logger)
+  public void LogContext(BaselineRunContext context, MetricsReporterOptions options, ILogger logger)
   {
     logger.LogInformation(
       $"Baseline debug: ReplaceMetricsBaseline={options.ReplaceMetricsBaseline}, " +
@@ -42,7 +56,7 @@ internal sealed class BaselineLifecycleService
   public async Task InitializeBaselineAsync(
       BaselineRunContext context,
       MetricsReporterOptions options,
-      FileLogger logger,
+      ILogger logger,
       CancellationToken cancellationToken)
   {
     if (!context.ReplaceBaselineEnabled
@@ -55,7 +69,7 @@ internal sealed class BaselineLifecycleService
     if (context.HadReportAtStart)
     {
       logger.LogInformation("Baseline does not exist. Creating baseline from previous report...");
-      await BaselineManager.CreateBaselineFromPreviousReportAsync(
+      await _baselineManager.CreateBaselineFromPreviousReportAsync(
           options.OutputJsonPath,
           options.BaselinePath,
           logger,
@@ -80,7 +94,7 @@ internal sealed class BaselineLifecycleService
   public async Task ReplaceBaselineAsync(
       BaselineRunContext context,
       MetricsReporterOptions options,
-      FileLogger logger,
+      ILogger logger,
       CancellationToken cancellationToken)
   {
     if (!context.ReplaceBaselineEnabled
@@ -90,7 +104,7 @@ internal sealed class BaselineLifecycleService
       return;
     }
 
-    await BaselineManager.ReplaceBaselineAsync(
+    await _baselineManager.ReplaceBaselineAsync(
         options.OutputJsonPath,
         options.BaselinePath,
         options.MetricsReportStoragePath,

@@ -13,11 +13,12 @@ using Rca.Tools.MetricsReporter.Processing;
 using Rca.Tools.MetricsReporter.Processing.Parsers;
 using Rca.Tools.MetricsReporter.Rendering;
 using Rca.Tools.MetricsReporter.Serialization;
+using Rca.Tools.MetricsReporter.Services.DTO;
 
 /// <summary>
 /// Handles parsing metrics sources, building aggregation input, and writing final reports.
 /// </summary>
-internal sealed class MetricsReportPipeline
+internal sealed class MetricsReportPipeline : IMetricsReportPipeline
 {
   private readonly AltCoverMetricsParser _altCoverParser;
   private readonly RoslynMetricsParser _roslynParser;
@@ -41,13 +42,13 @@ internal sealed class MetricsReportPipeline
   [System.Diagnostics.CodeAnalysis.SuppressMessage(
       "Microsoft.Maintainability",
       "CA1506:Avoid excessive class coupling",
-      Justification = "Pipeline orchestrator coordinates document parsing, report generation, and report writing; further decomposition would require wrapper methods which are prohibited by refactoring rules.")]
+      Justification = "Pipeline orchestrator coordinates document parsing, report generation, and report writing through DTOs and helper methods; further decomposition would fragment the orchestration logic.")]
   public async Task<MetricsReporterExitCode> ExecuteAsync(
       MetricsReporterOptions options,
       ThresholdLoadResult thresholdsResult,
       MetricsReport? baseline,
       List<SuppressedSymbolInfo> suppressedSymbols,
-      FileLogger logger,
+      ILogger logger,
       CancellationToken cancellationToken)
   {
     var documentsResult = await ParseAllDocumentsAsync(options, logger, cancellationToken).ConfigureAwait(false);
@@ -56,7 +57,8 @@ internal sealed class MetricsReportPipeline
       return documentsResult.ExitCode;
     }
 
-    var report = GenerateReport(options, documentsResult, thresholdsResult, baseline, suppressedSymbols, logger);
+    var context = new PipelineExecutionContext(options, thresholdsResult, baseline, suppressedSymbols);
+    var report = GenerateReport(context, documentsResult, logger);
     if (report is null)
     {
       return MetricsReporterExitCode.ValidationError;
@@ -65,51 +67,44 @@ internal sealed class MetricsReportPipeline
     return await WriteReportsAsync(report, options, logger, cancellationToken).ConfigureAwait(false);
   }
 
-  [System.Diagnostics.CodeAnalysis.SuppressMessage(
-      "Microsoft.Maintainability",
-      "CA1506:Avoid excessive class coupling",
-      Justification = "Report generation method coordinates multiple services and data structures; further decomposition would require wrapper methods which are prohibited by refactoring rules.")]
   private static MetricsReport? GenerateReport(
-      MetricsReporterOptions options,
-      (MetricsReporterExitCode ExitCode, IList<ParsedMetricsDocument> AltCoverDocuments, IList<ParsedMetricsDocument> RoslynDocuments, IList<ParsedMetricsDocument> SarifDocuments) documentsResult,
-      ThresholdLoadResult thresholdsResult,
-      MetricsReport? baseline,
-      List<SuppressedSymbolInfo> suppressedSymbols,
-      FileLogger logger)
+      PipelineExecutionContext context,
+      ParsedDocumentsResult documentsResult,
+      ILogger logger)
   {
-    var aggregationInput = BuildAggregationInput(options, documentsResult, thresholdsResult.Configuration.AsDictionary(), baseline, suppressedSymbols);
-    return BuildReportWithLogging(aggregationInput, options, logger);
+    var aggregationInput = BuildAggregationInput(context, documentsResult);
+    return BuildReportWithLogging(aggregationInput, context.Options, logger);
   }
 
-  private async Task<(MetricsReporterExitCode ExitCode, IList<ParsedMetricsDocument> AltCoverDocuments, IList<ParsedMetricsDocument> RoslynDocuments, IList<ParsedMetricsDocument> SarifDocuments)> ParseAllDocumentsAsync(
+  private async Task<ParsedDocumentsResult> ParseAllDocumentsAsync(
       MetricsReporterOptions options,
-      FileLogger logger,
+      ILogger logger,
       CancellationToken cancellationToken)
   {
     var altCoverDocuments = await ParseAltCoverDocumentsAsync(options, logger, cancellationToken).ConfigureAwait(false);
     if (altCoverDocuments is null)
     {
-      return (MetricsReporterExitCode.ParsingError, new List<ParsedMetricsDocument>(), new List<ParsedMetricsDocument>(), new List<ParsedMetricsDocument>());
+      return new ParsedDocumentsResult(MetricsReporterExitCode.ParsingError, [], [], []);
     }
 
     var roslynDocuments = await ParseRoslynDocumentsAsync(options, logger, cancellationToken).ConfigureAwait(false);
     if (roslynDocuments is null)
     {
-      return (MetricsReporterExitCode.ParsingError, altCoverDocuments, new List<ParsedMetricsDocument>(), new List<ParsedMetricsDocument>());
+      return new ParsedDocumentsResult(MetricsReporterExitCode.ParsingError, altCoverDocuments, [], []);
     }
 
     var sarifDocuments = await ParseSarifDocumentsAsync(options, logger, cancellationToken).ConfigureAwait(false);
     if (sarifDocuments is null)
     {
-      return (MetricsReporterExitCode.ParsingError, altCoverDocuments, roslynDocuments, new List<ParsedMetricsDocument>());
+      return new ParsedDocumentsResult(MetricsReporterExitCode.ParsingError, altCoverDocuments, roslynDocuments, []);
     }
 
-    return (MetricsReporterExitCode.Success, altCoverDocuments, roslynDocuments, sarifDocuments);
+    return new ParsedDocumentsResult(MetricsReporterExitCode.Success, altCoverDocuments, roslynDocuments, sarifDocuments);
   }
 
   private async Task<IList<ParsedMetricsDocument>?> ParseAltCoverDocumentsAsync(
       MetricsReporterOptions options,
-      FileLogger logger,
+      ILogger logger,
       CancellationToken cancellationToken)
   {
     var documents = new List<ParsedMetricsDocument>();
@@ -130,7 +125,7 @@ internal sealed class MetricsReportPipeline
 
   private async Task<IList<ParsedMetricsDocument>?> ParseRoslynDocumentsAsync(
       MetricsReporterOptions options,
-      FileLogger logger,
+      ILogger logger,
       CancellationToken cancellationToken)
   {
     var documents = new List<ParsedMetricsDocument>();
@@ -150,7 +145,7 @@ internal sealed class MetricsReportPipeline
 
   private async Task<IList<ParsedMetricsDocument>?> ParseSarifDocumentsAsync(
       MetricsReporterOptions options,
-      FileLogger logger,
+      ILogger logger,
       CancellationToken cancellationToken)
   {
     var documents = new List<ParsedMetricsDocument>();
@@ -171,41 +166,38 @@ internal sealed class MetricsReportPipeline
   [System.Diagnostics.CodeAnalysis.SuppressMessage(
       "Microsoft.Maintainability",
       "CA1506:Avoid excessive class coupling",
-      Justification = "Method constructs aggregation input object from multiple sources; further decomposition would require wrapper methods which are prohibited by refactoring rules.")]
+      Justification = "Method constructs aggregation input object from DTOs containing multiple data sources; further decomposition would create artificial factory methods that degrade code readability without architectural benefit.")]
   private static MetricsAggregationInput BuildAggregationInput(
-      MetricsReporterOptions options,
-      (MetricsReporterExitCode ExitCode, IList<ParsedMetricsDocument> AltCoverDocuments, IList<ParsedMetricsDocument> RoslynDocuments, IList<ParsedMetricsDocument> SarifDocuments) documentsResult,
-      IDictionary<MetricIdentifier, MetricThresholdDefinition> thresholds,
-      MetricsReport? baseline,
-      List<SuppressedSymbolInfo> suppressedSymbols)
+      PipelineExecutionContext context,
+      ParsedDocumentsResult documentsResult)
   {
     return new MetricsAggregationInput
     {
-      SolutionName = options.SolutionName,
+      SolutionName = context.Options.SolutionName,
       AltCoverDocuments = documentsResult.AltCoverDocuments,
       RoslynDocuments = documentsResult.RoslynDocuments,
       SarifDocuments = documentsResult.SarifDocuments,
-      Baseline = baseline,
-      Thresholds = thresholds,
+      Baseline = context.Baseline,
+      Thresholds = context.ThresholdsResult.Configuration.AsDictionary(),
       Paths = new ReportPaths
       {
-        MetricsDirectory = options.MetricsDirectory,
-        Baseline = options.BaselinePath,
-        Report = options.OutputJsonPath,
-        Html = options.OutputHtmlPath,
-        Thresholds = !string.IsNullOrWhiteSpace(options.ThresholdsPath)
-                ? options.ThresholdsPath
-                : !string.IsNullOrWhiteSpace(options.ThresholdsJson) ? "(inline thresholds)" : null
+        MetricsDirectory = context.Options.MetricsDirectory,
+        Baseline = context.Options.BaselinePath,
+        Report = context.Options.OutputJsonPath,
+        Html = context.Options.OutputHtmlPath,
+        Thresholds = !string.IsNullOrWhiteSpace(context.Options.ThresholdsPath)
+                ? context.Options.ThresholdsPath
+                : !string.IsNullOrWhiteSpace(context.Options.ThresholdsJson) ? "(inline thresholds)" : null
       },
-      BaselineReference = options.BaselineReference,
-      SuppressedSymbols = suppressedSymbols
+      BaselineReference = context.Options.BaselineReference,
+      SuppressedSymbols = context.SuppressedSymbols
     };
   }
 
   private static MetricsReport? BuildReportWithLogging(
       MetricsAggregationInput aggregationInput,
       MetricsReporterOptions options,
-      FileLogger logger)
+      ILogger logger)
   {
     var memberFilter = MemberFilter.FromString(options.ExcludedMemberNamesPatterns);
     var assemblyFilter = AssemblyFilter.FromString(options.ExcludedAssemblyNames);
@@ -226,7 +218,7 @@ internal sealed class MetricsReportPipeline
   private static async Task<MetricsReporterExitCode> WriteReportsAsync(
       MetricsReport report,
       MetricsReporterOptions options,
-      FileLogger logger,
+      ILogger logger,
       CancellationToken cancellationToken)
   {
     try
@@ -250,7 +242,7 @@ internal sealed class MetricsReportPipeline
   private static async Task<ParsedMetricsDocument?> ParseSafeAsync(
       IMetricsSourceParser parser,
       string path,
-      FileLogger logger,
+      ILogger logger,
       CancellationToken cancellationToken)
   {
     try

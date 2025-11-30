@@ -9,7 +9,7 @@ using Rca.Tools.MetricsReporter.Logging;
 /// <summary>
 /// Manages baseline file operations: creating baseline from previous report and replacing baseline with new report (including archiving old baselines).
 /// </summary>
-public sealed class BaselineManager
+public sealed class BaselineManager : IBaselineManager
 {
   /// <summary>
   /// Creates baseline from previous report if baseline doesn't exist.
@@ -25,37 +25,43 @@ public sealed class BaselineManager
   /// This method creates baseline from previous report only if baseline doesn't exist.
   /// This allows new report to be generated with deltas calculated against the previous report.
   /// </remarks>
-  [System.Diagnostics.CodeAnalysis.SuppressMessage(
-      "Microsoft.Maintainability",
-      "CA1506:Avoid excessive class coupling",
-      Justification = "Baseline creation method performs file I/O operations and directory management; further decomposition would require wrapper methods which are prohibited by refactoring rules.")]
-  public static async Task<bool> CreateBaselineFromPreviousReportAsync(
+  public async Task<bool> CreateBaselineFromPreviousReportAsync(
       string previousReportPath,
       string baselinePath,
-      FileLogger logger,
+      ILogger logger,
       CancellationToken cancellationToken)
   {
     ArgumentException.ThrowIfNullOrWhiteSpace(previousReportPath);
     ArgumentException.ThrowIfNullOrWhiteSpace(baselinePath);
     ArgumentNullException.ThrowIfNull(logger);
 
+    var parameters = new Services.DTO.BaselineCreationParameters(previousReportPath, baselinePath);
+    return await CreateBaselineFromPreviousReportInternalAsync(parameters, logger, cancellationToken).ConfigureAwait(false);
+  }
+
+  private async Task<bool> CreateBaselineFromPreviousReportInternalAsync(
+      Services.DTO.BaselineCreationParameters parameters,
+      ILogger logger,
+      CancellationToken cancellationToken)
+  {
+
     // Don't create baseline if it already exists
-    if (File.Exists(baselinePath))
+    if (File.Exists(parameters.BaselinePath))
     {
-      logger.LogInformation($"Baseline already exists at: {baselinePath}. Skipping creation from previous report.");
+      logger.LogInformation($"Baseline already exists at: {parameters.BaselinePath}. Skipping creation from previous report.");
       return false;
     }
 
-    if (!File.Exists(previousReportPath))
+    if (!File.Exists(parameters.PreviousReportPath))
     {
-      logger.LogInformation($"Previous report file not found: {previousReportPath}. Baseline will not be created.");
+      logger.LogInformation($"Previous report file not found: {parameters.PreviousReportPath}. Baseline will not be created.");
       return false;
     }
 
     try
     {
       // Ensure baseline directory exists
-      var baselineDir = Path.GetDirectoryName(baselinePath);
+      var baselineDir = Path.GetDirectoryName(parameters.BaselinePath);
       if (!string.IsNullOrWhiteSpace(baselineDir) && !Directory.Exists(baselineDir))
       {
         Directory.CreateDirectory(baselineDir);
@@ -63,8 +69,8 @@ public sealed class BaselineManager
       }
 
       // Copy previous report to baseline location
-      await CopyFileAsync(previousReportPath, baselinePath, cancellationToken).ConfigureAwait(false);
-      logger.LogInformation($"Baseline created from previous report: {baselinePath} <- {previousReportPath}");
+      await CopyFileAsync(parameters.PreviousReportPath, parameters.BaselinePath, cancellationToken).ConfigureAwait(false);
+      logger.LogInformation($"Baseline created from previous report: {parameters.BaselinePath} <- {parameters.PreviousReportPath}");
 
       return true;
     }
@@ -95,37 +101,42 @@ public sealed class BaselineManager
   /// 
   /// Note: This method does not compare files. The report is always copied to baseline location if it exists.
   /// </remarks>
-  [System.Diagnostics.CodeAnalysis.SuppressMessage(
-      "Microsoft.Maintainability",
-      "CA1506:Avoid excessive class coupling",
-      Justification = "Baseline replacement method performs file I/O, directory management, and archiving operations; further decomposition would require wrapper methods which are prohibited by refactoring rules.")]
-  public static async Task<bool> ReplaceBaselineAsync(
+  public async Task<bool> ReplaceBaselineAsync(
       string reportPath,
       string baselinePath,
       string? storagePath,
-      FileLogger logger,
+      ILogger logger,
       CancellationToken cancellationToken)
   {
     ArgumentException.ThrowIfNullOrWhiteSpace(reportPath);
     ArgumentException.ThrowIfNullOrWhiteSpace(baselinePath);
     ArgumentNullException.ThrowIfNull(logger);
 
-    if (!File.Exists(reportPath))
+    var parameters = new Services.DTO.BaselineReplacementParameters(reportPath, baselinePath, storagePath);
+    return await ReplaceBaselineInternalAsync(parameters, logger, cancellationToken).ConfigureAwait(false);
+  }
+
+  private async Task<bool> ReplaceBaselineInternalAsync(
+      Services.DTO.BaselineReplacementParameters parameters,
+      ILogger logger,
+      CancellationToken cancellationToken)
+  {
+    if (!File.Exists(parameters.ReportPath))
     {
-      logger.LogError($"Report file not found for baseline replacement: {reportPath}");
+      logger.LogError($"Report file not found for baseline replacement: {parameters.ReportPath}");
       return false;
     }
 
     try
     {
       // Archive old baseline if it exists
-      if (File.Exists(baselinePath))
+      if (File.Exists(parameters.BaselinePath))
       {
-        await ArchiveOldBaselineAsync(baselinePath, storagePath, logger, cancellationToken).ConfigureAwait(false);
+        await ArchiveOldBaselineAsync(parameters.BaselinePath, parameters.StoragePath, logger, cancellationToken).ConfigureAwait(false);
       }
 
       // Ensure baseline directory exists
-      var baselineDir = Path.GetDirectoryName(baselinePath);
+      var baselineDir = Path.GetDirectoryName(parameters.BaselinePath);
       if (!string.IsNullOrWhiteSpace(baselineDir) && !Directory.Exists(baselineDir))
       {
         Directory.CreateDirectory(baselineDir);
@@ -133,8 +144,8 @@ public sealed class BaselineManager
       }
 
       // Copy new report to baseline location (copy to preserve original report)
-      await CopyFileAsync(reportPath, baselinePath, cancellationToken).ConfigureAwait(false);
-      logger.LogInformation($"Baseline replaced: {baselinePath} <- {reportPath}");
+      await CopyFileAsync(parameters.ReportPath, parameters.BaselinePath, cancellationToken).ConfigureAwait(false);
+      logger.LogInformation($"Baseline replaced: {parameters.BaselinePath} <- {parameters.ReportPath}");
 
       return true;
     }
@@ -159,7 +170,7 @@ public sealed class BaselineManager
   private static Task ArchiveOldBaselineAsync(
       string baselinePath,
       string? storagePath,
-      FileLogger logger,
+      ILogger logger,
       CancellationToken cancellationToken)
   {
     if (string.IsNullOrWhiteSpace(storagePath))

@@ -13,14 +13,20 @@ using Rca.Tools.MetricsReporter.Logging;
 using Rca.Tools.MetricsReporter.Model;
 using Rca.Tools.MetricsReporter.Rendering;
 using Rca.Tools.MetricsReporter.Serialization;
+using Rca.Tools.MetricsReporter.Services.DTO;
+
 /// <summary>
 /// Coordinates the aggregation workflow and report generation.
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Microsoft.Maintainability",
+    "CA1506:Avoid excessive class coupling",
+    Justification = "Application service orchestrates metrics aggregation workflow coordinating multiple services through interfaces; further decomposition would fragment the coordination logic and degrade maintainability.")]
 public sealed class MetricsReporterApplication
 {
-  private readonly MetricsReportPipeline _reportPipeline;
-  private readonly BaselineLifecycleService _baselineLifecycle;
-  private readonly SuppressedSymbolsService _suppressedSymbolsService;
+  private readonly IMetricsReportPipeline _reportPipeline;
+  private readonly IBaselineLifecycleService _baselineLifecycle;
+  private readonly ISuppressedSymbolsService _suppressedSymbolsService;
 
   /// <summary>
   /// Initializes a new instance of the <see cref="MetricsReporterApplication"/> class.
@@ -31,9 +37,9 @@ public sealed class MetricsReporterApplication
   }
 
   internal MetricsReporterApplication(
-      MetricsReportPipeline reportPipeline,
-      BaselineLifecycleService baselineLifecycle,
-      SuppressedSymbolsService suppressedSymbolsService)
+      IMetricsReportPipeline reportPipeline,
+      IBaselineLifecycleService baselineLifecycle,
+      ISuppressedSymbolsService suppressedSymbolsService)
   {
     _reportPipeline = reportPipeline;
     _baselineLifecycle = baselineLifecycle;
@@ -51,6 +57,14 @@ public sealed class MetricsReporterApplication
     ArgumentNullException.ThrowIfNull(options);
 
     using var logger = new FileLogger(options.LogFilePath);
+    return await RunAsyncInternal(options, logger, cancellationToken).ConfigureAwait(false);
+  }
+
+  private async Task<MetricsReporterExitCode> RunAsyncInternal(
+      MetricsReporterOptions options,
+      ILogger logger,
+      CancellationToken cancellationToken)
+  {
     logger.LogInformation("Metrics Reporter started.");
 
     LogCommandLineArguments(logger);
@@ -75,7 +89,8 @@ public sealed class MetricsReporterApplication
 
     var baselineContext = await InitializeBaselineContextAsync(options, logger, cancellationToken).ConfigureAwait(false);
     
-    var executionResult = await ExecuteReportGenerationAsync(options, thresholdsResult, baselineContext, logger, cancellationToken).ConfigureAwait(false);
+    var reportGenerationContext = new ReportGenerationContext(options, thresholdsResult, baselineContext);
+    var executionResult = await ExecuteReportGenerationAsync(reportGenerationContext, logger, cancellationToken).ConfigureAwait(false);
     if (executionResult != MetricsReporterExitCode.Success)
     {
       return executionResult;
@@ -85,7 +100,7 @@ public sealed class MetricsReporterApplication
     return MetricsReporterExitCode.Success;
   }
 
-  private async Task<BaselineRunContext> InitializeBaselineContextAsync(MetricsReporterOptions options, FileLogger logger, CancellationToken cancellationToken)
+  private async Task<BaselineRunContext> InitializeBaselineContextAsync(MetricsReporterOptions options, ILogger logger, CancellationToken cancellationToken)
   {
     var baselineContext = _baselineLifecycle.CaptureContext(options);
     _baselineLifecycle.LogContext(baselineContext, options, logger);
@@ -96,28 +111,32 @@ public sealed class MetricsReporterApplication
   [System.Diagnostics.CodeAnalysis.SuppressMessage(
       "Microsoft.Maintainability",
       "CA1506:Avoid excessive class coupling",
-      Justification = "Report generation orchestrator coordinates baseline lifecycle, suppressed symbols resolution, and pipeline execution; further decomposition would require wrapper methods which are prohibited by refactoring rules.")]
+      Justification = "Report generation orchestrator coordinates baseline lifecycle, suppressed symbols resolution, and pipeline execution through interfaces and DTOs; further decomposition would create artificial wrapper methods that degrade code readability without architectural benefit.")]
   private async Task<MetricsReporterExitCode> ExecuteReportGenerationAsync(
-      MetricsReporterOptions options,
-      ThresholdLoadResult thresholdsResult,
-      BaselineRunContext baselineContext,
-      FileLogger logger,
+      ReportGenerationContext context,
+      ILogger logger,
       CancellationToken cancellationToken)
   {
-    var baseline = await _baselineLifecycle.LoadBaselineAsync(options.BaselinePath, cancellationToken).ConfigureAwait(false);
-    var suppressedSymbols = await _suppressedSymbolsService.ResolveAsync(options, logger, cancellationToken).ConfigureAwait(false);
+    var baseline = await _baselineLifecycle.LoadBaselineAsync(context.Options.BaselinePath, cancellationToken).ConfigureAwait(false);
+    var suppressedSymbols = await _suppressedSymbolsService.ResolveAsync(context.Options, logger, cancellationToken).ConfigureAwait(false);
 
-    var pipelineResult = await _reportPipeline.ExecuteAsync(options, thresholdsResult, baseline, suppressedSymbols, logger, cancellationToken).ConfigureAwait(false);
+    var pipelineResult = await _reportPipeline.ExecuteAsync(
+        context.Options,
+        context.ThresholdsResult,
+        baseline,
+        suppressedSymbols,
+        logger,
+        cancellationToken).ConfigureAwait(false);
     if (pipelineResult != MetricsReporterExitCode.Success)
     {
       return pipelineResult;
     }
 
-    await _baselineLifecycle.ReplaceBaselineAsync(baselineContext, options, logger, cancellationToken).ConfigureAwait(false);
+    await _baselineLifecycle.ReplaceBaselineAsync(context.BaselineContext, context.Options, logger, cancellationToken).ConfigureAwait(false);
     return MetricsReporterExitCode.Success;
   }
 
-  private static void LogCommandLineArguments(FileLogger logger)
+  private static void LogCommandLineArguments(ILogger logger)
   {
     try
     {
@@ -137,7 +156,7 @@ public sealed class MetricsReporterApplication
   /// <param name="options">The options to validate.</param>
   /// <param name="logger">The logger to use for error messages.</param>
   /// <returns>The exit code indicating validation result.</returns>
-  private static MetricsReporterExitCode ValidateOptionsWithLogging(MetricsReporterOptions options, FileLogger logger)
+  private static MetricsReporterExitCode ValidateOptionsWithLogging(MetricsReporterOptions options, ILogger logger)
   {
     try
     {
@@ -159,7 +178,7 @@ public sealed class MetricsReporterApplication
   /// <returns>A result containing the exit code and loaded thresholds.</returns>
   private static ThresholdLoadResult LoadThresholdsWithLogging(
       MetricsReporterOptions options,
-      FileLogger logger)
+      ILogger logger)
   {
     try
     {
@@ -255,7 +274,7 @@ public sealed class MetricsReporterApplication
   /// </summary>
   private static async Task<MetricsReporterExitCode> GenerateHtmlFromJsonAsync(
       MetricsReporterOptions options,
-      FileLogger logger,
+      ILogger logger,
       CancellationToken cancellationToken)
   {
     var validationResult = ValidateHtmlGenerationOptions(options, logger);
@@ -287,7 +306,7 @@ public sealed class MetricsReporterApplication
   /// <param name="options">The options to validate.</param>
   /// <param name="logger">The logger to use for error messages.</param>
   /// <returns>The exit code indicating validation result.</returns>
-  private static MetricsReporterExitCode ValidateHtmlGenerationOptions(MetricsReporterOptions options, FileLogger logger)
+  private static MetricsReporterExitCode ValidateHtmlGenerationOptions(MetricsReporterOptions options, ILogger logger)
   {
     if (string.IsNullOrWhiteSpace(options.InputJsonPath))
     {
@@ -313,7 +332,7 @@ public sealed class MetricsReporterApplication
   /// <returns>The loaded metrics report, or <see langword="null"/> if loading failed.</returns>
   private static async Task<MetricsReport?> LoadReportForHtmlGenerationAsync(
       MetricsReporterOptions options,
-      FileLogger logger,
+      ILogger logger,
       CancellationToken cancellationToken)
   {
     try
@@ -352,7 +371,7 @@ public sealed class MetricsReporterApplication
   private static async Task<MetricsReporterExitCode> GenerateAndWriteHtmlAsync(
       MetricsReport report,
       MetricsReporterOptions options,
-      FileLogger logger,
+      ILogger logger,
       CancellationToken cancellationToken)
   {
     logger.LogInformation("Generating HTML report...");

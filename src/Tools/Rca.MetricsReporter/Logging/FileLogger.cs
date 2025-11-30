@@ -8,7 +8,7 @@ using System.Text;
 /// <summary>
 /// Minimal file logger used by the metrics aggregator.
 /// </summary>
-public sealed class FileLogger : IDisposable
+public sealed class FileLogger : ILogger, IDisposable
 {
   private readonly StreamWriter _writer;
   private readonly object _syncRoot = new();

@@ -13,7 +13,7 @@ using Rca.Tools.MetricsReporter.Processing;
 /// <summary>
 /// Provides suppressed symbol metadata by either running Roslyn analysis or loading cached artefacts.
 /// </summary>
-internal sealed class SuppressedSymbolsService
+internal sealed class SuppressedSymbolsService : ISuppressedSymbolsService
 {
   /// <summary>
   /// Resolves suppressed symbols according to the configured options.
@@ -24,7 +24,7 @@ internal sealed class SuppressedSymbolsService
   /// <returns>A list of suppressed symbols. Returns an empty list when no data is available.</returns>
   public async Task<List<SuppressedSymbolInfo>> ResolveAsync(
       MetricsReporterOptions options,
-      FileLogger logger,
+      ILogger logger,
       CancellationToken cancellationToken)
   {
     if (!options.AnalyzeSuppressedSymbols)
@@ -46,10 +46,10 @@ internal sealed class SuppressedSymbolsService
   [System.Diagnostics.CodeAnalysis.SuppressMessage(
       "Microsoft.Maintainability",
       "CA1506:Avoid excessive class coupling",
-      Justification = "Suppressed symbols analysis method coordinates Roslyn analysis, directory resolution, and file I/O; further decomposition would require wrapper methods which are prohibited by refactoring rules.")]
+      Justification = "Suppressed symbols analysis method coordinates Roslyn analysis, directory resolution, and file I/O through helper methods; further decomposition would create artificial wrappers that degrade code readability.")]
   private static async Task<List<SuppressedSymbolInfo>> AnalyzeAsync(
       MetricsReporterOptions options,
-      FileLogger logger,
+      ILogger logger,
       CancellationToken cancellationToken)
   {
     try
@@ -88,7 +88,7 @@ internal sealed class SuppressedSymbolsService
     return new SuppressedSymbolsAnalysisContext(suppressionRoot, sourceCodeFolders, options.ExcludedAssemblyNames);
   }
 
-  private static void LogAnalysisStart(SuppressedSymbolsAnalysisContext context, FileLogger logger)
+  private static void LogAnalysisStart(SuppressedSymbolsAnalysisContext context, ILogger logger)
   {
     var foldersText = string.Join(", ", context.SourceCodeFolders);
     var excludedAssemblies = context.ExcludedAssemblyNames ?? string.Empty;
@@ -123,7 +123,7 @@ internal sealed class SuppressedSymbolsService
     await SuppressedSymbolsWriter.WriteAsync(report, outputPath, cancellationToken).ConfigureAwait(false);
   }
 
-  private static void LogAnalysisCompletion(int symbolCount, FileLogger logger)
+  private static void LogAnalysisCompletion(int symbolCount, ILogger logger)
   {
     logger.LogInformation($"Suppressed symbols analysis completed. Entries: {symbolCount}");
   }
