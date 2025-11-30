@@ -39,7 +39,7 @@ internal static class SuppressedSymbolMetricBinder
         continue;
       }
 
-      if (!string.IsNullOrWhiteSpace(suppressed.Metric))
+      if (HasRecognizedMetric(suppressed))
       {
         continue;
       }
@@ -127,6 +127,21 @@ internal static class SuppressedSymbolMetricBinder
     }
 
     return index;
+  }
+
+  private static bool HasRecognizedMetric(SuppressedSymbolInfo suppressed)
+  {
+    if (suppressed is null)
+    {
+      throw new ArgumentNullException(nameof(suppressed));
+    }
+
+    if (string.IsNullOrWhiteSpace(suppressed.Metric))
+    {
+      return false;
+    }
+
+    return Enum.TryParse<MetricIdentifier>(suppressed.Metric, ignoreCase: true, out _);
   }
 }
 
