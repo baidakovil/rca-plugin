@@ -28,12 +28,28 @@ internal static class SolutionLocator
 
   private static DirectoryInfo? GetStartingDirectory(string path)
   {
-    if (File.Exists(path))
+    var fullPath = Path.GetFullPath(path);
+
+    // If it's an existing file, start from its directory
+    if (File.Exists(fullPath))
     {
-      return new DirectoryInfo(Path.GetDirectoryName(path)!);
+      return new DirectoryInfo(Path.GetDirectoryName(fullPath)!);
     }
 
-    return new DirectoryInfo(Path.GetFullPath(path));
+    // If it's an existing directory, start there
+    if (Directory.Exists(fullPath))
+    {
+      return new DirectoryInfo(fullPath);
+    }
+
+    // Otherwise, walk up until we find an existing directory
+    var current = fullPath;
+    while (current != null && !Directory.Exists(current))
+    {
+      current = Path.GetDirectoryName(current);
+    }
+
+    return current != null ? new DirectoryInfo(current) : null;
   }
 
   private static string? TryResolveSolution(string directory)
