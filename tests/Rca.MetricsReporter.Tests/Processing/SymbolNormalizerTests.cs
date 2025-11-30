@@ -869,6 +869,20 @@ public sealed class SymbolNormalizerTests
   }
 
   [Test]
+  public void ExtractMethodName_ConstructorWithoutReturnType_PreservesLeadingDot()
+  {
+    // Arrange - variant without explicit return type, exercising constructor name extraction
+    var input = "Rca.UI.Services.ServiceResolver..ctor(Rca.Contracts.Infrastructure.ServiceContainer)";
+    const string expected = ".ctor";
+
+    // Act
+    var result = SymbolNormalizer.ExtractMethodName(input);
+
+    // Assert
+    result.Should().Be(expected);
+  }
+
+  [Test]
   public void NormalizeMethodSignature_AltCover_GenericMethodRegister_HandlesCorrectly()
   {
     // Arrange - from real AltCover data: System.Void Rca.Loader.Contracts.SharedServiceRegistry::Register(TInterface)
