@@ -8,7 +8,7 @@ using System.Linq;
 /// </summary>
 internal static class MetricDescriptorCatalog
 {
-  private static readonly IReadOnlyDictionary<MetricIdentifier, MetricDescriptor> Descriptors =
+  private static readonly Dictionary<MetricIdentifier, MetricDescriptor> Descriptors =
       new Dictionary<MetricIdentifier, MetricDescriptor>
       {
         [MetricIdentifier.AltCoverSequenceCoverage] = new() { Unit = "percent" },

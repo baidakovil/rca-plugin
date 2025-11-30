@@ -71,9 +71,13 @@ internal sealed class MetricsReporterConsoleHost
   /// This method is <see langword="internal"/> to allow tests in <c>Rca.MetricsReporter.Tests</c>
   /// to verify CLI-to-options binding (e.g., <c>--replace-baseline</c> →
   /// <see cref="MetricsReporterOptions.ReplaceMetricsBaseline"/>).
+  /// Because it does not depend on instance state, it is implemented as a static helper.
   /// </remarks>
-  internal MetricsReporterOptions ParseArguments(string[] args)
+  internal static MetricsReporterOptions ParseArguments(string[] args)
   {
+    const char FolderSeparatorComma = ',';
+    const char FolderSeparatorSemicolon = ';';
+
     var roslynPaths = new List<string>();
     var sarifPaths = new List<string>();
 
@@ -169,7 +173,9 @@ internal sealed class MetricsReporterConsoleHost
         case "--source-code-folders":
           var foldersValue = RequireValue(args, ref index, argument);
           // Support comma- or semicolon-separated list
-          var folders = foldersValue.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+          var folders = foldersValue.Split(
+              new[] { FolderSeparatorComma, FolderSeparatorSemicolon },
+              StringSplitOptions.RemoveEmptyEntries)
             .Select(f => f.Trim())
             .Where(f => !string.IsNullOrWhiteSpace(f));
           sourceCodeFolders.AddRange(folders);

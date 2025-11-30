@@ -15,7 +15,7 @@ internal static partial class JavascriptModules
   internal static IReadOnlyCollection<ScriptFragment> RefactoredFragments
     => _refactoredFragments ??= BuildRefactoredFragments();
 
-  private static IReadOnlyCollection<ScriptFragment> BuildRefactoredFragments()
+  private static ScriptFragment[] BuildRefactoredFragments()
     => new[]
     {
       new ScriptFragment("Utilities", Utilities),

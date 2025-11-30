@@ -1,6 +1,5 @@
 namespace Rca.MetricsReporter.Tests.Services;
 
-using System.IO;
 using FluentAssertions;
 using NUnit.Framework;
 using Rca.Tools.MetricsReporter;
@@ -20,7 +19,6 @@ public sealed class MetricsReporterConsoleHostArgumentTests
   public void ParseArguments_WithReplaceBaselineFlag_SetsReplaceMetricsBaselineTrue()
   {
     // Arrange
-    var host = new MetricsReporterConsoleHost(TextWriter.Null);
     var args = new[]
     {
       "--metrics-dir", "c:\\temp\\metrics",
@@ -30,7 +28,7 @@ public sealed class MetricsReporterConsoleHostArgumentTests
     };
 
     // Act
-    var options = host.ParseArguments(args);
+    var options = MetricsReporterConsoleHost.ParseArguments(args);
 
     // Assert
     options.ReplaceMetricsBaseline.Should().BeTrue();
@@ -44,7 +42,6 @@ public sealed class MetricsReporterConsoleHostArgumentTests
   public void ParseArguments_WithoutReplaceBaselineFlag_SetsReplaceMetricsBaselineFalse()
   {
     // Arrange
-    var host = new MetricsReporterConsoleHost(TextWriter.Null);
     var args = new[]
     {
       "--metrics-dir", "c:\\temp\\metrics",
@@ -53,7 +50,7 @@ public sealed class MetricsReporterConsoleHostArgumentTests
     };
 
     // Act
-    var options = host.ParseArguments(args);
+    var options = MetricsReporterConsoleHost.ParseArguments(args);
 
     // Assert
     options.ReplaceMetricsBaseline.Should().BeFalse();

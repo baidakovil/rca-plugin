@@ -20,7 +20,6 @@ internal static class SuppressedSymbolMetricBinder
     }
 
     var lookup = MetricsNodeLookup.Create(solution);
-    var resolver = new SuppressedMetricResolver();
 
     foreach (var suppressed in suppressedSymbols)
     {
@@ -39,7 +38,7 @@ internal static class SuppressedSymbolMetricBinder
         continue;
       }
 
-      if (resolver.TryResolve(node, suppressed.RuleId, out var metricIdentifier))
+      if (SuppressedMetricResolver.TryResolve(node, suppressed.RuleId, out var metricIdentifier))
       {
         suppressed.Metric = metricIdentifier.ToString();
       }

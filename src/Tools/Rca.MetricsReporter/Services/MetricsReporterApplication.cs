@@ -273,7 +273,7 @@ public sealed class MetricsReporterApplication
   /// <param name="options">The options containing threshold configuration.</param>
   /// <param name="logger">The logger to use for error messages.</param>
   /// <returns>A result containing the exit code and loaded thresholds.</returns>
-  private (MetricsReporterExitCode ExitCode, IDictionary<MetricIdentifier, MetricThresholdDefinition> Thresholds) LoadThresholdsWithLogging(
+  private static (MetricsReporterExitCode ExitCode, Dictionary<MetricIdentifier, MetricThresholdDefinition> Thresholds) LoadThresholdsWithLogging(
       MetricsReporterOptions options,
       FileLogger logger)
   {
@@ -482,7 +482,7 @@ public sealed class MetricsReporterApplication
   /// <param name="logger">The logger to use for error messages.</param>
   /// <param name="cancellationToken">Cancellation token for async operations.</param>
   /// <returns>The exit code indicating success or failure.</returns>
-  private async Task<MetricsReporterExitCode> WriteReportsAsync(
+  private static async Task<MetricsReporterExitCode> WriteReportsAsync(
       MetricsReport report,
       MetricsReporterOptions options,
       FileLogger logger,
@@ -560,7 +560,7 @@ public sealed class MetricsReporterApplication
     }
   }
 
-  private IDictionary<MetricIdentifier, MetricThresholdDefinition> ParseThresholds(
+  private static Dictionary<MetricIdentifier, MetricThresholdDefinition> ParseThresholds(
       MetricsReporterOptions options)
   {
     string? payload = null;
@@ -604,7 +604,7 @@ public sealed class MetricsReporterApplication
   /// <summary>
   /// Loads an existing JSON report and generates HTML from it without parsing source files.
   /// </summary>
-  private async Task<MetricsReporterExitCode> GenerateHtmlFromJsonAsync(
+  private static async Task<MetricsReporterExitCode> GenerateHtmlFromJsonAsync(
       MetricsReporterOptions options,
       FileLogger logger,
       CancellationToken cancellationToken)
@@ -662,7 +662,7 @@ public sealed class MetricsReporterApplication
   /// <param name="logger">The logger to use for progress messages.</param>
   /// <param name="cancellationToken">Cancellation token for async operations.</param>
   /// <returns>The loaded metrics report, or <see langword="null"/> if loading failed.</returns>
-  private async Task<MetricsReport?> LoadReportForHtmlGenerationAsync(
+  private static async Task<MetricsReport?> LoadReportForHtmlGenerationAsync(
       MetricsReporterOptions options,
       FileLogger logger,
       CancellationToken cancellationToken)
@@ -700,7 +700,7 @@ public sealed class MetricsReporterApplication
   /// <param name="logger">The logger to use for progress messages.</param>
   /// <param name="cancellationToken">Cancellation token for async operations.</param>
   /// <returns>The exit code indicating success or failure.</returns>
-  private async Task<MetricsReporterExitCode> GenerateAndWriteHtmlAsync(
+  private static async Task<MetricsReporterExitCode> GenerateAndWriteHtmlAsync(
       MetricsReport report,
       MetricsReporterOptions options,
       FileLogger logger,

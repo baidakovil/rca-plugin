@@ -13,9 +13,8 @@ public sealed class SuppressedMetricResolverTests
   public void TryResolve_PrefersRuleIdMetric()
   {
     var node = CreateNodeWithMetric(MetricIdentifier.SarifIdeRuleViolations);
-    var resolver = new SuppressedMetricResolver();
 
-    resolver.TryResolve(node, "IDE0028", out var identifier).Should().BeTrue();
+    SuppressedMetricResolver.TryResolve(node, "IDE0028", out var identifier).Should().BeTrue();
     identifier.Should().Be(MetricIdentifier.SarifIdeRuleViolations);
   }
 
@@ -23,9 +22,8 @@ public sealed class SuppressedMetricResolverTests
   public void TryResolve_FallsBackWhenPreferredUnavailable()
   {
     var node = CreateNodeWithMetric(MetricIdentifier.SarifCaRuleViolations);
-    var resolver = new SuppressedMetricResolver();
 
-    resolver.TryResolve(node, "IDE0028", out var identifier).Should().BeTrue();
+    SuppressedMetricResolver.TryResolve(node, "IDE0028", out var identifier).Should().BeTrue();
     identifier.Should().Be(MetricIdentifier.SarifCaRuleViolations);
   }
 

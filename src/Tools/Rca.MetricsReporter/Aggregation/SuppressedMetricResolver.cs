@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using Rca.Tools.MetricsReporter.Model;
 
-internal sealed class SuppressedMetricResolver
+internal static class SuppressedMetricResolver
 {
   private static readonly MetricIdentifier[] FallbackMetrics =
   {
@@ -12,7 +12,7 @@ internal sealed class SuppressedMetricResolver
     MetricIdentifier.SarifCaRuleViolations
   };
 
-  public bool TryResolve(MetricsNode node, string? ruleId, out MetricIdentifier metricIdentifier)
+  public static bool TryResolve(MetricsNode node, string? ruleId, out MetricIdentifier metricIdentifier)
   {
     if (node is null)
     {

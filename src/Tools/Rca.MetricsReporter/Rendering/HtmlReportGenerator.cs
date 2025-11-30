@@ -87,7 +87,7 @@ public sealed class HtmlReportGenerator
     builder.AppendLine("</script>");
   }
 
-  private static IReadOnlyDictionary<MetricIdentifier, string?> BuildMetricUnits(ReportMetadata metadata)
+  private static Dictionary<MetricIdentifier, string?> BuildMetricUnits(ReportMetadata metadata)
   {
     var result = new Dictionary<MetricIdentifier, string?>();
     foreach (var metric in MetricOrder)

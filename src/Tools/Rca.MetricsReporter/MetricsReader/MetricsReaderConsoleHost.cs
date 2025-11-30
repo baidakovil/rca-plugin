@@ -49,18 +49,18 @@ internal static class MetricsReaderConsoleHost
 
       config.AddCommand<ReadAnyCommand>("readany")
         .WithDescription("Reads metric violations for a namespace. Returns the most severe violation by default. Pass --all to list all matches.")
-        .WithExample(new[] { "readany", "--namespace", "Rca.Loader", "--metric", "Complexity" })
-        .WithExample(new[] { "readany", "--namespace", "Rca.Loader", "--metric", "Complexity", "--all", "--symbol-kind", "Member" });
+        .WithExample("readany", "--namespace", "Rca.Loader", "--metric", "Complexity")
+        .WithExample("readany", "--namespace", "Rca.Loader", "--metric", "Complexity", "--all", "--symbol-kind", "Member");
 
       config.AddCommand<ReadSarifCommand>("readsarif")
         .WithDescription("Aggregates SARIF-based metrics (SarifCaRuleViolations, SarifIdeRuleViolations) by rule ID for the specified namespace. --metric defaults to Any.")
-        .WithExample(new[] { "readsarif", "--namespace", "Rca.Loader" })
-        .WithExample(new[] { "readsarif", "--namespace", "Rca.Loader", "--metric", "SarifIdeRuleViolations", "--all", "--symbol-kind", "Member" })
-        .WithExample(new[] { "readsarif", "--namespace", "Rca.Loader", "--metric", "Any", "--ruleid", "CA1506" });
+        .WithExample("readsarif", "--namespace", "Rca.Loader")
+        .WithExample("readsarif", "--namespace", "Rca.Loader", "--metric", "SarifIdeRuleViolations", "--all", "--symbol-kind", "Member")
+        .WithExample("readsarif", "--namespace", "Rca.Loader", "--metric", "Any", "--ruleid", "CA1506");
 
       config.AddCommand<TestMetricCommand>("test")
         .WithDescription("Checks whether a symbol satisfies the specified metric after refactoring.")
-        .WithExample(new[] { "test", "--symbol", "Rca.Loader.SomeType.SomeMethod(...)", "--metric", "Complexity" });
+        .WithExample("test", "--symbol", "Rca.Loader.SomeType.SomeMethod(...)", "--metric", "Complexity");
     });
   }
 }

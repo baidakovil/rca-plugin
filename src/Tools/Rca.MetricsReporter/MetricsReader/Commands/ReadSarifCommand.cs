@@ -63,8 +63,8 @@ internal sealed class ReadSarifCommand : MetricsReaderCommandBase<SarifMetricSet
     JsonConsoleWriter.Write(payload);
     return 0;
   }
-  private static IReadOnlyList<SarifViolationGroup> FilterSarifGroups(
-    IReadOnlyList<SarifViolationGroup> groups,
+  private static List<SarifViolationGroup> FilterSarifGroups(
+    List<SarifViolationGroup> groups,
     SarifMetricSettings settings)
   {
     IEnumerable<SarifViolationGroup> query = groups;

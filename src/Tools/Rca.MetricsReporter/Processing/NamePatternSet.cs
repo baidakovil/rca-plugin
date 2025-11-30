@@ -14,6 +14,8 @@ using System.Text.RegularExpressions;
 /// </remarks>
 public sealed class NamePatternSet
 {
+  private static readonly char[] PatternDelimiters = { ',', ';' };
+
   private readonly List<Pattern> _patterns;
 
   private NamePatternSet(List<Pattern> patterns)
@@ -48,7 +50,7 @@ public sealed class NamePatternSet
     }
 
     var parts = input.Split(
-        new[] { ',', ';' },
+        PatternDelimiters,
         StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     List<Pattern> patterns = [];
