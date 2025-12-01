@@ -12,10 +12,6 @@ internal static class MetricsReaderCommandConfigurator
   /// Configures the command application with all available metrics-reader commands.
   /// </summary>
   /// <param name="app">The command application to configure.</param>
-  [System.Diagnostics.CodeAnalysis.SuppressMessage(
-    "Microsoft.Maintainability",
-    "CA1506:AvoidExcessiveClassCoupling",
-    Justification = "Command configuration method registers all command types with their descriptions and examples; dependencies on command types are necessary for CLI setup. Further decomposition would fragment the configuration logic without benefit.")]
   public static void Configure(CommandApp app)
   {
     app.Configure(config =>

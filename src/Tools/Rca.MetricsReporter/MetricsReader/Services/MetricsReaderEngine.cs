@@ -9,10 +9,6 @@ using Rca.Tools.MetricsReporter.Model;
 /// <summary>
 /// Provides high-level queries over MetricsReport.g.json for CLI commands.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.SuppressMessage(
-  "Microsoft.Maintainability",
-  "CA1506:Avoid excessive class coupling",
-  Justification = "Engine orchestrates queries over metrics report by coordinating specialized services (node enumerator, snapshot builder, violation aggregator/orderer); further decomposition would fragment the coordination logic and degrade maintainability.")]
 internal sealed class MetricsReaderEngine
 {
   private readonly IMetricsNodeEnumerator _nodeEnumerator;
