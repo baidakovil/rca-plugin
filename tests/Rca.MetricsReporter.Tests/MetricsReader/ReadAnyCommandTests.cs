@@ -157,8 +157,10 @@ internal sealed class ReadAnyCommandTests : MetricsReaderCommandTestsBase
   [Test]
   public async Task ExecuteAsync_SymbolKindAny_WithAll_PrefersTypesBeforeMembers()
   {
-    var member = MetricsReaderCommandTestData.CreateMemberNode("Rca.Loader.Services.MixedType.Execute(...)", 30, ThresholdStatus.Error);
-    var type = MetricsReaderCommandTestData.CreateTypeNode("Rca.Loader.Services.MixedType", 50, ThresholdStatus.Error, new[] { member });
+    // Arrange: Create a member with higher priority (Error + higher magnitude) than the type
+    // to verify that types are still listed first when SymbolKind is Any
+    var member = MetricsReaderCommandTestData.CreateMemberNode("Rca.Loader.Services.MixedType.Execute(...)", 60, ThresholdStatus.Error);
+    var type = MetricsReaderCommandTestData.CreateTypeNode("Rca.Loader.Services.MixedType", 30, ThresholdStatus.Error, new[] { member });
     var report = MetricsReaderCommandTestData.CreateReport(new[] { type });
 
     var reportPath = WriteReport(report);
@@ -176,8 +178,11 @@ internal sealed class ReadAnyCommandTests : MetricsReaderCommandTestsBase
     using var json = JsonDocument.Parse(output);
     var rows = json.RootElement.EnumerateArray().ToList();
     rows.Should().HaveCount(2);
+    // Verify that type comes before member even though member has higher magnitude (60-25=35 vs 30-20=10)
     rows[0].GetProperty("symbolType").GetString().Should().Be("Type");
+    rows[0].GetProperty("symbolFqn").GetString().Should().Be("Rca.Loader.Services.MixedType");
     rows[1].GetProperty("symbolType").GetString().Should().Be("Member");
+    rows[1].GetProperty("symbolFqn").GetString().Should().Contain("Execute(...)");
   }
 
   [Test]

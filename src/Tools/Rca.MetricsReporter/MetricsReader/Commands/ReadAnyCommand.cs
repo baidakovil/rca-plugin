@@ -21,14 +21,25 @@ internal sealed class ReadAnyCommand : MetricsReaderCommandBase<NamespaceMetricS
     var trimmedNamespace = settings.Namespace.Trim();
     var engine = await CreateEngineAsync(settings, cancellationToken).ConfigureAwait(false);
     var filter = new SymbolFilter(trimmedNamespace, settings.ResolvedMetric, settings.SymbolKind, settings.IncludeSuppressed);
-    var ordered = engine.GetProblematicSymbols(filter)
-      .OrderByDescending(snapshot => snapshot.Status == ThresholdStatus.Error ? 2 : 1)
-      .ThenByDescending(snapshot => snapshot.Magnitude ?? 0m)
-      .ThenBy(snapshot => snapshot.Symbol, StringComparer.Ordinal)
+    var query = engine.GetProblematicSymbols(filter);
+    
+    // When SymbolKind is Any, prioritize types before members to match readsarif behavior
+    var ordered = settings.SymbolKind == MetricsReaderSymbolKind.Any
+      ? query
+          .OrderBy(snapshot => snapshot.Kind == CodeElementKind.Type ? 0 : 1)
+          .ThenByDescending(snapshot => snapshot.Status == ThresholdStatus.Error ? 2 : 1)
+          .ThenByDescending(snapshot => snapshot.Magnitude ?? 0m)
+          .ThenBy(snapshot => snapshot.Symbol, StringComparer.Ordinal)
+      : query
+          .OrderByDescending(snapshot => snapshot.Status == ThresholdStatus.Error ? 2 : 1)
+          .ThenByDescending(snapshot => snapshot.Magnitude ?? 0m)
+          .ThenBy(snapshot => snapshot.Symbol, StringComparer.Ordinal);
+    
+    var result = ordered
       .Select(SymbolMetricDto.FromSnapshot)
       .ToList();
 
-    if (ordered.Count == 0)
+    if (result.Count == 0)
     {
       JsonConsoleWriter.Write(new
       {
@@ -42,11 +53,11 @@ internal sealed class ReadAnyCommand : MetricsReaderCommandBase<NamespaceMetricS
 
     if (settings.ShowAll)
     {
-      JsonConsoleWriter.Write(ordered);
+      JsonConsoleWriter.Write(result);
       return 0;
     }
 
-    JsonConsoleWriter.Write(ordered.FirstOrDefault());
+    JsonConsoleWriter.Write(result.FirstOrDefault());
     return 0;
   }
 }
