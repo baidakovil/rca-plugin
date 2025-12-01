@@ -13,7 +13,11 @@ Refactor code in the given namespace to achieve the required Class Coupling metr
 
 ### 1. Get problematic symbol
 
-Using the `metrics-reader readany` command, get the first "problematic" symbol that requires refactoring. A problematic symbol is one where the threshold is exceeded (`metrics-reader` handles this comparison automatically). Use `--symbol-kind Any` to first automatically get and refactor classes, as this is logical from an architectural perspective, and then automatically get methods. Example request to `metrics-reader` with the required options:
+Using the `metrics-reader readany` command, get the first "problematic" symbol that requires refactoring. A problematic symbol is one where the threshold is exceeded (`metrics-reader` handles this comparison automatically). Use `--symbol-kind Any` to first automatically get and refactor classes, as this is logical from an architectural perspective, and then automatically get methods. 
+
+**IMPORTANT: Never use `--no-update` flag when calling `metrics-reader` commands.** The `--no-update` flag skips metric generation and returns stale data. Always let `metrics-reader` update metrics automatically to ensure you work with current values.
+
+Example request to `metrics-reader` with the required options:
 
 ```powershell
 .\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe metrics-reader readany --namespace <given_namespace> --metric Coupling --symbol-kind Any
@@ -28,9 +32,9 @@ Begin working on the symbol. Study the code of the class or method and related c
 There is only one reason to cancel refactoring: refactoring should not be performed if further decoupling techniques lead to deterioration in code readability and maintainability. If refactoring is canceled, make a suppression for the symbol. Example suppression:
 
 ```csharp
-[SuppressMessage(
+[System.Diagnostics.CodeAnalysis.SuppressMessage(
     "Microsoft.Maintainability",
-    "CA1506:Avoid excessive class coupling",
+    "CA1506:AvoidExcessiveClassCoupling",
     Justification = "Revit test run coordinator is an orchestration point over VSTest abstractions and RCA execution services; low-level details are already delegated to dedicated components.")]
 ```
 
@@ -48,7 +52,11 @@ If refactoring is possible, proceed as follows:
 
 ### 4. Verify result
 
-Using the `metrics-reader test` command, verify that the symbol you worked on is fixed. Example request to `metrics-reader` with the required options:
+Using the `metrics-reader test` command, verify that the symbol you worked on is fixed. 
+
+**IMPORTANT: Never use `--no-update` flag when calling `metrics-reader` commands.** The `--no-update` flag skips metric generation and returns stale data. Always let `metrics-reader` update metrics automatically to ensure you work with current values.
+
+Example request to `metrics-reader` with the required options:
 
 ```powershell
 .\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe metrics-reader test --symbol <symbol_been_refactored> --metric Coupling

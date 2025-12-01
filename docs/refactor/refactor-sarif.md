@@ -14,6 +14,8 @@
 
 Always precede this step with `dotnet build --no-incremental` so the SARIF metrics reader can see updated violation counts; metrics are only refreshed during a build, and skipping it leaves the data stale.
 
+**IMPORTANT: Never use `--no-update` flag when calling `metrics-reader` commands.** The `--no-update` flag skips metric generation and returns stale data. Always let `metrics-reader` update metrics automatically to ensure you work with current values.
+
 Run `metrics-reader readsarif` for the target namespace to retrieve the first SARIF group. Because `--metric` defaults to `Any`, you do not need to specify it unless you want to focus on a single SARIF metric:
 
 ```powershell
@@ -29,16 +31,16 @@ Pick the first violation in the returned group and examine the code referenced b
 Only suppress a violation after careful consideration (for example, after two failed refactoring attempts or when a change would degrade clarity). Add a `[SuppressMessage(...)]` attribute with an English justification (and `using System.Diagnostics.CodeAnalysis;` if missing). Examples:
 
 ```csharp
-[SuppressMessage(
-    "Microsoft.CodeAnalysis.CSharp",
-    "CA1506:Avoid excessive class coupling",
+[System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Microsoft.Maintainability",
+    "CA1506:AvoidExcessiveClassCoupling",
     Justification = "This orchestration point coordinates multiple services; splitting it would scatter closely related steps.")]
 ```
 
 ```csharp
-[SuppressMessage(
+[System.Diagnostics.CodeAnalysis.SuppressMessage(
     "Style",
-    "IDE0028:Collection initialization can be simplified",
+    "IDE0028:SimplifyCollectionInitialization",
     Justification = "The downstream serializer expects a concrete List<T>, so the explicit construction must be retained.")]
 ```
 
@@ -57,7 +59,9 @@ Steps 3 and 4 can cover an entire violation group once the required fixes are sm
 
 ### 4. Validate and repeat
 
-After you have addressed all violations in a group, rerun `metrics-reader readsarif` with the namespace and the group’s `ruleId`:
+After you have addressed all violations in a group, rerun `metrics-reader readsarif` with the namespace and the group's `ruleId`. 
+
+**IMPORTANT: Never use `--no-update` flag when calling `metrics-reader` commands.** The `--no-update` flag skips metric generation and returns stale data. Always let `metrics-reader` update metrics automatically to ensure you work with current values.
 
 ```powershell
 .\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe metrics-reader readsarif --namespace <target_namespace> --ruleid <ruleId>
