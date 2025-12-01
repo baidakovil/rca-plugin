@@ -64,7 +64,7 @@ internal sealed class SarifViolationAggregatorTests
 
     // Assert
     result.Should().BeEmpty();
-    _mockSuppressedChecker.DidNotReceive().IsSuppressed(Arg.Any<string?>(), Arg.Any<MetricIdentifier>(), Arg.Any<string?>());
+    _mockSuppressedChecker!.DidNotReceive().IsSuppressed(Arg.Any<string?>(), Arg.Any<MetricIdentifier>(), Arg.Any<string?>());
   }
 
   [Test]

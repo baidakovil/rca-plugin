@@ -60,8 +60,8 @@ internal sealed class SymbolSnapshotBuilderTests
 
     // Assert
     result.Should().BeNull();
-    _mockThresholdProvider.DidNotReceive().GetThreshold(Arg.Any<MetricIdentifier>(), Arg.Any<MetricSymbolLevel>());
-    _mockSuppressedChecker.DidNotReceive().IsSuppressed(Arg.Any<string?>(), Arg.Any<MetricIdentifier>());
+    _mockThresholdProvider!.DidNotReceive().GetThreshold(Arg.Any<MetricIdentifier>(), Arg.Any<MetricSymbolLevel>());
+    _mockSuppressedChecker!.DidNotReceive().IsSuppressed(Arg.Any<string?>(), Arg.Any<MetricIdentifier>());
   }
 
   [Test]

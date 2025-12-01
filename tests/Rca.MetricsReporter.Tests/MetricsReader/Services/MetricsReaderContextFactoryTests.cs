@@ -164,9 +164,9 @@ internal sealed class MetricsReaderContextFactoryTests
     // Assert
     context.Should().NotBeNull();
     context.Report.Should().BeSameAs(report);
-    _mockSolutionLocator.DidNotReceive().FindSolutionPath(Arg.Any<string>());
-    _mockUpdaterFactory.DidNotReceive().Create(Arg.Any<string>());
-    _mockReportLoader.Received(1).LoadAsync(reportPath, Arg.Any<CancellationToken>());
+    _mockSolutionLocator!.DidNotReceive().FindSolutionPath(Arg.Any<string>());
+    _mockUpdaterFactory!.DidNotReceive().Create(Arg.Any<string>());
+    _ = _mockReportLoader!.Received(1).LoadAsync(reportPath, Arg.Any<CancellationToken>());
   }
 
   [Test]
@@ -207,9 +207,9 @@ internal sealed class MetricsReaderContextFactoryTests
 
     // Assert
     context.Should().NotBeNull();
-    await mockUpdater.Received(1).UpdateAsync(Arg.Any<CancellationToken>());
-    _mockSolutionLocator.Received(1).FindSolutionPath(reportPath);
-    _mockReportLoader.Received(1).LoadAsync(reportPath, Arg.Any<CancellationToken>());
+    await mockUpdater.Received(1).UpdateAsync(Arg.Any<CancellationToken>()).ConfigureAwait(false);
+    _mockSolutionLocator!.Received(1).FindSolutionPath(reportPath);
+    _ = _mockReportLoader!.Received(1).LoadAsync(reportPath, Arg.Any<CancellationToken>());
   }
 
   [Test]
@@ -345,7 +345,7 @@ internal sealed class MetricsReaderContextFactoryTests
 
     // Assert
     context.Should().NotBeNull();
-    _mockThresholdsFileLoader.Received(1).LoadAsync(thresholdsPath, Arg.Any<CancellationToken>());
+    _ = _mockThresholdsFileLoader!.Received(1).LoadAsync(thresholdsPath, Arg.Any<CancellationToken>());
   }
 
   [Test]
@@ -380,7 +380,7 @@ internal sealed class MetricsReaderContextFactoryTests
 
     // Assert
     context.Should().NotBeNull();
-    _mockThresholdsFileLoader.Received(1).LoadAsync(null, Arg.Any<CancellationToken>());
+    _ = _mockThresholdsFileLoader!.Received(1).LoadAsync(null, Arg.Any<CancellationToken>());
   }
 
   [Test]
@@ -401,10 +401,10 @@ internal sealed class MetricsReaderContextFactoryTests
     cts.Cancel();
 
     _mockReportLoader!.LoadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-      .Returns(async x =>
+      .Returns(async (NSubstitute.Core.CallInfo x) =>
       {
         await Task.Delay(1, x.Arg<CancellationToken>()).ConfigureAwait(false);
-        return MetricsReaderCommandTestData.CreateReport(Enumerable.Empty<TypeMetricsNode>());
+        return (MetricsReport?)MetricsReaderCommandTestData.CreateReport(Enumerable.Empty<TypeMetricsNode>());
       });
 
     var factory = new MetricsReaderContextFactory(
@@ -539,7 +539,7 @@ internal sealed class MetricsReaderContextFactoryTests
       // Assert
       context.Should().NotBeNull();
       // Verify that loader was called with absolute path
-      _mockReportLoader.Received(1).LoadAsync(Arg.Is<string>(p => Path.IsPathRooted(p)), Arg.Any<CancellationToken>());
+      _ = _mockReportLoader!.Received(1).LoadAsync(Arg.Is<string>(p => Path.IsPathRooted(p)), Arg.Any<CancellationToken>());
     }
     finally
     {

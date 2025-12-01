@@ -56,7 +56,7 @@ internal sealed class ThresholdsFileLoaderTests
 
     // Assert
     result.Should().BeNull();
-    _mockParser.DidNotReceive().Parse(Arg.Any<string>());
+    _mockParser!.DidNotReceive().Parse(Arg.Any<string>());
   }
 
   [Test]
@@ -70,7 +70,7 @@ internal sealed class ThresholdsFileLoaderTests
 
     // Assert
     result.Should().BeNull();
-    _mockParser.DidNotReceive().Parse(Arg.Any<string>());
+    _mockParser!.DidNotReceive().Parse(Arg.Any<string>());
   }
 
   [Test]
@@ -84,7 +84,7 @@ internal sealed class ThresholdsFileLoaderTests
 
     // Assert
     result.Should().BeNull();
-    _mockParser.DidNotReceive().Parse(Arg.Any<string>());
+    _mockParser!.DidNotReceive().Parse(Arg.Any<string>());
   }
 
   [Test]
@@ -100,7 +100,7 @@ internal sealed class ThresholdsFileLoaderTests
     // Assert
     await act.Should().ThrowAsync<FileNotFoundException>()
       .WithMessage($"Thresholds override file not found: {Path.GetFullPath(nonExistentPath)}*");
-    _mockParser.DidNotReceive().Parse(Arg.Any<string>());
+    _mockParser!.DidNotReceive().Parse(Arg.Any<string>());
   }
 
   [Test]
@@ -193,7 +193,7 @@ internal sealed class ThresholdsFileLoaderTests
     // JsonDocument.ParseAsync throws JsonReaderException for invalid JSON
     await act.Should().ThrowAsync<System.Text.Json.JsonException>();
     // Parser is never called because JsonDocument.ParseAsync fails first
-    _mockParser.DidNotReceive().Parse(Arg.Any<string>());
+    _mockParser!.DidNotReceive().Parse(Arg.Any<string>());
   }
 
   [Test]
@@ -211,7 +211,7 @@ internal sealed class ThresholdsFileLoaderTests
     // Assert
     // Empty file is not valid JSON, so JsonDocument.ParseAsync will throw
     await act.Should().ThrowAsync<System.Text.Json.JsonException>();
-    _mockParser.DidNotReceive().Parse(Arg.Any<string>());
+    _mockParser!.DidNotReceive().Parse(Arg.Any<string>());
   }
 
   [Test]
