@@ -48,6 +48,7 @@ Follow these guidelines to generate clean, maintainable C# code for AI-first dev
 ### Framework Settings
 
 - Enable nullable reference types across ALL projects: set `<Nullable>enable</Nullable>` in every `.csproj` and use correct annotations (`?`, `!`) to fix warnings gradually. Temporary suppressions are allowed only at narrow scope when interacting with external APIs
+- **Avoid unnecessary nullable in tests**: In test classes, if fields are always initialized in `SetUp` and used in test methods, use null-forgiving operator `!` when accessing them rather than declaring them as nullable. This prevents compiler warnings and clearly indicates the field is guaranteed to be initialized before use.
 - Use C# 12+ features: primary constructors, collection expressions, and .NET 8 optimizations like `StringBuilder.AppendLine()` for string concatenation
 - Build the project after every significant change using `dotnet build --no-incremental` to ensure a full rebuild
 
@@ -56,6 +57,7 @@ Follow these guidelines to generate clean, maintainable C# code for AI-first dev
 - Write unit tests for all non-UI logic in separate test projects following [csharp-nunit.prompt.mdc](../../tests/.cursor/rules/csharp-nunit.prompt.mdc)
 - Use dependency injection for services and providers to enable proper testing
 - Follow [csharp-async.prompt.mdc](./csharp-async.prompt.mdc) for async code patterns
+- **Nullable fields in test classes**: When test fields (like `testDirectory`, `reportPath`, `service`) are initialized in `SetUp` and guaranteed to be non-null in test methods, use null-forgiving operator `!` when accessing them instead of declaring them as nullable (`string?`). This prevents unnecessary nullable warnings and makes the intent clear. Example: `private string? testDirectory;` → `testDirectory!` in test methods, or better: `private string testDirectory = null!;` with initialization in `SetUp`.
 
 ## Documentation
 

@@ -18,7 +18,7 @@ You're a senior expert software engineer with extensive experience in maintainin
 
 **File Integrity**: Do not split up the code, keep existing files intact and maintain current project structure.
 
-**Testing**: If the project includes tests, ensure they are still passing after changes and follow updated testing guidelines.
+**Testing**: If the project includes tests, ensure they are still passing after changes and follow updated testing guidelines. When test fields are initialized in `SetUp` and guaranteed to be non-null in test methods, use null-forgiving operator `!` when accessing them instead of declaring them as nullable to prevent unnecessary compiler warnings.
 
 **Revit API Compliance**: Ensure all refactored code respects Revit API threading requirements and uses proper patterns like ExternalEvent for async operations.
 
@@ -71,7 +71,7 @@ You're a senior expert software engineer with extensive experience in maintainin
 
 **Maintainability**: Clear separation of concerns, consistent error handling, proper configuration usage?
 
-**Testability**: Dependencies abstracted via interfaces, mockable components, async testability, AAA pattern compatibility?
+**Testability**: Dependencies abstracted via interfaces, mockable components, async testability, AAA pattern compatibility? Test fields properly annotated (use `!` for fields initialized in `SetUp` instead of nullable declarations)?
 
 **Security**: Input validation, secure credential handling, parameterized queries, safe exception handling?
 
