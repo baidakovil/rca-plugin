@@ -57,8 +57,8 @@ public sealed class BaselineLifecycleServiceTests
 
     var options = new MetricsReporterOptions
     {
-      OutputJsonPath = reportPath,
-      BaselinePath = baselinePath,
+      OutputJsonPath = reportPath!,
+      BaselinePath = baselinePath!,
       ReplaceMetricsBaseline = true
     };
 
@@ -77,8 +77,8 @@ public sealed class BaselineLifecycleServiceTests
     // Arrange
     var options = new MetricsReporterOptions
     {
-      OutputJsonPath = reportPath,
-      BaselinePath = baselinePath,
+      OutputJsonPath = reportPath!,
+      BaselinePath = baselinePath!,
       ReplaceMetricsBaseline = false
     };
 
@@ -97,8 +97,8 @@ public sealed class BaselineLifecycleServiceTests
     // Arrange
     var options = new MetricsReporterOptions
     {
-      OutputJsonPath = null,
-      BaselinePath = baselinePath,
+      OutputJsonPath = string.Empty,
+      BaselinePath = baselinePath!,
       ReplaceMetricsBaseline = true
     };
 
@@ -116,7 +116,7 @@ public sealed class BaselineLifecycleServiceTests
     var options = new MetricsReporterOptions
     {
       OutputJsonPath = string.Empty,
-      BaselinePath = baselinePath,
+      BaselinePath = baselinePath!,
       ReplaceMetricsBaseline = true
     };
 
@@ -134,7 +134,7 @@ public sealed class BaselineLifecycleServiceTests
     var options = new MetricsReporterOptions
     {
       OutputJsonPath = "   ",
-      BaselinePath = baselinePath,
+      BaselinePath = baselinePath!,
       ReplaceMetricsBaseline = true
     };
 
@@ -153,7 +153,7 @@ public sealed class BaselineLifecycleServiceTests
     var options = new MetricsReporterOptions
     {
       OutputJsonPath = nonExistentPath,
-      BaselinePath = baselinePath,
+      BaselinePath = baselinePath!,
       ReplaceMetricsBaseline = true
     };
 
@@ -170,7 +170,7 @@ public sealed class BaselineLifecycleServiceTests
     // Arrange
     var options = new MetricsReporterOptions
     {
-      OutputJsonPath = reportPath,
+      OutputJsonPath = reportPath!,
       BaselinePath = null,
       ReplaceMetricsBaseline = true
     };
@@ -190,8 +190,8 @@ public sealed class BaselineLifecycleServiceTests
     var options = new MetricsReporterOptions
     {
       ReplaceMetricsBaseline = true,
-      BaselinePath = baselinePath,
-      OutputJsonPath = reportPath,
+      BaselinePath = baselinePath!,
+      OutputJsonPath = reportPath!,
       MetricsReportStoragePath = testDirectory
     };
     var logPath = Path.Combine(testDirectory!, Guid.NewGuid().ToString("N") + ".log");
@@ -219,7 +219,7 @@ public sealed class BaselineLifecycleServiceTests
     {
       ReplaceMetricsBaseline = false,
       BaselinePath = null,
-      OutputJsonPath = reportPath,
+      OutputJsonPath = reportPath!,
       MetricsReportStoragePath = null
     };
     var logPath = Path.Combine(testDirectory!, Guid.NewGuid().ToString("N") + ".log");
@@ -242,8 +242,8 @@ public sealed class BaselineLifecycleServiceTests
     var context = new BaselineRunContext(false, false, false);
     var options = new MetricsReporterOptions
     {
-      BaselinePath = baselinePath,
-      OutputJsonPath = reportPath,
+      BaselinePath = baselinePath!,
+      OutputJsonPath = reportPath!,
       ReplaceMetricsBaseline = false
     };
     var logPath = Path.Combine(testDirectory!, Guid.NewGuid().ToString("N") + ".log");
@@ -264,7 +264,7 @@ public sealed class BaselineLifecycleServiceTests
     var options = new MetricsReporterOptions
     {
       BaselinePath = null,
-      OutputJsonPath = reportPath,
+      OutputJsonPath = reportPath!,
       ReplaceMetricsBaseline = true
     };
     var logPath = Path.Combine(testDirectory!, Guid.NewGuid().ToString("N") + ".log");
@@ -284,8 +284,8 @@ public sealed class BaselineLifecycleServiceTests
     var context = new BaselineRunContext(true, true, true);
     var options = new MetricsReporterOptions
     {
-      BaselinePath = baselinePath,
-      OutputJsonPath = reportPath,
+      BaselinePath = baselinePath!,
+      OutputJsonPath = reportPath!,
       ReplaceMetricsBaseline = true
     };
     var logPath = Path.Combine(testDirectory!, Guid.NewGuid().ToString("N") + ".log");
@@ -308,8 +308,8 @@ public sealed class BaselineLifecycleServiceTests
     var context = new BaselineRunContext(true, false, true);
     var options = new MetricsReporterOptions
     {
-      BaselinePath = baselinePath,
-      OutputJsonPath = reportPath,
+      BaselinePath = baselinePath!,
+      OutputJsonPath = reportPath!,
       ReplaceMetricsBaseline = true
     };
     var logPath = Path.Combine(testDirectory!, Guid.NewGuid().ToString("N") + ".log");
@@ -331,8 +331,8 @@ public sealed class BaselineLifecycleServiceTests
     var context = new BaselineRunContext(false, false, true);
     var options = new MetricsReporterOptions
     {
-      BaselinePath = baselinePath,
-      OutputJsonPath = reportPath,
+      BaselinePath = baselinePath!,
+      OutputJsonPath = reportPath!,
       ReplaceMetricsBaseline = true
     };
     var logPath = Path.Combine(testDirectory!, Guid.NewGuid().ToString("N") + ".log");
@@ -379,7 +379,7 @@ public sealed class BaselineLifecycleServiceTests
     File.WriteAllText(baselinePath!, baselineContent);
 
     // Act
-    var result = await service!.LoadBaselineAsync(baselinePath, CancellationToken.None).ConfigureAwait(false);
+    var result = await service!.LoadBaselineAsync(baselinePath!, CancellationToken.None).ConfigureAwait(false);
 
     // Assert
     result.Should().NotBeNull();
@@ -393,8 +393,8 @@ public sealed class BaselineLifecycleServiceTests
     var context = new BaselineRunContext(false, false, false);
     var options = new MetricsReporterOptions
     {
-      BaselinePath = baselinePath,
-      OutputJsonPath = reportPath,
+      BaselinePath = baselinePath!,
+      OutputJsonPath = reportPath!,
       ReplaceMetricsBaseline = false
     };
     var logPath = Path.Combine(testDirectory!, Guid.NewGuid().ToString("N") + ".log");
@@ -414,7 +414,7 @@ public sealed class BaselineLifecycleServiceTests
     var options = new MetricsReporterOptions
     {
       BaselinePath = null,
-      OutputJsonPath = reportPath,
+      OutputJsonPath = reportPath!,
       ReplaceMetricsBaseline = true
     };
     var logPath = Path.Combine(testDirectory!, Guid.NewGuid().ToString("N") + ".log");
@@ -433,8 +433,8 @@ public sealed class BaselineLifecycleServiceTests
     var context = new BaselineRunContext(false, false, true);
     var options = new MetricsReporterOptions
     {
-      BaselinePath = baselinePath,
-      OutputJsonPath = reportPath,
+      BaselinePath = baselinePath!,
+      OutputJsonPath = reportPath!,
       ReplaceMetricsBaseline = true
     };
     var logPath = Path.Combine(testDirectory!, Guid.NewGuid().ToString("N") + ".log");
@@ -458,8 +458,8 @@ public sealed class BaselineLifecycleServiceTests
     var context = new BaselineRunContext(true, true, true);
     var options = new MetricsReporterOptions
     {
-      BaselinePath = baselinePath,
-      OutputJsonPath = reportPath,
+      BaselinePath = baselinePath!,
+      OutputJsonPath = reportPath!,
       MetricsReportStoragePath = testDirectory,
       ReplaceMetricsBaseline = true
     };
