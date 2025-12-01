@@ -17,6 +17,30 @@ public static class SymbolNormalizer
   private const string ParameterPlaceholder = "...";
 
   /// <summary>
+  /// Determines whether the given name is a special placeholder name that should not be normalized.
+  /// </summary>
+  /// <param name="name">The name to check.</param>
+  /// <returns>
+  /// <see langword="true"/> if the name is a special placeholder (e.g., "&lt;unknown-type&gt;", "&lt;unknown-member&gt;", "&lt;unknown-assembly&gt;", "&lt;global&gt;");
+  /// otherwise, <see langword="false"/>.
+  /// </returns>
+  /// <remarks>
+  /// Special placeholder names are used when actual names are missing from metric sources.
+  /// These placeholders should be preserved as-is and not treated as generic type parameters.
+  /// </remarks>
+  private static bool IsSpecialPlaceholderName(string? name)
+  {
+    if (string.IsNullOrWhiteSpace(name))
+    {
+      return false;
+    }
+
+    // Special placeholder names are enclosed in angle brackets and start with '<'
+    // Examples: "<unknown-type>", "<unknown-member>", "<unknown-assembly>", "<global>"
+    return name.StartsWith("<", StringComparison.Ordinal) && name.EndsWith(">", StringComparison.Ordinal);
+  }
+
+  /// <summary>
   /// Normalizes a method signature by removing parameter details and replacing them with a placeholder.
   /// </summary>
   /// <param name="methodSignature">The method signature to normalize (e.g., "Method(System.Object, System.String)" or "Method(object? sender, string name)").</param>
@@ -258,14 +282,23 @@ public static class SymbolNormalizer
   /// <returns>
   /// Normalized type name without generic parameters (e.g., "List").
   /// If the input is <see langword="null"/> or whitespace, returns the input unchanged.
+  /// Special placeholder names like "&lt;unknown-type&gt;" are returned unchanged.
   /// </returns>
   /// <remarks>
   /// This method removes generic type parameters to ensure types with different generic arguments
   /// are treated as the same base type for aggregation purposes.
+  /// Special placeholder names (enclosed in angle brackets) are preserved as-is to maintain their semantic meaning.
   /// </remarks>
   public static string? NormalizeTypeName(string? typeName)
   {
     if (string.IsNullOrWhiteSpace(typeName))
+    {
+      return typeName;
+    }
+
+    // Preserve special placeholder names (e.g., "<unknown-type>", "<unknown-member>", "<unknown-assembly>", "<global>")
+    // These are not generic type parameters and should be returned unchanged
+    if (IsSpecialPlaceholderName(typeName))
     {
       return typeName;
     }

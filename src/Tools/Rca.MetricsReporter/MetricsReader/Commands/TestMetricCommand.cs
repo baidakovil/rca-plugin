@@ -18,15 +18,19 @@ internal sealed class TestMetricCommand : MetricsReaderCommandBase<TestMetricSet
     var engine = await CreateEngineAsync(settings, cancellationToken).ConfigureAwait(false);
     var snapshot = engine.TryGetSymbol(settings.Symbol.Trim(), settings.ResolvedMetric);
 
-    var result = new MetricTestResultDto
+    var result = CreateResult(snapshot, settings.IncludeSuppressed);
+    JsonConsoleWriter.Write(result);
+    return 0;
+  }
+
+  private static MetricTestResultDto CreateResult(SymbolMetricSnapshot? snapshot, bool includeSuppressed)
+  {
+    return new MetricTestResultDto
     {
-      IsOk = EvaluateStatus(snapshot, settings.IncludeSuppressed),
+      IsOk = EvaluateStatus(snapshot, includeSuppressed),
       Details = snapshot is null ? null : SymbolMetricDto.FromSnapshot(snapshot),
       Message = snapshot is null ? "Symbol not present in the current metrics report." : null
     };
-
-    JsonConsoleWriter.Write(result);
-    return 0;
   }
 
   private static bool EvaluateStatus(SymbolMetricSnapshot? snapshot, bool includeSuppressed)

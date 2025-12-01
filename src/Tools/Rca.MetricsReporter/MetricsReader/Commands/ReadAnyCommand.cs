@@ -1,13 +1,9 @@
 namespace Rca.Tools.MetricsReporter.MetricsReader.Commands;
 
-using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Rca.Tools.MetricsReporter.MetricsReader.Output;
 using Rca.Tools.MetricsReporter.MetricsReader.Services;
 using Rca.Tools.MetricsReporter.MetricsReader.Settings;
-using Rca.Tools.MetricsReporter.Model;
 using Spectre.Console.Cli;
 
 /// <summary>
@@ -18,47 +14,21 @@ internal sealed class ReadAnyCommand : MetricsReaderCommandBase<NamespaceMetricS
   /// <inheritdoc />
   protected override async Task<int> ExecuteAsync(CommandContext context, NamespaceMetricSettings settings, CancellationToken cancellationToken)
   {
-    var trimmedNamespace = settings.Namespace.Trim();
-    var engine = await CreateEngineAsync(settings, cancellationToken).ConfigureAwait(false);
-    var filter = new SymbolFilter(trimmedNamespace, settings.ResolvedMetric, settings.SymbolKind, settings.IncludeSuppressed);
-    var query = engine.GetProblematicSymbols(filter);
-    
-    // When SymbolKind is Any, prioritize types before members to match readsarif behavior
-    var ordered = settings.SymbolKind == MetricsReaderSymbolKind.Any
-      ? query
-          .OrderBy(snapshot => snapshot.Kind == CodeElementKind.Type ? 0 : 1)
-          .ThenByDescending(snapshot => snapshot.Status == ThresholdStatus.Error ? 2 : 1)
-          .ThenByDescending(snapshot => snapshot.Magnitude ?? 0m)
-          .ThenBy(snapshot => snapshot.Symbol, StringComparer.Ordinal)
-      : query
-          .OrderByDescending(snapshot => snapshot.Status == ThresholdStatus.Error ? 2 : 1)
-          .ThenByDescending(snapshot => snapshot.Magnitude ?? 0m)
-          .ThenBy(snapshot => snapshot.Symbol, StringComparer.Ordinal);
-    
-    var result = ordered
-      .Select(SymbolMetricDto.FromSnapshot)
-      .ToList();
-
-    if (result.Count == 0)
-    {
-      JsonConsoleWriter.Write(new
-      {
-        metric = settings.Metric,
-        @namespace = trimmedNamespace,
-        symbolKind = settings.SymbolKind.ToString(),
-        message = $"No violations were found for metric '{settings.Metric}' in namespace '{trimmedNamespace}'."
-      });
-      return 0;
-    }
-
-    if (settings.ShowAll)
-    {
-      JsonConsoleWriter.Write(result);
-      return 0;
-    }
-
-    JsonConsoleWriter.Write(result.FirstOrDefault());
+    var executor = CreateExecutor();
+    await executor.ExecuteAsync(settings, cancellationToken).ConfigureAwait(false);
     return 0;
+  }
+
+  [System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Microsoft.Maintainability",
+    "CA1506:AvoidExcessiveClassCoupling",
+    Justification = "Factory method creates executor with all required services (query service, orderer, result handler); decomposition would fragment factory logic without meaningful architectural benefit.")]
+  private static IReadAnyCommandExecutor CreateExecutor()
+  {
+    var queryService = new SymbolQueryService();
+    var orderer = new SymbolSnapshotOrderer();
+    var resultHandler = new ReadAnyCommandResultHandler();
+    return new ReadAnyCommandExecutor(CreateEngineAsync, queryService, orderer, resultHandler);
   }
 }
 

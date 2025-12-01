@@ -629,6 +629,87 @@ public sealed class SymbolNormalizerTests
     result.Should().Be("Type");
   }
 
+  [Test]
+  public void NormalizeTypeName_UnknownTypePlaceholder_ReturnsUnchanged()
+  {
+    // Arrange
+    var input = "<unknown-type>";
+
+    // Act
+    var result = SymbolNormalizer.NormalizeTypeName(input);
+
+    // Assert
+    result.Should().Be(input);
+  }
+
+  [Test]
+  public void NormalizeTypeName_UnknownMemberPlaceholder_ReturnsUnchanged()
+  {
+    // Arrange
+    var input = "<unknown-member>";
+
+    // Act
+    var result = SymbolNormalizer.NormalizeTypeName(input);
+
+    // Assert
+    result.Should().Be(input);
+  }
+
+  [Test]
+  public void NormalizeTypeName_UnknownAssemblyPlaceholder_ReturnsUnchanged()
+  {
+    // Arrange
+    var input = "<unknown-assembly>";
+
+    // Act
+    var result = SymbolNormalizer.NormalizeTypeName(input);
+
+    // Assert
+    result.Should().Be(input);
+  }
+
+  [Test]
+  public void NormalizeTypeName_GlobalNamespacePlaceholder_ReturnsUnchanged()
+  {
+    // Arrange
+    var input = "<global>";
+
+    // Act
+    var result = SymbolNormalizer.NormalizeTypeName(input);
+
+    // Assert
+    result.Should().Be(input);
+  }
+
+  [Test]
+  public void NormalizeTypeName_TypeStartingWithAngleBracketButNotPlaceholder_RemovesGenerics()
+  {
+    // Arrange - type name that starts with '<' but is not a placeholder (edge case)
+    // This shouldn't happen in practice, but we should handle it correctly
+    var input = "<Type<string>>";
+
+    // Act
+    var result = SymbolNormalizer.NormalizeTypeName(input);
+
+    // Assert
+    // Since it starts with '<' and ends with '>', it's treated as a placeholder
+    result.Should().Be(input);
+  }
+
+  [Test]
+  public void NormalizeTypeName_TypeWithAngleBracketInMiddle_RemovesGenerics()
+  {
+    // Arrange - type name with angle bracket in the middle (not at start)
+    var input = "Type<string>";
+
+    // Act
+    var result = SymbolNormalizer.NormalizeTypeName(input);
+
+    // Assert
+    result.Should().Be("Type");
+  }
+
+
   #endregion
 
   #region Integration Tests - Real World Scenarios

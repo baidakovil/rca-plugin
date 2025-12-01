@@ -32,6 +32,10 @@ internal abstract class MetricsReaderCommandBase<TSettings> : AsyncCommand<TSett
     return new MetricsReaderContextFactory(reportLoader, thresholdsFileLoader, solutionLocator, updaterFactory);
   }
 
+  [System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Microsoft.Maintainability",
+    "CA1506:AvoidExcessiveClassCoupling",
+    Justification = "Factory method creates MetricsReaderEngine by instantiating all required services (node enumerator, snapshot builder, violation aggregator/orderer); decomposition would fragment factory logic without meaningful architectural benefit.")]
   private static MetricsReaderEngine CreateEngine(MetricsReaderContext context)
   {
     var nodeEnumerator = new MetricsNodeEnumerator(context.Report);

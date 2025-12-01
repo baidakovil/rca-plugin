@@ -191,7 +191,7 @@ internal sealed class RoslynMetricsDocumentWalker
       // Normalize generic type parameters to ensure consistent FQN format
       // This ensures that types like "MetricsReaderCommandBase<TSettings>" are normalized
       // to "MetricsReaderCommandBase" for consistent matching with suppressions
-      var normalizedTypeName = SymbolNormalizer.NormalizeTypeName(typeName);
+      var normalizedTypeName = SymbolNormalizer.NormalizeTypeName(typeName) ?? typeName;
       
       if (string.IsNullOrWhiteSpace(namespaceName) || namespaceName == "<global>")
       {
