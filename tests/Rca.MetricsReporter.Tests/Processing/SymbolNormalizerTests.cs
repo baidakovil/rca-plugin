@@ -478,6 +478,48 @@ public sealed class SymbolNormalizerTests
     result.Should().Be(input);
   }
 
+  [Test]
+  public void NormalizeFullyQualifiedMethodName_GenericTypeInFqn_NormalizesTypeGenerics()
+  {
+    // Arrange - method from generic type like MetricsReaderCommandBase<TSettings>.CreateEngine(...)
+    var input = "Rca.Tools.MetricsReporter.MetricsReader.Commands.MetricsReaderCommandBase<TSettings>.CreateEngine(MetricsReaderContext context)";
+    var expected = "Rca.Tools.MetricsReporter.MetricsReader.Commands.MetricsReaderCommandBase.CreateEngine(...)";
+
+    // Act
+    var result = SymbolNormalizer.NormalizeFullyQualifiedMethodName(input);
+
+    // Assert
+    result.Should().Be(expected);
+  }
+
+  [Test]
+  public void NormalizeFullyQualifiedMethodName_GenericTypeWithMultipleParameters_NormalizesTypeGenerics()
+  {
+    // Arrange - method from generic type with multiple type parameters
+    var input = "Namespace.Type<TKey, TValue>.Method(string param)";
+    var expected = "Namespace.Type.Method(...)";
+
+    // Act
+    var result = SymbolNormalizer.NormalizeFullyQualifiedMethodName(input);
+
+    // Assert
+    result.Should().Be(expected);
+  }
+
+  [Test]
+  public void NormalizeFullyQualifiedMethodName_GenericTypeAndGenericMethod_NormalizesBoth()
+  {
+    // Arrange - both type and method have generic parameters
+    var input = "Namespace.Type<TSettings>.Method<TResult>(TResult value)";
+    var expected = "Namespace.Type.Method(...)";
+
+    // Act
+    var result = SymbolNormalizer.NormalizeFullyQualifiedMethodName(input);
+
+    // Assert
+    result.Should().Be(expected);
+  }
+
   #endregion
 
   #region NormalizeTypeName Tests

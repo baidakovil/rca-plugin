@@ -179,11 +179,14 @@ public static class SymbolNormalizer
   /// It handles both AltCover and Roslyn formats by applying signature normalization to the method part.
   /// 
   /// The method works by:
-  /// 1. Finding the parameter list (opening parenthesis)
-  /// 2. Finding the matching closing parenthesis (handling nested parentheses in generic types)
-  /// 3. Replacing the entire parameter list with "..."
+  /// 1. Normalizing generic type parameters in the type part (e.g., "Type&lt;T&gt;.Method(...)" -> "Type.Method(...)")
+  /// 2. Finding the parameter list (opening parenthesis)
+  /// 3. Finding the matching closing parenthesis (handling nested parentheses in generic types)
+  /// 4. Replacing the entire parameter list with "..."
+  /// 5. Removing generic parameters from the method name (e.g., "Method&lt;T&gt;(...)" -> "Method(...)")
   /// 
-  /// This approach is simpler and more reliable than trying to parse the method name separately.
+  /// This approach ensures that methods from generic types are properly matched with suppressions
+  /// regardless of whether the type's generic parameters are included in the FQN.
   /// </remarks>
   public static string? NormalizeFullyQualifiedMethodName(string? fullyQualifiedMethodName)
   {
@@ -192,14 +195,37 @@ public static class SymbolNormalizer
       return fullyQualifiedMethodName;
     }
 
-    // First, remove generic type parameters from the method name (e.g., "Process<T>" -> "Process")
-    // This ensures methods with different generic parameters are treated as the same method for aggregation
-    // Note: We need to distinguish between actual generic parameters (Method<T>) and
-    // method names that contain angle brackets (like <Clone>$)
+    // First, normalize generic type parameters in the type part of the FQN
+    // This handles cases like "Type<T>.Method(...)" -> "Type.Method(...)"
+    // We need to find the last dot before the method name to separate type and method parts
     var paramStart = fullyQualifiedMethodName.IndexOf('(');
     var searchEnd = paramStart >= 0 ? paramStart : fullyQualifiedMethodName.Length;
 
-    // Find generic parameters before the method parameter list
+    // Find the last dot before the method parameter list (separates type from method)
+    var lastDotBeforeMethod = fullyQualifiedMethodName.LastIndexOf('.', searchEnd - 1);
+    if (lastDotBeforeMethod >= 0)
+    {
+      // Extract the type part (everything before the last dot)
+      var typePart = fullyQualifiedMethodName[..lastDotBeforeMethod];
+      // Extract the method part (everything from the last dot onwards)
+      var methodPart = fullyQualifiedMethodName[lastDotBeforeMethod..];
+
+      // Normalize generic parameters in the type part
+      var normalizedTypePart = NormalizeTypeName(typePart);
+      if (normalizedTypePart != typePart)
+      {
+        // Reconstruct FQN with normalized type part
+        fullyQualifiedMethodName = normalizedTypePart + methodPart;
+        // Update search end since the string length may have changed
+        paramStart = fullyQualifiedMethodName.IndexOf('(');
+        searchEnd = paramStart >= 0 ? paramStart : fullyQualifiedMethodName.Length;
+      }
+    }
+
+    // Then, remove generic type parameters from the method name (e.g., "Process<T>" -> "Process")
+    // This ensures methods with different generic parameters are treated as the same method for aggregation
+    // Note: We need to distinguish between actual generic parameters (Method<T>) and
+    // method names that contain angle brackets (like <Clone>$)
     var genericStart = fullyQualifiedMethodName.IndexOf('<');
     if (genericStart >= 0 && genericStart < searchEnd)
     {
@@ -221,7 +247,7 @@ public static class SymbolNormalizer
       }
     }
 
-    // Then apply method signature normalization which will find and replace parameters
+    // Finally, apply method signature normalization which will find and replace parameters
     return NormalizeMethodSignature(fullyQualifiedMethodName);
   }
 
