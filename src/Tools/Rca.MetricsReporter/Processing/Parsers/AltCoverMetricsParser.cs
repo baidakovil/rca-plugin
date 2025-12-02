@@ -203,7 +203,7 @@ public sealed class AltCoverMetricsParser : IMetricsSourceParser
         Source = source
       };
 
-    private static SourceLocation? ResolveSourceLocation(XElement methodElement, Dictionary<string, string> files)
+  private static SourceLocation? ResolveSourceLocation(XElement methodElement, Dictionary<string, string> files)
   {
     var fileRef = methodElement.Element(XmlNamespace + "FileRef");
     var fileId = fileRef?.Attribute("uid")?.Value;

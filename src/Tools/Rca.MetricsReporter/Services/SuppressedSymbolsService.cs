@@ -57,11 +57,11 @@ internal sealed class SuppressedSymbolsService : ISuppressedSymbolsService
       ValidateAnalysisOptions(options);
       var analysisContext = CreateAnalysisContext(options);
       LogAnalysisStart(analysisContext, logger);
-      
+
       var suppressedReport = ExecuteAnalysis(analysisContext, cancellationToken);
       EnsureOutputDirectoryExists(options.SuppressedSymbolsPath!);
       await WriteAnalysisResultsAsync(suppressedReport, options.SuppressedSymbolsPath!, cancellationToken).ConfigureAwait(false);
-      
+
       var suppressedSymbols = suppressedReport.SuppressedSymbols.ToList();
       LogAnalysisCompletion(suppressedSymbols.Count, logger);
       return suppressedSymbols;

@@ -107,7 +107,7 @@ internal static class SuppressedSymbolsAnalyzer
     return new SuppressedSymbolsReport
     {
       GeneratedAtUtc = DateTime.UtcNow,
-      SuppressedSymbols = suppressedSymbols is List<SuppressedSymbolInfo> list ? list : [..suppressedSymbols]
+      SuppressedSymbols = suppressedSymbols is List<SuppressedSymbolInfo> list ? list : [.. suppressedSymbols]
     };
   }
 

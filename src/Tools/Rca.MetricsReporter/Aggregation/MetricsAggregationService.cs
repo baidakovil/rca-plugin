@@ -123,42 +123,42 @@ public sealed class MetricsAggregationService
     }
   }
 
-    private interface IReportMetadataComposer
+  private interface IReportMetadataComposer
+  {
+    ReportMetadata Compose(
+        MetricsAggregationInput input,
+        HashSet<string>? usedRuleIds);
+  }
+
+  private sealed class ReportMetadataComposerAdapter : IReportMetadataComposer
+  {
+    private readonly MemberFilter _memberFilter;
+    private readonly AssemblyFilter _assemblyFilter;
+    private readonly TypeFilter _typeFilter;
+
+    public ReportMetadataComposerAdapter(
+        MemberFilter memberFilter,
+        AssemblyFilter assemblyFilter,
+        TypeFilter typeFilter)
     {
-      ReportMetadata Compose(
-          MetricsAggregationInput input,
-          HashSet<string>? usedRuleIds);
+      _memberFilter = memberFilter ?? throw new ArgumentNullException(nameof(memberFilter));
+      _assemblyFilter = assemblyFilter ?? throw new ArgumentNullException(nameof(assemblyFilter));
+      _typeFilter = typeFilter ?? throw new ArgumentNullException(nameof(typeFilter));
     }
 
-    private sealed class ReportMetadataComposerAdapter : IReportMetadataComposer
+    public ReportMetadata Compose(
+        MetricsAggregationInput input,
+        HashSet<string>? usedRuleIds)
     {
-      private readonly MemberFilter _memberFilter;
-      private readonly AssemblyFilter _assemblyFilter;
-      private readonly TypeFilter _typeFilter;
-
-      public ReportMetadataComposerAdapter(
-          MemberFilter memberFilter,
-          AssemblyFilter assemblyFilter,
-          TypeFilter typeFilter)
-      {
-        _memberFilter = memberFilter ?? throw new ArgumentNullException(nameof(memberFilter));
-        _assemblyFilter = assemblyFilter ?? throw new ArgumentNullException(nameof(assemblyFilter));
-        _typeFilter = typeFilter ?? throw new ArgumentNullException(nameof(typeFilter));
-      }
-
-      public ReportMetadata Compose(
-          MetricsAggregationInput input,
-          HashSet<string>? usedRuleIds)
-      {
-        var metadataInput = ReportMetadataComposer.CreateInput(
-            input,
-            _memberFilter,
-            _assemblyFilter,
-            _typeFilter,
-            usedRuleIds);
-        return ReportMetadataComposer.Compose(metadataInput);
-      }
+      var metadataInput = ReportMetadataComposer.CreateInput(
+          input,
+          _memberFilter,
+          _assemblyFilter,
+          _typeFilter,
+          usedRuleIds);
+      return ReportMetadataComposer.Compose(metadataInput);
     }
+  }
 
   /// <summary>
   /// Recursively collects all rule IDs from breakdown dictionaries in SARIF metrics across the entire metrics tree.
@@ -608,13 +608,13 @@ public sealed class MetricsAggregationService
     if (aggregate && value.Value.HasValue)
     {
       var sum = (existing.Value ?? 0m) + value.Value.Value;
-      
+
       // WHY: We merge breakdown dictionaries when aggregating SARIF metrics to preserve
       // the detailed breakdown of rule violations. This allows the report to show which
       // specific rules are violated at each level of the hierarchy (Member, Type, etc.).
       // If both values have breakdowns, we sum the counts for each rule ID.
       var mergedBreakdown = SarifBreakdownHelper.Merge(existing.Breakdown, value.Breakdown);
-      
+
       node.Metrics[identifier] = new MetricValue
       {
         Value = sum,
@@ -766,62 +766,62 @@ public sealed class MetricsAggregationService
     }
   }
 
-    private sealed class ReportMetadataSpecification
+  private sealed class ReportMetadataSpecification
+  {
+    public ReportMetadataSpecification(string? baselineReference, ReportPaths paths, ReportMetadataContent content)
     {
-      public ReportMetadataSpecification(string? baselineReference, ReportPaths paths, ReportMetadataContent content)
-      {
-        BaselineReference = baselineReference;
-        Paths = paths ?? throw new ArgumentNullException(nameof(paths));
-        Content = content ?? throw new ArgumentNullException(nameof(content));
-      }
-
-      public string? BaselineReference { get; }
-
-      public ReportPaths Paths { get; }
-
-      public ReportMetadataContent Content { get; }
-
-      public ReportMetadataInput CreateInput(IList<SuppressedSymbolInfo> suppressedSymbols)
-      {
-        ArgumentNullException.ThrowIfNull(suppressedSymbols);
-        return new ReportMetadataInput(BaselineReference, Paths, Content, suppressedSymbols);
-      }
+      BaselineReference = baselineReference;
+      Paths = paths ?? throw new ArgumentNullException(nameof(paths));
+      Content = content ?? throw new ArgumentNullException(nameof(content));
     }
 
-    private sealed class ReportMetadataContent
+    public string? BaselineReference { get; }
+
+    public ReportPaths Paths { get; }
+
+    public ReportMetadataContent Content { get; }
+
+    public ReportMetadataInput CreateInput(IList<SuppressedSymbolInfo> suppressedSymbols)
     {
-      public ReportMetadataContent(
-          ReportThresholdMetadata thresholdMetadata,
-          IDictionary<MetricIdentifier, MetricDescriptor> metricDescriptors,
-          FilterPatternExtractor.FilterPatterns filterPatterns,
-          Dictionary<string, RuleDescription> ruleDescriptions)
-      {
-        ThresholdMetadata = thresholdMetadata ?? throw new ArgumentNullException(nameof(thresholdMetadata));
-        MetricDescriptors = metricDescriptors ?? throw new ArgumentNullException(nameof(metricDescriptors));
-        FilterPatterns = filterPatterns ?? throw new ArgumentNullException(nameof(filterPatterns));
-        RuleDescriptions = ruleDescriptions ?? throw new ArgumentNullException(nameof(ruleDescriptions));
-      }
+      ArgumentNullException.ThrowIfNull(suppressedSymbols);
+      return new ReportMetadataInput(BaselineReference, Paths, Content, suppressedSymbols);
+    }
+  }
 
-      public ReportThresholdMetadata ThresholdMetadata { get; }
-
-      public IDictionary<MetricIdentifier, MetricDescriptor> MetricDescriptors { get; }
-
-      public FilterPatternExtractor.FilterPatterns FilterPatterns { get; }
-
-      public Dictionary<string, RuleDescription> RuleDescriptions { get; }
-
-      public string? MemberNamesPatterns => FilterPatterns.MemberNamesPatterns;
-
-      public string? AssemblyNamesPatterns => FilterPatterns.AssemblyNamesPatterns;
-
-      public string? TypeNamesPatterns => FilterPatterns.TypeNamesPatterns;
+  private sealed class ReportMetadataContent
+  {
+    public ReportMetadataContent(
+        ReportThresholdMetadata thresholdMetadata,
+        IDictionary<MetricIdentifier, MetricDescriptor> metricDescriptors,
+        FilterPatternExtractor.FilterPatterns filterPatterns,
+        Dictionary<string, RuleDescription> ruleDescriptions)
+    {
+      ThresholdMetadata = thresholdMetadata ?? throw new ArgumentNullException(nameof(thresholdMetadata));
+      MetricDescriptors = metricDescriptors ?? throw new ArgumentNullException(nameof(metricDescriptors));
+      FilterPatterns = filterPatterns ?? throw new ArgumentNullException(nameof(filterPatterns));
+      RuleDescriptions = ruleDescriptions ?? throw new ArgumentNullException(nameof(ruleDescriptions));
     }
 
-    private sealed record ReportMetadataInput(
-        string? BaselineReference,
-        ReportPaths Paths,
-        ReportMetadataContent Content,
-        IList<SuppressedSymbolInfo> SuppressedSymbols);
+    public ReportThresholdMetadata ThresholdMetadata { get; }
+
+    public IDictionary<MetricIdentifier, MetricDescriptor> MetricDescriptors { get; }
+
+    public FilterPatternExtractor.FilterPatterns FilterPatterns { get; }
+
+    public Dictionary<string, RuleDescription> RuleDescriptions { get; }
+
+    public string? MemberNamesPatterns => FilterPatterns.MemberNamesPatterns;
+
+    public string? AssemblyNamesPatterns => FilterPatterns.AssemblyNamesPatterns;
+
+    public string? TypeNamesPatterns => FilterPatterns.TypeNamesPatterns;
+  }
+
+  private sealed record ReportMetadataInput(
+      string? BaselineReference,
+      ReportPaths Paths,
+      ReportMetadataContent Content,
+      IList<SuppressedSymbolInfo> SuppressedSymbols);
 
   private sealed class ReportThresholdMetadata
   {

@@ -489,7 +489,7 @@ public sealed class HtmlReportGeneratorTests
       }
     }
 
-    }
+  }
 
   [Test]
   public void Generate_WithoutCoverageHtmlDir_DoesNotGenerateLinks()

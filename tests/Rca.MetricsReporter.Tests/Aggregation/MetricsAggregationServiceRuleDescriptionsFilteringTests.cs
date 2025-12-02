@@ -118,7 +118,7 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
     // Assert
     report.Metadata.RuleDescriptions.Should().ContainKey("CA1502");
     report.Metadata.RuleDescriptions.Should().NotContainKey("CA1506", "CA1506 is not in breakdown");
-    
+
     var description = report.Metadata.RuleDescriptions["CA1502"];
     description.ShortDescription.Should().Be("Avoid excessive complexity");
     description.FullDescription.Should().Be("Methods should not have excessive cyclomatic complexity.");
@@ -242,7 +242,7 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
     report.Metadata.RuleDescriptions.Should().ContainKey("CA1506");
     report.Metadata.RuleDescriptions.Should().NotContainKey("CA1505", "CA1505 is not in breakdown");
     report.Metadata.RuleDescriptions.Should().NotContainKey("IDE0051", "IDE0051 is not in breakdown");
-    
+
     report.Metadata.RuleDescriptions.Count.Should().Be(2);
   }
 
@@ -330,7 +330,7 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
     // Assert
     report.Metadata.RuleDescriptions.Should().ContainKey("IDE0051");
     report.Metadata.RuleDescriptions.Should().NotContainKey("IDE0028", "IDE0028 is not in breakdown");
-    
+
     var description = report.Metadata.RuleDescriptions["IDE0051"];
     description.ShortDescription.Should().Be("Remove unused private members");
   }
@@ -453,7 +453,7 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
     report.Metadata.RuleDescriptions.Should().ContainKey("IDE0051");
     report.Metadata.RuleDescriptions.Should().NotContainKey("CA1506", "CA1506 is not in breakdown");
     report.Metadata.RuleDescriptions.Should().NotContainKey("IDE0028", "IDE0028 is not in breakdown");
-    
+
     report.Metadata.RuleDescriptions.Count.Should().Be(2);
   }
 
@@ -554,7 +554,7 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
     report.Metadata.RuleDescriptions.Should().ContainKey("CA1502");
     report.Metadata.RuleDescriptions.Should().ContainKey("CA1506");
     report.Metadata.RuleDescriptions.Should().NotContainKey("CA1505", "CA1505 is not in breakdown");
-    
+
     report.Metadata.RuleDescriptions.Count.Should().Be(2);
   }
 
@@ -765,7 +765,7 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
     // Act & Assert - Should not throw even if rule ID in breakdown doesn't have a description
     var act = () => service.BuildReport(input);
     act.Should().NotThrow();
-    
+
     var report = service.BuildReport(input);
     report.Metadata.RuleDescriptions.Should().ContainKey("CA1502");
     report.Metadata.RuleDescriptions.Should().NotContainKey("CA9999", "CA9999 has no description");
@@ -897,7 +897,7 @@ public sealed class MetricsAggregationServiceRuleDescriptionsFilteringTests
     report.Metadata.RuleDescriptions.Should().ContainKey("CA1502");
     report.Metadata.RuleDescriptions.Should().ContainKey("CA1506");
     report.Metadata.RuleDescriptions.Should().NotContainKey("CA1505", "CA1505 is not in breakdown");
-    
+
     report.Metadata.RuleDescriptions.Count.Should().Be(2);
   }
 }

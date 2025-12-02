@@ -212,7 +212,7 @@ internal sealed class HtmlTableGenerator
     {
       if (memberNode.IncludesIteratorStateMachineCoverage)
       {
-      builder.Append("<span class=\"method-state-machine symbol-indicator\" data-simple-tooltip=\"Includes coverage from compiler-generated iterator state machine\">⊃</span>");
+        builder.Append("<span class=\"method-state-machine symbol-indicator\" data-simple-tooltip=\"Includes coverage from compiler-generated iterator state machine\">⊃</span>");
       }
 
       builder.Append("<span class=\"name-text item-name\"" + nameTooltipData + ">" + nameText + "</span>");

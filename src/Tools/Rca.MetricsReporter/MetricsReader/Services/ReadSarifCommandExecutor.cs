@@ -55,7 +55,7 @@ internal sealed class ReadSarifCommandExecutor : IReadSarifCommandExecutor
 
     var trimmedNamespace = settings.Namespace.Trim();
     var engine = await _engineFactory(settings, cancellationToken).ConfigureAwait(false);
-    
+
     var aggregatedGroups = _aggregator.AggregateGroups(
       engine,
       trimmedNamespace,

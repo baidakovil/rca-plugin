@@ -318,13 +318,13 @@ internal sealed class StructuralElementMerger
     string existingAssemblyName)
   {
     _namespaces.Remove(key);
-    
+
     if (_namespaceIndex.TryGetValue(namespaceFqn, out var indexList))
     {
       indexList.Remove(existingEntry);
     }
 
-    if (_assemblies.TryGetValue(existingAssemblyName, out var existingAssembly) 
+    if (_assemblies.TryGetValue(existingAssemblyName, out var existingAssembly)
         && existingAssembly.Namespaces.Contains(existingEntry.Node))
     {
       existingAssembly.Namespaces.Remove(existingEntry.Node);
@@ -421,7 +421,7 @@ internal sealed class StructuralElementMerger
   private void RemoveTypeFromIndexes(TypeEntry existingEntry, string typeFqn)
   {
     _types.Remove(typeFqn);
-    
+
     var existingAssemblyName = existingEntry.Assembly.FullyQualifiedName ?? string.Empty;
     if (_assemblies.TryGetValue(existingAssemblyName, out var existingAssembly))
     {
@@ -579,12 +579,12 @@ internal sealed class StructuralElementMerger
     MetricValue incoming)
   {
     var sum = (existing.Value ?? 0m) + incoming.Value!.Value;
-    
+
     // WHY: We merge breakdown dictionaries when aggregating metrics to preserve
     // the detailed breakdown of rule violations. This is especially important for
     // SARIF metrics where we want to track individual rule IDs across the hierarchy.
     var mergedBreakdown = SarifBreakdownHelper.Merge(existing.Breakdown, incoming.Breakdown);
-    
+
     target[key] = new MetricValue
     {
       Value = sum,
@@ -653,9 +653,9 @@ internal sealed class StructuralElementMerger
       return true;
     }
 
-    return existing.StartLine.HasValue 
-        && incoming.StartLine.HasValue 
-        && incoming.EndLine.HasValue 
+    return existing.StartLine.HasValue
+        && incoming.StartLine.HasValue
+        && incoming.EndLine.HasValue
         && !existing.EndLine.HasValue;
   }
 
@@ -726,7 +726,7 @@ internal sealed class StructuralElementMerger
       return typeFqn;
     }
 
-    if (!string.IsNullOrWhiteSpace(namespaceName) 
+    if (!string.IsNullOrWhiteSpace(namespaceName)
         && !string.Equals(namespaceName, "<global>", StringComparison.Ordinal)
         && _assemblyFilter.ShouldExcludeAssembly(namespaceName))
     {

@@ -192,7 +192,7 @@ internal sealed class RoslynMetricsDocumentWalker
       // This ensures that types like "MetricsReaderCommandBase<TSettings>" are normalized
       // to "MetricsReaderCommandBase" for consistent matching with suppressions
       var normalizedTypeName = SymbolNormalizer.NormalizeTypeName(typeName) ?? typeName;
-      
+
       if (string.IsNullOrWhiteSpace(namespaceName) || namespaceName == "<global>")
       {
         return normalizedTypeName;

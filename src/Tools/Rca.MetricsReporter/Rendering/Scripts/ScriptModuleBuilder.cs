@@ -13,7 +13,7 @@ namespace Rca.Tools.MetricsReporter.Rendering.Scripts
     /// <returns>Script fragment.</returns>
     public static ScriptFragment CreateModule(string moduleName, string body)
     {
-      if(string.IsNullOrWhiteSpace(body))
+      if (string.IsNullOrWhiteSpace(body))
       {
         return new ScriptFragment(moduleName, $"(function {moduleName}(){{}})();");
       }

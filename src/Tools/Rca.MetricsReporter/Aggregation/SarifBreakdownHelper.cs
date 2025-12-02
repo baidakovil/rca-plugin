@@ -82,7 +82,7 @@ internal static class SarifBreakdownHelper
     }
 
     var entry = new SarifRuleBreakdownEntry
-          {
+    {
       Count = source.Count
     };
 

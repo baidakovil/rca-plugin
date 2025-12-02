@@ -21,12 +21,12 @@ internal static class RuleDescriptionProcessor
       HashSet<string>? usedRuleIds = null)
   {
     var allRuleDescriptions = Merge(sarifDocuments);
-    
+
     if (usedRuleIds is not null)
     {
       return Filter(allRuleDescriptions, usedRuleIds);
     }
-    
+
     return allRuleDescriptions;
   }
 
@@ -76,7 +76,7 @@ internal static class RuleDescriptionProcessor
       HashSet<string> usedRuleIds)
   {
     var filtered = new Dictionary<string, RuleDescription>();
-    
+
     foreach (var (ruleId, description) in allRuleDescriptions)
     {
       if (usedRuleIds.Contains(ruleId))
@@ -84,7 +84,7 @@ internal static class RuleDescriptionProcessor
         filtered[ruleId] = description;
       }
     }
-    
+
     return filtered;
   }
 

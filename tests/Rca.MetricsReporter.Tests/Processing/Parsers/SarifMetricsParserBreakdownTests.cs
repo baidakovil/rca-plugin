@@ -45,7 +45,7 @@ public sealed class SarifMetricsParserBreakdownTests
       result.Elements.Should().HaveCount(1);
       var element = result.Elements.First();
       element.Metrics.Should().ContainKey(MetricIdentifier.SarifCaRuleViolations);
-      
+
       var metric = element.Metrics[MetricIdentifier.SarifCaRuleViolations];
       metric.Value.Should().Be(1);
       metric.Breakdown.Should().NotBeNull().And.ContainKey("CA1502");
@@ -84,7 +84,7 @@ public sealed class SarifMetricsParserBreakdownTests
       result.Elements.Should().HaveCount(1);
       var element = result.Elements.First();
       element.Metrics.Should().ContainKey(MetricIdentifier.SarifIdeRuleViolations);
-      
+
       var metric = element.Metrics[MetricIdentifier.SarifIdeRuleViolations];
       metric.Value.Should().Be(1);
       metric.Breakdown.Should().NotBeNull().And.ContainKey("IDE0051");
@@ -213,15 +213,15 @@ public sealed class SarifMetricsParserBreakdownTests
 
       // Assert
       result.Elements.Should().HaveCount(5);
-      
+
       // Check CA rules
       var caElements = result.Elements.Where(e => e.Metrics.ContainsKey(MetricIdentifier.SarifCaRuleViolations)).ToList();
       caElements.Should().HaveCount(3);
-      
+
       // Check IDE rules
       var ideElements = result.Elements.Where(e => e.Metrics.ContainsKey(MetricIdentifier.SarifIdeRuleViolations)).ToList();
       ideElements.Should().HaveCount(2);
-      
+
       // Verify breakdowns
       foreach (var element in caElements)
       {
@@ -229,7 +229,7 @@ public sealed class SarifMetricsParserBreakdownTests
         breakdown.Should().NotBeNull();
         breakdown!.Count.Should().Be(1);
       }
-      
+
       foreach (var element in ideElements)
       {
         var breakdown = element.Metrics[MetricIdentifier.SarifIdeRuleViolations].Breakdown;
@@ -291,22 +291,22 @@ public sealed class SarifMetricsParserBreakdownTests
       // Act
       var result = await parser.ParseAsync(tempFile, CancellationToken.None);
 
-    // Assert - Only a single violation should be emitted and its metadata should use the first location
-    result.Elements.Should().HaveCount(1);
+      // Assert - Only a single violation should be emitted and its metadata should use the first location
+      result.Elements.Should().HaveCount(1);
 
-    var element = result.Elements.Single();
-    element.Source.Should().NotBeNull();
-    element.Source!.StartLine.Should().Be(10);
+      var element = result.Elements.Single();
+      element.Source.Should().NotBeNull();
+      element.Source!.StartLine.Should().Be(10);
 
-    var metric = element.Metrics[MetricIdentifier.SarifCaRuleViolations];
-    metric.Value.Should().Be(1);
-    metric.Breakdown.Should().NotBeNull().And.ContainKey("CA1502");
-    var breakdownEntry = metric.Breakdown!["CA1502"];
-    breakdownEntry.Count.Should().Be(1);
-    breakdownEntry.Violations.Should().HaveCount(1);
-    var violation = breakdownEntry.Violations.Single();
-    violation.StartLine.Should().Be(10);
-    violation.EndLine.Should().Be(10);
+      var metric = element.Metrics[MetricIdentifier.SarifCaRuleViolations];
+      metric.Value.Should().Be(1);
+      metric.Breakdown.Should().NotBeNull().And.ContainKey("CA1502");
+      var breakdownEntry = metric.Breakdown!["CA1502"];
+      breakdownEntry.Count.Should().Be(1);
+      breakdownEntry.Violations.Should().HaveCount(1);
+      var violation = breakdownEntry.Violations.Single();
+      violation.StartLine.Should().Be(10);
+      violation.EndLine.Should().Be(10);
     }
     finally
     {

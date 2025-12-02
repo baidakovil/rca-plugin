@@ -88,7 +88,7 @@ public sealed class MetricsReporterApplication
     }
 
     var baselineContext = await InitializeBaselineContextAsync(options, logger, cancellationToken).ConfigureAwait(false);
-    
+
     var reportGenerationContext = new ReportGenerationContext(options, thresholdsResult, baselineContext);
     var executionResult = await ExecuteReportGenerationAsync(reportGenerationContext, logger, cancellationToken).ConfigureAwait(false);
     if (executionResult != MetricsReporterExitCode.Success)

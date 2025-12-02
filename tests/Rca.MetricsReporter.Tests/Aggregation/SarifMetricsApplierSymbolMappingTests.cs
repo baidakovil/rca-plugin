@@ -215,7 +215,7 @@ public sealed class SarifMetricsApplierSymbolMappingTests
 
     // Assert
     _mergeTargets.Should().HaveCount(1);
-    _mergeTargets[0].Should().Be(member, because: 
+    _mergeTargets[0].Should().Be(member, because:
       "When SARIF violation is on method declaration line (159) but method is indexed at body start (160), " +
       "the violation should still map to the method using near-start matching logic");
   }
@@ -228,10 +228,10 @@ public sealed class SarifMetricsApplierSymbolMappingTests
     const string normalizedPath = @"C:\Repo\Test.cs";
     var assembly = CreateAssembly("TestAssembly");
     var type = CreateType(assembly, "TestType", filePath, startLine: 10, endLine: 100);
-    
+
     // First method: declaration on line 20, body starts on line 21
     var method1 = CreateMember(type, "Method1", filePath, startLine: 21, endLine: 30);
-    
+
     // Second method: declaration on line 40, body starts on line 41
     var method2 = CreateMember(type, "Method2", filePath, startLine: 41, endLine: 50);
 
@@ -249,7 +249,7 @@ public sealed class SarifMetricsApplierSymbolMappingTests
 
     // Assert
     _mergeTargets.Should().HaveCount(1);
-    _mergeTargets[0].Should().Be(method1, because: 
+    _mergeTargets[0].Should().Be(method1, because:
       "Violation on declaration line 20 should map to Method1 (indexed at body start 21), not Method2");
   }
 
@@ -267,10 +267,10 @@ public sealed class SarifMetricsApplierSymbolMappingTests
     const string normalizedPath = @"C:\Repo\RuntimeCommandHandler.cs";
     var assembly = CreateAssembly("Rca.Loader");
     var type = CreateType(assembly, "RuntimeCommandHandler", filePath, startLine: 20, endLine: 200);
-    
+
     // Method indexed as single line (Roslyn limitation - only provides declaration line)
     var method = CreateMember(type, "HandlePipeCommandAsync", filePath, startLine: 52, endLine: 52);
-    
+
     // Next method starts later (simulating HandleSyncCommand at line 85)
     var nextMethod = CreateMember(type, "HandleSyncCommand", filePath, startLine: 85, endLine: 85);
 
@@ -288,7 +288,7 @@ public sealed class SarifMetricsApplierSymbolMappingTests
 
     // Assert
     _mergeTargets.Should().HaveCount(1);
-    _mergeTargets[0].Should().Be(method, because: 
+    _mergeTargets[0].Should().Be(method, because:
       "Violation on line 54 should map to HandlePipeCommandAsync (indexed at 52-52), not type, " +
       "since no other method starts between line 52 and line 54");
   }
@@ -301,7 +301,7 @@ public sealed class SarifMetricsApplierSymbolMappingTests
     const string normalizedPath = @"C:\Repo\Test.cs";
     var assembly = CreateAssembly("TestAssembly");
     var type = CreateType(assembly, "TestType", filePath, startLine: 10, endLine: 100);
-    
+
     var method1 = CreateMember(type, "Method1", filePath, startLine: 20, endLine: 20);
     var method2 = CreateMember(type, "Method2", filePath, startLine: 50, endLine: 50);
 
@@ -319,7 +319,7 @@ public sealed class SarifMetricsApplierSymbolMappingTests
 
     // Assert
     _mergeTargets.Should().HaveCount(1);
-    _mergeTargets[0].Should().Be(method1, because: 
+    _mergeTargets[0].Should().Be(method1, because:
       "Violation on line 35 should map to Method1 (line 20), not Method2 (line 50), " +
       "since Method1 is the closest preceding method");
   }
@@ -333,7 +333,7 @@ public sealed class SarifMetricsApplierSymbolMappingTests
     const string normalizedPath = @"C:\Repo\Test.cs";
     var assembly = CreateAssembly("TestAssembly");
     var type = CreateType(assembly, "TestType", filePath, startLine: 10, endLine: 100);
-    
+
     var method1 = CreateMember(type, "Method1", filePath, startLine: 20, endLine: 20);
     // Method2 starts between Method1 and violation
     var method2 = CreateMember(type, "Method2", filePath, startLine: 25, endLine: 25);
@@ -355,7 +355,7 @@ public sealed class SarifMetricsApplierSymbolMappingTests
     // Should map to Method2 (line 25), not Method1 (line 20), since violation is after Method2 starts
     // Note: Method2 will be found via exact/near/containing match logic first, but if not,
     // the single-line logic should prefer Method2 over Method1 since Method2 is closer to violation
-    _mergeTargets[0].Should().NotBe(method1, because: 
+    _mergeTargets[0].Should().NotBe(method1, because:
       "Violation on line 30 should not map to Method1 (20), " +
       "since Method2 (25) starts between Method1 and violation");
     // Should map to Method2 or type

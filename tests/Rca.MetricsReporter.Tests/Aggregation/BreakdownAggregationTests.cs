@@ -383,13 +383,13 @@ public sealed class BreakdownAggregationTests
 
     // Assert
     var assembly = report.Solution.Assemblies.Single();
-    
+
     // CA rules breakdown
     var caMetric = assembly.Metrics[MetricIdentifier.SarifCaRuleViolations];
     caMetric.Value.Should().Be(1);
     caMetric.Breakdown.Should().NotBeNull().And.ContainKey("CA1502");
     caMetric.Breakdown!["CA1502"].Count.Should().Be(1);
-    
+
     // IDE rules breakdown
     var ideMetric = assembly.Metrics[MetricIdentifier.SarifIdeRuleViolations];
     ideMetric.Value.Should().Be(1);
@@ -809,7 +809,7 @@ public sealed class BreakdownAggregationTests
 
     // Assert
     var assembly = report.Solution.Assemblies.Single();
-    
+
     // CA rules breakdown
     var caMetric = assembly.Metrics[MetricIdentifier.SarifCaRuleViolations];
     caMetric.Value.Should().Be(3);
@@ -819,7 +819,7 @@ public sealed class BreakdownAggregationTests
     caMetric.Breakdown.Should().ContainKey("CA1506");
     caMetric.Breakdown["CA1506"].Count.Should().Be(1);
     caMetric.Breakdown["CA1506"].Violations.Should().HaveCount(1);
-    
+
     // IDE rules breakdown
     var ideMetric = assembly.Metrics[MetricIdentifier.SarifIdeRuleViolations];
     ideMetric.Value.Should().Be(3);
