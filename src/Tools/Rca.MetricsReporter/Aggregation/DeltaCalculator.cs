@@ -25,3 +25,4 @@ internal static class DeltaCalculator
 
 
 
+

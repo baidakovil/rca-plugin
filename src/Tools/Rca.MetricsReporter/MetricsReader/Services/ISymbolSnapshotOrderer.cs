@@ -17,3 +17,4 @@ internal interface ISymbolSnapshotOrderer
   IOrderedEnumerable<SymbolMetricSnapshot> Order(IEnumerable<SymbolMetricSnapshot> snapshots, SymbolSnapshotOrderingParameters parameters);
 }
 
+

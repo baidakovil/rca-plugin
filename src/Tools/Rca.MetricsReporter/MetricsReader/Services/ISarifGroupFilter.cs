@@ -17,3 +17,4 @@ internal interface ISarifGroupFilter
   List<SarifViolationGroup> Filter(List<SarifViolationGroup> groups, string? ruleId, bool showAll);
 }
 
+
