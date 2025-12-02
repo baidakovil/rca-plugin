@@ -65,15 +65,36 @@ public sealed class MetricsAggregationService
     ArgumentNullException.ThrowIfNull(input);
 
     var workspace = _workspaceFactory.Create(input);
-    SuppressedSymbolMetricBinder.Bind(workspace.Solution, input.SuppressedSymbols);
-    var usedRuleIds = CollectUsedRuleIds(workspace.Solution);
-    var filteredRuleIds = usedRuleIds.Count == 0 ? null : usedRuleIds;
-    var metadata = _metadataComposer.Compose(input, filteredRuleIds);
+    BindSuppressedSymbols(workspace.Solution, input.SuppressedSymbols);
+    var metadata = ComposeMetadata(input, workspace.Solution);
 
+    return CreateMetricsReport(metadata, workspace.Solution);
+  }
+
+  private static void BindSuppressedSymbols(SolutionMetricsNode solution, IReadOnlyCollection<SuppressedSymbolInfo>? suppressedSymbols)
+  {
+    if (suppressedSymbols is null || suppressedSymbols.Count == 0)
+    {
+      return;
+    }
+
+    var suppressedSymbolsList = suppressedSymbols is IList<SuppressedSymbolInfo> list ? list : suppressedSymbols.ToList();
+    SuppressedSymbolMetricBinder.Bind(solution, suppressedSymbolsList);
+  }
+
+  private ReportMetadata ComposeMetadata(MetricsAggregationInput input, SolutionMetricsNode solution)
+  {
+    var usedRuleIds = CollectUsedRuleIds(solution);
+    var filteredRuleIds = usedRuleIds.Count == 0 ? null : usedRuleIds;
+    return _metadataComposer.Compose(input, filteredRuleIds);
+  }
+
+  private static MetricsReport CreateMetricsReport(ReportMetadata metadata, SolutionMetricsNode solution)
+  {
     return new MetricsReport
     {
       Metadata = metadata,
-      Solution = workspace.Solution
+      Solution = solution
     };
   }
 
@@ -235,13 +256,31 @@ public sealed class MetricsAggregationService
         AggregationWorkspaceState state,
         WorkflowProcessors processors)
     {
-      return new AggregationWorkspaceWorkflow(
-          state,
-          processors.DocumentProcessor,
-          processors.LineIndexProcessor,
-          processors.SarifProcessor,
-          processors.BaselineProcessor,
-          processors.ReconciliationProcessor);
+      return WorkflowFactory.Create(state, processors);
+    }
+
+    private static class WorkflowFactory
+    {
+      /// <summary>
+      /// Creates an <see cref="AggregationWorkspaceWorkflow"/> from the processor collection.
+      /// </summary>
+      /// <param name="state">The aggregation workspace state.</param>
+      /// <param name="processors">The workflow processors.</param>
+      /// <returns>A new workflow instance.</returns>
+      [SuppressMessage(
+          "Microsoft.Maintainability",
+          "CA1506:AvoidExcessiveClassCoupling",
+          Justification = "This factory method must access all five processor properties from the WorkflowProcessors record to construct the AggregationWorkspaceWorkflow. The coupling is inherent to the factory pattern's responsibility of coordinating multiple dependencies. Further reduction would require either dummy wrapper methods or scattering the workflow construction logic, which would harm maintainability.")]
+      public static AggregationWorkspaceWorkflow Create(AggregationWorkspaceState state, WorkflowProcessors processors)
+      {
+        return new AggregationWorkspaceWorkflow(
+            state,
+            processors.DocumentProcessor,
+            processors.LineIndexProcessor,
+            processors.SarifProcessor,
+            processors.BaselineProcessor,
+            processors.ReconciliationProcessor);
+      }
     }
 
     private sealed record WorkflowProcessors(

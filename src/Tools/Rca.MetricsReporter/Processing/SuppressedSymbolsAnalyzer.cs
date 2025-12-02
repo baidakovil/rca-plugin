@@ -3,7 +3,6 @@ namespace Rca.Tools.MetricsReporter.Processing;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -75,124 +74,41 @@ internal static class SuppressedSymbolsAnalyzer
       throw new ArgumentException("Solution directory must be provided for suppressed symbol analysis.", nameof(solutionDirectory));
     }
 
+    var suppressedSymbols = new List<SuppressedSymbolInfo>();
+    var context = CreateAnalysisContext(solutionDirectory, sourceCodeFolders, excludedAssemblyNames, suppressedSymbols, cancellationToken);
+
+    SuppressedSymbolFileProcessor.ProcessFiles(context, AnalyzeSingleFile);
+
+    return CreateReport(suppressedSymbols);
+  }
+
+  private static SuppressedSymbolAnalysisContext CreateAnalysisContext(
+      string solutionDirectory,
+      IReadOnlyCollection<string> sourceCodeFolders,
+      string? excludedAssemblyNames,
+      ICollection<SuppressedSymbolInfo> suppressedSymbols,
+      CancellationToken cancellationToken)
+  {
     var normalizedRoot = Path.GetFullPath(solutionDirectory);
     var assemblyFilter = AssemblyFilter.FromString(excludedAssemblyNames);
-    var suppressedSymbols = new List<SuppressedSymbolInfo>();
+    var normalizedFolders = SourceCodeFolderProcessor.NormalizeAndSortFolders(sourceCodeFolders);
 
-    // Normalize source code folders: sort by length (longest first) for longest-prefix matching
-    var normalizedFolders = sourceCodeFolders
-      .Where(f => !string.IsNullOrWhiteSpace(f))
-      .Select(f => NormalizePath(f))
-      .OrderByDescending(f => f.Length)
-      .ToArray();
+    return new SuppressedSymbolAnalysisContext(
+        normalizedRoot,
+        normalizedFolders,
+        assemblyFilter,
+        suppressedSymbols,
+        cancellationToken);
+  }
 
-    if (normalizedFolders.Length == 0)
-    {
-      // If no source code folders specified, fall back to scanning everything
-      // (backward compatibility, though not recommended)
-      normalizedFolders = new[] { string.Empty };
-    }
 
-    foreach (var filePath in EnumerateCSharpFiles(normalizedRoot, normalizedFolders))
-    {
-      cancellationToken.ThrowIfCancellationRequested();
-
-      var assemblyName = TryResolveAssemblyName(normalizedRoot, filePath, normalizedFolders);
-      if (string.IsNullOrWhiteSpace(assemblyName) || assemblyFilter.ShouldExcludeAssembly(assemblyName))
-      {
-        continue;
-      }
-
-      var relativePath = Path.GetRelativePath(normalizedRoot, filePath);
-      AnalyzeSingleFile(filePath, relativePath, suppressedSymbols, cancellationToken);
-    }
-
+  private static SuppressedSymbolsReport CreateReport(ICollection<SuppressedSymbolInfo> suppressedSymbols)
+  {
     return new SuppressedSymbolsReport
     {
       GeneratedAtUtc = DateTime.UtcNow,
-      SuppressedSymbols = suppressedSymbols
+      SuppressedSymbols = suppressedSymbols is List<SuppressedSymbolInfo> list ? list : new List<SuppressedSymbolInfo>(suppressedSymbols)
     };
-  }
-
-  private static string NormalizePath(string path)
-  {
-    // Normalize path separators and remove leading/trailing separators
-    return path.Replace('\\', Path.DirectorySeparatorChar)
-               .Replace('/', Path.DirectorySeparatorChar)
-               .Trim(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-  }
-
-  private static IEnumerable<string> EnumerateCSharpFiles(string solutionDirectory, string[] sourceCodeFolders)
-  {
-    if (!Directory.Exists(solutionDirectory))
-    {
-      return Array.Empty<string>();
-    }
-
-    var allFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-    foreach (var folder in sourceCodeFolders)
-    {
-      var folderPath = string.IsNullOrEmpty(folder)
-        ? solutionDirectory
-        : Path.Combine(solutionDirectory, folder);
-
-      if (!Directory.Exists(folderPath))
-      {
-        continue;
-      }
-
-      var files = Directory.EnumerateFiles(folderPath, "*.cs", SearchOption.AllDirectories);
-      foreach (var file in files)
-      {
-        allFiles.Add(file);
-      }
-    }
-
-    return allFiles;
-  }
-
-  private static string? TryResolveAssemblyName(
-      string solutionDirectory,
-      string filePath,
-      string[] sourceCodeFolders)
-  {
-    var relative = Path.GetRelativePath(solutionDirectory, filePath);
-    var normalizedRelative = NormalizePath(relative);
-    var separators = new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar };
-
-    // Find the longest matching source code folder prefix
-    string? matchedPrefix = null;
-    foreach (var folder in sourceCodeFolders)
-    {
-      if (string.IsNullOrEmpty(folder))
-      {
-        continue;
-      }
-
-      var normalizedFolder = NormalizePath(folder);
-      if (normalizedRelative.StartsWith(normalizedFolder + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
-          normalizedRelative.Equals(normalizedFolder, StringComparison.OrdinalIgnoreCase))
-      {
-        // Prefer longer matches (folders are already sorted by length descending)
-        if (matchedPrefix is null || normalizedFolder.Length > matchedPrefix.Length)
-        {
-          matchedPrefix = normalizedFolder;
-        }
-      }
-    }
-
-    if (matchedPrefix is null)
-    {
-      // No source code folder matched - treat first segment as assembly name
-      var segments = normalizedRelative.Split(separators, StringSplitOptions.RemoveEmptyEntries);
-      return segments.Length > 0 ? segments[0] : null;
-    }
-
-    // Remove the matched prefix and take the next segment as assembly name
-    var remaining = normalizedRelative.Substring(matchedPrefix.Length).Trim(separators);
-    var remainingSegments = remaining.Split(separators, StringSplitOptions.RemoveEmptyEntries);
-    return remainingSegments.Length > 0 ? remainingSegments[0] : null;
   }
 
   private static void AnalyzeSingleFile(
@@ -213,8 +129,7 @@ internal static class SuppressedSymbolsAnalyzer
   {
     private readonly string _relativePath;
     private readonly ICollection<SuppressedSymbolInfo> _output;
-    private readonly Stack<string> _namespaceStack = new();
-    private readonly Stack<string> _typeStack = new();
+    private readonly FullyQualifiedNameBuilder _fqnBuilder = new();
 
     public SuppressMessageWalker(string relativePath, ICollection<SuppressedSymbolInfo> output)
       : base(SyntaxWalkerDepth.StructuredTrivia)
@@ -230,9 +145,9 @@ internal static class SuppressedSymbolsAnalyzer
         return;
       }
 
-      _namespaceStack.Push(node.Name.ToString());
+      _fqnBuilder.PushNamespace(node.Name.ToString());
       base.VisitNamespaceDeclaration(node);
-      _namespaceStack.Pop();
+      _fqnBuilder.PopNamespace();
     }
 
     public override void VisitFileScopedNamespaceDeclaration(FileScopedNamespaceDeclarationSyntax node)
@@ -242,9 +157,9 @@ internal static class SuppressedSymbolsAnalyzer
         return;
       }
 
-      _namespaceStack.Push(node.Name.ToString());
+      _fqnBuilder.PushNamespace(node.Name.ToString());
       base.VisitFileScopedNamespaceDeclaration(node);
-      _namespaceStack.Pop();
+      _fqnBuilder.PopNamespace();
     }
 
     public override void VisitClassDeclaration(ClassDeclarationSyntax node)
@@ -254,10 +169,10 @@ internal static class SuppressedSymbolsAnalyzer
         return;
       }
 
-      _typeStack.Push(node.Identifier.Text);
-      TryRecordSuppression(node.AttributeLists, BuildTypeFqn());
+      _fqnBuilder.PushType(node.Identifier.Text);
+      TryRecordSuppression(node.AttributeLists, _fqnBuilder.BuildTypeFqn());
       base.VisitClassDeclaration(node);
-      _typeStack.Pop();
+      _fqnBuilder.PopType();
     }
 
     public override void VisitStructDeclaration(StructDeclarationSyntax node)
@@ -267,10 +182,10 @@ internal static class SuppressedSymbolsAnalyzer
         return;
       }
 
-      _typeStack.Push(node.Identifier.Text);
-      TryRecordSuppression(node.AttributeLists, BuildTypeFqn());
+      _fqnBuilder.PushType(node.Identifier.Text);
+      TryRecordSuppression(node.AttributeLists, _fqnBuilder.BuildTypeFqn());
       base.VisitStructDeclaration(node);
-      _typeStack.Pop();
+      _fqnBuilder.PopType();
     }
 
     public override void VisitRecordDeclaration(RecordDeclarationSyntax node)
@@ -280,10 +195,10 @@ internal static class SuppressedSymbolsAnalyzer
         return;
       }
 
-      _typeStack.Push(node.Identifier.Text);
-      TryRecordSuppression(node.AttributeLists, BuildTypeFqn());
+      _fqnBuilder.PushType(node.Identifier.Text);
+      TryRecordSuppression(node.AttributeLists, _fqnBuilder.BuildTypeFqn());
       base.VisitRecordDeclaration(node);
-      _typeStack.Pop();
+      _fqnBuilder.PopType();
     }
 
     public override void VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
@@ -293,10 +208,10 @@ internal static class SuppressedSymbolsAnalyzer
         return;
       }
 
-      _typeStack.Push(node.Identifier.Text);
-      TryRecordSuppression(node.AttributeLists, BuildTypeFqn());
+      _fqnBuilder.PushType(node.Identifier.Text);
+      TryRecordSuppression(node.AttributeLists, _fqnBuilder.BuildTypeFqn());
       base.VisitInterfaceDeclaration(node);
-      _typeStack.Pop();
+      _fqnBuilder.PopType();
     }
 
     public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
@@ -306,7 +221,7 @@ internal static class SuppressedSymbolsAnalyzer
         return;
       }
 
-      var memberFqn = BuildMemberFqn(node.Identifier.Text);
+      var memberFqn = _fqnBuilder.BuildMemberFqn(node.Identifier.Text);
       TryRecordSuppression(node.AttributeLists, memberFqn);
       base.VisitMethodDeclaration(node);
     }
@@ -320,7 +235,7 @@ internal static class SuppressedSymbolsAnalyzer
 
       // Constructors are filtered out of the metrics report, but we still record
       // suppressions in case future consumers need them.
-      var memberFqn = BuildMemberFqn(node.Identifier.Text);
+      var memberFqn = _fqnBuilder.BuildMemberFqn(node.Identifier.Text);
       TryRecordSuppression(node.AttributeLists, memberFqn);
       base.VisitConstructorDeclaration(node);
     }
@@ -332,49 +247,9 @@ internal static class SuppressedSymbolsAnalyzer
         return;
       }
 
-      var propertyFqn = BuildPropertyFqn(node.Identifier.Text);
+      var propertyFqn = _fqnBuilder.BuildPropertyFqn(node.Identifier.Text);
       TryRecordSuppression(node.AttributeLists, propertyFqn);
       base.VisitPropertyDeclaration(node);
-    }
-
-    private string? BuildTypeFqn()
-    {
-      if (_typeStack.Count == 0)
-      {
-        return null;
-      }
-
-      var typeName = string.Join(".", _typeStack.Reverse());
-      var ns = _namespaceStack.Count == 0 ? null : string.Join(".", _namespaceStack.Reverse());
-      return string.IsNullOrWhiteSpace(ns) ? typeName : ns + "." + typeName;
-    }
-
-    private static string? NormalizeMemberFqn(string? rawMemberFqn)
-      => Processing.SymbolNormalizer.NormalizeFullyQualifiedMethodName(rawMemberFqn);
-
-    private string? BuildMemberFqn(string identifier)
-    {
-      var typeFqn = BuildTypeFqn();
-      if (string.IsNullOrWhiteSpace(typeFqn))
-      {
-        return null;
-      }
-
-      // Parameter details are not required because the normalizer will collapse
-      // them to "(...)" and only preserve the namespace/type/method name chain.
-      var raw = $"{typeFqn}.{identifier}()";
-      return NormalizeMemberFqn(raw);
-    }
-
-    private string? BuildPropertyFqn(string identifier)
-    {
-      var typeFqn = BuildTypeFqn();
-      if (string.IsNullOrWhiteSpace(typeFqn))
-      {
-        return null;
-      }
-
-      return $"{typeFqn}.{identifier}";
     }
 
     private void TryRecordSuppression(SyntaxList<AttributeListSyntax> attributeLists, string? fullyQualifiedName)
@@ -388,7 +263,7 @@ internal static class SuppressedSymbolsAnalyzer
       {
         foreach (var attribute in attributeList.Attributes)
         {
-          if (!TryParseSuppressMessage(attribute, out var ruleId, out var justification))
+          if (!SuppressMessageAttributeParser.TryParse(attribute, out var ruleId, out var justification))
           {
             continue;
           }
@@ -410,168 +285,6 @@ internal static class SuppressedSymbolsAnalyzer
           });
         }
       }
-    }
-
-    private static bool TryParseSuppressMessage(
-        AttributeSyntax attribute,
-        out string? ruleId,
-        out string? justification)
-    {
-      ruleId = null;
-      justification = null;
-
-      if (!IsSuppressMessageAttribute(attribute))
-      {
-        return false;
-      }
-
-      if (attribute.ArgumentList is null || attribute.ArgumentList.Arguments.Count < 2)
-      {
-        return false;
-      }
-
-      // SuppressMessage(string category, string checkId)
-      var args = attribute.ArgumentList.Arguments;
-
-      var categoryLiteral = args[0].Expression as LiteralExpressionSyntax;
-      var category = categoryLiteral?.Token.ValueText;
-      if (string.IsNullOrWhiteSpace(category) ||
-          (!category.StartsWith("Microsoft.", StringComparison.OrdinalIgnoreCase) &&
-           !category.Equals("Style", StringComparison.OrdinalIgnoreCase)))
-      {
-        return false;
-      }
-
-      var checkIdLiteral = args[1].Expression as LiteralExpressionSyntax;
-      var checkIdValue = checkIdLiteral?.Token.ValueText;
-      if (string.IsNullOrWhiteSpace(checkIdValue))
-      {
-        return false;
-      }
-
-      var colonIndex = checkIdValue.IndexOf(':', StringComparison.Ordinal);
-      ruleId = colonIndex > 0 ? checkIdValue[..colonIndex] : checkIdValue;
-
-      foreach (var argument in args)
-      {
-        if (argument.NameEquals is null)
-        {
-          continue;
-        }
-
-        if (!string.Equals(argument.NameEquals.Name.Identifier.Text, "Justification", StringComparison.Ordinal))
-        {
-          continue;
-        }
-
-        // WHY: Justification can be a single string literal or a concatenation of multiple
-        // string literals (e.g., "string1" + "string2" + "string3"). We need to handle both cases
-        // by recursively extracting string literals from binary expressions with the '+' operator.
-        justification = ExtractJustificationText(argument.Expression);
-        break;
-      }
-
-      return !string.IsNullOrWhiteSpace(ruleId);
-    }
-
-    /// <summary>
-    /// Extracts justification text from an expression, handling both single string literals
-    /// and string concatenation expressions (e.g., "string1" + "string2").
-    /// </summary>
-    /// <param name="expression">The expression to extract text from.</param>
-    /// <returns>
-    /// The extracted justification text, or <see langword="null"/> if the expression
-    /// does not contain string literals.
-    /// </returns>
-    private static string? ExtractJustificationText(ExpressionSyntax? expression)
-    {
-      if (expression is null)
-      {
-        return null;
-      }
-
-      // Single string literal case
-      if (expression is LiteralExpressionSyntax literal && literal.IsKind(SyntaxKind.StringLiteralExpression))
-      {
-        return literal.Token.ValueText;
-      }
-
-      // String concatenation case: "string1" + "string2" + ...
-      if (expression is BinaryExpressionSyntax binary && binary.IsKind(SyntaxKind.AddExpression))
-      {
-        var parts = new List<string>();
-
-        // WHY: Recursively collect all string literals from the left and right sides
-        // of the binary expression. This handles nested concatenations like:
-        // "string1" + ("string2" + "string3")
-        CollectStringLiterals(binary, parts);
-
-        return parts.Count > 0 ? string.Concat(parts) : null;
-      }
-
-      return null;
-    }
-
-    /// <summary>
-    /// Recursively collects string literals from a binary expression tree.
-    /// </summary>
-    /// <param name="expression">The expression to traverse.</param>
-    /// <param name="parts">The list to collect string literal values into.</param>
-    private static void CollectStringLiterals(ExpressionSyntax expression, List<string> parts)
-    {
-      if (expression is LiteralExpressionSyntax literal && literal.IsKind(SyntaxKind.StringLiteralExpression))
-      {
-        var text = literal.Token.ValueText;
-        if (!string.IsNullOrEmpty(text))
-        {
-          parts.Add(text);
-        }
-        return;
-      }
-
-      if (expression is BinaryExpressionSyntax binary && binary.IsKind(SyntaxKind.AddExpression))
-      {
-        // Traverse left and right subtrees
-        CollectStringLiterals(binary.Left, parts);
-        CollectStringLiterals(binary.Right, parts);
-      }
-    }
-
-    private static bool IsSuppressMessageAttribute(AttributeSyntax attribute)
-    {
-      // WHY: Support both short form (SuppressMessage) and fully qualified form
-      // (System.Diagnostics.CodeAnalysis.SuppressMessage). The attribute name can be parsed
-      // as a simple identifier, qualified name, or alias-qualified name by Roslyn.
-      // We need to handle all cases to ensure suppressions work regardless of using directives.
-      
-      // Check the simple name (last identifier in the qualified name chain)
-      string? simpleName = null;
-      
-      if (attribute.Name is SimpleNameSyntax simpleNameSyntax)
-      {
-        simpleName = simpleNameSyntax.Identifier.Text;
-      }
-      else if (attribute.Name is QualifiedNameSyntax qualifiedName)
-      {
-        // WHY: QualifiedNameSyntax has Left (NameSyntax) and Right (SimpleNameSyntax).
-        // For "System.Diagnostics.CodeAnalysis.SuppressMessage", it's parsed as:
-        // QualifiedName(QualifiedName(QualifiedName(System, Diagnostics), CodeAnalysis), SuppressMessage)
-        // The Right property always contains the rightmost SimpleNameSyntax, which is the actual attribute name.
-        // No traversal needed - Right is always the simple name we want.
-        simpleName = qualifiedName.Right.Identifier.Text;
-      }
-
-      if (string.IsNullOrEmpty(simpleName))
-      {
-        // Fallback to string comparison if structure parsing fails
-        var name = attribute.Name.ToString();
-        return name.EndsWith("SuppressMessage", StringComparison.Ordinal) ||
-               name.EndsWith("SuppressMessageAttribute", StringComparison.Ordinal);
-      }
-
-      // Check if the simple name matches (with or without "Attribute" suffix)
-      return simpleName.Equals("SuppressMessage", StringComparison.Ordinal) ||
-             simpleName.Equals("SuppressMessageAttribute", StringComparison.Ordinal);
     }
   }
 }

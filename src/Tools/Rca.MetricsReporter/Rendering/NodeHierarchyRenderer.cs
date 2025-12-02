@@ -81,25 +81,25 @@ internal static class NodeHierarchyRenderer
     switch (node)
     {
       case SolutionMetricsNode solution:
-        foreach (var assembly in solution.Assemblies.OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase))
+        foreach (var assembly in NodeSorter.SortAssemblies(solution.Assemblies))
         {
           renderNodeRows(assembly, level + 1, parentId, builder, assembly.Name, null);
         }
         break;
       case AssemblyMetricsNode assembly:
-        foreach (var ns in assembly.Namespaces.OrderBy(n => n.Name, StringComparer.OrdinalIgnoreCase))
+        foreach (var ns in NodeSorter.SortNamespaces(assembly.Namespaces))
         {
           renderNodeRows(ns, level + 1, parentId, builder, assemblyName, null);
         }
         break;
       case NamespaceMetricsNode @namespace:
-        foreach (var type in @namespace.Types.OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase))
+        foreach (var type in NodeSorter.SortTypes(@namespace.Types))
         {
           renderNodeRows(type, level + 1, parentId, builder, assemblyName, null);
         }
         break;
       case TypeMetricsNode type:
-        foreach (var member in type.Members.OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase))
+        foreach (var member in NodeSorter.SortMembers(type.Members))
         {
           renderNodeRows(member, level + 1, parentId, builder, assemblyName, typeName);
         }

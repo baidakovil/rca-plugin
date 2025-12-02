@@ -195,54 +195,10 @@ public sealed class ThresholdsParser
       bool higherIsBetter,
       bool positiveDeltaNeutral)
   {
-    if (metricElement.TryGetProperty("symbolThresholds", out var symbolThresholdsElement) &&
-        symbolThresholdsElement.ValueKind == JsonValueKind.Object)
-    {
-      foreach (var property in symbolThresholdsElement.EnumerateObject())
-      {
-        if (!TryParseSymbolLevel(property.Name, out var level))
-        {
-          continue;
-        }
-
-        if (property.Value.ValueKind != JsonValueKind.Object)
-        {
-          continue;
-        }
-
-        var warning = ReadNullableDecimal(property.Value, "warning");
-        var error = ReadNullableDecimal(property.Value, "error");
-
-        definition.Levels[level] = CreateThreshold(warning, error, higherIsBetter, positiveDeltaNeutral);
-      }
-    }
-
-    foreach (var level in SupportedLevels)
-    {
-      if (definition.Levels.TryGetValue(level, out var existing))
-      {
-        definition.Levels[level] = CreateThreshold(existing.Warning, existing.Error, higherIsBetter, positiveDeltaNeutral);
-      }
-      else
-      {
-        definition.Levels[level] = CreateThreshold(null, null, higherIsBetter, positiveDeltaNeutral);
-      }
-    }
-  }
-
-  private static bool TryParseSymbolLevel(ReadOnlySpan<char> value, out MetricSymbolLevel level)
-  {
-    foreach (var candidate in Enum.GetValues<MetricSymbolLevel>())
-    {
-      if (value.Equals(candidate.ToString(), StringComparison.OrdinalIgnoreCase))
-      {
-        level = candidate;
-        return true;
-      }
-    }
-
-    level = default;
-    return false;
+    SymbolThresholdProcessor.ApplySymbolThresholds(
+        metricElement,
+        definition,
+        (warning, error) => CreateThreshold(warning, error, higherIsBetter, positiveDeltaNeutral));
   }
 
   private static decimal? ReadNullableDecimal(JsonElement parent, string propertyName)
