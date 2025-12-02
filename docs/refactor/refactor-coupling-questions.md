@@ -2,6 +2,16 @@
 
 After completing refactoring according to the rules in `@docs/refactor/refactor-coupling.md`, review each symbol (method or class) that was created or refactored in this session.
 
+Summary of the my refactoring with the list of symbol:
+
+## --- Summary Start ---
+
+Refactored the `` namespace to reduce Class coupling:
+
+
+
+## --- Summary End ---
+
 ## Review Criteria
 
 ### 1. SOLID Principles Assessment
