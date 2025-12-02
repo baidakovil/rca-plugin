@@ -35,7 +35,7 @@
           "notes": "Assembly complexity naturally accumulates; number has no reason here."
         },
         "Namespace": {
-          "warning": 50010,
+          "warning": 5001,
           "error": 5000,
           "notes": "Same as for Assembly."
         },
