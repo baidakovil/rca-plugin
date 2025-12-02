@@ -14,6 +14,10 @@ using Rca.Tools.MetricsReporter.Processing;
 /// This helper keeps the workspace focused on orchestration while maintaining the original
 /// filtering and merging behavior from <see cref="MetricsAggregationService.AggregationWorkspace"/>.
 /// </remarks>
+[SuppressMessage(
+    "Microsoft.Maintainability",
+    "CA1502:AvoidExcessiveComplexity",
+    Justification = "This class orchestrates complex merging logic for assemblies, namespaces, types, and members with multiple filters, dummy node creation, and index management. The complexity comes from coordinating multiple dictionaries, filters, and conditional logic required to maintain tree consistency. Further simplification would require splitting into multiple classes that would introduce architectural overhead and reduce cohesion, or would harm readability by obscuring the orchestration flow.")]
 internal sealed class StructuralElementMerger
 {
   private readonly SolutionMetricsNode _solution;
@@ -213,6 +217,51 @@ internal sealed class StructuralElementMerger
 
   private sealed record MemberResolutionContext(string MemberFqn, string TypeFqn, string AssemblyName);
 
+  private static AssemblyMetricsNode CreateDummyAssembly(string assemblyName, string? displayName = null)
+  {
+    return new AssemblyMetricsNode
+    {
+      Name = displayName ?? assemblyName,
+      FullyQualifiedName = assemblyName,
+      Metrics = new Dictionary<MetricIdentifier, MetricValue>()
+    };
+  }
+
+  private static NamespaceMetricsNode CreateDummyNamespace(string namespaceFqn, string displayName)
+  {
+    return new NamespaceMetricsNode
+    {
+      Name = displayName,
+      FullyQualifiedName = namespaceFqn,
+      Metrics = new Dictionary<MetricIdentifier, MetricValue>()
+    };
+  }
+
+  private static TypeMetricsNode CreateDummyType(string typeFqn, string displayName)
+  {
+    return new TypeMetricsNode
+    {
+      Name = displayName,
+      FullyQualifiedName = typeFqn,
+      Metrics = new Dictionary<MetricIdentifier, MetricValue>()
+    };
+  }
+
+  private static MemberMetricsNode CreateDummyMember(string memberFqn, string displayName)
+  {
+    return new MemberMetricsNode
+    {
+      Name = displayName,
+      FullyQualifiedName = memberFqn,
+      Metrics = new Dictionary<MetricIdentifier, MetricValue>()
+    };
+  }
+
+  private bool ShouldUseDummyNode(string assemblyName)
+  {
+    return _assemblyFilter.ShouldExcludeAssembly(assemblyName) || !_assemblies.ContainsKey(assemblyName);
+  }
+
   [SuppressMessage(
       "Microsoft.Maintainability",
       "CA1506:Avoid excessive class coupling",
@@ -224,68 +273,70 @@ internal sealed class StructuralElementMerger
       assemblyName = ResolveAssemblyNameFromFqn(namespaceFqn);
     }
 
-    if (_assemblyFilter.ShouldExcludeAssembly(assemblyName))
+    if (ShouldUseDummyNode(assemblyName))
     {
-      var dummyAssembly = new AssemblyMetricsNode
-      {
-        Name = assemblyName,
-        FullyQualifiedName = assemblyName,
-        Metrics = new Dictionary<MetricIdentifier, MetricValue>()
-      };
-      var dummyNamespace = new NamespaceMetricsNode
-      {
-        Name = displayName,
-        FullyQualifiedName = namespaceFqn,
-        Metrics = new Dictionary<MetricIdentifier, MetricValue>()
-      };
-      return new NamespaceEntry(dummyNamespace, dummyAssembly);
+      return CreateDummyNamespaceEntry(assemblyName, namespaceFqn, displayName);
     }
 
     var key = $"{assemblyName}::{namespaceFqn}";
     if (_namespaces.TryGetValue(key, out var existingEntry))
     {
-      var existingAssemblyName = existingEntry.Assembly.FullyQualifiedName;
-      if (existingAssemblyName is not null && (_assemblyFilter.ShouldExcludeAssembly(existingAssemblyName) || !_assemblies.ContainsKey(existingAssemblyName)))
-      {
-        _namespaces.Remove(key);
-        if (_namespaceIndex.TryGetValue(namespaceFqn, out var indexList))
-        {
-          indexList.Remove(existingEntry);
-        }
-
-        if (_assemblies.TryGetValue(existingAssemblyName, out var existingAssembly) && existingAssembly.Namespaces.Contains(existingEntry.Node))
-        {
-          existingAssembly.Namespaces.Remove(existingEntry.Node);
-        }
-
-        var dummyAssembly2 = new AssemblyMetricsNode
-        {
-          Name = assemblyName,
-          FullyQualifiedName = assemblyName,
-          Metrics = new Dictionary<MetricIdentifier, MetricValue>()
-        };
-        var dummyNamespace2 = new NamespaceMetricsNode
-        {
-          Name = displayName,
-          FullyQualifiedName = namespaceFqn,
-          Metrics = new Dictionary<MetricIdentifier, MetricValue>()
-        };
-        return new NamespaceEntry(dummyNamespace2, dummyAssembly2);
-      }
-
-      return existingEntry;
+      return HandleExistingNamespaceEntry(key, namespaceFqn, existingEntry, assemblyName, displayName);
     }
 
-    var assembly = GetOrCreateAssembly(assemblyName, new ParsedCodeElement(CodeElementKind.Assembly, assemblyName, assemblyName));
-    if (!_assemblies.ContainsKey(assemblyName))
+    return CreateNewNamespaceEntry(assemblyName, namespaceFqn, displayName);
+  }
+
+  private static NamespaceEntry CreateDummyNamespaceEntry(string assemblyName, string namespaceFqn, string displayName)
+  {
+    return new NamespaceEntry(
+      CreateDummyNamespace(namespaceFqn, displayName),
+      CreateDummyAssembly(assemblyName));
+  }
+
+  private NamespaceEntry HandleExistingNamespaceEntry(
+    string key,
+    string namespaceFqn,
+    NamespaceEntry existingEntry,
+    string assemblyName,
+    string displayName)
+  {
+    var existingAssemblyName = existingEntry.Assembly.FullyQualifiedName;
+    if (existingAssemblyName is not null && ShouldUseDummyNode(existingAssemblyName))
     {
-      var dummyNamespace3 = new NamespaceMetricsNode
-      {
-        Name = displayName,
-        FullyQualifiedName = namespaceFqn,
-        Metrics = new Dictionary<MetricIdentifier, MetricValue>()
-      };
-      return new NamespaceEntry(dummyNamespace3, assembly);
+      RemoveNamespaceFromIndexes(key, namespaceFqn, existingEntry, existingAssemblyName);
+      return CreateDummyNamespaceEntry(assemblyName, namespaceFqn, displayName);
+    }
+
+    return existingEntry;
+  }
+
+  private void RemoveNamespaceFromIndexes(
+    string key,
+    string namespaceFqn,
+    NamespaceEntry existingEntry,
+    string existingAssemblyName)
+  {
+    _namespaces.Remove(key);
+    
+    if (_namespaceIndex.TryGetValue(namespaceFqn, out var indexList))
+    {
+      indexList.Remove(existingEntry);
+    }
+
+    if (_assemblies.TryGetValue(existingAssemblyName, out var existingAssembly) 
+        && existingAssembly.Namespaces.Contains(existingEntry.Node))
+    {
+      existingAssembly.Namespaces.Remove(existingEntry.Node);
+    }
+  }
+
+  private NamespaceEntry CreateNewNamespaceEntry(string assemblyName, string namespaceFqn, string displayName)
+  {
+    var assembly = GetOrCreateAssembly(assemblyName, new ParsedCodeElement(CodeElementKind.Assembly, assemblyName, assemblyName));
+    if (ShouldUseDummyNode(assemblyName))
+    {
+      return new NamespaceEntry(CreateDummyNamespace(namespaceFqn, displayName), assembly);
     }
 
     var node = new NamespaceMetricsNode
@@ -297,8 +348,14 @@ internal sealed class StructuralElementMerger
 
     assembly.Namespaces.Add(node);
     var entry = new NamespaceEntry(node, assembly);
-    _namespaces[key] = entry;
+    _namespaces[$"{assemblyName}::{namespaceFqn}"] = entry;
 
+    AddToNamespaceIndex(namespaceFqn, entry);
+    return entry;
+  }
+
+  private void AddToNamespaceIndex(string namespaceFqn, NamespaceEntry entry)
+  {
     if (!_namespaceIndex.TryGetValue(namespaceFqn, out var list))
     {
       list = [];
@@ -309,20 +366,13 @@ internal sealed class StructuralElementMerger
     {
       list.Add(entry);
     }
-
-    return entry;
   }
 
   private AssemblyMetricsNode GetOrCreateAssembly(string assemblyName, ParsedCodeElement element)
   {
-    if (_assemblyFilter.ShouldExcludeAssembly(assemblyName))
+    if (ShouldUseDummyNode(assemblyName))
     {
-      return new AssemblyMetricsNode
-      {
-        Name = element.Name,
-        FullyQualifiedName = assemblyName,
-        Metrics = new Dictionary<MetricIdentifier, MetricValue>()
-      };
+      return CreateDummyAssembly(assemblyName, element.Name);
     }
 
     if (!_assemblies.TryGetValue(assemblyName, out var assemblyNode))
@@ -347,68 +397,74 @@ internal sealed class StructuralElementMerger
   {
     if (_types.TryGetValue(typeFqn, out var existingEntry))
     {
-      if (assemblyName is not null && (_assemblyFilter.ShouldExcludeAssembly(assemblyName) || !_assemblies.ContainsKey(assemblyName)))
-      {
-        _types.Remove(typeFqn);
-        if (_assemblies.TryGetValue(existingEntry.Assembly.FullyQualifiedName ?? string.Empty, out var existingAssembly))
-        {
-          foreach (var ns in existingAssembly.Namespaces)
-          {
-            if (ns.Types.Contains(existingEntry.Node))
-            {
-              ns.Types.Remove(existingEntry.Node);
-              break;
-            }
-          }
-        }
-
-        var dummyAssembly = new AssemblyMetricsNode
-        {
-          Name = assemblyName,
-          FullyQualifiedName = assemblyName,
-          Metrics = new Dictionary<MetricIdentifier, MetricValue>()
-        };
-        var dummyType = new TypeMetricsNode
-        {
-          Name = displayName,
-          FullyQualifiedName = typeFqn,
-          Metrics = new Dictionary<MetricIdentifier, MetricValue>()
-        };
-        return new TypeEntry(dummyType, dummyAssembly);
-      }
-
-      return existingEntry;
+      return HandleExistingTypeEntry(existingEntry, assemblyName, typeFqn, displayName);
     }
 
-    if (_assemblyFilter.ShouldExcludeAssembly(assemblyName))
+    return CreateNewTypeEntry(assemblyName, namespaceName, typeFqn, displayName);
+  }
+
+  private TypeEntry HandleExistingTypeEntry(
+    TypeEntry existingEntry,
+    string assemblyName,
+    string typeFqn,
+    string displayName)
+  {
+    if (assemblyName is not null && ShouldUseDummyNode(assemblyName))
     {
-      var dummyAssembly2 = new AssemblyMetricsNode
+      RemoveTypeFromIndexes(existingEntry, typeFqn);
+      return CreateDummyTypeEntry(assemblyName, typeFqn, displayName);
+    }
+
+    return existingEntry;
+  }
+
+  private void RemoveTypeFromIndexes(TypeEntry existingEntry, string typeFqn)
+  {
+    _types.Remove(typeFqn);
+    
+    var existingAssemblyName = existingEntry.Assembly.FullyQualifiedName ?? string.Empty;
+    if (_assemblies.TryGetValue(existingAssemblyName, out var existingAssembly))
+    {
+      foreach (var ns in existingAssembly.Namespaces)
       {
-        Name = assemblyName,
-        FullyQualifiedName = assemblyName,
-        Metrics = new Dictionary<MetricIdentifier, MetricValue>()
-      };
-      var dummyType2 = new TypeMetricsNode
-      {
-        Name = displayName,
-        FullyQualifiedName = typeFqn,
-        Metrics = new Dictionary<MetricIdentifier, MetricValue>()
-      };
-      return new TypeEntry(dummyType2, dummyAssembly2);
+        if (ns.Types.Contains(existingEntry.Node))
+        {
+          ns.Types.Remove(existingEntry.Node);
+          break;
+        }
+      }
+    }
+  }
+
+  private static TypeEntry CreateDummyTypeEntry(string assemblyName, string typeFqn, string displayName)
+  {
+    return new TypeEntry(
+      CreateDummyType(typeFqn, displayName),
+      CreateDummyAssembly(assemblyName));
+  }
+
+  private TypeEntry CreateNewTypeEntry(
+    string assemblyName,
+    string namespaceName,
+    string typeFqn,
+    string displayName)
+  {
+    if (ShouldUseDummyNode(assemblyName))
+    {
+      return CreateDummyTypeEntry(assemblyName, typeFqn, displayName);
     }
 
     var namespaceEntry = GetOrCreateNamespace(assemblyName, namespaceName, namespaceName);
-    if (!_assemblies.ContainsKey(assemblyName))
+    if (ShouldUseDummyNode(assemblyName))
     {
-      var dummyType3 = new TypeMetricsNode
-      {
-        Name = displayName,
-        FullyQualifiedName = typeFqn,
-        Metrics = new Dictionary<MetricIdentifier, MetricValue>()
-      };
-      return new TypeEntry(dummyType3, namespaceEntry.Assembly);
+      return new TypeEntry(CreateDummyType(typeFqn, displayName), namespaceEntry.Assembly);
     }
 
+    return CreateAndRegisterTypeNode(namespaceEntry, typeFqn, displayName);
+  }
+
+  private TypeEntry CreateAndRegisterTypeNode(NamespaceEntry namespaceEntry, string typeFqn, string displayName)
+  {
     var node = new TypeMetricsNode
     {
       Name = displayName,
@@ -438,32 +494,41 @@ internal sealed class StructuralElementMerger
   {
     if (_members.TryGetValue(memberFqn, out var existingNode))
     {
-      var assemblyName = typeEntry.Assembly.FullyQualifiedName;
-      if (assemblyName is not null && (_assemblyFilter.ShouldExcludeAssembly(assemblyName) || !_assemblies.ContainsKey(assemblyName)))
-      {
-        _members.Remove(memberFqn);
-        return new MemberMetricsNode
-        {
-          Name = ExtractMemberDisplayName(memberFqn, displayName),
-          FullyQualifiedName = memberFqn,
-          Metrics = new Dictionary<MetricIdentifier, MetricValue>()
-        };
-      }
-
-      return existingNode;
+      return HandleExistingMember(existingNode, typeEntry, memberFqn, displayName);
     }
 
-    var assemblyName2 = typeEntry.Assembly.FullyQualifiedName;
-    if (assemblyName2 is not null && (_assemblyFilter.ShouldExcludeAssembly(assemblyName2) || !_assemblies.ContainsKey(assemblyName2)))
+    return CreateNewMember(typeEntry, memberFqn, displayName);
+  }
+
+  private MemberMetricsNode HandleExistingMember(
+    MemberMetricsNode existingNode,
+    TypeEntry typeEntry,
+    string memberFqn,
+    string displayName)
+  {
+    var assemblyName = typeEntry.Assembly.FullyQualifiedName;
+    if (assemblyName is not null && ShouldUseDummyNode(assemblyName))
     {
-      return new MemberMetricsNode
-      {
-        Name = ExtractMemberDisplayName(memberFqn, displayName),
-        FullyQualifiedName = memberFqn,
-        Metrics = new Dictionary<MetricIdentifier, MetricValue>()
-      };
+      _members.Remove(memberFqn);
+      return CreateDummyMember(memberFqn, ExtractMemberDisplayName(memberFqn, displayName));
     }
 
+    return existingNode;
+  }
+
+  private MemberMetricsNode CreateNewMember(TypeEntry typeEntry, string memberFqn, string displayName)
+  {
+    var assemblyName = typeEntry.Assembly.FullyQualifiedName;
+    if (assemblyName is not null && ShouldUseDummyNode(assemblyName))
+    {
+      return CreateDummyMember(memberFqn, ExtractMemberDisplayName(memberFqn, displayName));
+    }
+
+    return CreateAndRegisterMemberNode(typeEntry, memberFqn, displayName);
+  }
+
+  private MemberMetricsNode CreateAndRegisterMemberNode(TypeEntry typeEntry, string memberFqn, string displayName)
+  {
     var node = new MemberMetricsNode
     {
       Name = ExtractMemberDisplayName(memberFqn, displayName),
@@ -482,51 +547,85 @@ internal sealed class StructuralElementMerger
     {
       if (target.TryGetValue(pair.Key, out var existing))
       {
-        if (IsAggregatableMetric(pair.Key) && pair.Value.Value.HasValue)
-        {
-          var sum = (existing.Value ?? 0m) + pair.Value.Value.Value;
-          
-          // WHY: We merge breakdown dictionaries when aggregating metrics to preserve
-          // the detailed breakdown of rule violations. This is especially important for
-          // SARIF metrics where we want to track individual rule IDs across the hierarchy.
-          var mergedBreakdown = SarifBreakdownHelper.Merge(existing.Breakdown, pair.Value.Breakdown);
-          
-          target[pair.Key] = new MetricValue
-          {
-            Value = sum,
-            Status = ThresholdStatus.NotApplicable,
-            Breakdown = mergedBreakdown
-          };
-        }
-        else if (!existing.Value.HasValue && pair.Value.Value.HasValue)
-        {
-          // WHY: When replacing a null value with a real value, we preserve the breakdown
-          // from the incoming value to ensure SARIF breakdown information is not lost.
-          // We create a new MetricValue to ensure the breakdown dictionary is properly copied.
-          target[pair.Key] = new MetricValue
-          {
-            Value = pair.Value.Value,
-            Delta = pair.Value.Delta,
-            Status = pair.Value.Status,
-            Breakdown = SarifBreakdownHelper.Clone(pair.Value.Breakdown)
-          };
-        }
+        MergeExistingMetric(target, pair.Key, existing, pair.Value);
       }
       else
       {
-        // WHY: When adding a metric for the first time, we preserve the breakdown if present.
-        // This ensures that SARIF metrics with breakdown information are correctly stored
-        // even on the first assignment. We create a new MetricValue to ensure the breakdown
-        // dictionary is properly copied.
-        target[pair.Key] = new MetricValue
-        {
-          Value = pair.Value.Value,
-          Delta = pair.Value.Delta,
-          Status = pair.Value.Status,
-          Breakdown = SarifBreakdownHelper.Clone(pair.Value.Breakdown)
-        };
+        AddNewMetric(target, pair.Key, pair.Value);
       }
     }
+  }
+
+  private static void MergeExistingMetric(
+    IDictionary<MetricIdentifier, MetricValue> target,
+    MetricIdentifier key,
+    MetricValue existing,
+    MetricValue incoming)
+  {
+    if (IsAggregatableMetric(key) && incoming.Value.HasValue)
+    {
+      AggregateMetricValue(target, key, existing, incoming);
+    }
+    else if (!existing.Value.HasValue && incoming.Value.HasValue)
+    {
+      ReplaceNullMetricValue(target, key, incoming);
+    }
+  }
+
+  private static void AggregateMetricValue(
+    IDictionary<MetricIdentifier, MetricValue> target,
+    MetricIdentifier key,
+    MetricValue existing,
+    MetricValue incoming)
+  {
+    var sum = (existing.Value ?? 0m) + incoming.Value!.Value;
+    
+    // WHY: We merge breakdown dictionaries when aggregating metrics to preserve
+    // the detailed breakdown of rule violations. This is especially important for
+    // SARIF metrics where we want to track individual rule IDs across the hierarchy.
+    var mergedBreakdown = SarifBreakdownHelper.Merge(existing.Breakdown, incoming.Breakdown);
+    
+    target[key] = new MetricValue
+    {
+      Value = sum,
+      Status = ThresholdStatus.NotApplicable,
+      Breakdown = mergedBreakdown
+    };
+  }
+
+  private static void ReplaceNullMetricValue(
+    IDictionary<MetricIdentifier, MetricValue> target,
+    MetricIdentifier key,
+    MetricValue incoming)
+  {
+    // WHY: When replacing a null value with a real value, we preserve the breakdown
+    // from the incoming value to ensure SARIF breakdown information is not lost.
+    // We create a new MetricValue to ensure the breakdown dictionary is properly copied.
+    target[key] = new MetricValue
+    {
+      Value = incoming.Value,
+      Delta = incoming.Delta,
+      Status = incoming.Status,
+      Breakdown = SarifBreakdownHelper.Clone(incoming.Breakdown)
+    };
+  }
+
+  private static void AddNewMetric(
+    IDictionary<MetricIdentifier, MetricValue> target,
+    MetricIdentifier key,
+    MetricValue value)
+  {
+    // WHY: When adding a metric for the first time, we preserve the breakdown if present.
+    // This ensures that SARIF metrics with breakdown information are correctly stored
+    // even on the first assignment. We create a new MetricValue to ensure the breakdown
+    // dictionary is properly copied.
+    target[key] = new MetricValue
+    {
+      Value = value.Value,
+      Delta = value.Delta,
+      Status = value.Status,
+      Breakdown = SarifBreakdownHelper.Clone(value.Breakdown)
+    };
   }
 
   private static void MergeSource(MetricsNode node, SourceLocation? source)
@@ -536,23 +635,28 @@ internal sealed class StructuralElementMerger
       return;
     }
 
-    if (node.Source is null)
+    if (ShouldReplaceSource(node.Source, source))
     {
       node.Source = source;
-      return;
+    }
+  }
+
+  private static bool ShouldReplaceSource(SourceLocation? existing, SourceLocation incoming)
+  {
+    if (existing is null)
+    {
+      return true;
     }
 
-    if (!node.Source.StartLine.HasValue && source.StartLine.HasValue)
+    if (!existing.StartLine.HasValue && incoming.StartLine.HasValue)
     {
-      node.Source = source;
-      return;
+      return true;
     }
 
-    if (node.Source.StartLine.HasValue && source.StartLine.HasValue &&
-        source.EndLine.HasValue && !node.Source.EndLine.HasValue)
-    {
-      node.Source = source;
-    }
+    return existing.StartLine.HasValue 
+        && incoming.StartLine.HasValue 
+        && incoming.EndLine.HasValue 
+        && !existing.EndLine.HasValue;
   }
 
   private string ResolveAssemblyForType(ParsedCodeElement element)
@@ -562,21 +666,29 @@ internal sealed class StructuralElementMerger
       return element.ContainingAssemblyName!;
     }
 
-    if (element.ParentFullyQualifiedName is not null && _assemblies.ContainsKey(element.ParentFullyQualifiedName))
+    var resolved = ResolveAssemblyFromParent(element);
+    if (resolved is not null)
+    {
+      return resolved;
+    }
+
+    return ResolveAssemblyNameFromFqn(element.FullyQualifiedName ?? element.Name);
+  }
+
+  private string? ResolveAssemblyFromParent(ParsedCodeElement element)
+  {
+    if (element.ParentFullyQualifiedName is null)
+    {
+      return null;
+    }
+
+    if (_assemblies.ContainsKey(element.ParentFullyQualifiedName))
     {
       return element.ParentFullyQualifiedName;
     }
 
-    if (element.ParentFullyQualifiedName is not null)
-    {
-      var assembly = TryResolveAssembly(element.ParentFullyQualifiedName);
-      if (assembly is not null)
-      {
-        return assembly.FullyQualifiedName ?? assembly.Name;
-      }
-    }
-
-    return ResolveAssemblyNameFromFqn(element.FullyQualifiedName ?? element.Name);
+    var assembly = TryResolveAssembly(element.ParentFullyQualifiedName);
+    return assembly?.FullyQualifiedName ?? assembly?.Name;
   }
 
   private AssemblyMetricsNode? TryResolveAssembly(string namespaceFqn)
@@ -598,12 +710,24 @@ internal sealed class StructuralElementMerger
       return assembly.FullyQualifiedName ?? assembly.Name;
     }
 
+    var excludedAssembly = FindExcludedAssembly(typeFqn, namespaceName);
+    if (excludedAssembly is not null)
+    {
+      return excludedAssembly;
+    }
+
+    return GetDefaultAssemblyName();
+  }
+
+  private string? FindExcludedAssembly(string typeFqn, string namespaceName)
+  {
     if (!string.IsNullOrWhiteSpace(typeFqn) && _assemblyFilter.ShouldExcludeAssembly(typeFqn))
     {
       return typeFqn;
     }
 
-    if (!string.IsNullOrWhiteSpace(namespaceName) && !string.Equals(namespaceName, "<global>", StringComparison.Ordinal)
+    if (!string.IsNullOrWhiteSpace(namespaceName) 
+        && !string.Equals(namespaceName, "<global>", StringComparison.Ordinal)
         && _assemblyFilter.ShouldExcludeAssembly(namespaceName))
     {
       return namespaceName;
@@ -615,6 +739,11 @@ internal sealed class StructuralElementMerger
       return rootNamespace;
     }
 
+    return null;
+  }
+
+  private string GetDefaultAssemblyName()
+  {
     return _assemblies.Keys.Count > 0 ? _assemblies.Keys.First() : _solution.Name;
   }
 

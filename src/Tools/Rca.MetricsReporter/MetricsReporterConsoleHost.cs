@@ -75,164 +75,173 @@ internal sealed class MetricsReporterConsoleHost
   /// </remarks>
   internal static MetricsReporterOptions ParseArguments(string[] args)
   {
-    const char FolderSeparatorComma = ',';
-    const char FolderSeparatorSemicolon = ';';
+    var parserState = new ArgumentParserState();
+    ProcessArguments(args, parserState);
+    ValidateArguments(parserState);
+    return CreateOptions(parserState);
+  }
 
-    var roslynPaths = new List<string>();
-    var sarifPaths = new List<string>();
-
-    string? solutionName = null;
-    string? metricsDir = null;
-    string? altCoverPath = null;
-    string? baselinePath = null;
-    string? baselineRef = null;
-    string? outputJson = null;
-    string? outputHtml = null;
-    string? thresholds = null;
-    string? thresholdsFile = null;
-    string? inputJson = null;
-    string? excludedAssemblyNames = null;
-    string? excludedTypeNamePatterns = null;
-    string? excludedMemberNamesPatterns = null;
-    bool analyzeSuppressedSymbols = false;
-    string? suppressedSymbolsPath = null;
-    string? solutionDirectory = null;
-    var sourceCodeFolders = new List<string>();
-    bool replaceBaseline = false;
-    string? baselineStoragePath = null;
-    string? coverageHtmlDir = null;
-
+  private static void ProcessArguments(string[] args, ArgumentParserState state)
+  {
     for (var index = 0; index < args.Length; index++)
     {
       var argument = args[index];
-      switch (argument)
+      if (!TryProcessArgument(argument, args, ref index, state))
       {
-        case "--solution-name":
-          solutionName = RequireValue(args, ref index, argument);
-          break;
-        case "--metrics-dir":
-          metricsDir = RequireValue(args, ref index, argument);
-          break;
-        case "--altcover":
-          altCoverPath = RequireValue(args, ref index, argument);
-          break;
-        case "--roslyn":
-          roslynPaths.Add(RequireValue(args, ref index, argument));
-          break;
-        case "--sarif":
-          sarifPaths.Add(RequireValue(args, ref index, argument));
-          break;
-        case "--baseline":
-          baselinePath = RequireValue(args, ref index, argument);
-          break;
-        case "--baseline-ref":
-          baselineRef = RequireValue(args, ref index, argument);
-          break;
-        case "--output-json":
-          outputJson = RequireValue(args, ref index, argument);
-          break;
-        case "--output-html":
-          outputHtml = RequireValue(args, ref index, argument);
-          break;
-        case "--thresholds":
-          thresholds = RequireValue(args, ref index, argument);
-          break;
-        case "--thresholds-file":
-          thresholdsFile = RequireValue(args, ref index, argument);
-          break;
-        case "--input-json":
-          inputJson = RequireValue(args, ref index, argument);
-          break;
-        case "--excluded-members":
-          excludedMemberNamesPatterns = RequireValue(args, ref index, argument);
-          break;
-        case "--excluded-assemblies":
-          excludedAssemblyNames = RequireValue(args, ref index, argument);
-          break;
-        case "--excluded-types":
-          excludedTypeNamePatterns = RequireValue(args, ref index, argument);
-          break;
-        case "--replace-baseline":
-          replaceBaseline = true;
-          break;
-        case "--baseline-storage-path":
-          baselineStoragePath = RequireValue(args, ref index, argument);
-          break;
-        case "--coverage-html-dir":
-          coverageHtmlDir = RequireValue(args, ref index, argument);
-          break;
-        case "--analyze-suppressed-symbols":
-          analyzeSuppressedSymbols = true;
-          break;
-        case "--suppressed-symbols":
-          suppressedSymbolsPath = RequireValue(args, ref index, argument);
-          break;
-        case "--solution-dir":
-          solutionDirectory = RequireValue(args, ref index, argument);
-          break;
-        case "--source-code-folders":
-          var foldersValue = RequireValue(args, ref index, argument);
-          // Support comma- or semicolon-separated list
-          var folders = foldersValue.Split(
-              new[] { FolderSeparatorComma, FolderSeparatorSemicolon },
-              StringSplitOptions.RemoveEmptyEntries)
-            .Select(f => f.Trim())
-            .Where(f => !string.IsNullOrWhiteSpace(f));
-          sourceCodeFolders.AddRange(folders);
-          break;
-        default:
-          throw new ArgumentException($"Unknown argument '{argument}'. Use --help to view usage.", argument);
+        throw new ArgumentException($"Unknown argument '{argument}'. Use --help to view usage.", argument);
       }
     }
+  }
 
-    if (string.IsNullOrWhiteSpace(inputJson))
+  private static bool TryProcessArgument(string argument, string[] args, ref int index, ArgumentParserState state)
+  {
+    return argument switch
     {
-      if (string.IsNullOrWhiteSpace(metricsDir))
-      {
-        throw new ArgumentException("--metrics-dir is required when not using --input-json.");
-      }
+      "--solution-name" => TrySetValue(args, ref index, argument, value => state.SolutionName = value),
+      "--metrics-dir" => TrySetValue(args, ref index, argument, value => state.MetricsDir = value),
+      "--altcover" => TrySetValue(args, ref index, argument, value => state.AltCoverPath = value),
+      "--roslyn" => TrySetValue(args, ref index, argument, value => state.RoslynPaths.Add(value)),
+      "--sarif" => TrySetValue(args, ref index, argument, value => state.SarifPaths.Add(value)),
+      "--baseline" => TrySetValue(args, ref index, argument, value => state.BaselinePath = value),
+      "--baseline-ref" => TrySetValue(args, ref index, argument, value => state.BaselineRef = value),
+      "--output-json" => TrySetValue(args, ref index, argument, value => state.OutputJson = value),
+      "--output-html" => TrySetValue(args, ref index, argument, value => state.OutputHtml = value),
+      "--thresholds" => TrySetValue(args, ref index, argument, value => state.Thresholds = value),
+      "--thresholds-file" => TrySetValue(args, ref index, argument, value => state.ThresholdsFile = value),
+      "--input-json" => TrySetValue(args, ref index, argument, value => state.InputJson = value),
+      "--excluded-members" => TrySetValue(args, ref index, argument, value => state.ExcludedMemberNamesPatterns = value),
+      "--excluded-assemblies" => TrySetValue(args, ref index, argument, value => state.ExcludedAssemblyNames = value),
+      "--excluded-types" => TrySetValue(args, ref index, argument, value => state.ExcludedTypeNamePatterns = value),
+      "--replace-baseline" => TrySetFlag(() => state.ReplaceBaseline = true),
+      "--baseline-storage-path" => TrySetValue(args, ref index, argument, value => state.BaselineStoragePath = value),
+      "--coverage-html-dir" => TrySetValue(args, ref index, argument, value => state.CoverageHtmlDir = value),
+      "--analyze-suppressed-symbols" => TrySetFlag(() => state.AnalyzeSuppressedSymbols = true),
+      "--suppressed-symbols" => TrySetValue(args, ref index, argument, value => state.SuppressedSymbolsPath = value),
+      "--solution-dir" => TrySetValue(args, ref index, argument, value => state.SolutionDirectory = value),
+      "--source-code-folders" => TryProcessSourceCodeFolders(args, ref index, state),
+      _ => false
+    };
+  }
 
-      if (string.IsNullOrWhiteSpace(outputJson))
-      {
-        throw new ArgumentException("--output-json is required when not using --input-json.");
-      }
+  private static bool TrySetValue(string[] args, ref int index, string argumentName, Action<string> setter)
+  {
+    var value = RequireValue(args, ref index, argumentName);
+    setter(value);
+    return true;
+  }
+
+  private static bool TrySetFlag(Action setter)
+  {
+    setter();
+    return true;
+  }
+
+  private static bool TryProcessSourceCodeFolders(string[] args, ref int index, ArgumentParserState state)
+  {
+    const char FolderSeparatorComma = ',';
+    const char FolderSeparatorSemicolon = ';';
+
+    var foldersValue = RequireValue(args, ref index, "--source-code-folders");
+    var folders = foldersValue.Split(
+        new[] { FolderSeparatorComma, FolderSeparatorSemicolon },
+        StringSplitOptions.RemoveEmptyEntries)
+      .Select(f => f.Trim())
+      .Where(f => !string.IsNullOrWhiteSpace(f));
+    state.SourceCodeFolders.AddRange(folders);
+    return true;
+  }
+
+  private static void ValidateArguments(ArgumentParserState state)
+  {
+    if (string.IsNullOrWhiteSpace(state.InputJson))
+    {
+      ValidateRequiredForGeneration(state);
     }
-    else if (string.IsNullOrWhiteSpace(outputHtml))
+    else
+    {
+      ValidateRequiredForHtmlGeneration(state);
+    }
+  }
+
+  private static void ValidateRequiredForGeneration(ArgumentParserState state)
+  {
+    if (string.IsNullOrWhiteSpace(state.MetricsDir))
+    {
+      throw new ArgumentException("--metrics-dir is required when not using --input-json.");
+    }
+
+    if (string.IsNullOrWhiteSpace(state.OutputJson))
+    {
+      throw new ArgumentException("--output-json is required when not using --input-json.");
+    }
+  }
+
+  private static void ValidateRequiredForHtmlGeneration(ArgumentParserState state)
+  {
+    if (string.IsNullOrWhiteSpace(state.OutputHtml))
     {
       throw new ArgumentException("--output-html is required when using --input-json.");
     }
+  }
 
-    var normalizedMetricsDir = string.IsNullOrWhiteSpace(metricsDir) ? string.Empty : Path.GetFullPath(metricsDir);
+  private static MetricsReporterOptions CreateOptions(ArgumentParserState state)
+  {
+    var normalizedMetricsDir = string.IsNullOrWhiteSpace(state.MetricsDir) ? string.Empty : Path.GetFullPath(state.MetricsDir);
     var reportDir = string.IsNullOrWhiteSpace(normalizedMetricsDir) ? Path.GetTempPath() : Path.Combine(normalizedMetricsDir, "Report");
     var logFilePath = Path.Combine(reportDir, "MetricsReporter.log");
 
     return new MetricsReporterOptions
     {
-      SolutionName = string.IsNullOrWhiteSpace(solutionName) ? "Solution" : solutionName,
+      SolutionName = string.IsNullOrWhiteSpace(state.SolutionName) ? "Solution" : state.SolutionName,
       MetricsDirectory = normalizedMetricsDir,
-      AltCoverPath = altCoverPath is null ? null : Path.GetFullPath(altCoverPath),
-      RoslynPaths = roslynPaths.Select(Path.GetFullPath).ToArray(),
-      SarifPaths = sarifPaths.Select(Path.GetFullPath).ToArray(),
-      BaselinePath = baselinePath is null ? null : Path.GetFullPath(baselinePath),
-      BaselineReference = baselineRef,
-      ThresholdsJson = thresholds,
-      ThresholdsPath = thresholdsFile is null ? null : Path.GetFullPath(thresholdsFile),
-      InputJsonPath = inputJson is null ? null : Path.GetFullPath(inputJson),
-      OutputJsonPath = string.IsNullOrWhiteSpace(outputJson) ? string.Empty : Path.GetFullPath(outputJson),
-      OutputHtmlPath = string.IsNullOrWhiteSpace(outputHtml) ? string.Empty : Path.GetFullPath(outputHtml),
+      AltCoverPath = state.AltCoverPath is null ? null : Path.GetFullPath(state.AltCoverPath),
+      RoslynPaths = state.RoslynPaths.Select(Path.GetFullPath).ToArray(),
+      SarifPaths = state.SarifPaths.Select(Path.GetFullPath).ToArray(),
+      BaselinePath = state.BaselinePath is null ? null : Path.GetFullPath(state.BaselinePath),
+      BaselineReference = state.BaselineRef,
+      ThresholdsJson = state.Thresholds,
+      ThresholdsPath = state.ThresholdsFile is null ? null : Path.GetFullPath(state.ThresholdsFile),
+      InputJsonPath = state.InputJson is null ? null : Path.GetFullPath(state.InputJson),
+      OutputJsonPath = string.IsNullOrWhiteSpace(state.OutputJson) ? string.Empty : Path.GetFullPath(state.OutputJson),
+      OutputHtmlPath = string.IsNullOrWhiteSpace(state.OutputHtml) ? string.Empty : Path.GetFullPath(state.OutputHtml),
       LogFilePath = logFilePath,
-      ExcludedMemberNamesPatterns = excludedMemberNamesPatterns,
-      ExcludedAssemblyNames = excludedAssemblyNames,
-      ExcludedTypeNamePatterns = excludedTypeNamePatterns,
-      ReplaceMetricsBaseline = replaceBaseline,
-      MetricsReportStoragePath = baselineStoragePath is null ? null : Path.GetFullPath(baselineStoragePath),
-      CoverageHtmlDir = coverageHtmlDir is null ? null : Path.GetFullPath(coverageHtmlDir)
-      ,
-      AnalyzeSuppressedSymbols = analyzeSuppressedSymbols,
-      SuppressedSymbolsPath = suppressedSymbolsPath is null ? null : Path.GetFullPath(suppressedSymbolsPath),
-      SolutionDirectory = solutionDirectory is null ? null : Path.GetFullPath(solutionDirectory),
-      SourceCodeFolders = sourceCodeFolders.ToArray()
+      ExcludedMemberNamesPatterns = state.ExcludedMemberNamesPatterns,
+      ExcludedAssemblyNames = state.ExcludedAssemblyNames,
+      ExcludedTypeNamePatterns = state.ExcludedTypeNamePatterns,
+      ReplaceMetricsBaseline = state.ReplaceBaseline,
+      MetricsReportStoragePath = state.BaselineStoragePath is null ? null : Path.GetFullPath(state.BaselineStoragePath),
+      CoverageHtmlDir = state.CoverageHtmlDir is null ? null : Path.GetFullPath(state.CoverageHtmlDir),
+      AnalyzeSuppressedSymbols = state.AnalyzeSuppressedSymbols,
+      SuppressedSymbolsPath = state.SuppressedSymbolsPath is null ? null : Path.GetFullPath(state.SuppressedSymbolsPath),
+      SolutionDirectory = state.SolutionDirectory is null ? null : Path.GetFullPath(state.SolutionDirectory),
+      SourceCodeFolders = state.SourceCodeFolders.ToArray()
     };
+  }
+
+  private sealed class ArgumentParserState
+  {
+    public List<string> RoslynPaths { get; } = new();
+    public List<string> SarifPaths { get; } = new();
+    public string? SolutionName { get; set; }
+    public string? MetricsDir { get; set; }
+    public string? AltCoverPath { get; set; }
+    public string? BaselinePath { get; set; }
+    public string? BaselineRef { get; set; }
+    public string? OutputJson { get; set; }
+    public string? OutputHtml { get; set; }
+    public string? Thresholds { get; set; }
+    public string? ThresholdsFile { get; set; }
+    public string? InputJson { get; set; }
+    public string? ExcludedAssemblyNames { get; set; }
+    public string? ExcludedTypeNamePatterns { get; set; }
+    public string? ExcludedMemberNamesPatterns { get; set; }
+    public bool AnalyzeSuppressedSymbols { get; set; }
+    public string? SuppressedSymbolsPath { get; set; }
+    public string? SolutionDirectory { get; set; }
+    public List<string> SourceCodeFolders { get; } = new();
+    public bool ReplaceBaseline { get; set; }
+    public string? BaselineStoragePath { get; set; }
+    public string? CoverageHtmlDir { get; set; }
   }
 
   private static string RequireValue(string[] args, ref int index, string argumentName)

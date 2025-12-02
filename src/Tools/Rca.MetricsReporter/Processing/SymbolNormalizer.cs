@@ -106,15 +106,24 @@ public static class SymbolNormalizer
       return methodSignature;
     }
 
-    // Remove return type if present (format: "ReturnType Method(...)")
-    var spaceIndex = methodSignature.IndexOf(' ');
-    var nameStart = spaceIndex >= 0 ? spaceIndex + 1 : 0;
+    var nameStart = FindMethodNameStart(methodSignature);
+    var methodNameEnd = FindMethodNameEnd(methodSignature, nameStart);
+    var methodNameWithoutGenerics = ExtractMethodNameWithoutGenerics(methodSignature, nameStart, methodNameEnd);
+    var extractedName = ExtractNameAfterLastDot(methodNameWithoutGenerics);
+    return NormalizeConstructorName(extractedName, methodNameWithoutGenerics);
+  }
 
-    // Find parameter list start and constraints
+  private static int FindMethodNameStart(string methodSignature)
+  {
+    var spaceIndex = methodSignature.IndexOf(' ');
+    return spaceIndex >= 0 ? spaceIndex + 1 : 0;
+  }
+
+  private static int FindMethodNameEnd(string methodSignature, int nameStart)
+  {
     var paramStart = methodSignature.IndexOf('(', nameStart);
     var whereIndex = methodSignature.IndexOf(" where ", StringComparison.Ordinal);
 
-    // Determine where the method name part ends (before parameters or constraints)
     var methodNameEnd = methodSignature.Length;
     if (paramStart >= nameStart)
     {
@@ -125,66 +134,67 @@ public static class SymbolNormalizer
       methodNameEnd = whereIndex;
     }
 
-    // Find generic parameters start in the original signature (before parameters/constraints)
-    // This is more reliable than searching in the extracted part
-    // Note: We need to distinguish between actual generic parameters (Method<T>) and
-    // method names that contain angle brackets (like <Clone>$)
+    return methodNameEnd;
+  }
+
+  private static string ExtractMethodNameWithoutGenerics(string methodSignature, int nameStart, int methodNameEnd)
+  {
     var genericStartInSignature = methodSignature.IndexOf('<', nameStart);
-    string methodNameWithoutGenerics;
-
-    if (genericStartInSignature >= 0 && genericStartInSignature < methodNameEnd)
+    if (genericStartInSignature < 0 || genericStartInSignature >= methodNameEnd)
     {
-      // Check if this is actually a generic parameter list by finding the matching '>'
-      // and verifying it's followed by valid generic parameter continuation (space, '(', or end)
-      var genericEnd = FindMatchingClosingAngleBracket(methodSignature, genericStartInSignature);
-      if (genericEnd >= 0 && genericEnd < methodNameEnd)
-      {
-        // Check if after '>' there's a space, '(', ')' or end of method name part
-        // This indicates it's a generic parameter list (Method<T>(...) or Method<T> where ...)
-        var afterGeneric = genericEnd + 1;
-        if (afterGeneric >= methodNameEnd ||
-            methodSignature[afterGeneric] == ' ' ||
-            methodSignature[afterGeneric] == '(' ||
-            methodSignature[afterGeneric] == ')')
-        {
-          // It's a generic parameter list - extract only the part before generics
-          methodNameWithoutGenerics = methodSignature[nameStart..genericStartInSignature].Trim();
-        }
-        else
-        {
-          // '<' is part of the method name (like <Clone>$), not a generic parameter
-          methodNameWithoutGenerics = methodSignature[nameStart..methodNameEnd].Trim();
-        }
-      }
-      else
-      {
-        // No matching '>', so '<' is part of the method name
-        methodNameWithoutGenerics = methodSignature[nameStart..methodNameEnd].Trim();
-      }
-    }
-    else
-    {
-      // No generics - extract the part before parameters/constraints
-      methodNameWithoutGenerics = methodSignature[nameStart..methodNameEnd].Trim();
+      return methodSignature[nameStart..methodNameEnd].Trim();
     }
 
-    // Extract just the method name (after the last dot, if any)
-    // This handles fully qualified names like "Namespace.Type.Method"
+    return ExtractMethodNameHandlingGenerics(methodSignature, nameStart, methodNameEnd, genericStartInSignature);
+  }
+
+  private static string ExtractMethodNameHandlingGenerics(
+    string methodSignature,
+    int nameStart,
+    int methodNameEnd,
+    int genericStartInSignature)
+  {
+    var genericEnd = FindMatchingClosingAngleBracket(methodSignature, genericStartInSignature);
+    if (genericEnd < 0 || genericEnd >= methodNameEnd)
+    {
+      return methodSignature[nameStart..methodNameEnd].Trim();
+    }
+
+    if (IsGenericParameterList(methodSignature, genericEnd, methodNameEnd))
+    {
+      return methodSignature[nameStart..genericStartInSignature].Trim();
+    }
+
+    return methodSignature[nameStart..methodNameEnd].Trim();
+  }
+
+  private static bool IsGenericParameterList(string methodSignature, int genericEnd, int methodNameEnd)
+  {
+    var afterGeneric = genericEnd + 1;
+    return afterGeneric >= methodNameEnd ||
+           methodSignature[afterGeneric] == ' ' ||
+           methodSignature[afterGeneric] == '(' ||
+           methodSignature[afterGeneric] == ')';
+  }
+
+  private static string ExtractNameAfterLastDot(string methodNameWithoutGenerics)
+  {
     var lastDot = methodNameWithoutGenerics.LastIndexOf('.');
-    var extractedName = lastDot >= 0 ? methodNameWithoutGenerics[(lastDot + 1)..].Trim() : methodNameWithoutGenerics.Trim();
+    return lastDot >= 0 ? methodNameWithoutGenerics[(lastDot + 1)..].Trim() : methodNameWithoutGenerics.Trim();
+  }
 
-    // Special handling for constructors: if the extracted name is "ctor" or "cctor",
-    // check if the original had a dot before it (e.g., ".ctor" or ".cctor")
-    if (extractedName == "ctor" || extractedName == "cctor")
+  private static string NormalizeConstructorName(string extractedName, string methodNameWithoutGenerics)
+  {
+    if (extractedName != "ctor" && extractedName != "cctor")
     {
-      // Check if there's a dot before "ctor" or "cctor" in the original string
-      // Look for pattern like "..ctor" or "..cctor" (double dot indicates .ctor/.cctor)
-      var beforeLastDot = lastDot > 0 ? methodNameWithoutGenerics[..lastDot] : string.Empty;
-      if (beforeLastDot.EndsWith('.'))
-      {
-        // It's a constructor, add the leading dot
-        extractedName = "." + extractedName;
-      }
+      return extractedName;
+    }
+
+    var lastDot = methodNameWithoutGenerics.LastIndexOf('.');
+    var beforeLastDot = lastDot > 0 ? methodNameWithoutGenerics[..lastDot] : string.Empty;
+    if (beforeLastDot.EndsWith('.'))
+    {
+      return "." + extractedName;
     }
 
     return extractedName;

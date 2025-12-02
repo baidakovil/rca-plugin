@@ -134,53 +134,80 @@ public sealed class SarifMetricsParser : IMetricsSourceParser
   /// <param name="ruleDescriptions">Dictionary to populate with extracted rule descriptions.</param>
   private static void ExtractRuleDescriptions(JsonElement run, Dictionary<string, RuleDescription> ruleDescriptions)
   {
-    var tool = run.GetPropertyOrDefault("tool");
-    if (tool is null)
-    {
-      return;
-    }
-
-    var driver = tool.Value.GetPropertyOrDefault("driver");
-    if (driver is null)
-    {
-      return;
-    }
-
-    var rules = driver.Value.GetPropertyOrDefault("rules");
-    if (rules is null || rules.Value.ValueKind != JsonValueKind.Array)
+    var rules = GetRulesArray(run);
+    if (rules is null)
     {
       return;
     }
 
     foreach (var rule in rules.Value.EnumerateArray())
     {
-      var ruleId = rule.GetPropertyOrDefault("id")?.GetString();
-      if (string.IsNullOrWhiteSpace(ruleId))
+      if (TryExtractRuleDescription(rule, out var ruleId, out var description))
       {
-        continue;
+        ruleDescriptions[ruleId] = description;
       }
-
-      // Only extract descriptions for CA and IDE rules
-      if (!TryResolveMetric(ruleId, out _))
-      {
-        continue;
-      }
-
-      var shortDescription = rule.GetPropertyOrDefault("shortDescription")?.GetPropertyOrDefault("text")?.GetString() ?? string.Empty;
-      var fullDescription = rule.GetPropertyOrDefault("fullDescription")?.GetPropertyOrDefault("text")?.GetString();
-      var helpUri = rule.GetPropertyOrDefault("helpUri")?.GetString();
-      var category = rule.GetPropertyOrDefault("properties")?.GetPropertyOrDefault("category")?.GetString();
-
-      var description = new RuleDescription
-      {
-        ShortDescription = shortDescription,
-        FullDescription = fullDescription,
-        HelpUri = helpUri,
-        Category = category
-      };
-
-      ruleDescriptions[ruleId] = description;
     }
+  }
+
+  private static JsonElement? GetRulesArray(JsonElement run)
+  {
+    var tool = run.GetPropertyOrDefault("tool");
+    if (tool is null)
+    {
+      return null;
+    }
+
+    var driver = tool.Value.GetPropertyOrDefault("driver");
+    if (driver is null)
+    {
+      return null;
+    }
+
+    var rules = driver.Value.GetPropertyOrDefault("rules");
+    if (rules is null || rules.Value.ValueKind != JsonValueKind.Array)
+    {
+      return null;
+    }
+
+    return rules;
+  }
+
+  private static bool TryExtractRuleDescription(JsonElement rule, out string ruleId, out RuleDescription description)
+  {
+    ruleId = string.Empty;
+    description = new RuleDescription();
+
+    var ruleIdValue = rule.GetPropertyOrDefault("id")?.GetString();
+    if (string.IsNullOrWhiteSpace(ruleIdValue))
+    {
+      return false;
+    }
+
+    // Only extract descriptions for CA and IDE rules
+    if (!TryResolveMetric(ruleIdValue, out _))
+    {
+      return false;
+    }
+
+    ruleId = ruleIdValue;
+    description = CreateRuleDescription(rule);
+    return true;
+  }
+
+  private static RuleDescription CreateRuleDescription(JsonElement rule)
+  {
+    var shortDescription = rule.GetPropertyOrDefault("shortDescription")?.GetPropertyOrDefault("text")?.GetString() ?? string.Empty;
+    var fullDescription = rule.GetPropertyOrDefault("fullDescription")?.GetPropertyOrDefault("text")?.GetString();
+    var helpUri = rule.GetPropertyOrDefault("helpUri")?.GetString();
+    var category = rule.GetPropertyOrDefault("properties")?.GetPropertyOrDefault("category")?.GetString();
+
+    return new RuleDescription
+    {
+      ShortDescription = shortDescription,
+      FullDescription = fullDescription,
+      HelpUri = helpUri,
+      Category = category
+    };
   }
 
   private static ParsedMetricsDocument EmptyDocument()
