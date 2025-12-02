@@ -37,7 +37,7 @@ public static class SymbolNormalizer
 
     // Special placeholder names are enclosed in angle brackets and start with '<'
     // Examples: "<unknown-type>", "<unknown-member>", "<unknown-assembly>", "<global>"
-    return name.StartsWith("<", StringComparison.Ordinal) && name.EndsWith(">", StringComparison.Ordinal);
+    return name.StartsWith('<') && name.EndsWith('>');
   }
 
   /// <summary>

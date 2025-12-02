@@ -11,13 +11,6 @@ using Rca.Tools.MetricsReporter.Processing.Parsers;
 [Category("Unit")]
 public sealed class RoslynMetricsDocumentWalkerTests
 {
-  private RoslynMetricsDocumentWalker walker = null!;
-
-  [SetUp]
-  public void SetUp()
-  {
-    walker = new RoslynMetricsDocumentWalker();
-  }
 
   [Test]
   public void Parse_WithCompleteDocument_BuildsHierarchyAndMetrics()
@@ -60,7 +53,7 @@ public sealed class RoslynMetricsDocumentWalkerTests
         """);
 
     // Act
-    var result = walker.Parse(document);
+    var result = RoslynMetricsDocumentWalker.Parse(document);
 
     // Assert
     result.SolutionName.Should().Be("TestSolution");
@@ -95,7 +88,7 @@ public sealed class RoslynMetricsDocumentWalkerTests
     var document = XDocument.Parse("<CodeMetricsReport />");
 
     // Act
-    var result = walker.Parse(document);
+    var result = RoslynMetricsDocumentWalker.Parse(document);
 
     // Assert
     result.SolutionName.Should().BeEmpty();
@@ -116,7 +109,7 @@ public sealed class RoslynMetricsDocumentWalkerTests
         """);
 
     // Act
-    var result = walker.Parse(document);
+    var result = RoslynMetricsDocumentWalker.Parse(document);
 
     // Assert
     result.SolutionName.Should().Be("TestSolution");
@@ -143,7 +136,7 @@ public sealed class RoslynMetricsDocumentWalkerTests
         """);
 
     // Act
-    var result = walker.Parse(document);
+    var result = RoslynMetricsDocumentWalker.Parse(document);
 
     // Assert
     result.Elements.Should().HaveCount(1);
@@ -175,7 +168,7 @@ public sealed class RoslynMetricsDocumentWalkerTests
         """);
 
     // Act
-    var result = walker.Parse(document);
+    var result = RoslynMetricsDocumentWalker.Parse(document);
 
     // Assert
     result.Elements.Should().HaveCount(2);
@@ -212,7 +205,7 @@ public sealed class RoslynMetricsDocumentWalkerTests
         """);
 
     // Act
-    var result = walker.Parse(document);
+    var result = RoslynMetricsDocumentWalker.Parse(document);
 
     // Assert
     result.Elements.Should().HaveCount(3);
@@ -250,7 +243,7 @@ public sealed class RoslynMetricsDocumentWalkerTests
         """);
 
     // Act
-    var result = walker.Parse(document);
+    var result = RoslynMetricsDocumentWalker.Parse(document);
 
     // Assert
     var ns = result.Elements.Single(e => e.Kind == CodeElementKind.Namespace);
@@ -285,7 +278,7 @@ public sealed class RoslynMetricsDocumentWalkerTests
         """);
 
     // Act
-    var result = walker.Parse(document);
+    var result = RoslynMetricsDocumentWalker.Parse(document);
 
     // Assert
     var ns = result.Elements.Single(e => e.Kind == CodeElementKind.Namespace);
@@ -314,7 +307,7 @@ public sealed class RoslynMetricsDocumentWalkerTests
         """);
 
     // Act
-    var result = walker.Parse(document);
+    var result = RoslynMetricsDocumentWalker.Parse(document);
 
     // Assert
     var assembly = result.Elements.Single(e => e.Kind == CodeElementKind.Assembly);
@@ -349,7 +342,7 @@ public sealed class RoslynMetricsDocumentWalkerTests
         """);
 
     // Act
-    var result = walker.Parse(document);
+    var result = RoslynMetricsDocumentWalker.Parse(document);
 
     // Assert
     var type = result.Elements.Single(e => e.Kind == CodeElementKind.Type);
@@ -390,7 +383,7 @@ public sealed class RoslynMetricsDocumentWalkerTests
         """);
 
     // Act
-    var result = walker.Parse(document);
+    var result = RoslynMetricsDocumentWalker.Parse(document);
 
     // Assert
     var member = result.Elements.Single(e => e.Kind == CodeElementKind.Member);
@@ -429,7 +422,7 @@ public sealed class RoslynMetricsDocumentWalkerTests
         """);
 
     // Act
-    var result = walker.Parse(document);
+    var result = RoslynMetricsDocumentWalker.Parse(document);
 
     // Assert
     var member = result.Elements.Single(e => e.Kind == CodeElementKind.Member);
@@ -465,7 +458,7 @@ public sealed class RoslynMetricsDocumentWalkerTests
         """);
 
     // Act
-    var result = walker.Parse(document);
+    var result = RoslynMetricsDocumentWalker.Parse(document);
 
     // Assert
     var type = result.Elements.Single(e => e.Kind == CodeElementKind.Type);
@@ -502,7 +495,7 @@ public sealed class RoslynMetricsDocumentWalkerTests
         """);
 
     // Act
-    var result = walker.Parse(document);
+    var result = RoslynMetricsDocumentWalker.Parse(document);
 
     // Assert
     var type = result.Elements.Single(e => e.Kind == CodeElementKind.Type);
@@ -543,7 +536,7 @@ public sealed class RoslynMetricsDocumentWalkerTests
         """);
 
     // Act
-    var result = walker.Parse(document);
+    var result = RoslynMetricsDocumentWalker.Parse(document);
 
     // Assert
     var assembly = result.Elements.Single(e => e.Kind == CodeElementKind.Assembly);
@@ -575,7 +568,7 @@ public sealed class RoslynMetricsDocumentWalkerTests
         """);
 
     // Act
-    var result = walker.Parse(document);
+    var result = RoslynMetricsDocumentWalker.Parse(document);
 
     // Assert
     result.SolutionName.Should().Be("SecondSolution");
@@ -601,7 +594,7 @@ public sealed class RoslynMetricsDocumentWalkerTests
         """);
 
     // Act
-    var result = walker.Parse(document);
+    var result = RoslynMetricsDocumentWalker.Parse(document);
 
     // Assert
     result.SolutionName.Should().Be("TestSolution");

@@ -220,8 +220,8 @@ internal sealed class MetricsReporterConsoleHost
 
   private sealed class ArgumentParserState
   {
-    public List<string> RoslynPaths { get; } = new();
-    public List<string> SarifPaths { get; } = new();
+    public List<string> RoslynPaths { get; } = [];
+    public List<string> SarifPaths { get; } = [];
     public string? SolutionName { get; set; }
     public string? MetricsDir { get; set; }
     public string? AltCoverPath { get; set; }
@@ -238,7 +238,7 @@ internal sealed class MetricsReporterConsoleHost
     public bool AnalyzeSuppressedSymbols { get; set; }
     public string? SuppressedSymbolsPath { get; set; }
     public string? SolutionDirectory { get; set; }
-    public List<string> SourceCodeFolders { get; } = new();
+    public List<string> SourceCodeFolders { get; } = [];
     public bool ReplaceBaseline { get; set; }
     public string? BaselineStoragePath { get; set; }
     public string? CoverageHtmlDir { get; set; }

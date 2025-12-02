@@ -23,7 +23,7 @@ internal static class SarifRuleViolationFactory
     };
   }
 
-  private static IDictionary<MetricIdentifier, MetricValue> CreateMetricDictionary(
+  private static Dictionary<MetricIdentifier, MetricValue> CreateMetricDictionary(
       MetricIdentifier identifier,
       Dictionary<string, SarifRuleBreakdownEntry>? breakdown)
   {

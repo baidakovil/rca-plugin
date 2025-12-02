@@ -41,7 +41,7 @@ public sealed class RoslynMetricsParser : IMetricsSourceParser
     ArgumentNullException.ThrowIfNull(path);
 
     var document = await documentLoader.LoadAsync(path, cancellationToken).ConfigureAwait(false);
-    return documentWalker.Parse(document);
+    return RoslynMetricsDocumentWalker.Parse(document);
   }
 }
 

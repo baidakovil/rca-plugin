@@ -31,7 +31,7 @@ internal sealed class RoslynMetricsDocumentWalker
   /// </summary>
   /// <param name="document">Roslyn metrics XML document.</param>
   /// <returns>A populated <see cref="ParsedMetricsDocument" /> instance.</returns>
-  public ParsedMetricsDocument Parse(XDocument document)
+  public static ParsedMetricsDocument Parse(XDocument document)
   {
     ArgumentNullException.ThrowIfNull(document);
 

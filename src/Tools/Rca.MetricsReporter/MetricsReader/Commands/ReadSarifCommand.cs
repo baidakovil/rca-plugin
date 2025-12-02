@@ -23,7 +23,7 @@ internal sealed class ReadSarifCommand : MetricsReaderCommandBase<SarifMetricSet
     "Microsoft.Maintainability",
     "CA1506:AvoidExcessiveClassCoupling",
     Justification = "Factory method creates executor with all required services (aggregator, sorter, filter, result handler); decomposition would fragment factory logic without meaningful architectural benefit.")]
-  private static IReadSarifCommandExecutor CreateExecutor()
+  private static ReadSarifCommandExecutor CreateExecutor()
   {
     var aggregator = new SarifGroupAggregator();
     var sorter = new SarifGroupSorter();

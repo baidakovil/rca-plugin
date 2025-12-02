@@ -62,7 +62,7 @@ public sealed class MetricsReporterApplication
 
   private async Task<MetricsReporterExitCode> RunAsyncInternal(
       MetricsReporterOptions options,
-      ILogger logger,
+      FileLogger logger,
       CancellationToken cancellationToken)
   {
     logger.LogInformation("Metrics Reporter started.");
@@ -100,7 +100,7 @@ public sealed class MetricsReporterApplication
     return MetricsReporterExitCode.Success;
   }
 
-  private async Task<BaselineRunContext> InitializeBaselineContextAsync(MetricsReporterOptions options, ILogger logger, CancellationToken cancellationToken)
+  private async Task<BaselineRunContext> InitializeBaselineContextAsync(MetricsReporterOptions options, FileLogger logger, CancellationToken cancellationToken)
   {
     var baselineContext = _baselineLifecycle.CaptureContext(options);
     _baselineLifecycle.LogContext(baselineContext, options, logger);
@@ -114,7 +114,7 @@ public sealed class MetricsReporterApplication
       Justification = "Report generation orchestrator coordinates baseline lifecycle, suppressed symbols resolution, and pipeline execution through interfaces and DTOs; further decomposition would create artificial wrapper methods that degrade code readability without architectural benefit.")]
   private async Task<MetricsReporterExitCode> ExecuteReportGenerationAsync(
       ReportGenerationContext context,
-      ILogger logger,
+      FileLogger logger,
       CancellationToken cancellationToken)
   {
     var baseline = await _baselineLifecycle.LoadBaselineAsync(context.Options.BaselinePath, cancellationToken).ConfigureAwait(false);
@@ -136,7 +136,7 @@ public sealed class MetricsReporterApplication
     return MetricsReporterExitCode.Success;
   }
 
-  private static void LogCommandLineArguments(ILogger logger)
+  private static void LogCommandLineArguments(FileLogger logger)
   {
     try
     {
@@ -156,7 +156,7 @@ public sealed class MetricsReporterApplication
   /// <param name="options">The options to validate.</param>
   /// <param name="logger">The logger to use for error messages.</param>
   /// <returns>The exit code indicating validation result.</returns>
-  private static MetricsReporterExitCode ValidateOptionsWithLogging(MetricsReporterOptions options, ILogger logger)
+  private static MetricsReporterExitCode ValidateOptionsWithLogging(MetricsReporterOptions options, FileLogger logger)
   {
     try
     {
@@ -178,7 +178,7 @@ public sealed class MetricsReporterApplication
   /// <returns>A result containing the exit code and loaded thresholds.</returns>
   private static ThresholdLoadResult LoadThresholdsWithLogging(
       MetricsReporterOptions options,
-      ILogger logger)
+      FileLogger logger)
   {
     try
     {
@@ -274,7 +274,7 @@ public sealed class MetricsReporterApplication
   /// </summary>
   private static async Task<MetricsReporterExitCode> GenerateHtmlFromJsonAsync(
       MetricsReporterOptions options,
-      ILogger logger,
+      FileLogger logger,
       CancellationToken cancellationToken)
   {
     var validationResult = ValidateHtmlGenerationOptions(options, logger);
@@ -306,7 +306,7 @@ public sealed class MetricsReporterApplication
   /// <param name="options">The options to validate.</param>
   /// <param name="logger">The logger to use for error messages.</param>
   /// <returns>The exit code indicating validation result.</returns>
-  private static MetricsReporterExitCode ValidateHtmlGenerationOptions(MetricsReporterOptions options, ILogger logger)
+  private static MetricsReporterExitCode ValidateHtmlGenerationOptions(MetricsReporterOptions options, FileLogger logger)
   {
     if (string.IsNullOrWhiteSpace(options.InputJsonPath))
     {
@@ -332,7 +332,7 @@ public sealed class MetricsReporterApplication
   /// <returns>The loaded metrics report, or <see langword="null"/> if loading failed.</returns>
   private static async Task<MetricsReport?> LoadReportForHtmlGenerationAsync(
       MetricsReporterOptions options,
-      ILogger logger,
+      FileLogger logger,
       CancellationToken cancellationToken)
   {
     try
@@ -371,7 +371,7 @@ public sealed class MetricsReporterApplication
   private static async Task<MetricsReporterExitCode> GenerateAndWriteHtmlAsync(
       MetricsReport report,
       MetricsReporterOptions options,
-      ILogger logger,
+      FileLogger logger,
       CancellationToken cancellationToken)
   {
     logger.LogInformation("Generating HTML report...");

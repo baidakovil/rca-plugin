@@ -71,15 +71,14 @@ public sealed class MetricsAggregationService
     return CreateMetricsReport(metadata, workspace.Solution);
   }
 
-  private static void BindSuppressedSymbols(SolutionMetricsNode solution, IReadOnlyCollection<SuppressedSymbolInfo>? suppressedSymbols)
+  private static void BindSuppressedSymbols(SolutionMetricsNode solution, List<SuppressedSymbolInfo>? suppressedSymbols)
   {
     if (suppressedSymbols is null || suppressedSymbols.Count == 0)
     {
       return;
     }
 
-    var suppressedSymbolsList = suppressedSymbols is IList<SuppressedSymbolInfo> list ? list : suppressedSymbols.ToList();
-    SuppressedSymbolMetricBinder.Bind(solution, suppressedSymbolsList);
+    SuppressedSymbolMetricBinder.Bind(solution, suppressedSymbols);
   }
 
   private ReportMetadata ComposeMetadata(MetricsAggregationInput input, SolutionMetricsNode solution)

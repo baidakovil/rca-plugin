@@ -39,7 +39,7 @@ public sealed class BaselineManager : IBaselineManager
     return await CreateBaselineFromPreviousReportInternalAsync(parameters, logger, cancellationToken).ConfigureAwait(false);
   }
 
-  private async Task<bool> CreateBaselineFromPreviousReportInternalAsync(
+  private static async Task<bool> CreateBaselineFromPreviousReportInternalAsync(
       Services.DTO.BaselineCreationParameters parameters,
       ILogger logger,
       CancellationToken cancellationToken)
@@ -116,7 +116,7 @@ public sealed class BaselineManager : IBaselineManager
     return await ReplaceBaselineInternalAsync(parameters, logger, cancellationToken).ConfigureAwait(false);
   }
 
-  private async Task<bool> ReplaceBaselineInternalAsync(
+  private static async Task<bool> ReplaceBaselineInternalAsync(
       Services.DTO.BaselineReplacementParameters parameters,
       ILogger logger,
       CancellationToken cancellationToken)

@@ -23,7 +23,7 @@ internal sealed class ReadAnyCommand : MetricsReaderCommandBase<NamespaceMetricS
     "Microsoft.Maintainability",
     "CA1506:AvoidExcessiveClassCoupling",
     Justification = "Factory method creates executor with all required services (query service, orderer, result handler); decomposition would fragment factory logic without meaningful architectural benefit.")]
-  private static IReadAnyCommandExecutor CreateExecutor()
+  private static ReadAnyCommandExecutor CreateExecutor()
   {
     var queryService = new SymbolQueryService();
     var orderer = new SymbolSnapshotOrderer();

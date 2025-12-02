@@ -55,3 +55,4 @@ internal sealed class ReadSarifCommandResultHandler : IReadSarifCommandResultHan
 }
 
 
+

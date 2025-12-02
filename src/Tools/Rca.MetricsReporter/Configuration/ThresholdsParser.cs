@@ -201,23 +201,6 @@ public sealed class ThresholdsParser
         (warning, error) => CreateThreshold(warning, error, higherIsBetter, positiveDeltaNeutral));
   }
 
-  private static decimal? ReadNullableDecimal(JsonElement parent, string propertyName)
-  {
-    if (!parent.TryGetProperty(propertyName, out var property))
-    {
-      return null;
-    }
-
-    return property.ValueKind switch
-    {
-      JsonValueKind.Number => property.GetDecimal(),
-      JsonValueKind.String when decimal.TryParse(property.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
-          => parsed,
-      JsonValueKind.Null => null,
-      _ => null
-    };
-  }
-
   /// <summary>
   /// Extracts the "higher is better" preference from a metric JSON element or falls back to existing levels.
   /// </summary>
