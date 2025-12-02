@@ -1381,11 +1381,12 @@ public sealed class MetricsAggregationServiceTests
     rootNamespace.Types.Should().NotContain(t => t.FullyQualifiedName == plusInnerTypeFqn);
 
     // Dot types should be present
-    var loaderLogNamespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == dotNamespaceFqn).Subject;
-    var loaderInternalLoggerNamespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == dotInnerNamespaceFqn).Subject;
+    assembly.Namespaces.Should().NotContain(n => n.Name == dotNamespaceFqn);
+    assembly.Namespaces.Should().NotContain(n => n.Name == dotInnerNamespaceFqn);
 
-    var loaderInternalLoggerType = loaderLogNamespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == dotTypeFqn).Subject;
-    var nullScopeType = loaderInternalLoggerNamespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == dotInnerTypeFqn).Subject;
+    rootNamespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == dotNamespaceFqn);
+    var loaderInternalLoggerType = rootNamespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == dotTypeFqn).Subject;
+    var nullScopeType = rootNamespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == dotInnerTypeFqn).Subject;
 
     // Type-level coverage transferred
     loaderInternalLoggerType.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(75);
@@ -1407,6 +1408,152 @@ public sealed class MetricsAggregationServiceTests
     var dispose = nullScopeType.Members.Should().ContainSingle(m => m.Name == "Dispose").Subject;
     dispose.Metrics[MetricIdentifier.AltCoverSequenceCoverage].Value.Should().Be(50);
     dispose.IncludesIteratorStateMachineCoverage.Should().BeTrue();
+  }
+
+  [Test]
+  public void BuildReport_RoslynNestedType_UsesDeclaredNamespace()
+  {
+    const string assemblyName = "Sample.Assembly";
+    const string namespaceFqn = "Sample.Namespace";
+    const string outerTypeFqn = "Sample.Namespace.OuterType";
+    const string nestedTypeFqn = "Sample.Namespace.OuterType.InnerType";
+
+    var roslynDocument = new ParsedMetricsDocument
+    {
+      SolutionName = "SampleSolution",
+      Elements = new List<ParsedCodeElement>
+      {
+        new(CodeElementKind.Assembly, assemblyName, assemblyName),
+        new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
+        {
+          ParentFullyQualifiedName = assemblyName
+        },
+        new(CodeElementKind.Type, "OuterType", outerTypeFqn)
+        {
+          ParentFullyQualifiedName = namespaceFqn,
+          Metrics = new Dictionary<MetricIdentifier, MetricValue>()
+        },
+        new(CodeElementKind.Type, "OuterType.InnerType", nestedTypeFqn)
+        {
+          ParentFullyQualifiedName = namespaceFqn,
+          Metrics = new Dictionary<MetricIdentifier, MetricValue>()
+        }
+      }
+    };
+
+    var input = new MetricsAggregationInput
+    {
+      SolutionName = "SampleSolution",
+      RoslynDocuments = new List<ParsedMetricsDocument> { roslynDocument },
+      AltCoverDocuments = new List<ParsedMetricsDocument>(),
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      Baseline = null,
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
+
+    var report = service.BuildReport(input);
+
+    var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+    assembly.Namespaces.Should().ContainSingle(n => n.Name == namespaceFqn);
+    assembly.Namespaces.Should().NotContain(n => n.Name == nestedTypeFqn);
+
+    var namespaceNode = assembly.Namespaces.Single();
+    namespaceNode.Types.Should().ContainSingle(t => t.FullyQualifiedName == outerTypeFqn);
+    namespaceNode.Types.Should().ContainSingle(t => t.FullyQualifiedName == nestedTypeFqn);
+  }
+
+  [Test]
+  public void BuildReport_NamespaceIndexBeatsNestedTypeHeuristics_WhenNamespaceContainsDots()
+  {
+    const string assemblyName = "Sample.Assembly";
+    const string namespaceFqn = "MyCompany.Services.Core";
+    const string outerTypeFqn = "MyCompany.Services.Core.StructuralElementMerger";
+    const string nestedTypeFqn = "MyCompany.Services.Core.StructuralElementMerger.MemberResolutionContext";
+
+    var altCoverDocument = new ParsedMetricsDocument
+    {
+      Elements = new List<ParsedCodeElement>
+      {
+        new(CodeElementKind.Assembly, assemblyName, assemblyName),
+        new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
+        {
+          ParentFullyQualifiedName = assemblyName
+        },
+        // AltCover classes report the assembly as parent, forcing namespace inference to rely on the index.
+        new(CodeElementKind.Type, "MyCompany.Services.Core.StructuralElementMerger", outerTypeFqn)
+        {
+          ParentFullyQualifiedName = assemblyName,
+          Metrics = new Dictionary<MetricIdentifier, MetricValue>()
+        },
+        new(CodeElementKind.Type, "MyCompany.Services.Core.StructuralElementMerger.MemberResolutionContext", nestedTypeFqn)
+        {
+          ParentFullyQualifiedName = assemblyName,
+          Metrics = new Dictionary<MetricIdentifier, MetricValue>()
+        }
+      }
+    };
+
+    var input = new MetricsAggregationInput
+    {
+      SolutionName = "SampleSolution",
+      AltCoverDocuments = new List<ParsedMetricsDocument> { altCoverDocument },
+      RoslynDocuments = new List<ParsedMetricsDocument>(),
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      Baseline = null,
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
+
+    var report = service.BuildReport(input);
+
+    var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+    assembly.Namespaces.Should().ContainSingle(n => n.Name == namespaceFqn);
+    assembly.Namespaces.Should().NotContain(n => n.Name == outerTypeFqn);
+    assembly.Namespaces.Should().NotContain(n => n.Name == nestedTypeFqn);
+
+    var namespaceNode = assembly.Namespaces.Single();
+    namespaceNode.Types.Should().ContainSingle(t => t.FullyQualifiedName == outerTypeFqn);
+    namespaceNode.Types.Should().ContainSingle(t => t.FullyQualifiedName == nestedTypeFqn);
+  }
+
+  [Test]
+  public void BuildReport_MissingNamespaceFallsBackToStringSlicing()
+  {
+    const string assemblyName = "Sample.Assembly";
+    const string inferredNamespace = "Sample.Namespace";
+    const string typeFqn = "Sample.Namespace.TypeWithoutNamespaceElement";
+
+    var altCoverDocument = new ParsedMetricsDocument
+    {
+      Elements = new List<ParsedCodeElement>
+      {
+        new(CodeElementKind.Assembly, assemblyName, assemblyName),
+        new(CodeElementKind.Type, typeFqn, typeFqn)
+        {
+          ParentFullyQualifiedName = assemblyName,
+          Metrics = new Dictionary<MetricIdentifier, MetricValue>()
+        }
+      }
+    };
+
+    var input = new MetricsAggregationInput
+    {
+      SolutionName = "SampleSolution",
+      AltCoverDocuments = new List<ParsedMetricsDocument> { altCoverDocument },
+      RoslynDocuments = new List<ParsedMetricsDocument>(),
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      Baseline = null,
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
+
+    var report = service.BuildReport(input);
+
+    var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+    assembly.Namespaces.Should().ContainSingle(n => n.Name == inferredNamespace);
+    var namespaceNode = assembly.Namespaces.Single();
+    namespaceNode.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn);
   }
 
   [Test]

@@ -23,6 +23,15 @@ Metrics Reporter — консольное приложение .NET 8, объе�
   - Все пользовательские предпочтения (детализация, awareness, фильтр, чекбоксы) сохраняются в `localStorage` per-path и восстанавливаются при открытии отчёта.
 - **Статистика под спойлером**: в блоке `meta-details` отображаются подсчитанные количества символов (total/no metric/clear/warning/error) и проценты с дельтами относительно baseline.
 
+### Nested Type Semantics
+- Парсеры AltCover и Roslyn нормализуют вложенные типы к точечным FQN и передают их в агрегацию вместе с исходными namespace.
+- `StructuralElementMerger` использует индекс namespace и общий `NamespaceResolutionHelper`, чтобы отличать реальные пространства имён (например, `MyCompany.Services.Core`) от сегментов вложенных типов и складывать узлы в корректные ветви.
+- При отсутствии namespace-узла применяется строковое срезание FQN до последней точки или `<global>` — см. тест `BuildReport_MissingNamespaceFallsBackToStringSlicing`.
+- Для случаев, когда namespace содержит точки и выглядит как вложенный тип, longest-prefix поиск фиксирует правильный namespace (`BuildReport_NamespaceIndexBeatsNestedTypeHeuristics_WhenNamespaceContainsDots`).
+- `PlainNestedTypeCoverageReconciler` проецирует AltCover-нотацию `Outer+Inner` на dot-FQN и переносит покрытие в уже созданные типы, убирая дубликаты.
+- CLI (`metrics-reader`) и HTML используют dot-FQN, поэтому фильтры корректно обрабатывают и `.` и `+`.
+- Полный обзор решений и ссылок на код/tests см. в `docs/metrics-reporter/nested-types.md`.
+
 ### JSON-структура (сокращённо)
 ```json
 {

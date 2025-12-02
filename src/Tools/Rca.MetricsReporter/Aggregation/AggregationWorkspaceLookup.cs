@@ -79,7 +79,7 @@ internal sealed class AggregationWorkspaceLookup
 
   private string ResolveAssemblyNameFromFqn(string typeFqn)
   {
-    var namespaceName = ResolveNamespaceName(typeFqn);
+    var namespaceName = ResolveNamespaceFromIndexesOrFqn(typeFqn);
     var assembly = TryResolveAssembly(namespaceName);
     if (assembly is not null)
     {
@@ -116,10 +116,15 @@ internal sealed class AggregationWorkspaceLookup
     return entries[0].Assembly;
   }
 
-  private static string ResolveNamespaceName(string typeFqn)
+  private string ResolveNamespaceFromIndexesOrFqn(string typeFqn)
   {
-    var lastDot = typeFqn.LastIndexOf('.');
-    return lastDot <= 0 ? "<global>" : typeFqn[..lastDot];
+    var knownNamespace = NamespaceResolutionHelper.FindKnownNamespace(typeFqn, _namespaceIndex);
+    if (!string.IsNullOrWhiteSpace(knownNamespace))
+    {
+      return knownNamespace;
+    }
+
+    return NamespaceResolutionHelper.ExtractNamespaceFromTypeFqn(typeFqn);
   }
 
   private static string ExtractRootNamespace(string namespaceName)

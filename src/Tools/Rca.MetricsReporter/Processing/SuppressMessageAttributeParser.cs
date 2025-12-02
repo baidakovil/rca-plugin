@@ -184,10 +184,6 @@ internal static class SuppressMessageAttributeParser
   /// as a simple identifier, qualified name, or alias-qualified name by Roslyn.
   /// We need to handle all cases to ensure suppressions work regardless of using directives.
   /// </remarks>
-  [SuppressMessage(
-      "Microsoft.Maintainability",
-      "CA1506:AvoidExcessiveClassCoupling",
-      Justification = "This method needs to handle multiple Roslyn syntax node types (SimpleNameSyntax, QualifiedNameSyntax) to correctly identify SuppressMessage attributes regardless of how they are written in source code. The coupling is inherent to the Roslyn API design.")]
   private static bool IsSuppressMessageAttribute(AttributeSyntax attribute)
   {
     // Check the simple name (last identifier in the qualified name chain)

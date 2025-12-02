@@ -142,7 +142,7 @@ internal sealed class StructuralElementMerger
       return;
     }
 
-    var namespaceName = ResolveNamespaceName(typeFqn);
+    var namespaceName = ResolveNamespaceForType(element, assemblyName, typeFqn);
     var displayName = string.IsNullOrWhiteSpace(element.Name)
         ? ExtractTypeDisplayName(typeFqn)
         : element.Name.Contains('.') ? ExtractTypeDisplayName(typeFqn) : element.Name;
@@ -262,10 +262,6 @@ internal sealed class StructuralElementMerger
     return _assemblyFilter.ShouldExcludeAssembly(assemblyName) || !_assemblies.ContainsKey(assemblyName);
   }
 
-  [SuppressMessage(
-      "Microsoft.Maintainability",
-      "CA1506:Avoid excessive class coupling",
-      Justification = "This merger must orchestrate assembly lookup, indexing, dummy node creation, and filter checks to keep the namespace tree consistent, so it interacts with assemblies, filters, indexes, and metrics nodes. Splitting the logic would scatter related steps and reintroduce the same dependencies elsewhere.")]
   private NamespaceEntry GetOrCreateNamespace(string assemblyName, string namespaceFqn, string displayName)
   {
     if (string.IsNullOrEmpty(assemblyName))
@@ -486,7 +482,7 @@ internal sealed class StructuralElementMerger
     }
 
     var assemblyName = ResolveAssemblyNameFromFqn(typeFqn);
-    var namespaceName = ResolveNamespaceName(typeFqn);
+    var namespaceName = ResolveNamespaceFromIndexesOrFqn(typeFqn);
     return GetOrCreateType(assemblyName, namespaceName, typeFqn, ExtractTypeDisplayName(typeFqn));
   }
 
@@ -747,10 +743,51 @@ internal sealed class StructuralElementMerger
     return _assemblies.Keys.Count > 0 ? _assemblies.Keys.First() : _solution.Name;
   }
 
+  private string ResolveNamespaceForType(ParsedCodeElement element, string assemblyName, string typeFqn)
+  {
+    if (IsExplicitNamespace(element.ParentFullyQualifiedName, assemblyName))
+    {
+      return element.ParentFullyQualifiedName!;
+    }
+
+    return ResolveNamespaceFromIndexesOrFqn(typeFqn);
+  }
+
+  private string ResolveNamespaceFromIndexesOrFqn(string typeFqn)
+  {
+    var knownNamespace = NamespaceResolutionHelper.FindKnownNamespace(typeFqn, _namespaceIndex);
+    if (!string.IsNullOrWhiteSpace(knownNamespace))
+    {
+      return knownNamespace;
+    }
+
+    return ResolveNamespaceName(typeFqn);
+  }
+
+  private bool IsExplicitNamespace(string? candidate, string assemblyName)
+  {
+    if (string.IsNullOrWhiteSpace(candidate))
+    {
+      return false;
+    }
+
+    if (string.Equals(candidate, "<global>", StringComparison.Ordinal))
+    {
+      return true;
+    }
+
+    if (string.Equals(candidate, assemblyName, StringComparison.Ordinal))
+    {
+      return false;
+    }
+
+    var key = $"{assemblyName}::{candidate}";
+    return _namespaces.ContainsKey(key) || _namespaceIndex.ContainsKey(candidate);
+  }
+
   private static string ResolveNamespaceName(string typeFqn)
   {
-    var lastDot = typeFqn.LastIndexOf('.');
-    return lastDot <= 0 ? "<global>" : typeFqn[..lastDot];
+    return NamespaceResolutionHelper.ExtractNamespaceFromTypeFqn(typeFqn);
   }
 
   private static string ExtractRootNamespace(string namespaceName)
