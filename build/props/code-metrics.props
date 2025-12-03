@@ -9,8 +9,13 @@
     <SarifMetricsEnabled Condition="'$(SarifMetricsEnabled)' == ''">true</SarifMetricsEnabled>
     <!-- Set to true to enable AltCover metrics collection -->
     <AltCoverEnabled Condition="'$(AltCoverEnabled)' == ''">true</AltCoverEnabled>
+    <!-- Set to true to enable MetricsReporter-specific AltCover workflow (requires AltCoverEnabled as well) -->
+    <MrCoverageEnabled Condition="'$(MrCoverageEnabled)' == ''">true</MrCoverageEnabled>
     <!-- Assembly filter for AltCover instrumentation (which assemblies to instrument) -->
     <RcaCoverageAssemblyFilter Condition="'$(RcaCoverageAssemblyFilter)' == ''">Rca.*.dll</RcaCoverageAssemblyFilter>
+    <!-- Assembly filter for MetricsReporter instrumentation.
+         AltCover treats assembly filters as exclusions, so we match everything except Rca.MetricsReporter -->
+    <MrCoverageAssemblyFilter Condition="'$(MrCoverageAssemblyFilter)' == ''">^(?!Rca\.MetricsReporter$).*$</MrCoverageAssemblyFilter>
     <!-- Method filter for AltCover instrumentation (which methods to exclude from coverage, e.g. constructors) -->
     <AltCoverMethodFilter Condition="'$(AltCoverMethodFilter)' == ''">.cctor|.ctor</AltCoverMethodFilter>
     <!-- Target framework of test projects whose binaries participate in AltCover-based metrics -->
@@ -60,6 +65,7 @@
     <CompilerVisibleProperty Include="RoslynMetricsEnabled" />
     <CompilerVisibleProperty Include="SarifMetricsEnabled" />
     <CompilerVisibleProperty Include="AltCoverEnabled" />
+    <CompilerVisibleProperty Include="MrCoverageEnabled" />
     <CompilerVisibleProperty Include="GenerateMetricsDashboard" />
     <CompilerVisibleProperty Include="GenerateHtmlFromJson" />
     <CompilerVisibleProperty Include="ReplaceMetricsBaseline" />

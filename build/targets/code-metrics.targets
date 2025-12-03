@@ -57,6 +57,23 @@
     <Message Text="AltCover instrumentation completed. Signal file: $(AltCoverSignalFile)" Importance="Normal" />
   </Target>
 
+  <!-- Instrument MetricsReporter binaries to enable AltCover coverage collection -->
+  <Target Name="InstrumentMetricsReporter"
+          AfterTargets="Build"
+          Condition="'$(AltCoverEnabled)' == 'true' and '$(MrCoverageEnabled)' == 'true' and '$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.MetricsReporter'">
+    <PropertyGroup>
+      <MrCoverageInputDir Condition="'$(MrCoverageInputDir)' == ''">$(MetricsReporterOutputDir)</MrCoverageInputDir>
+      <MrCoverageSavedDir>$(MrCoverageInputDir)\__Saved</MrCoverageSavedDir>
+    </PropertyGroup>
+
+    <RemoveDir Directories="$(MrCoverageSavedDir)" Condition="Exists('$(MrCoverageSavedDir)')" />
+
+    <Message Text="Instrumenting MetricsReporter assemblies in $(MrCoverageInputDir) with AltCover" Importance="High" />
+    <Exec Command='altcover --inputDirectory="$(MrCoverageInputDir)" --assemblyFilter="$(MrCoverageAssemblyFilter)" --methodFilter="$(AltCoverMethodFilter)" --inplace --save --report="$(MrCoverageOutputFile)"'
+          ContinueOnError="false" />
+    <Message Text="AltCover instrumentation for MetricsReporter completed. Signal file: $(MrCoverageSignalFile)" Importance="Normal" />
+  </Target>
+
   <!-- Copy instrumented runtime assemblies into unit test output directories after all tests are built -->
   <!-- Anchored on Rca.Core.Tests, which in current graph builds last among test projects -->
   <Target Name="CopyInstrumentedAssembliesToTests"
@@ -100,40 +117,61 @@
     <PropertyGroup>
       <AltCoverRecorderDir Condition="'$(RuntimeDeployDir)' != ''">$(RuntimeDeployDir)</AltCoverRecorderDir>
       <AltCoverRecorderDir Condition="'$(RuntimeDeployDir)' == '' and Exists('$(RcaTimestampFile)')">$(RcaRevitAddinsDir)\$([System.IO.File]::ReadAllText('$(RcaTimestampFile)').Trim())</AltCoverRecorderDir>
+      <MrCoverageRecorderDir Condition="'$(MrCoverageEnabled)' == 'true'">$(MetricsReporterOutputDir)</MrCoverageRecorderDir>
     </PropertyGroup>
 
     <!-- Validate that we have a valid recorder directory -->
     <Error Text="Cannot determine recorder directory for coverage collection. RuntimeDeployDir is not set and timestamp file is missing or empty." 
            Condition="'$(AltCoverRecorderDir)' == ''" />
+    <Error Text="Cannot determine recorder directory for MetricsReporter coverage collection. Ensure Rca.MetricsReporter has been built before running CollectCoverage." 
+           Condition="'$(MrCoverageEnabled)' == 'true' and ('$(MrCoverageRecorderDir)' == '' or !Exists('$(MrCoverageRecorderDir)'))" />
     
     <!-- Warn if signal file is missing -->
     <Warning Text="AltCover signal file not found at $(AltCoverSignalFile). Coverage collection may be incomplete." 
              Condition="'$(AltCoverSignalFile)' != '' and !Exists('$(AltCoverSignalFile)')" />
+    <Warning Text="MetricsReporter AltCover signal file not found at $(MrCoverageSignalFile). Coverage collection may be incomplete."
+             Condition="'$(MrCoverageEnabled)' == 'true' and '$(MrCoverageSignalFile)' != '' and !Exists('$(MrCoverageSignalFile)')" />
 
     <!-- Remove signal file if it exists -->
     <Delete Files="$(AltCoverSignalFile)" Condition="'$(AltCoverSignalFile)' != '' and Exists('$(AltCoverSignalFile)')" />
+    <Delete Files="$(MrCoverageSignalFile)" Condition="'$(MrCoverageEnabled)' == 'true' and '$(MrCoverageSignalFile)' != '' and Exists('$(MrCoverageSignalFile)')" />
 
     <!-- Run AltCover runner to collect coverage -->
     <Message Text="Collecting coverage from $(AltCoverRecorderDir)..." Importance="High" />    
     <Exec Command='altcover runner --collect --recorderDirectory="$(AltCoverRecorderDir)" --outputFile="$(RcaCoverageStorageFile)"'
           ContinueOnError="false" />
     
+    <Message Text="Collecting coverage for MetricsReporter from $(MrCoverageRecorderDir)..." Importance="High" Condition="'$(MrCoverageEnabled)' == 'true'" />
+    <Exec Command='altcover runner --collect --recorderDirectory="$(MrCoverageRecorderDir)" --outputFile="$(MrCoverageStorageFile)"'
+          ContinueOnError="false"
+          Condition="'$(MrCoverageEnabled)' == 'true'" />
+    
     <!-- Check if coverage file was created successfully -->
     <PropertyGroup>
       <CoverageFileCreated Condition="Exists('$(RcaCoverageStorageFile)')">true</CoverageFileCreated>
       <CoverageFileCreated Condition="!Exists('$(RcaCoverageStorageFile)')">false</CoverageFileCreated>
+      <MrCoverageFileCreated>false</MrCoverageFileCreated>
+      <MrCoverageFileCreated Condition="'$(MrCoverageEnabled)' == 'true' and Exists('$(MrCoverageStorageFile)')">true</MrCoverageFileCreated>
+      <MrCoverageFileCreated Condition="'$(MrCoverageEnabled)' == 'true' and !Exists('$(MrCoverageStorageFile)')">false</MrCoverageFileCreated>
     </PropertyGroup>
     
     <Message Text="Coverage collected successfully to $(RcaCoverageStorageFile)" Importance="High" Condition="'$(CoverageFileCreated)' == 'true'" />
+    <Message Text="MetricsReporter coverage collected successfully to $(MrCoverageStorageFile)" Importance="High" Condition="'$(MrCoverageEnabled)' == 'true' and '$(MrCoverageFileCreated)' == 'true'" />
     
     <!-- Recreate signal file to enable continuous coverage collection -->
     <WriteLinesToFile File="$(AltCoverSignalFile)" Lines="" Overwrite="true" Condition="'$(CoverageFileCreated)' == 'true'" />
     <Message Text="Signal file recreated at $(AltCoverSignalFile) for continuous coverage collection" Importance="Normal" Condition="'$(CoverageFileCreated)' == 'true'" />
+    <WriteLinesToFile File="$(MrCoverageSignalFile)" Lines="" Overwrite="true" Condition="'$(MrCoverageEnabled)' == 'true' and '$(MrCoverageFileCreated)' == 'true'" />
+    <Message Text="MetricsReporter signal file recreated at $(MrCoverageSignalFile) for continuous coverage collection" Importance="Normal" Condition="'$(MrCoverageEnabled)' == 'true' and '$(MrCoverageFileCreated)' == 'true'" />
     
     <!-- Generate HTML report using reportgenerator -->
+    <PropertyGroup Condition="'$(CoverageFileCreated)' == 'true'">
+      <CombinedCoverageReportFiles>$(RcaCoverageStorageFile)</CombinedCoverageReportFiles>
+      <CombinedCoverageReportFiles Condition="'$(MrCoverageEnabled)' == 'true' and '$(MrCoverageFileCreated)' == 'true'">$(RcaCoverageStorageFile);$(MrCoverageStorageFile)</CombinedCoverageReportFiles>
+    </PropertyGroup>
     <MakeDir Directories="$(CoverageHtmlDir)" Condition="'$(CoverageFileCreated)' == 'true'" />
     <Message Text="Generating HTML coverage report in $(CoverageHtmlDir)..." Importance="High" Condition="'$(CoverageFileCreated)' == 'true'" />
-    <Exec Command='reportgenerator -reports:"$(RcaCoverageStorageFile)" -targetdir:"$(CoverageHtmlDir)" -reporttypes:Html'
+    <Exec Command='reportgenerator -reports:"$(CombinedCoverageReportFiles)" -targetdir:"$(CoverageHtmlDir)" -reporttypes:Html'
           ContinueOnError="false"
           Condition="'$(CoverageFileCreated)' == 'true'" />
     <Message Text="HTML coverage report generated in $(CoverageHtmlDir)" Importance="High" Condition="'$(CoverageFileCreated)' == 'true'" />
