@@ -1,10 +1,8 @@
 namespace Rca.Tools.MetricsReporter.Aggregation;
-
 using System;
 using System.Collections.Generic;
 using Rca.Tools.MetricsReporter.Model;
 using Rca.Tools.MetricsReporter.Processing;
-
 /// <summary>
 /// Processes rule descriptions from SARIF documents by merging and filtering them.
 /// </summary>
@@ -21,15 +19,12 @@ internal static class RuleDescriptionProcessor
       HashSet<string>? usedRuleIds = null)
   {
     var allRuleDescriptions = Merge(sarifDocuments);
-
     if (usedRuleIds is not null)
     {
       return Filter(allRuleDescriptions, usedRuleIds);
     }
-
     return allRuleDescriptions;
   }
-
   /// <summary>
   /// Merges rule descriptions from all SARIF documents, detecting and warning about conflicts.
   /// </summary>
@@ -38,7 +33,6 @@ internal static class RuleDescriptionProcessor
   private static Dictionary<string, RuleDescription> Merge(IList<ParsedMetricsDocument> sarifDocuments)
   {
     var merged = new Dictionary<string, RuleDescription>();
-
     foreach (var document in sarifDocuments)
     {
       foreach (var (ruleId, description) in document.RuleDescriptions)
@@ -61,10 +55,8 @@ internal static class RuleDescriptionProcessor
         }
       }
     }
-
     return merged;
   }
-
   /// <summary>
   /// Filters rule descriptions to only include rules that are actually used in breakdown.
   /// </summary>
@@ -76,7 +68,6 @@ internal static class RuleDescriptionProcessor
       HashSet<string> usedRuleIds)
   {
     var filtered = new Dictionary<string, RuleDescription>();
-
     foreach (var (ruleId, description) in allRuleDescriptions)
     {
       if (usedRuleIds.Contains(ruleId))
@@ -84,10 +75,8 @@ internal static class RuleDescriptionProcessor
         filtered[ruleId] = description;
       }
     }
-
     return filtered;
   }
-
   /// <summary>
   /// Compares two rule descriptions for equality.
   /// </summary>
@@ -102,12 +91,3 @@ internal static class RuleDescriptionProcessor
         && string.Equals(first.Category ?? string.Empty, second.Category ?? string.Empty, StringComparison.Ordinal);
   }
 }
-
-
-
-
-
-
-
-
-

@@ -1,7 +1,5 @@
 namespace Rca.Tools.MetricsReporter.MetricsReader.Services;
-
 using System.Collections.Generic;
-
 /// <summary>
 /// Sorts SARIF violation groups according to specified criteria.
 /// </summary>
@@ -14,10 +12,3 @@ internal interface ISarifGroupSorter
   /// <returns>A sorted list of groups.</returns>
   List<SarifViolationGroup> SortByCountAndRuleId(IEnumerable<SarifViolationGroup> groups);
 }
-
-
-
-
-
-
-

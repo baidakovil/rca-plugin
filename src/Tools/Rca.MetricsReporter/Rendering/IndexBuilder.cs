@@ -1,10 +1,8 @@
 namespace Rca.Tools.MetricsReporter.Rendering;
-
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Rca.Tools.MetricsReporter.Model;
-
 /// <summary>
 /// Builds indices for metrics report processing.
 /// </summary>
@@ -24,22 +22,18 @@ internal static class IndexBuilder
       {
         continue;
       }
-
       if (!Enum.TryParse<MetricIdentifier>(entry.Metric, out var metricIdentifier))
       {
         continue;
       }
-
       var key = (entry.FullyQualifiedName, metricIdentifier);
       // Last-in-wins is acceptable here: multiple suppressions for the same
       // symbol/metric pair are rare and the most recent justification is likely
       // the one users care about.
       result[key] = entry;
     }
-
     return result;
   }
-
   /// <summary>
   /// Builds an index mapping metrics nodes to their descendant counts.
   /// </summary>
@@ -52,10 +46,8 @@ internal static class IndexBuilder
     {
       PopulateDescendantCounts(root, index);
     }
-
     return index;
   }
-
   private static int PopulateDescendantCounts(MetricsNode node, IDictionary<MetricsNode, int> index)
   {
     var total = 0;
@@ -64,11 +56,9 @@ internal static class IndexBuilder
       var childDescendants = PopulateDescendantCounts(child, index);
       total += 1 + childDescendants;
     }
-
     index[node] = total;
     return total;
   }
-
   private static IEnumerable<MetricsNode> EnumerateChildren(MetricsNode node)
   {
     switch (node)
@@ -78,49 +68,33 @@ internal static class IndexBuilder
         {
           yield return assembly;
         }
-
         break;
       case AssemblyMetricsNode assembly when assembly.Namespaces is not null:
         foreach (var ns in assembly.Namespaces)
         {
           yield return ns;
         }
-
         break;
       case NamespaceMetricsNode @namespace when @namespace.Types is not null:
         foreach (var type in @namespace.Types)
         {
           yield return type;
         }
-
         break;
       case TypeMetricsNode type when type.Members is not null:
         foreach (var member in type.Members)
         {
           yield return member;
         }
-
         break;
     }
   }
-
   private sealed class MetricsNodeReferenceComparer : IEqualityComparer<MetricsNode>
   {
     public static MetricsNodeReferenceComparer Instance { get; } = new();
-
     public bool Equals(MetricsNode? x, MetricsNode? y)
       => ReferenceEquals(x, y);
-
     public int GetHashCode(MetricsNode obj)
       => RuntimeHelpers.GetHashCode(obj);
   }
 }
-
-
-
-
-
-
-
-
-

@@ -1,7 +1,5 @@
 namespace Rca.Tools.MetricsReporter.Rendering;
-
 using System.Text;
-
 /// <summary>
 /// Generates HTML markup for table action controls.
 /// </summary>
@@ -55,12 +53,3 @@ internal static class TableActionsGenerator
     builder.AppendLine("</div>");
   }
 }
-
-
-
-
-
-
-
-
-

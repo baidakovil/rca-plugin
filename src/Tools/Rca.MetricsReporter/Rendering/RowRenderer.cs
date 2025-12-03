@@ -1,11 +1,9 @@
 namespace Rca.Tools.MetricsReporter.Rendering;
-
 using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
 using Rca.Tools.MetricsReporter.Model;
-
 /// <summary>
 /// Renders individual table rows for metrics nodes.
 /// </summary>
@@ -39,11 +37,9 @@ internal static class RowRenderer
     var fqnAttribute = string.IsNullOrWhiteSpace(fullyQualifiedName)
         ? string.Empty
         : $" data-fqn=\"{WebUtility.HtmlEncode(fullyQualifiedName)}\"";
-
     builder.AppendLine("    <tr class=\"" + rowClass + "\" " +
         $"data-id=\"{thisId}\" data-level=\"{level}\" data-parent=\"{parentId ?? string.Empty}\" data-has-children=\"{hasChildren.ToString().ToLowerInvariant()}\" data-role=\"{role}\" data-is-new=\"{(isNew ? "true" : "false")}\"{fqnAttribute}{extendedAttributes}>");
   }
-
   /// <summary>
   /// Appends a symbol cell to the string builder.
   /// </summary>
@@ -79,19 +75,8 @@ internal static class RowRenderer
     {
       builder.Append("<span class=\"expander-placeholder symbol-indicator\" data-simple-tooltip=\"No child nodes available\" aria-hidden=\"true\">Ø</span>");
     }
-
     NodeRenderer.RenderNodeName(builder, node, nameText, coverageLink, isNodeRow, nameTooltipData);
     NodeRenderer.AppendRowActionIcons(builder, node);
-
     builder.AppendLine($"</{symbolTag}>");
   }
 }
-
-
-
-
-
-
-
-
-

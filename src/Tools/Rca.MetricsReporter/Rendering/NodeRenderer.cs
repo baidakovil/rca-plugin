@@ -1,11 +1,9 @@
 namespace Rca.Tools.MetricsReporter.Rendering;
-
 using System;
 using System.Net;
 using System.Text;
 using System.Text.Json;
 using Rca.Tools.MetricsReporter.Model;
-
 /// <summary>
 /// Provides helper methods for rendering node-specific HTML elements.
 /// </summary>
@@ -16,7 +14,6 @@ internal static class NodeRenderer
     PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
   };
-
   /// <summary>
   /// Builds symbol tooltip data attribute for a metrics node.
   /// </summary>
@@ -28,7 +25,6 @@ internal static class NodeRenderer
     {
       return string.Empty;
     }
-
     var role = NodeKindProvider.GetKind(node);
     var roleUpper = role.ToUpperInvariant();
     var source = node.Source;
@@ -40,12 +36,9 @@ internal static class NodeRenderer
       sourceStartLine = source?.StartLine,
       sourceEndLine = source?.EndLine
     };
-
     var json = JsonSerializer.Serialize(data, SymbolTooltipSerializerOptions);
-
     return $" data-symbol-info=\"{WebUtility.HtmlEncode(json)}\"";
   }
-
   /// <summary>
   /// Renders the node name with appropriate HTML markup.
   /// </summary>
@@ -69,7 +62,6 @@ internal static class NodeRenderer
       {
         builder.Append("<span class=\"method-state-machine symbol-indicator\" data-simple-tooltip=\"Includes coverage from compiler-generated iterator state machine\">⊃</span>");
       }
-
       builder.Append("<span class=\"name-text item-name\"" + nameTooltipData + ">" + nameText + "</span>");
     }
     else if (isNodeRow && node is TypeMetricsNode)
@@ -91,13 +83,11 @@ internal static class NodeRenderer
     {
       builder.Append("<span class=\"name-text\"" + nameTooltipData + ">" + nameText + "</span>");
     }
-
     if (node.IsNew)
     {
       builder.Append(" <span class=\"badge badge-new\">NEW</span>");
     }
   }
-
   /// <summary>
   /// Appends row action icons (Open, Copy, Filter) to the string builder.
   /// </summary>
@@ -120,16 +110,6 @@ internal static class NodeRenderer
     builder.AppendLine("        </button>");
     builder.AppendLine("      </span>");
   }
-
   private static bool HasOpenSource(MetricsNode node)
       => node.Source?.Path is not null && node.Source.StartLine.HasValue;
 }
-
-
-
-
-
-
-
-
-

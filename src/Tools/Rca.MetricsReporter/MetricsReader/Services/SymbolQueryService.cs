@@ -1,10 +1,8 @@
 namespace Rca.Tools.MetricsReporter.MetricsReader.Services;
-
 using System;
 using System.Collections.Generic;
 using Rca.Tools.MetricsReporter.MetricsReader.Settings;
 using Rca.Tools.MetricsReporter.Model;
-
 /// <summary>
 /// Executes queries for problematic symbols.
 /// </summary>
@@ -23,16 +21,8 @@ internal sealed class SymbolQueryService : ISymbolQueryService
     {
       throw new ArgumentException("Namespace cannot be null or empty.", nameof(@namespace));
     }
-
     var trimmedNamespace = @namespace.Trim();
     var filter = new SymbolFilter(trimmedNamespace, metric, symbolKind, includeSuppressed);
     return engine.GetProblematicSymbols(filter);
   }
 }
-
-
-
-
-
-
-

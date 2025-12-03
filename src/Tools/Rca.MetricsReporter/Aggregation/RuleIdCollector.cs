@@ -1,8 +1,6 @@
 namespace Rca.Tools.MetricsReporter.Aggregation;
-
 using System.Collections.Generic;
 using Rca.Tools.MetricsReporter.Model;
-
 /// <summary>
 /// Collects rule IDs from breakdown dictionaries in the metrics tree.
 /// </summary>
@@ -18,13 +16,11 @@ internal static class RuleIdCollector
     CollectFromNode(node, usedRuleIds);
     CollectFromChildren(node, usedRuleIds);
   }
-
   private static void CollectFromNode(MetricsNode node, HashSet<string> usedRuleIds)
   {
     CollectFromMetric(node.Metrics, MetricIdentifier.SarifCaRuleViolations, usedRuleIds);
     CollectFromMetric(node.Metrics, MetricIdentifier.SarifIdeRuleViolations, usedRuleIds);
   }
-
   private static void CollectFromMetric(
       IDictionary<MetricIdentifier, MetricValue> metrics,
       MetricIdentifier metricIdentifier,
@@ -38,7 +34,6 @@ internal static class RuleIdCollector
       }
     }
   }
-
   private static void CollectFromChildren(MetricsNode node, HashSet<string> usedRuleIds)
   {
     switch (node)
@@ -57,7 +52,6 @@ internal static class RuleIdCollector
         break;
     }
   }
-
   private static void CollectFromAssemblies(SolutionMetricsNode solutionNode, HashSet<string> usedRuleIds)
   {
     foreach (var assembly in solutionNode.Assemblies)
@@ -65,7 +59,6 @@ internal static class RuleIdCollector
       CollectRecursive(assembly, usedRuleIds);
     }
   }
-
   private static void CollectFromNamespaces(AssemblyMetricsNode assemblyNode, HashSet<string> usedRuleIds)
   {
     foreach (var ns in assemblyNode.Namespaces)
@@ -73,7 +66,6 @@ internal static class RuleIdCollector
       CollectRecursive(ns, usedRuleIds);
     }
   }
-
   private static void CollectFromTypes(NamespaceMetricsNode namespaceNode, HashSet<string> usedRuleIds)
   {
     foreach (var type in namespaceNode.Types)
@@ -81,7 +73,6 @@ internal static class RuleIdCollector
       CollectRecursive(type, usedRuleIds);
     }
   }
-
   private static void CollectFromMembers(TypeMetricsNode typeNode, HashSet<string> usedRuleIds)
   {
     foreach (var member in typeNode.Members)
@@ -90,12 +81,3 @@ internal static class RuleIdCollector
     }
   }
 }
-
-
-
-
-
-
-
-
-

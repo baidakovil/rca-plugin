@@ -1,5 +1,4 @@
 namespace Rca.Tools.MetricsReporter.Aggregation;
-
 /// <summary>
 /// Calculates deltas between current and baseline metric values.
 /// </summary>
@@ -17,17 +16,7 @@ internal static class DeltaCalculator
     {
       return null;
     }
-
     var delta = currentValue.Value - baseline;
     return delta == 0 ? null : delta;
   }
 }
-
-
-
-
-
-
-
-
-

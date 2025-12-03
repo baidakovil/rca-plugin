@@ -1,11 +1,9 @@
 namespace Rca.MetricsReporter.Tests.Configuration;
-
 using FluentAssertions;
 using NUnit.Framework;
 using Rca.Tools.MetricsReporter.Configuration;
 using Rca.Tools.MetricsReporter.Model;
 using System.Text.Json;
-
 /// <summary>
 /// Unit tests for <see cref="SymbolThresholdProcessor"/> class.
 /// </summary>
@@ -25,13 +23,11 @@ public sealed class SymbolThresholdProcessorTests
         }
       }
       """;
-
     var element = JsonDocument.Parse(json).RootElement;
     var definition = new MetricThresholdDefinition
     {
       Levels = new Dictionary<MetricSymbolLevel, MetricThreshold>()
     };
-
     MetricThreshold CreateThreshold(decimal? warning, decimal? error)
     {
       return new MetricThreshold
@@ -42,10 +38,8 @@ public sealed class SymbolThresholdProcessorTests
         PositiveDeltaNeutral = false
       };
     }
-
     // Act
     SymbolThresholdProcessor.ApplySymbolThresholds(element, definition, CreateThreshold);
-
     // Assert
     definition.Levels.Should().ContainKey(MetricSymbolLevel.Type);
     definition.Levels[MetricSymbolLevel.Type].Warning.Should().Be(80);
@@ -53,7 +47,6 @@ public sealed class SymbolThresholdProcessorTests
     definition.Levels[MetricSymbolLevel.Member].Warning.Should().Be(50);
     definition.Levels[MetricSymbolLevel.Member].Error.Should().Be(40);
   }
-
   [Test]
   public void ApplySymbolThresholds_WithoutSymbolThresholds_EnsuresAllLevelsPresent()
   {
@@ -64,7 +57,6 @@ public sealed class SymbolThresholdProcessorTests
     {
       Levels = new Dictionary<MetricSymbolLevel, MetricThreshold>()
     };
-
     MetricThreshold CreateThreshold(decimal? warning, decimal? error)
     {
       return new MetricThreshold
@@ -75,10 +67,8 @@ public sealed class SymbolThresholdProcessorTests
         PositiveDeltaNeutral = false
       };
     }
-
     // Act
     SymbolThresholdProcessor.ApplySymbolThresholds(element, definition, CreateThreshold);
-
     // Assert
     definition.Levels.Should().ContainKey(MetricSymbolLevel.Solution);
     definition.Levels.Should().ContainKey(MetricSymbolLevel.Assembly);
@@ -86,7 +76,6 @@ public sealed class SymbolThresholdProcessorTests
     definition.Levels.Should().ContainKey(MetricSymbolLevel.Type);
     definition.Levels.Should().ContainKey(MetricSymbolLevel.Member);
   }
-
   [Test]
   public void ApplySymbolThresholds_WithExistingLevels_UpdatesWithNewThresholds()
   {
@@ -98,7 +87,6 @@ public sealed class SymbolThresholdProcessorTests
         }
       }
       """;
-
     var element = JsonDocument.Parse(json).RootElement;
     var definition = new MetricThresholdDefinition
     {
@@ -113,7 +101,6 @@ public sealed class SymbolThresholdProcessorTests
         }
       }
     };
-
     MetricThreshold CreateThreshold(decimal? warning, decimal? error)
     {
       return new MetricThreshold
@@ -124,16 +111,13 @@ public sealed class SymbolThresholdProcessorTests
         PositiveDeltaNeutral = false
       };
     }
-
     // Act
     SymbolThresholdProcessor.ApplySymbolThresholds(element, definition, CreateThreshold);
-
     // Assert
     definition.Levels[MetricSymbolLevel.Type].Warning.Should().Be(80);
     definition.Levels[MetricSymbolLevel.Type].Error.Should().Be(70);
     definition.Levels[MetricSymbolLevel.Type].HigherIsBetter.Should().BeTrue();
   }
-
   [Test]
   public void ApplySymbolThresholds_WithNullValues_HandlesNulls()
   {
@@ -145,13 +129,11 @@ public sealed class SymbolThresholdProcessorTests
         }
       }
       """;
-
     var element = JsonDocument.Parse(json).RootElement;
     var definition = new MetricThresholdDefinition
     {
       Levels = new Dictionary<MetricSymbolLevel, MetricThreshold>()
     };
-
     MetricThreshold CreateThreshold(decimal? warning, decimal? error)
     {
       return new MetricThreshold
@@ -162,15 +144,12 @@ public sealed class SymbolThresholdProcessorTests
         PositiveDeltaNeutral = false
       };
     }
-
     // Act
     SymbolThresholdProcessor.ApplySymbolThresholds(element, definition, CreateThreshold);
-
     // Assert
     definition.Levels[MetricSymbolLevel.Type].Warning.Should().BeNull();
     definition.Levels[MetricSymbolLevel.Type].Error.Should().BeNull();
   }
-
   [Test]
   public void ApplySymbolThresholds_WithInvalidLevel_IgnoresInvalidLevel()
   {
@@ -183,13 +162,11 @@ public sealed class SymbolThresholdProcessorTests
         }
       }
       """;
-
     var element = JsonDocument.Parse(json).RootElement;
     var definition = new MetricThresholdDefinition
     {
       Levels = new Dictionary<MetricSymbolLevel, MetricThreshold>()
     };
-
     MetricThreshold CreateThreshold(decimal? warning, decimal? error)
     {
       return new MetricThreshold
@@ -200,15 +177,12 @@ public sealed class SymbolThresholdProcessorTests
         PositiveDeltaNeutral = false
       };
     }
-
     // Act
     SymbolThresholdProcessor.ApplySymbolThresholds(element, definition, CreateThreshold);
-
     // Assert
     definition.Levels.Should().ContainKey(MetricSymbolLevel.Type);
     definition.Levels.Should().NotContainKey((MetricSymbolLevel)999); // Invalid level should not be added
   }
-
   [Test]
   public void ApplySymbolThresholds_WithNonObjectValue_IgnoresInvalidValue()
   {
@@ -220,13 +194,11 @@ public sealed class SymbolThresholdProcessorTests
         }
       }
       """;
-
     var element = JsonDocument.Parse(json).RootElement;
     var definition = new MetricThresholdDefinition
     {
       Levels = new Dictionary<MetricSymbolLevel, MetricThreshold>()
     };
-
     MetricThreshold CreateThreshold(decimal? warning, decimal? error)
     {
       return new MetricThreshold
@@ -237,18 +209,10 @@ public sealed class SymbolThresholdProcessorTests
         PositiveDeltaNeutral = false
       };
     }
-
     // Act
     SymbolThresholdProcessor.ApplySymbolThresholds(element, definition, CreateThreshold);
-
     // Assert
     // Type level should still be created with defaults
     definition.Levels.Should().ContainKey(MetricSymbolLevel.Type);
   }
 }
-
-
-
-
-
-

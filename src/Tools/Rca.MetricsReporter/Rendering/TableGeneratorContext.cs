@@ -1,8 +1,6 @@
 namespace Rca.Tools.MetricsReporter.Rendering;
-
 using System.Collections.Generic;
 using Rca.Tools.MetricsReporter.Model;
-
 /// <summary>
 /// Encapsulates context and dependencies for table generation.
 /// </summary>
@@ -12,27 +10,22 @@ internal sealed class TableGeneratorContext
   /// Gets the ordered list of metric identifiers.
   /// </summary>
   public MetricIdentifier[] MetricOrder { get; }
-
   /// <summary>
   /// Gets the dictionary mapping metric identifiers to their units.
   /// </summary>
   public IReadOnlyDictionary<MetricIdentifier, string?> MetricUnits { get; }
-
   /// <summary>
   /// Gets the dictionary mapping (FQN, Metric) tuples to suppression information.
   /// </summary>
   public Dictionary<(string Fqn, MetricIdentifier Metric), SuppressedSymbolInfo>? SuppressedIndex { get; }
-
   /// <summary>
   /// Gets the dictionary mapping nodes to their descendant counts.
   /// </summary>
   public Dictionary<MetricsNode, int>? DescendantCountIndex { get; }
-
   /// <summary>
   /// Gets the optional coverage link builder.
   /// </summary>
   public CoverageLinkBuilder? CoverageLinkBuilder { get; }
-
   /// <summary>
   /// Initializes a new instance of the <see cref="TableGeneratorContext"/> class.
   /// </summary>
@@ -55,12 +48,3 @@ internal sealed class TableGeneratorContext
     CoverageLinkBuilder = coverageLinkBuilder;
   }
 }
-
-
-
-
-
-
-
-
-

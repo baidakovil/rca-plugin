@@ -1,9 +1,7 @@
 namespace Rca.Tools.MetricsReporter.Aggregation;
-
 using System;
 using System.Collections.Generic;
 using Rca.Tools.MetricsReporter.Model;
-
 /// <summary>
 /// Processes metrics by applying baseline values and threshold evaluation.
 /// </summary>
@@ -26,7 +24,6 @@ internal static class MetricsBaselineProcessor
     var context = CreateContext(metrics, baselineMetrics, thresholds, symbolLevel);
     return BuildResult(context);
   }
-
   private static ProcessingContext CreateContext(
       IDictionary<MetricIdentifier, MetricValue> metrics,
       IDictionary<MetricIdentifier, MetricValue> baselineMetrics,
@@ -35,7 +32,6 @@ internal static class MetricsBaselineProcessor
   {
     return new ProcessingContext(metrics, baselineMetrics, thresholds, symbolLevel);
   }
-
   private static Dictionary<MetricIdentifier, MetricValue> BuildResult(ProcessingContext context)
   {
     var result = new Dictionary<MetricIdentifier, MetricValue>();
@@ -47,37 +43,28 @@ internal static class MetricsBaselineProcessor
         result[identifier] = metricValue;
       }
     }
-
     return result;
   }
-
   private static MetricIdentifier[] GetAllMetricIdentifiers()
       => Enum.GetValues<MetricIdentifier>();
-
   private static MetricValue? ProcessMetric(MetricIdentifier identifier, ProcessingContext context)
   {
     var data = ExtractData(identifier, context);
     var status = ThresholdEvaluator.Evaluate(identifier, data.CurrentValue, context.Thresholds, context.SymbolLevel);
-
     if (status == ThresholdStatus.NotApplicable)
     {
       return null;
     }
-
     return CreateMetricValue(data, status);
   }
-
   private static MetricData ExtractData(MetricIdentifier identifier, ProcessingContext context)
   {
     context.Metrics.TryGetValue(identifier, out var current);
     context.BaselineMetrics.TryGetValue(identifier, out var baseline);
-
     var value = current?.Value;
     var delta = DeltaCalculator.Calculate(value, baseline?.Value);
-
     return new MetricData(value, delta, current?.Breakdown);
   }
-
   private static MetricValue CreateMetricValue(MetricData data, ThresholdStatus status)
   {
     var clonedBreakdown = SarifBreakdownHelper.Clone(data.Breakdown);
@@ -89,24 +76,13 @@ internal static class MetricsBaselineProcessor
       Breakdown = clonedBreakdown
     };
   }
-
   private sealed record ProcessingContext(
       IDictionary<MetricIdentifier, MetricValue> Metrics,
       IDictionary<MetricIdentifier, MetricValue> BaselineMetrics,
       IDictionary<MetricIdentifier, MetricThresholdDefinition> Thresholds,
       MetricSymbolLevel SymbolLevel);
-
   private sealed record MetricData(
       decimal? CurrentValue,
       decimal? Delta,
       Dictionary<string, SarifRuleBreakdownEntry>? Breakdown);
 }
-
-
-
-
-
-
-
-
-

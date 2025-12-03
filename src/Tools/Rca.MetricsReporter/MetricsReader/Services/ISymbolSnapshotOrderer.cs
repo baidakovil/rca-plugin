@@ -1,8 +1,6 @@
 namespace Rca.Tools.MetricsReporter.MetricsReader.Services;
-
 using System.Collections.Generic;
 using System.Linq;
-
 /// <summary>
 /// Orders symbol metric snapshots according to specified criteria.
 /// </summary>
@@ -16,10 +14,3 @@ internal interface ISymbolSnapshotOrderer
   /// <returns>An ordered enumeration of snapshots.</returns>
   IOrderedEnumerable<SymbolMetricSnapshot> Order(IEnumerable<SymbolMetricSnapshot> snapshots, SymbolSnapshotOrderingParameters parameters);
 }
-
-
-
-
-
-
-

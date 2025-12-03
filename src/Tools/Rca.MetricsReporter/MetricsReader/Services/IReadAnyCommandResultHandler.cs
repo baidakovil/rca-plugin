@@ -1,7 +1,5 @@
 namespace Rca.Tools.MetricsReporter.MetricsReader.Services;
-
 using System.Collections.Generic;
-
 /// <summary>
 /// Handles result formatting and output for ReadAny command.
 /// </summary>
@@ -14,10 +12,3 @@ internal interface IReadAnyCommandResultHandler
   /// <param name="parameters">The result handling parameters.</param>
   void HandleResults(IEnumerable<SymbolMetricSnapshot> snapshots, ReadAnyCommandResultParameters parameters);
 }
-
-
-
-
-
-
-
