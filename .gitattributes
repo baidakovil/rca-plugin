@@ -1,0 +1,12 @@
+## Enforce LF line endings for all text content to avoid cross-platform conflicts.
+* text=auto eol=lf
+
+## Preserve binary files as-is.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.dll binary
+*.exe binary
+
