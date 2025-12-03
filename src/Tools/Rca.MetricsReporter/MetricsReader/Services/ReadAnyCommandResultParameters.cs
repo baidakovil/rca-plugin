@@ -7,3 +7,4 @@ internal sealed record ReadAnyCommandResultParameters(
   string Namespace,
   string SymbolKind,
   bool ShowAll);
+

@@ -5,3 +5,4 @@ using Rca.Tools.MetricsReporter.MetricsReader.Settings;
 /// </summary>
 internal sealed record SymbolSnapshotOrderingParameters(
   MetricsReaderSymbolKind SymbolKind);
+

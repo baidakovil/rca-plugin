@@ -113,3 +113,4 @@ internal static class NodeRenderer
   private static bool HasOpenSource(MetricsNode node)
       => node.Source?.Path is not null && node.Source.StartLine.HasValue;
 }
+

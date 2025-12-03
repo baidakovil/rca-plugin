@@ -53,3 +53,4 @@ internal static class TableActionsGenerator
     builder.AppendLine("</div>");
   }
 }
+

@@ -12,3 +12,4 @@ internal interface IReadAnyCommandResultHandler
   /// <param name="parameters">The result handling parameters.</param>
   void HandleResults(IEnumerable<SymbolMetricSnapshot> snapshots, ReadAnyCommandResultParameters parameters);
 }
+

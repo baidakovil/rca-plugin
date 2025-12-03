@@ -98,3 +98,4 @@ internal static class IndexBuilder
       => RuntimeHelpers.GetHashCode(obj);
   }
 }
+

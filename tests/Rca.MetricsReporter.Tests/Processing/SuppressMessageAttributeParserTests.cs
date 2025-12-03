@@ -218,3 +218,4 @@ public sealed class SuppressMessageAttributeParserTests
     justification.Should().BeNull();
   }
 }
+

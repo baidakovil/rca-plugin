@@ -5,3 +5,4 @@ namespace Rca.Tools.MetricsReporter.MetricsReader.Output;
 internal sealed record SarifInvalidMetricDto(
   string Metric,
   string Message);
+

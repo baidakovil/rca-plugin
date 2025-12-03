@@ -86,3 +86,4 @@ internal static class MetricsBaselineProcessor
       decimal? Delta,
       Dictionary<string, SarifRuleBreakdownEntry>? Breakdown);
 }
+

@@ -148,3 +148,4 @@ public sealed class FullyQualifiedNameBuilderTests
     afterPop.Should().Be("Sample.Namespace.OuterType");
   }
 }
+

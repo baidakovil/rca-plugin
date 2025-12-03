@@ -81,3 +81,4 @@ internal static class RuleIdCollector
     }
   }
 }
+

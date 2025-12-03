@@ -91,3 +91,4 @@ internal static class RuleDescriptionProcessor
         && string.Equals(first.Category ?? string.Empty, second.Category ?? string.Empty, StringComparison.Ordinal);
   }
 }
+

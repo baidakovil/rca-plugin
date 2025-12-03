@@ -44,3 +44,4 @@ internal sealed class ReadSarifCommandResultHandler : IReadSarifCommandResultHan
     return $"No SARIF violations for metric '{metric}' and rule '{ruleId}' were found within namespace '{@namespace}'.";
   }
 }
+

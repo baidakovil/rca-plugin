@@ -23,3 +23,4 @@ internal sealed class SarifGroupFilter : ISarifGroupFilter
     return query.ToList();
   }
 }
+

@@ -80,3 +80,4 @@ internal static class RowRenderer
     builder.AppendLine($"</{symbolTag}>");
   }
 }
+

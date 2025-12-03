@@ -12,3 +12,4 @@ internal interface ISarifGroupSorter
   /// <returns>A sorted list of groups.</returns>
   List<SarifViolationGroup> SortByCountAndRuleId(IEnumerable<SarifViolationGroup> groups);
 }
+

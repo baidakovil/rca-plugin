@@ -17,3 +17,4 @@ internal sealed class SarifGroupSorter : ISarifGroupSorter
       .ToList();
   }
 }
+

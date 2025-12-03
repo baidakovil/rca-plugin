@@ -48,3 +48,4 @@ internal sealed class TableGeneratorContext
     CoverageLinkBuilder = coverageLinkBuilder;
   }
 }
+

@@ -20,3 +20,4 @@ internal static class DeltaCalculator
     return delta == 0 ? null : delta;
   }
 }
+

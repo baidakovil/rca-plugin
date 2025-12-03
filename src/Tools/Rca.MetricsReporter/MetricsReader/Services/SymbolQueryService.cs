@@ -26,3 +26,4 @@ internal sealed class SymbolQueryService : ISymbolQueryService
     return engine.GetProblematicSymbols(filter);
   }
 }
+

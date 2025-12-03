@@ -216,3 +216,4 @@ public sealed class SymbolThresholdProcessorTests
     definition.Levels.Should().ContainKey(MetricSymbolLevel.Type);
   }
 }
+
