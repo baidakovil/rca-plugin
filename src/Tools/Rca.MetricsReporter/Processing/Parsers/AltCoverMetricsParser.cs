@@ -27,7 +27,8 @@ public sealed class AltCoverMetricsParser : IMetricsSourceParser
     return new ParsedMetricsDocument
     {
       SolutionName = string.Empty,
-      Elements = elements
+      Elements = elements,
+      SourcePath = Path.GetFullPath(path)
     };
   }
 

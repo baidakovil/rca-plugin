@@ -10,6 +10,7 @@ Metrics Reporter — консольное приложение .NET 8, объе�
 
 ### Источники данных
 1. **AltCover/OpenCover**: `AltCoverSequenceCoverage`, `AltCoverBranchCoverage`, `AltCoverCyclomaticComplexity`, `AltCoverNPathComplexity`. Модуль парсинга теперь делегирует создание узлов вспомогательным фабрикам (`CreateClassNode`, `AltCoverMethodNodeFactory`), поэтому orchestration-методы оперируют только коллекциями ParsedCodeElement и не зависят напрямую от множества XML-структур.
+   - CLI и MSBuild поддерживают множественные `--altcover` аргументы: достаточно повторить ключ для каждого XML-файла покрытия. Перед мерджем репорт проверяет, что тип/метод встречается максимум в одном AltCover-файле; при пересечении символов выполнение завершается ошибкой парсинга, чтобы исключить некорректное «перетирание» данных.
 2. **Roslyn (Microsoft.CodeAnalysis.Metrics)**: `RoslynMaintainabilityIndex`, `RoslynCyclomaticComplexity`, `RoslynClassCoupling`, `RoslynDepthOfInheritance`, `RoslynSourceLines`, `RoslynExecutableLines`. Парсинг разделён на `IRoslynMetricsDocumentLoader` (отвечает за I/O) и `RoslynMetricsDocumentWalker` (разбирает дерево CodeMetricsReport). Walker предоставляет фабрики для сборок, пространств имён, типов и членов, что упростило тестирование и снижает связность основного сервиса.
 3. **SARIF (Roslyn анализаторы)**: количество нарушений `SarifCaRuleViolations`, `SarifIdeRuleViolations`. Обработка run-элементов вынесена в `SarifDocumentAggregator`, а построение ParsedCodeElement и breakdown для каждой локации — в `SarifRuleViolationFactory`. Такой подход даёт более предсказуемые единицы повторного использования и облегчает замену источников SARIF.
 4. **SuppressMessage-анализ** (опционально): карта подавленных символов, полученная из атрибутов `SuppressMessage` и сопоставленная с Roslyn-метриками (`CA1506 → RoslynClassCoupling`, `CA1502 → RoslynCyclomaticComplexity`, `CA1505 → RoslynMaintainabilityIndex`, `CA1501 → RoslynDepthOfInheritance`). После агрегации дополнительно пробегаемся по дереву метрик и связываем FQN с тем SARIF-идентификатором (`SarifIdeRuleViolations` или `SarifCaRuleViolations`), который уже присутствует на узле, чтобы IDE- и CA-подавления стали частью отчёта. Анализ выполняется только для файлов, расположенных в папках, указанных в `SourceCodeFolders` (например, `["src", "src/Tools", "tests"]`). Имя сборки извлекается из первого сегмента пути после соответствующей папки с исходниками.
@@ -225,7 +226,8 @@ dotnet msbuild rca-plugin.sln /t:Build /p:ReplaceMetricsBaseline=true
 dotnet run --project src/Tools/Rca.MetricsReporter/Rca.MetricsReporter.csproj -- \
   --solution-name "rca-plugin" \
   --metrics-dir "build/Metrics" \
-  --altcover "build/Metrics/AltCover/coverage.xml" \
+  --altcover "build/Metrics/AltCover/coverage-runtime.xml" \
+  --altcover "build/Metrics/AltCover/coverage-metrics-reporter.xml" \
   --roslyn "build/Metrics/Roslyn/Rca.Loader.xml" \
   --sarif "build/Metrics/Sarif/Rca.Loader.sarif" \
   --baseline "build/MetricsTemp/MetricsBaseline.g.json" \

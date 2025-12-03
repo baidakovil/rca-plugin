@@ -1,5 +1,6 @@
 namespace Rca.MetricsReporter.Tests.Services;
 
+using System.IO;
 using FluentAssertions;
 using NUnit.Framework;
 using Rca.Tools.MetricsReporter;
@@ -54,6 +55,27 @@ public sealed class MetricsReporterConsoleHostArgumentTests
 
     // Assert
     options.ReplaceMetricsBaseline.Should().BeFalse();
+  }
+
+  [Test]
+  public void ParseArguments_WithMultipleAltCoverArguments_PreservesAllPaths()
+  {
+    // Arrange
+    var args = new[]
+    {
+      "--metrics-dir", "c:\\temp\\metrics",
+      "--output-json", "c:\\temp\\metrics\\report.json",
+      "--altcover", "coverage-one.xml",
+      "--altcover", "coverage-two.xml"
+    };
+
+    // Act
+    var options = MetricsReporterConsoleHost.ParseArguments(args);
+
+    // Assert
+    options.AltCoverPaths.Should().HaveCount(2);
+    options.AltCoverPaths.Should().Contain(Path.GetFullPath("coverage-one.xml"));
+    options.AltCoverPaths.Should().Contain(Path.GetFullPath("coverage-two.xml"));
   }
 }
 

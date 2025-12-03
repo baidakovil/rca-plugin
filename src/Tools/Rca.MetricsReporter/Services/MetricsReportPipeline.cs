@@ -57,6 +57,11 @@ internal sealed class MetricsReportPipeline : IMetricsReportPipeline
       return documentsResult.ExitCode;
     }
 
+    if (!AltCoverDocumentValidator.TryValidateUniqueSymbols(documentsResult.AltCoverDocuments, logger))
+    {
+      return MetricsReporterExitCode.ParsingError;
+    }
+
     var context = new PipelineExecutionContext(options, thresholdsResult, baseline, suppressedSymbols);
     var report = GenerateReport(context, documentsResult, logger);
     if (report is null)
@@ -108,18 +113,22 @@ internal sealed class MetricsReportPipeline : IMetricsReportPipeline
       CancellationToken cancellationToken)
   {
     var documents = new List<ParsedMetricsDocument>();
-    if (string.IsNullOrWhiteSpace(options.AltCoverPath))
+    foreach (var path in options.AltCoverPaths)
     {
-      return documents;
+      if (string.IsNullOrWhiteSpace(path))
+      {
+        continue;
+      }
+
+      var document = await ParseSafeAsync(_altCoverParser, path, logger, cancellationToken).ConfigureAwait(false);
+      if (document is null)
+      {
+        return null;
+      }
+
+      documents.Add(document);
     }
 
-    var document = await ParseSafeAsync(_altCoverParser, options.AltCoverPath, logger, cancellationToken).ConfigureAwait(false);
-    if (document is null)
-    {
-      return null;
-    }
-
-    documents.Add(document);
     return documents;
   }
 

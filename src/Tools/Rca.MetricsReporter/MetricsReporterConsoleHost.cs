@@ -99,7 +99,7 @@ internal sealed class MetricsReporterConsoleHost
     {
       "--solution-name" => TrySetValue(args, ref index, argument, value => state.SolutionName = value),
       "--metrics-dir" => TrySetValue(args, ref index, argument, value => state.MetricsDir = value),
-      "--altcover" => TrySetValue(args, ref index, argument, value => state.AltCoverPath = value),
+      "--altcover" => TrySetValue(args, ref index, argument, value => state.AltCoverPaths.Add(value)),
       "--roslyn" => TrySetValue(args, ref index, argument, value => state.RoslynPaths.Add(value)),
       "--sarif" => TrySetValue(args, ref index, argument, value => state.SarifPaths.Add(value)),
       "--baseline" => TrySetValue(args, ref index, argument, value => state.BaselinePath = value),
@@ -194,7 +194,7 @@ internal sealed class MetricsReporterConsoleHost
     {
       SolutionName = string.IsNullOrWhiteSpace(state.SolutionName) ? "Solution" : state.SolutionName,
       MetricsDirectory = normalizedMetricsDir,
-      AltCoverPath = state.AltCoverPath is null ? null : Path.GetFullPath(state.AltCoverPath),
+      AltCoverPaths = state.AltCoverPaths.Select(Path.GetFullPath).ToArray(),
       RoslynPaths = state.RoslynPaths.Select(Path.GetFullPath).ToArray(),
       SarifPaths = state.SarifPaths.Select(Path.GetFullPath).ToArray(),
       BaselinePath = state.BaselinePath is null ? null : Path.GetFullPath(state.BaselinePath),
@@ -224,7 +224,7 @@ internal sealed class MetricsReporterConsoleHost
     public List<string> SarifPaths { get; } = [];
     public string? SolutionName { get; set; }
     public string? MetricsDir { get; set; }
-    public string? AltCoverPath { get; set; }
+    public List<string> AltCoverPaths { get; } = [];
     public string? BaselinePath { get; set; }
     public string? BaselineRef { get; set; }
     public string? OutputJson { get; set; }
@@ -266,7 +266,7 @@ internal sealed class MetricsReporterConsoleHost
     _outputWriter.WriteLine("Optional parameters:");
     _outputWriter.WriteLine("  --output-html <path>    Path to the resulting metrics-report.html.");
     _outputWriter.WriteLine("  --solution-name <name>  Solution name for the report header.");
-    _outputWriter.WriteLine("  --altcover <path>       Path to AltCover/OpenCover coverage.xml.");
+    _outputWriter.WriteLine("  --altcover <path>       Path to AltCover/OpenCover coverage.xml (repeatable).");
     _outputWriter.WriteLine("  --roslyn <path>         Path to Roslyn metrics XML (repeat for multiple files).");
     _outputWriter.WriteLine("  --sarif <path>          Path to SARIF file (repeat for multiple files).");
     _outputWriter.WriteLine("  --baseline <path>       Path to baseline metrics JSON.");

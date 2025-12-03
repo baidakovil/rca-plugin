@@ -230,9 +230,12 @@ public sealed class MetricsReporterApplication
 
   private static IEnumerable<string> EnumerateInputFiles(MetricsReporterOptions options)
   {
-    if (!string.IsNullOrWhiteSpace(options.AltCoverPath))
+    foreach (var path in options.AltCoverPaths)
     {
-      yield return options.AltCoverPath;
+      if (!string.IsNullOrWhiteSpace(path))
+      {
+        yield return path;
+      }
     }
 
     foreach (var path in options.RoslynPaths)

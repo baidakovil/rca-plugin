@@ -25,5 +25,10 @@ public sealed class ParsedMetricsDocument
   /// </summary>
   public IDictionary<string, RuleDescription> RuleDescriptions { get; init; }
       = new Dictionary<string, RuleDescription>();
+
+  /// <summary>
+  /// Absolute path to the source file that produced this document.
+  /// </summary>
+  public string SourcePath { get; init; } = string.Empty;
 }
 

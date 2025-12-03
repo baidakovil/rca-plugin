@@ -213,10 +213,12 @@
     <ItemGroup Condition="'$(GenerateHtmlFromJson)' != 'true'">
       <RoslynMetricsFiles Include="$(RoslynSolutionMetricsOutputFile)" Condition="Exists('$(RoslynSolutionMetricsOutputFile)')" />
       <SarifMetricsFiles Include="$(SarifOutputDir)\*.sarif" />
+      <AltCoverMetricsFiles Include="$(RcaCoverageStorageFile)" Condition="Exists('$(RcaCoverageStorageFile)')" />
+      <AltCoverMetricsFiles Include="$(MrCoverageStorageFile)" Condition="Exists('$(MrCoverageStorageFile)')" />
     </ItemGroup>
 
     <PropertyGroup Condition="'$(GenerateHtmlFromJson)' != 'true'">
-      <MetricsReporterAltCoverArg Condition="Exists('$(RcaCoverageStorageFile)')"> --altcover "$(RcaCoverageStorageFile)"</MetricsReporterAltCoverArg>
+      <MetricsReporterAltCoverArgs>@(AltCoverMetricsFiles->' --altcover "%(FullPath)"', ' ')</MetricsReporterAltCoverArgs>
       <MetricsReporterRoslynArgs>@(RoslynMetricsFiles->' --roslyn "%(FullPath)"', ' ')</MetricsReporterRoslynArgs>
       <MetricsReporterSarifArgs>@(SarifMetricsFiles->' --sarif "%(FullPath)"', ' ')</MetricsReporterSarifArgs>
       <MetricsReporterBaselineArg Condition="'$(ReplaceMetricsBaseline)' == 'true' or Exists('$(MetricsBaselineJson)')"> --baseline "$(MetricsBaselineJson)"</MetricsReporterBaselineArg>
@@ -233,7 +235,7 @@
       <MetricsReporterReplaceBaselineArg Condition="'$(ReplaceMetricsBaseline)' == 'true'"> --replace-baseline</MetricsReporterReplaceBaselineArg>
       <MetricsReporterBaselineStoragePathArg Condition="'$(ReplaceMetricsBaseline)' == 'true' and '$(MetricsReportStoragePath)' != ''"> --baseline-storage-path "$(MetricsReportStoragePath)"</MetricsReporterBaselineStoragePathArg>
       <MetricsReporterCoverageHtmlDirArg Condition="Exists('$(CoverageHtmlDir)')"> --coverage-html-dir "$(CoverageHtmlDir)"</MetricsReporterCoverageHtmlDirArg>
-      <MetricsReporterCommand>"$(MetricsReporterExe)" --solution-name "$(MetricsSolutionName)" --metrics-dir "$(RcaMetricsDir)"$(MetricsReporterAltCoverArg)$(MetricsReporterRoslynArgs)$(MetricsReporterSarifArgs)$(MetricsReporterBaselineArg)$(MetricsReporterBaselineRefArg) --output-json "$(MetricsReportJson)" --output-html "$(MetricsReportHtml)"$(MetricsReporterThresholdArg)$(MetricsReporterExcludedMembersArg)$(MetricsReporterExcludedAssembliesArg)$(MetricsReporterExcludedTypesArg)$(MetricsReporterSuppressedSymbolsArg)$(MetricsReporterReplaceBaselineArg)$(MetricsReporterBaselineStoragePathArg)$(MetricsReporterCoverageHtmlDirArg)</MetricsReporterCommand>
+      <MetricsReporterCommand>"$(MetricsReporterExe)" --solution-name "$(MetricsSolutionName)" --metrics-dir "$(RcaMetricsDir)"$(MetricsReporterAltCoverArgs)$(MetricsReporterRoslynArgs)$(MetricsReporterSarifArgs)$(MetricsReporterBaselineArg)$(MetricsReporterBaselineRefArg) --output-json "$(MetricsReportJson)" --output-html "$(MetricsReportHtml)"$(MetricsReporterThresholdArg)$(MetricsReporterExcludedMembersArg)$(MetricsReporterExcludedAssembliesArg)$(MetricsReporterExcludedTypesArg)$(MetricsReporterSuppressedSymbolsArg)$(MetricsReporterReplaceBaselineArg)$(MetricsReporterBaselineStoragePathArg)$(MetricsReporterCoverageHtmlDirArg)</MetricsReporterCommand>
     </PropertyGroup>
 
     <Message Text="Generating HTML report from existing JSON: $(InputJsonFile)" Importance="High" Condition="'$(GenerateHtmlFromJson)' == 'true' and Exists('$(MetricsReporterExe)')" />
