@@ -35,3 +35,4 @@ internal sealed class SarifGroupFilter : ISarifGroupFilter
 
 
 
+

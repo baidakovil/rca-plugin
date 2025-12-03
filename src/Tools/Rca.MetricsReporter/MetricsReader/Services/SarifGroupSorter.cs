@@ -26,3 +26,4 @@ internal sealed class SarifGroupSorter : ISarifGroupSorter
 
 
 
+
