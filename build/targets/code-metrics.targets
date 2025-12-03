@@ -115,23 +115,16 @@
 
     <!-- Run AltCover runner to collect coverage -->
     <Message Text="Collecting coverage from $(AltCoverRecorderDir)..." Importance="High" />    
-    <Exec Command='altcover runner --collect --recorderDirectory="$(AltCoverRecorderDir)"'
+    <Exec Command='altcover runner --collect --recorderDirectory="$(AltCoverRecorderDir)" --outputFile="$(RcaCoverageStorageFile)"'
           ContinueOnError="false" />
     
     <!-- Check if coverage file was created successfully -->
     <PropertyGroup>
-      <CoverageFileCreated Condition="Exists('$(RcaCoverageOutputFile)')">true</CoverageFileCreated>
-      <CoverageFileCreated Condition="!Exists('$(RcaCoverageOutputFile)')">false</CoverageFileCreated>
+      <CoverageFileCreated Condition="Exists('$(RcaCoverageStorageFile)')">true</CoverageFileCreated>
+      <CoverageFileCreated Condition="!Exists('$(RcaCoverageStorageFile)')">false</CoverageFileCreated>
     </PropertyGroup>
     
-    <Message Text="Coverage collected successfully to $(RcaCoverageOutputFile)" Importance="High" Condition="'$(CoverageFileCreated)' == 'true'" />
-    
-    <!-- Copy coverage file to storage location to prevent coverage data from being overwritten during builds -->
-    <Copy SourceFiles="$(RcaCoverageOutputFile)" 
-          DestinationFiles="$(RcaCoverageStorageFile)" 
-          Condition="'$(CoverageFileCreated)' == 'true'" 
-          SkipUnchangedFiles="true" />
-    <Message Text="Coverage file copied to storage location: $(RcaCoverageStorageFile)" Importance="Normal" Condition="'$(CoverageFileCreated)' == 'true'" />
+    <Message Text="Coverage collected successfully to $(RcaCoverageStorageFile)" Importance="High" Condition="'$(CoverageFileCreated)' == 'true'" />
     
     <!-- Recreate signal file to enable continuous coverage collection -->
     <WriteLinesToFile File="$(AltCoverSignalFile)" Lines="" Overwrite="true" Condition="'$(CoverageFileCreated)' == 'true'" />
@@ -140,7 +133,7 @@
     <!-- Generate HTML report using reportgenerator -->
     <MakeDir Directories="$(CoverageHtmlDir)" Condition="'$(CoverageFileCreated)' == 'true'" />
     <Message Text="Generating HTML coverage report in $(CoverageHtmlDir)..." Importance="High" Condition="'$(CoverageFileCreated)' == 'true'" />
-    <Exec Command='reportgenerator -reports:"$(RcaCoverageOutputFile)" -targetdir:"$(CoverageHtmlDir)" -reporttypes:Html'
+    <Exec Command='reportgenerator -reports:"$(RcaCoverageStorageFile)" -targetdir:"$(CoverageHtmlDir)" -reporttypes:Html'
           ContinueOnError="false"
           Condition="'$(CoverageFileCreated)' == 'true'" />
     <Message Text="HTML coverage report generated in $(CoverageHtmlDir)" Importance="High" Condition="'$(CoverageFileCreated)' == 'true'" />
