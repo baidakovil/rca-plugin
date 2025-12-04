@@ -167,8 +167,27 @@ internal sealed class IteratorCoverageReconciler
 
   private static void TransferIteratorCoverage(TypeMetricsNode iteratorType, MemberMetricsNode targetMember)
   {
+    // WHY: We always want to transfer sequence coverage from the iterator state machine
+    // back to the user method, because AltCover attributes most IL for async/iterator
+    // methods to the compiler-generated <Method>d__N type. Without this step, user
+    // methods would appear as never executed even when their logical body did run.
     CopyAltCoverMetricIfPresent(iteratorType.Metrics, targetMember.Metrics, MetricIdentifier.AltCoverSequenceCoverage);
-    CopyAltCoverMetricIfPresent(iteratorType.Metrics, targetMember.Metrics, MetricIdentifier.AltCoverBranchCoverage);
+
+    // WHY: Branch coverage coming solely from the compiler-generated iterator type
+    // is often not meaningful for the user-authored method. For async/iterator patterns
+    // AltCover reports branches that belong to the state machine scaffolding rather
+    // than to explicit control-flow in the source method. We therefore only propagate
+    // branch coverage when the target method already has an AltCoverBranchCoverage
+    // metric of its own (i.e. AltCover reported real branch points for the method).
+    // This keeps branch coverage for plain methods intact while avoiding misleading
+    // "0% branch coverage" on async methods like ParseAsync that have no user-visible
+    // branches but do have internal state-machine branches.
+    var methodHasOwnBranchMetric = targetMember.Metrics.ContainsKey(MetricIdentifier.AltCoverBranchCoverage);
+    if (methodHasOwnBranchMetric)
+    {
+      CopyAltCoverMetricIfPresent(iteratorType.Metrics, targetMember.Metrics, MetricIdentifier.AltCoverBranchCoverage);
+    }
+
     CopyAltCoverMetricIfPresent(iteratorType.Metrics, targetMember.Metrics, MetricIdentifier.AltCoverCyclomaticComplexity);
     CopyAltCoverMetricIfPresent(iteratorType.Metrics, targetMember.Metrics, MetricIdentifier.AltCoverNPathComplexity);
 
@@ -201,4 +220,3 @@ internal sealed class IteratorCoverageReconciler
     };
   }
 }
-

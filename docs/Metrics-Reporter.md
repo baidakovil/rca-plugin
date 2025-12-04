@@ -9,7 +9,8 @@ Metrics Reporter — консольное приложение .NET 8, объе�
 - `RcaSuppressedSymbols.g.json` — плоский список символов, подавленных через `SuppressMessage`, с привязкой к FQN и метрике.
 
 ### Источники данных
-1. **AltCover/OpenCover**: `AltCoverSequenceCoverage`, `AltCoverBranchCoverage`, `AltCoverCyclomaticComplexity`, `AltCoverNPathComplexity`. Модуль парсинга теперь делегирует создание узлов вспомогательным фабрикам (`CreateClassNode`, `AltCoverMethodNodeFactory`), поэтому orchestration-методы оперируют только коллекциями ParsedCodeElement и не зависят напрямую от множества XML-структур.
+1. **AltCover/OpenCover**: источники покрытий `AltCoverSequenceCoverage`, `AltCoverBranchCoverage`, `AltCoverCyclomaticComplexity`, `AltCoverNPathComplexity`.  
+   Механика парсинга XML, фильтрации технических методов и переноса покрытий между типами/методами описана в `docs/metrics-reporter/coverage-reporting.md`.
    - CLI и MSBuild поддерживают множественные `--altcover` аргументы: достаточно повторить ключ для каждого XML-файла покрытия. Перед мерджем репорт проверяет, что тип/метод встречается максимум в одном AltCover-файле; при пересечении символов выполнение завершается ошибкой парсинга, чтобы исключить некорректное «перетирание» данных.
 2. **Roslyn (Microsoft.CodeAnalysis.Metrics)**: `RoslynMaintainabilityIndex`, `RoslynCyclomaticComplexity`, `RoslynClassCoupling`, `RoslynDepthOfInheritance`, `RoslynSourceLines`, `RoslynExecutableLines`. Парсинг разделён на `IRoslynMetricsDocumentLoader` (отвечает за I/O) и `RoslynMetricsDocumentWalker` (разбирает дерево CodeMetricsReport). Walker предоставляет фабрики для сборок, пространств имён, типов и членов, что упростило тестирование и снижает связность основного сервиса.
 3. **SARIF (Roslyn анализаторы)**: количество нарушений `SarifCaRuleViolations`, `SarifIdeRuleViolations`. Обработка run-элементов вынесена в `SarifDocumentAggregator`, а построение ParsedCodeElement и breakdown для каждой локации — в `SarifRuleViolationFactory`. Такой подход даёт более предсказуемые единицы повторного использования и облегчает замену источников SARIF.
@@ -25,13 +26,8 @@ Metrics Reporter — консольное приложение .NET 8, объе�
 - **Статистика под спойлером**: в блоке `meta-details` отображаются подсчитанные количества символов (total/no metric/clear/warning/error) и проценты с дельтами относительно baseline.
 
 ### Nested Type Semantics
-- Парсеры AltCover и Roslyn нормализуют вложенные типы к точечным FQN и передают их в агрегацию вместе с исходными namespace.
-- `StructuralElementMerger` использует индекс namespace и общий `NamespaceResolutionHelper`, чтобы отличать реальные пространства имён (например, `MyCompany.Services.Core`) от сегментов вложенных типов и складывать узлы в корректные ветви.
-- При отсутствии namespace-узла применяется строковое срезание FQN до последней точки или `<global>` — см. тест `BuildReport_MissingNamespaceFallsBackToStringSlicing`.
-- Для случаев, когда namespace содержит точки и выглядит как вложенный тип, longest-prefix поиск фиксирует правильный namespace (`BuildReport_NamespaceIndexBeatsNestedTypeHeuristics_WhenNamespaceContainsDots`).
-- `PlainNestedTypeCoverageReconciler` проецирует AltCover-нотацию `Outer+Inner` на dot-FQN и переносит покрытие в уже созданные типы, убирая дубликаты.
-- CLI (`metrics-reader`) и HTML используют dot-FQN, поэтому фильтры корректно обрабатывают и `.` и `+`.
-- Полный обзор решений и ссылок на код/tests см. в `docs/metrics-reporter/nested-types.md`.
+- Вложенные типы нормализуются к dot-FQN и привязываются к реальным namespace; AltCover‑нотация `Outer/Nested` и `Outer+Inner` не просачивается в итоговый DTO.  
+- Перенос покрытия между `Outer+Inner` и dot‑типами, а также взаимодействие с iterator state machine описаны в `docs/metrics-reporter/nested-types.md` и `docs/metrics-reporter/compiler-classes-handling.md`.
 
 ### JSON-структура (сокращённо)
 ```json
@@ -123,11 +119,7 @@ Metrics Reporter — консольное приложение .NET 8, объе�
 
 Если ключ отсутствует в `metrics`, значит метрика неприменима к данному символу или недоступна в исходных данных. Метрики с фактическими значениями, но без настроенных порогов, по умолчанию получают статус `Success`, чтобы значение сохранилось в отчёте без визуального подсвечивания.
 
-**Как формируются записи о метриках.** Агрегатор сериализует только те метрики, для которых есть числовое значение и рассчитан значимый статус. Если после сравнения с порогами статус остался `NotApplicable` (например, нет данных или правило не покрывает символ), метрика исключается из JSON — HTML показывает это как пустую ячейку. Если же значение существует, но пороги не заданы, сервис помечает метрику как `Success`, чтобы она попала в отчёт без визуальных подсветок.
-
-**Metadata → unit descriptors.** Справочник `metricDescriptors` хранит единицы измерения для каждой метрики. Ключ — `MetricIdentifier`, значение — объект `{ "unit": "percent|count|score" }`. HTML-рендерер получает единицы из этого справочника, поэтому внутри узлов больше нет повторяющихся `unit`. Свойство `MetricValue.Unit` оставлено только для обратной совместимости и не сериализуется.
-
-**Метаданные исключений.** Поля `excludedMemberNamesPatterns`, `excludedAssemblyNames` и `excludedTypeNamePatterns` содержат списки шаблонов (через запятую), которые использовались при генерации отчёта. Значения отображаются в шапке HTML, чтобы было очевидно, какие сборки, типы или члены были исключены; те же поля описаны в JSON Schema и доступны для машинной проверки.
+Краткая семантика ключевых полей и общих правил сериализации приведена выше; подробная логика построения метрик (baseline, пороги, правила для отсутствующих значений и branch‑coverage) вынесена в `docs/metrics-reporter/coverage-reporting.md`.
 
 ### JSON Schema
 - Файл `src/Tools/Rca.MetricsReporter/Model/metrics-report.schema.json` описывает структуру `MetricsReport.g.json` (metadata, пороги, дерево Solution → Member). Любые изменения схемы синхронизируются с этим файлом.
@@ -508,4 +500,3 @@ Metrics Reporter автоматически исключает методы ко
 ### Реализация
 
 `MemberFilter` (`src/Tools/Rca.MetricsReporter/Processing/MemberFilter.cs`): `ShouldExcludeMethod(string?)` — проверка по имени, `ShouldExcludeMethodByFqn(string?)` — проверка по FQN. Тесты можно найти в `MemberFilterTests.cs` и `MetricsAggregationServiceTests.cs`.
-
