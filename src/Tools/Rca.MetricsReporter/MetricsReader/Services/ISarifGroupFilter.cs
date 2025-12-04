@@ -6,11 +6,10 @@ using System.Collections.Generic;
 internal interface ISarifGroupFilter
 {
   /// <summary>
-  /// Filters violation groups by rule ID and show-all settings.
+  /// Filters violation groups by rule ID.
   /// </summary>
   /// <param name="groups">The groups to filter.</param>
   /// <param name="ruleId">Optional rule ID filter (case-insensitive).</param>
-  /// <param name="showAll">If false, returns only the first group.</param>
   /// <returns>A filtered list of groups.</returns>
-  List<SarifViolationGroup> Filter(List<SarifViolationGroup> groups, string? ruleId, bool showAll);
+  List<SarifViolationGroup> Filter(List<SarifViolationGroup> groups, string? ruleId);
 }

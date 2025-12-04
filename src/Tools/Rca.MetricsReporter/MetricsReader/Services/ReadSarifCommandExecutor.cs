@@ -1,9 +1,11 @@
 namespace Rca.Tools.MetricsReporter.MetricsReader.Services;
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Rca.Tools.MetricsReporter.MetricsReader.Settings;
+using Rca.Tools.MetricsReporter.Model;
 
 /// <summary>
 /// Executes the ReadSarif command logic.
@@ -55,16 +57,17 @@ internal sealed class ReadSarifCommandExecutor : IReadSarifCommandExecutor
 
     var trimmedNamespace = settings.Namespace.Trim();
     var engine = await _engineFactory(settings, cancellationToken).ConfigureAwait(false);
+    IReadOnlyList<MetricIdentifier> metricList = metrics ?? Array.Empty<MetricIdentifier>();
 
     var aggregatedGroups = _aggregator.AggregateGroups(
       engine,
       trimmedNamespace,
-      metrics,
+      metricList,
       settings.SymbolKind,
       settings.IncludeSuppressed);
 
     var sortedGroups = _sorter.SortByCountAndRuleId(aggregatedGroups);
-    var filteredGroups = _filter.Filter(sortedGroups, settings.RuleId, settings.ShowAll);
+    var filteredGroups = _filter.Filter(sortedGroups, settings.RuleId);
 
     if (filteredGroups.Count == 0)
     {
@@ -79,4 +82,3 @@ internal sealed class ReadSarifCommandExecutor : IReadSarifCommandExecutor
     _resultHandler.WriteResponse(settings, filteredGroups);
   }
 }
-

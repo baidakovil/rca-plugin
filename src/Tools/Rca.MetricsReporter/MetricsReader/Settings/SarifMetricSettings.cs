@@ -42,6 +42,13 @@ internal sealed class SarifMetricSettings : MetricsReaderSettingsBase
   public string? RuleId { get; init; }
 
   /// <summary>
+  /// Gets or sets the grouping dimension (defaults to ruleId for readsarif).
+  /// </summary>
+  [CommandOption("--group-by <metric|method|type|namespace|ruleId>")]
+  [Description("Controls grouping of SARIF violations (metric, namespace, type, method, ruleId). Defaults to ruleId.")]
+  public MetricsReaderGroupByOption? GroupBy { get; init; }
+
+  /// <summary>
   /// Gets a value indicating if the user explicitly provided a metric option.
   /// </summary>
   public bool HasExplicitMetric => !string.IsNullOrWhiteSpace(Metric);
@@ -53,6 +60,12 @@ internal sealed class SarifMetricSettings : MetricsReaderSettingsBase
       => string.IsNullOrWhiteSpace(Metric)
         ? "Any"
         : Metric!.Trim();
+
+  /// <summary>
+  /// Gets the effective grouping mode for the command.
+  /// </summary>
+  public MetricsReaderGroupByOption EffectiveGroupBy
+    => GroupBy ?? MetricsReaderGroupByOption.RuleId;
 
   /// <inheritdoc/>
   public override ValidationResult Validate()
@@ -105,4 +118,3 @@ internal sealed class SarifMetricSettings : MetricsReaderSettingsBase
     return true;
   }
 }
-

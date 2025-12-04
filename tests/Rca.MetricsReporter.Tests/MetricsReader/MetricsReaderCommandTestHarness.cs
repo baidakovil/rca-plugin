@@ -67,6 +67,12 @@ internal static class MetricsReaderCommandTestHarness
       "--symbol-kind", settings.SymbolKind.ToString()
     };
 
+    if (settings.GroupBy.HasValue)
+    {
+      args.Add("--group-by");
+      args.Add(ConvertGroupBy(settings.GroupBy.Value));
+    }
+
     if (!string.IsNullOrWhiteSpace(settings.RuleId))
     {
       args.Add("--ruleid");
@@ -103,6 +109,12 @@ internal static class MetricsReaderCommandTestHarness
       "--namespace", settings.Namespace,
       "--symbol-kind", settings.SymbolKind.ToString()
     };
+
+    if (settings.GroupBy.HasValue)
+    {
+      args.Add("--group-by");
+      args.Add(ConvertGroupBy(settings.GroupBy.Value));
+    }
 
     if (settings.HasExplicitMetric && !string.IsNullOrWhiteSpace(settings.Metric))
     {
@@ -147,5 +159,15 @@ internal static class MetricsReaderCommandTestHarness
       args.Add("--no-update");
     }
   }
-}
 
+  private static string ConvertGroupBy(MetricsReaderGroupByOption option)
+    => option switch
+    {
+      MetricsReaderGroupByOption.Metric => "metric",
+      MetricsReaderGroupByOption.Namespace => "namespace",
+      MetricsReaderGroupByOption.Type => "type",
+      MetricsReaderGroupByOption.Method => "method",
+      MetricsReaderGroupByOption.RuleId => "ruleId",
+      _ => "metric"
+    };
+}

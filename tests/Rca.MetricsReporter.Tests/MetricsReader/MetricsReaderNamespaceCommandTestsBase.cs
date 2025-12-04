@@ -41,7 +41,8 @@ internal abstract class MetricsReaderCommandTestsBase
     bool showAll = false,
     string metricName = "Complexity",
     string? ruleId = null,
-    bool noUpdate = true)
+    bool noUpdate = true,
+    MetricsReaderGroupByOption? groupBy = null)
   {
     var settings = new NamespaceMetricSettings
     {
@@ -53,7 +54,8 @@ internal abstract class MetricsReaderCommandTestsBase
       ThresholdsFile = thresholdsFile,
       ShowAll = showAll,
       RuleId = ruleId,
-      NoUpdate = noUpdate
+      NoUpdate = noUpdate,
+      GroupBy = groupBy
     };
 
     var validation = settings.Validate();
@@ -70,7 +72,8 @@ internal abstract class MetricsReaderCommandTestsBase
     bool showAll = false,
     string? metricName = null,
     string? ruleId = null,
-    bool noUpdate = true)
+    bool noUpdate = true,
+    MetricsReaderGroupByOption? groupBy = null)
   {
     var settings = new SarifMetricSettings
     {
@@ -82,7 +85,8 @@ internal abstract class MetricsReaderCommandTestsBase
       ThresholdsFile = thresholdsFile,
       ShowAll = showAll,
       RuleId = ruleId,
-      NoUpdate = noUpdate
+      NoUpdate = noUpdate,
+      GroupBy = groupBy
     };
 
     var validation = settings.Validate();
@@ -139,5 +143,3 @@ internal abstract class MetricsReaderCommandTestsBase
     return path;
   }
 }
-
-

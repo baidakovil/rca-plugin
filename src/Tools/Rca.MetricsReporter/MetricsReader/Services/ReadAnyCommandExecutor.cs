@@ -44,9 +44,10 @@ internal sealed class ReadAnyCommandExecutor : IReadAnyCommandExecutor
     ArgumentNullException.ThrowIfNull(settings);
 
     var engine = await _engineFactory(settings, cancellationToken).ConfigureAwait(false);
+    var trimmedNamespace = settings.Namespace.Trim();
     var query = _queryService.GetProblematicSymbols(
       engine,
-      settings.Namespace,
+      trimmedNamespace,
       settings.ResolvedMetric,
       settings.SymbolKind,
       settings.IncludeSuppressed);
@@ -56,10 +57,11 @@ internal sealed class ReadAnyCommandExecutor : IReadAnyCommandExecutor
 
     var resultParameters = new ReadAnyCommandResultParameters(
       settings.Metric,
-      settings.Namespace.Trim(),
+      trimmedNamespace,
       settings.SymbolKind.ToString(),
-      settings.ShowAll);
+      settings.ShowAll,
+      settings.IncludeSuppressed,
+      settings.EffectiveGroupBy);
     _resultHandler.HandleResults(ordered, resultParameters);
   }
 }
-

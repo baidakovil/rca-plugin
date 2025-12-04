@@ -44,6 +44,19 @@ internal sealed class NamespaceMetricSettings : MetricsReaderSettingsBase
   public string? RuleId { get; init; }
 
   /// <summary>
+  /// Gets or sets the optional grouping dimension.
+  /// </summary>
+  [CommandOption("--group-by <metric|method|type|namespace|ruleId>")]
+  [Description("Controls grouping of violations (metric, namespace, type, method). ruleId is reserved for readsarif.")]
+  public MetricsReaderGroupByOption? GroupBy { get; init; }
+
+  /// <summary>
+  /// Gets the effective grouping mode (defaults to None for readany).
+  /// </summary>
+  public MetricsReaderGroupByOption EffectiveGroupBy
+    => GroupBy ?? MetricsReaderGroupByOption.None;
+
+  /// <summary>
   /// Gets the resolved metric identifier after validation succeeds.
   /// </summary>
   public MetricIdentifier ResolvedMetric { get; private set; }
@@ -72,8 +85,12 @@ internal sealed class NamespaceMetricSettings : MetricsReaderSettingsBase
       return ValidationResult.Error($"Unknown metric identifier '{Metric}'.");
     }
 
+    if (GroupBy == MetricsReaderGroupByOption.RuleId)
+    {
+      return ValidationResult.Error("--group-by ruleId is only supported by the readsarif command.");
+    }
+
     ResolvedMetric = resolved;
     return ValidationResult.Success();
   }
 }
-

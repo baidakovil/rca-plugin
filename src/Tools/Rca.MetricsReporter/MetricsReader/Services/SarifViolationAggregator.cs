@@ -75,7 +75,7 @@ internal sealed class SarifViolationAggregator : ISarifViolationAggregator
         continue;
       }
 
-      var builder = GetOrCreateBuilder(groups, pair.Key, ruleDescriptions);
+      var builder = GetOrCreateBuilder(groups, pair.Key, ruleDescriptions, filter.Metric);
       builder.Add(entry.Count, entry.Violations, node);
     }
   }
@@ -83,7 +83,8 @@ internal sealed class SarifViolationAggregator : ISarifViolationAggregator
   private static SarifViolationGroupBuilder GetOrCreateBuilder(
     Dictionary<string, SarifViolationGroupBuilder> groups,
     string ruleId,
-    IReadOnlyDictionary<string, RuleDescription>? ruleDescriptions)
+    IReadOnlyDictionary<string, RuleDescription>? ruleDescriptions,
+    MetricIdentifier metric)
   {
     if (groups.TryGetValue(ruleId, out var builder))
     {
@@ -92,9 +93,8 @@ internal sealed class SarifViolationAggregator : ISarifViolationAggregator
 
     RuleDescription? description = null;
     ruleDescriptions?.TryGetValue(ruleId, out description);
-    builder = new SarifViolationGroupBuilder(ruleId, description?.ShortDescription);
+    builder = new SarifViolationGroupBuilder(ruleId, description?.ShortDescription, metric);
     groups[ruleId] = builder;
     return builder;
   }
 }
-

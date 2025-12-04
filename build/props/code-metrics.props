@@ -8,9 +8,9 @@
     <!-- Set to true to enable Sarif metrics collection -->
     <SarifMetricsEnabled Condition="'$(SarifMetricsEnabled)' == ''">true</SarifMetricsEnabled>
     <!-- Set to true to enable AltCover metrics collection -->
-    <AltCoverEnabled Condition="'$(AltCoverEnabled)' == ''">true</AltCoverEnabled>
+    <AltCoverEnabled Condition="'$(AltCoverEnabled)' == ''">false</AltCoverEnabled>
     <!-- Set to true to enable MetricsReporter-specific AltCover workflow (requires AltCoverEnabled as well) -->
-    <MrCoverageEnabled Condition="'$(MrCoverageEnabled)' == ''">true</MrCoverageEnabled>
+    <MrCoverageEnabled Condition="'$(MrCoverageEnabled)' == ''">false</MrCoverageEnabled>
     <!-- Assembly filter for AltCover instrumentation (which assemblies to instrument) -->
     <RcaCoverageAssemblyFilter Condition="'$(RcaCoverageAssemblyFilter)' == ''">Rca.*.dll</RcaCoverageAssemblyFilter>
     <!-- Assembly filter for MetricsReporter instrumentation.

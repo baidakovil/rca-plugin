@@ -234,9 +234,7 @@ dotnet run --project src/Tools/Rca.MetricsReporter/Rca.MetricsReporter.csproj --
 
 ## Metrics Reader Helper
 
-Помимо генерации отчёта теперь доступен встроенный CLI-хелпер `metrics-reader`, предназначенный для оркестраторов и ручного анализа. Он работает на базе `Spectre.Console.Cli` и использует уже сгенерированный `MetricsReport.g.json`.
-
-Команды вызываются через основной exe. Примеры:
+CLI для чтения готового отчёта (`metrics-reader`) описан в отдельном документе [`docs/metrics-reporter/metrics-reader.md`](./metrics-reporter/metrics-reader.md). Там перечислены все параметры, форматы ответов (включая новые группировки `--group-by`) и примеры вызовов `readany`, `readsarif`, `test`. Ниже приведён только базовый пример запуска.
 
 ```powershell
 dotnet run --project src/Tools/Rca.MetricsReporter/Rca.MetricsReporter.csproj -- `
@@ -244,101 +242,9 @@ dotnet run --project src/Tools/Rca.MetricsReporter/Rca.MetricsReporter.csproj --
 ```
 
 ```powershell
-# если инструмент уже собран
 .\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe `
   metrics-reader readsarif --namespace Rca.Loader.Infrastructure --metric SarifCaRuleViolations
 ```
-
-### Общие параметры
-
-| Параметр              | Обязательность | Значение по умолчанию | Описание |
-|-----------------------|----------------|------------------------|----------|
-| `--report <PATH>`     | Нет            | `build/Metrics/Report/MetricsReport.g.json` | Путь к агрегированному отчёту. |
-| `--thresholds-file`   | Нет            | Пороги из отчёта       | Позволяет временно переопределить предупреждения/ошибки. |
-| `--include-suppressed`| Нет            | `false`                | Включает символы, подавленные через `[SuppressMessage]`. |
-| `--no-update`         | Нет            | `false`                | Пропускает предварительное обновление метрик (по умолчанию перед чтением запускается `GenerateMetricsDashboard`). |
-
-### Команды и параметры
-
-#### `metrics-reader readany`
-
-```
-metrics-reader readany --namespace <NamespacePrefix> --metric <MetricAlias>
-                       [--symbol-kind <Any|Type|Member>] [--all] [общие параметры]
-```
-
-- **Обязательные:** `--namespace`, `--metric`.
-- **Опциональные:** `--symbol-kind` (по умолчанию `Any`, что означает типы + члены), `--all`, общие параметры.
-- Без `--all` возвращает один самый критичный символ (`symbolFqn`, `symbolType`, `metric`, `value`, `threshold`, `delta`, `filePath`, `status`, `isSuppressed`).  
-  С `--all` выводит массив всех символов, отсортированный по приоритету: при `symbol-kind Any` сначала типы, затем члены; внутри каждой группы — по серьёзности (Error > Warning), затем по величине превышения порога, затем по имени символа.
-- Если подходящих символов нет, команда выводит сообщение с причинами вместо `[]` или `null`.
-
-**Пример:**
-
-```powershell
-metrics-reader readany --namespace Rca.Loader --metric Coupling
-metrics-reader readany --namespace Rca.Loader.Infrastructure --metric Complexity --symbol-kind Member --all --include-suppressed
-```
-
-#### `metrics-reader readsarif`
-
-```
-metrics-reader readsarif --namespace <NamespacePrefix> [--metric <SarifCaRuleViolations|SarifIdeRuleViolations|Any>]
-                         [--symbol-kind <Any|Type|Member>] [--all] [--ruleid <CAxxxx|IDExxxx>] [общие параметры]
-```
-
-- Метрика по умолчанию — `Any`, то есть агрегируются одновременно `SarifCaRuleViolations` и `SarifIdeRuleViolations`. Укажите `--metric` только если хотите ужать вывод до одной категории.
-
-- Агрегирует SARIF-метрики по `ruleId` и выводит группы в порядке убывания количества нарушений.
-- Каждая группа содержит `ruleId`, `shortDescription`, общее `count` и массив `violations` со сведениями: `symbol`, `message`, `uri`, `startLine`, `endLine`.
-- Без `--all` возвращается только самая проблемная группа. С `--all` — все группы (при `symbol-kind Any` сначала появляются типы, затем члены).
-- Команда поддерживает только метрики `SarifCaRuleViolations` и `SarifIdeRuleViolations`. Для остальных метрик возвращается сообщение о том, что breakdown-данные отсутствуют.
-- Если для выбранного namespace не найдены нарушения, команда возвращает сообщение вместо пустого массива.
-- Дополнительно доступен фильтр `--ruleid <CAxxxx|IDExxxx>`, который ограничивает вывод конкретным правилом (регистр не важен). Если совпадений для такого ruleId нет, также выводится сообщение.
-
-**Пример:**
-
-```powershell
-metrics-reader readsarif --namespace Rca.Loader
-metrics-reader readsarif --namespace Rca.Loader --metric SarifIdeRuleViolations --symbol-kind Member --all
-metrics-reader readsarif --namespace Rca.Loader --metric SarifCaRuleViolations --ruleid CA1506
-```
-
-#### `metrics-reader test`
-
-```
-metrics-reader test --symbol <FullyQualifiedName> --metric <MetricAlias> [общие параметры]
-```
-
-- **Обязательные:** `--symbol` (тип или член), `--metric`.
-- **Опциональные:** общие параметры.
-- Возвращает JSON вида `{ "isOk": <bool>, "details": {…}, "message": "..." }`, где `details` содержит ту же структуру, что и остальные команды.
-
-**Важные детали:**
-
-- `--symbol` необходимо указывать в нормализованном формате, **обязательно** с суффиксом `(...)` и в кавычках, чтобы оболочка не съела пробелы. Значение можно скопировать из поля `symbolFqn`, возвращаемого командой `list`. Например:
-
-  ```powershell
-  metrics-reader test --symbol "Rca.Loader.Services.RuntimeManager.ReloadRuntime(...)" --metric Coupling
-  metrics-reader test --symbol "Rca.Loader.LoaderApp.OnStartup(...)" --metric RoslynClassCoupling --include-suppressed
-  ```
-
-- Для типов правила те же: `--symbol "Rca.Loader.Services.RuntimeManager"`.
-
-### Метрики и алиасы
-
-Метрики можно указывать как точные идентификаторы (`RoslynCyclomaticComplexity`, `RoslynClassCoupling`, и т. д.) либо через алиасы:
-
-| Алиас            | Идентификатор                     |
-|------------------|-----------------------------------|
-| `Complexity`     | `RoslynCyclomaticComplexity`      |
-| `Coupling`       | `RoslynClassCoupling`             |
-| `Maintainability`| `RoslynMaintainabilityIndex`      |
-| `Coverage`       | `AltCoverSequenceCoverage`        |
-| `Inheritance`    | `RoslynDepthOfInheritance`        |
-| …                | См. `MetricIdentifierResolver`.   |
-
-Все команды возвращают JSON в `camelCase`, поэтому их удобно парсить скриптами PowerShell (`ConvertFrom-Json`) или оркестраторами.
 
 ## Symbol Normalization
 

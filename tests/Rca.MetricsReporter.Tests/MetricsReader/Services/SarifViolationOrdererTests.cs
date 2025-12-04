@@ -33,7 +33,7 @@ internal sealed class SarifViolationOrdererTests
   {
     // Arrange
     var orderer = new SarifViolationOrderer();
-    var builder = new SarifViolationGroupBuilder("CA1506", "Test rule");
+    var builder = CreateBuilder("CA1506", "Test rule");
     builder.Add(5, new List<SarifRuleViolationDetail>(), CreateTestNode());
     var builders = new[] { builder };
 
@@ -51,13 +51,13 @@ internal sealed class SarifViolationOrdererTests
   {
     // Arrange
     var orderer = new SarifViolationOrderer();
-    var builder1 = new SarifViolationGroupBuilder("CA1506", "Rule 1");
+    var builder1 = CreateBuilder("CA1506", "Rule 1");
     builder1.Add(3, new List<SarifRuleViolationDetail>(), CreateTestNode());
 
-    var builder2 = new SarifViolationGroupBuilder("CA1502", "Rule 2");
+    var builder2 = CreateBuilder("CA1502", "Rule 2");
     builder2.Add(10, new List<SarifRuleViolationDetail>(), CreateTestNode());
 
-    var builder3 = new SarifViolationGroupBuilder("CA1505", "Rule 3");
+    var builder3 = CreateBuilder("CA1505", "Rule 3");
     builder3.Add(5, new List<SarifRuleViolationDetail>(), CreateTestNode());
 
     var builders = new[] { builder1, builder2, builder3 };
@@ -80,13 +80,13 @@ internal sealed class SarifViolationOrdererTests
   {
     // Arrange
     var orderer = new SarifViolationOrderer();
-    var builder1 = new SarifViolationGroupBuilder("CA1506", "Rule 1");
+    var builder1 = CreateBuilder("CA1506", "Rule 1");
     builder1.Add(5, new List<SarifRuleViolationDetail>(), CreateTestNode());
 
-    var builder2 = new SarifViolationGroupBuilder("CA1502", "Rule 2");
+    var builder2 = CreateBuilder("CA1502", "Rule 2");
     builder2.Add(5, new List<SarifRuleViolationDetail>(), CreateTestNode());
 
-    var builder3 = new SarifViolationGroupBuilder("CA1505", "Rule 3");
+    var builder3 = CreateBuilder("CA1505", "Rule 3");
     builder3.Add(5, new List<SarifRuleViolationDetail>(), CreateTestNode());
 
     var builders = new[] { builder1, builder2, builder3 };
@@ -106,13 +106,13 @@ internal sealed class SarifViolationOrdererTests
   {
     // Arrange
     var orderer = new SarifViolationOrderer();
-    var builder1 = new SarifViolationGroupBuilder("ca1506", "Rule 1");
+    var builder1 = CreateBuilder("ca1506", "Rule 1");
     builder1.Add(5, new List<SarifRuleViolationDetail>(), CreateTestNode());
 
-    var builder2 = new SarifViolationGroupBuilder("CA1502", "Rule 2");
+    var builder2 = CreateBuilder("CA1502", "Rule 2");
     builder2.Add(5, new List<SarifRuleViolationDetail>(), CreateTestNode());
 
-    var builder3 = new SarifViolationGroupBuilder("CA1505", "Rule 3");
+    var builder3 = CreateBuilder("CA1505", "Rule 3");
     builder3.Add(5, new List<SarifRuleViolationDetail>(), CreateTestNode());
 
     var builders = new[] { builder1, builder2, builder3 };
@@ -132,16 +132,16 @@ internal sealed class SarifViolationOrdererTests
   {
     // Arrange
     var orderer = new SarifViolationOrderer();
-    var builder1 = new SarifViolationGroupBuilder("CA1506", "Rule 1");
+    var builder1 = CreateBuilder("CA1506", "Rule 1");
     builder1.Add(10, new List<SarifRuleViolationDetail>(), CreateTestNode()); // Highest count
 
-    var builder2 = new SarifViolationGroupBuilder("CA1502", "Rule 2");
+    var builder2 = CreateBuilder("CA1502", "Rule 2");
     builder2.Add(5, new List<SarifRuleViolationDetail>(), CreateTestNode()); // Equal counts below
 
-    var builder3 = new SarifViolationGroupBuilder("CA1505", "Rule 3");
+    var builder3 = CreateBuilder("CA1505", "Rule 3");
     builder3.Add(5, new List<SarifRuleViolationDetail>(), CreateTestNode()); // Equal counts below
 
-    var builder4 = new SarifViolationGroupBuilder("CA1501", "Rule 4");
+    var builder4 = CreateBuilder("CA1501", "Rule 4");
     builder4.Add(3, new List<SarifRuleViolationDetail>(), CreateTestNode()); // Lowest count
 
     var builders = new[] { builder1, builder2, builder3, builder4 };
@@ -162,10 +162,10 @@ internal sealed class SarifViolationOrdererTests
   {
     // Arrange
     var orderer = new SarifViolationOrderer();
-    var builder1 = new SarifViolationGroupBuilder("CA1506", "Rule 1");
+    var builder1 = CreateBuilder("CA1506", "Rule 1");
     // No Add call, count stays 0
 
-    var builder2 = new SarifViolationGroupBuilder("CA1502", "Rule 2");
+    var builder2 = CreateBuilder("CA1502", "Rule 2");
     // No Add call, count stays 0
 
     var builders = new[] { builder1, builder2 };
@@ -186,7 +186,7 @@ internal sealed class SarifViolationOrdererTests
   {
     // Arrange
     var orderer = new SarifViolationOrderer();
-    var builder = new SarifViolationGroupBuilder("CA1506", null);
+    var builder = CreateBuilder("CA1506");
     builder.Add(5, new List<SarifRuleViolationDetail>(), CreateTestNode());
     var builders = new[] { builder };
 
@@ -198,6 +198,9 @@ internal sealed class SarifViolationOrdererTests
     result[0].ShortDescription.Should().BeNull();
   }
 
+  private static SarifViolationGroupBuilder CreateBuilder(string ruleId, string? description = null)
+    => new(ruleId, description, MetricIdentifier.SarifCaRuleViolations);
+
   private static TypeMetricsNode CreateTestNode()
   {
     return new TypeMetricsNode
@@ -208,4 +211,3 @@ internal sealed class SarifViolationOrdererTests
     };
   }
 }
-

@@ -250,6 +250,170 @@ internal sealed class ReadAnyCommandTests : MetricsReaderCommandTestsBase
     json.RootElement.GetProperty("namespace").GetString().Should().Be("Rca.Loader.Services");
     json.RootElement.GetProperty("message").GetString().Should().Contain("No violations were found");
   }
+
+  [Test]
+  public async Task ExecuteAsync_GroupByType_ReturnsGroupedEnvelope()
+  {
+    var report = MetricsReaderCommandTestData.CreateReport(new[]
+    {
+      MetricsReaderCommandTestData.CreateTypeNode("Rca.Loader.Services.Critical.TypeA", 40, ThresholdStatus.Error),
+      MetricsReaderCommandTestData.CreateTypeNode("Rca.Loader.Services.Critical.TypeB", 20, ThresholdStatus.Warning)
+    });
+
+    var reportPath = WriteReport(report);
+    var settings = CreateNamespaceSettings(
+      reportPath,
+      "Rca.Loader.Services",
+      showAll: true,
+      groupBy: MetricsReaderGroupByOption.Type);
+
+    var (exitCode, output) = await MetricsReaderCommandTestHarness
+      .RunNamespaceCommandAsync<ReadAnyCommand>(settings)
+      .ConfigureAwait(false);
+
+    exitCode.Should().Be(0);
+    using var json = JsonDocument.Parse(output);
+    var root = json.RootElement;
+    root.GetProperty("groupBy").GetString().Should().Be("type");
+    root.GetProperty("violationsGroupsCount").GetInt32().Should().Be(2);
+
+    var groups = root.GetProperty("violationsGroups").EnumerateArray().ToList();
+    groups.Should().HaveCount(2);
+
+    var first = groups[0];
+    first.GetProperty("type").GetString().Should().Be("Rca.Loader.Services.Critical.TypeA");
+    first.GetProperty("violationsCount").GetInt32().Should().Be(1);
+    first.GetProperty("violations")[0].GetProperty("symbolFqn").GetString()
+      .Should().Be("Rca.Loader.Services.Critical.TypeA");
+
+    var second = groups[1];
+    second.GetProperty("violationsCount").GetInt32().Should().Be(1);
+    second.GetProperty("type").GetString().Should().Be("Rca.Loader.Services.Critical.TypeB");
+  }
+
+  [Test]
+  public async Task ExecuteAsync_GroupByNamespaceWithoutAll_ReturnsSingleGroupAndCount()
+  {
+    var report = MetricsReaderCommandTestData.CreateReport(new[]
+    {
+      MetricsReaderCommandTestData.CreateTypeNode("Rca.Loader.Primary.TypeA", 40, ThresholdStatus.Error),
+      MetricsReaderCommandTestData.CreateTypeNode("Rca.Loader.Secondary.TypeB", 30, ThresholdStatus.Error)
+    });
+
+    var reportPath = WriteReport(report);
+    var settings = CreateNamespaceSettings(
+      reportPath,
+      "Rca.Loader",
+      groupBy: MetricsReaderGroupByOption.Namespace);
+
+    var (exitCode, output) = await MetricsReaderCommandTestHarness
+      .RunNamespaceCommandAsync<ReadAnyCommand>(settings)
+      .ConfigureAwait(false);
+
+    exitCode.Should().Be(0);
+    using var json = JsonDocument.Parse(output);
+    var root = json.RootElement;
+    root.GetProperty("groupBy").GetString().Should().Be("namespace");
+    root.GetProperty("violationsGroupsCount").GetInt32().Should().Be(2);
+    root.GetProperty("violationsGroups").GetArrayLength().Should().Be(1);
+    var group = root.GetProperty("violationsGroups")[0];
+    group.GetProperty("namespace").GetString().Should().Be("Rca.Loader.Primary");
+  }
+
+  [Test]
+  public void NamespaceSettings_GroupByRuleId_ReturnsValidationError()
+  {
+    var settings = new NamespaceMetricSettings
+    {
+      ReportPath = "build/Metrics/Report/MetricsReport.g.json",
+      Namespace = "Rca.Loader",
+      Metric = "Complexity",
+      GroupBy = MetricsReaderGroupByOption.RuleId
+    };
+
+    var validation = settings.Validate();
+    validation.Successful.Should().BeFalse();
+    validation.Message.Should().Contain("ruleId");
+  }
+
+  [Test]
+  public async Task ExecuteAsync_GroupByMethod_UsesMethodKeys()
+  {
+    var member = MetricsReaderCommandTestData.CreateMemberNode(
+      "Rca.Loader.Services.Type.Process(...)",
+      60,
+      ThresholdStatus.Error);
+    var type = MetricsReaderCommandTestData.CreateTypeNode(
+      "Rca.Loader.Services.Type",
+      15,
+      ThresholdStatus.Warning,
+      new[] { member });
+    var report = MetricsReaderCommandTestData.CreateReport(new[] { type });
+    var reportPath = WriteReport(report);
+    var settings = CreateNamespaceSettings(
+      reportPath,
+      "Rca.Loader.Services",
+      symbolKind: MetricsReaderSymbolKind.Member,
+      showAll: true,
+      groupBy: MetricsReaderGroupByOption.Method);
+
+    var (exitCode, output) = await MetricsReaderCommandTestHarness
+      .RunNamespaceCommandAsync<ReadAnyCommand>(settings)
+      .ConfigureAwait(false);
+
+    exitCode.Should().Be(0);
+    using var json = JsonDocument.Parse(output);
+    var group = json.RootElement.GetProperty("violationsGroups")[0];
+    group.GetProperty("method").GetString().Should().Be("Process");
+    group.GetProperty("violationsCount").GetInt32().Should().Be(1);
+  }
+
+  [Test]
+  public async Task ExecuteAsync_GroupByMetric_AggregatesAcrossSymbols()
+  {
+    var typeA = MetricsReaderCommandTestData.CreateTypeNode("Rca.Loader.Core.TypeA", 40, ThresholdStatus.Error);
+    var typeB = MetricsReaderCommandTestData.CreateTypeNode("Rca.Loader.Core.TypeB", 35, ThresholdStatus.Error);
+    var report = MetricsReaderCommandTestData.CreateReport(new[] { typeA, typeB });
+
+    var reportPath = WriteReport(report);
+    var settings = CreateNamespaceSettings(
+      reportPath,
+      "Rca.Loader.Core",
+      showAll: true,
+      groupBy: MetricsReaderGroupByOption.Metric);
+
+    var (exitCode, output) = await MetricsReaderCommandTestHarness
+      .RunNamespaceCommandAsync<ReadAnyCommand>(settings)
+      .ConfigureAwait(false);
+
+    exitCode.Should().Be(0);
+    using var json = JsonDocument.Parse(output);
+    var groups = json.RootElement.GetProperty("violationsGroups").EnumerateArray().ToList();
+    groups.Should().HaveCount(1);
+    groups[0].GetProperty("metric").GetString().Should().Be("RoslynCyclomaticComplexity");
+    groups[0].GetProperty("violationsCount").GetInt32().Should().Be(2);
+  }
+
+  [Test]
+  public async Task ExecuteAsync_GroupByType_NoViolations_PrintsMessage()
+  {
+    var report = MetricsReaderCommandTestData.CreateReport(new[]
+    {
+      MetricsReaderCommandTestData.CreateTypeNode("Rca.Loader.Services.Exists", 5, ThresholdStatus.Success)
+    });
+
+    var reportPath = WriteReport(report);
+    var settings = CreateNamespaceSettings(
+      reportPath,
+      "Rca.Other.Namespace",
+      groupBy: MetricsReaderGroupByOption.Type);
+
+    var (exitCode, output) = await MetricsReaderCommandTestHarness
+      .RunNamespaceCommandAsync<ReadAnyCommand>(settings)
+      .ConfigureAwait(false);
+
+    exitCode.Should().Be(0);
+    using var json = JsonDocument.Parse(output);
+    json.RootElement.GetProperty("message").GetString().Should().Contain("No violations were found");
+  }
 }
-
-

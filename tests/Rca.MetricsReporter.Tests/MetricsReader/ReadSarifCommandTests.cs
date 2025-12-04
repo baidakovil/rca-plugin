@@ -52,11 +52,13 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
     using var json = JsonDocument.Parse(output);
     var root = json.RootElement;
     root.GetProperty("metric").GetString().Should().Be("SarifIdeRuleViolations");
+    root.GetProperty("groupBy").GetString().Should().Be("ruleId");
+    root.GetProperty("violationsGroupsCount").GetInt32().Should().Be(2);
     var groups = root.GetProperty("violationsGroups").EnumerateArray().ToList();
     groups.Should().HaveCount(1);
     var group = groups[0];
     group.GetProperty("ruleId").GetString().Should().Be("IDE0060");
-    group.GetProperty("count").GetInt32().Should().Be(2);
+    group.GetProperty("violationsCount").GetInt32().Should().Be(2);
     group.GetProperty("shortDescription").GetString().Should().Be("Unused parameter");
   }
 
@@ -93,7 +95,7 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
     json.RootElement.GetProperty("metric").GetString().Should().Be("Any");
     var group = json.RootElement.GetProperty("violationsGroups")[0];
     group.GetProperty("ruleId").GetString().Should().Be("IDE0060");
-    group.GetProperty("count").GetInt32().Should().Be(2);
+    group.GetProperty("violationsCount").GetInt32().Should().Be(2);
   }
 
   [Test]
@@ -132,9 +134,9 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
     var groups = json.RootElement.GetProperty("violationsGroups").EnumerateArray().ToList();
     groups.Should().HaveCount(2);
     groups[0].GetProperty("ruleId").GetString().Should().Be("IDE0040");
-    groups[0].GetProperty("count").GetInt32().Should().Be(2);
+    groups[0].GetProperty("violationsCount").GetInt32().Should().Be(2);
     groups[1].GetProperty("ruleId").GetString().Should().Be("IDE0060");
-    groups[1].GetProperty("count").GetInt32().Should().Be(1);
+    groups[1].GetProperty("violationsCount").GetInt32().Should().Be(1);
   }
 
   [Test]
@@ -262,7 +264,7 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
     var groups = json.RootElement.GetProperty("violationsGroups").EnumerateArray().ToList();
     groups.Should().HaveCount(1);
     groups[0].GetProperty("ruleId").GetString().Should().Be("CA1506");
-    groups[0].GetProperty("count").GetInt32().Should().Be(2);
+    groups[0].GetProperty("violationsCount").GetInt32().Should().Be(2);
   }
 
   [Test]
@@ -567,6 +569,218 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
     violation.GetProperty("symbol").GetString().Should().Be("Rca.Loader.Services.Type.DoWork(...)");
   }
 
+  [Test]
+  public async Task ExecuteAsync_GroupByMethod_ReturnsMethodKeys()
+  {
+    var memberMetric = CreateSarifMetric(("CA1502", new[]
+    {
+      ("Avoid complexity", "file:///src/Consumer.cs", 42)
+    }));
+
+    var member = MetricsReaderCommandTestData.CreateMemberNode(
+      "Rca.Loader.Services.RuleConsumer.Process(...)",
+      new Dictionary<MetricIdentifier, MetricValue>
+      {
+        [MetricIdentifier.SarifCaRuleViolations] = memberMetric
+      });
+
+    var type = MetricsReaderCommandTestData.CreateTypeNode(
+      "Rca.Loader.Services.RuleConsumer",
+      new Dictionary<MetricIdentifier, MetricValue>(),
+      new[] { member });
+
+    var report = MetricsReaderCommandTestData.CreateReport(new[] { type });
+    var reportPath = WriteReport(report);
+    var settings = CreateSarifSettings(
+      reportPath,
+      "Rca.Loader.Services",
+      showAll: true,
+      groupBy: MetricsReaderGroupByOption.Method,
+      metricName: "SarifCaRuleViolations");
+
+    var (exitCode, output) = await MetricsReaderCommandTestHarness
+      .RunSarifCommandAsync<ReadSarifCommand>(settings)
+      .ConfigureAwait(false);
+
+    exitCode.Should().Be(0);
+    using var json = JsonDocument.Parse(output);
+    var group = json.RootElement.GetProperty("violationsGroups")[0];
+    group.GetProperty("method").GetString().Should().Be("Process");
+    group.GetProperty("violationsCount").GetInt32().Should().Be(1);
+  }
+
+  [Test]
+  public async Task ExecuteAsync_GroupByNamespaceWithRuleFilterWithoutMatches_PrintsMessage()
+  {
+    var type = MetricsReaderCommandTestData.CreateTypeNode(
+      "Rca.Loader.Services.RuleConsumer",
+      new Dictionary<MetricIdentifier, MetricValue>
+      {
+        [MetricIdentifier.SarifCaRuleViolations] = CreateSarifMetric(
+          ("CA1502", new[]
+          {
+            ("Avoid complexity", "file:///src/Consumer.cs", 10)
+          }))
+      });
+
+    var report = MetricsReaderCommandTestData.CreateReport(new[] { type });
+    var reportPath = WriteReport(report);
+    var settings = CreateSarifSettings(
+      reportPath,
+      "Rca.Loader.Services",
+      groupBy: MetricsReaderGroupByOption.Namespace,
+      metricName: "SarifCaRuleViolations",
+      ruleId: "CA9999");
+
+    var (exitCode, output) = await MetricsReaderCommandTestHarness
+      .RunSarifCommandAsync<ReadSarifCommand>(settings)
+      .ConfigureAwait(false);
+
+    exitCode.Should().Be(0);
+    using var json = JsonDocument.Parse(output);
+    json.RootElement.GetProperty("message").GetString().Should().Contain("rule 'CA9999'");
+  }
+
+  [Test]
+  public async Task ExecuteAsync_GroupByNamespace_UsesCountsWhenViolationsEmpty()
+  {
+    var breakdown = new Dictionary<string, SarifRuleBreakdownEntry>
+    {
+      ["CA1502"] = new SarifRuleBreakdownEntry
+      {
+        Count = 5,
+        Violations = new List<SarifRuleViolationDetail>()
+      }
+    };
+
+    var metrics = new Dictionary<MetricIdentifier, MetricValue>
+    {
+      [MetricIdentifier.SarifCaRuleViolations] = new MetricValue
+      {
+        Value = 5,
+        Status = ThresholdStatus.NotApplicable,
+        Breakdown = breakdown
+      }
+    };
+
+    var type = MetricsReaderCommandTestData.CreateTypeNode("Rca.Loader.Services.RuleConsumer", metrics);
+    var report = MetricsReaderCommandTestData.CreateReport(new[] { type });
+    var reportPath = WriteReport(report);
+    var settings = CreateSarifSettings(
+      reportPath,
+      "Rca.Loader.Services",
+      showAll: true,
+      groupBy: MetricsReaderGroupByOption.Namespace,
+      metricName: "SarifCaRuleViolations");
+
+    var (exitCode, output) = await MetricsReaderCommandTestHarness
+      .RunSarifCommandAsync<ReadSarifCommand>(settings)
+      .ConfigureAwait(false);
+
+    exitCode.Should().Be(0);
+    using var json = JsonDocument.Parse(output);
+    var group = json.RootElement.GetProperty("violationsGroups")[0];
+    group.GetProperty("namespace").GetString().Should().Be("Rca.Loader.Services");
+    group.GetProperty("violationsCount").GetInt32().Should().Be(5);
+    group.GetProperty("violations").GetArrayLength().Should().Be(0);
+  }
+
+  [Test]
+  public async Task ExecuteAsync_GroupByNamespace_ReturnsAggregatedGroups()
+  {
+    var typeA = MetricsReaderCommandTestData.CreateTypeNode(
+      "Rca.Loader.Core.TypeA",
+      new Dictionary<MetricIdentifier, MetricValue>
+      {
+        [MetricIdentifier.SarifCaRuleViolations] = CreateSarifMetric(
+          ("CA1502", new[]
+          {
+            ("Avoid complexity", "file:///src/Core/TypeA.cs", 10),
+            ("Avoid complexity", "file:///src/Core/TypeA.cs", 20)
+          }))
+      });
+
+    var typeB = MetricsReaderCommandTestData.CreateTypeNode(
+      "Rca.Loader.Infrastructure.TypeB",
+      new Dictionary<MetricIdentifier, MetricValue>
+      {
+        [MetricIdentifier.SarifCaRuleViolations] = CreateSarifMetric(
+          ("CA1506", new[]
+          {
+            ("Reduce coupling", "file:///src/Infra/TypeB.cs", 30)
+          }))
+      });
+
+    var report = MetricsReaderCommandTestData.CreateReport(new[] { typeA, typeB }, namespaceName: "Rca.Loader");
+    var reportPath = WriteReport(report);
+    var settings = CreateSarifSettings(
+      reportPath,
+      "Rca.Loader",
+      showAll: true,
+      groupBy: MetricsReaderGroupByOption.Namespace);
+
+    var (exitCode, output) = await MetricsReaderCommandTestHarness
+      .RunSarifCommandAsync<ReadSarifCommand>(settings)
+      .ConfigureAwait(false);
+
+    exitCode.Should().Be(0);
+    using var json = JsonDocument.Parse(output);
+    var root = json.RootElement;
+    root.GetProperty("groupBy").GetString().Should().Be("namespace");
+    root.GetProperty("violationsGroupsCount").GetInt32().Should().Be(2);
+    var groups = root.GetProperty("violationsGroups").EnumerateArray().ToList();
+    groups.Should().HaveCount(2);
+    groups[0].GetProperty("namespace").GetString().Should().Be("Rca.Loader.Core");
+    groups[0].GetProperty("violationsCount").GetInt32().Should().Be(2);
+    groups[1].GetProperty("namespace").GetString().Should().Be("Rca.Loader.Infrastructure");
+    groups[1].GetProperty("violationsCount").GetInt32().Should().Be(1);
+  }
+
+  [Test]
+  public async Task ExecuteAsync_GroupByMetric_ReturnsBucketsPerMetric()
+  {
+    var type = MetricsReaderCommandTestData.CreateTypeNode(
+      "Rca.Loader.Core.TypeA",
+      new Dictionary<MetricIdentifier, MetricValue>
+      {
+        [MetricIdentifier.SarifCaRuleViolations] = CreateSarifMetric(
+          ("CA1502", new[]
+          {
+            ("Avoid complexity", "file:///src/Core/TypeA.cs", 10)
+          })),
+        [MetricIdentifier.SarifIdeRuleViolations] = CreateSarifMetric(
+          ("IDE0060", new[]
+          {
+            ("Remove unused parameter", "file:///src/Core/TypeA.cs", 15),
+            ("Remove unused parameter", "file:///src/Core/TypeA.cs", 18)
+          }))
+      });
+
+    var report = MetricsReaderCommandTestData.CreateReport(new[] { type });
+    var reportPath = WriteReport(report);
+    var settings = CreateSarifSettings(
+      reportPath,
+      "Rca.Loader.Core",
+      showAll: true,
+      groupBy: MetricsReaderGroupByOption.Metric);
+
+    var (exitCode, output) = await MetricsReaderCommandTestHarness
+      .RunSarifCommandAsync<ReadSarifCommand>(settings)
+      .ConfigureAwait(false);
+
+    exitCode.Should().Be(0);
+    using var json = JsonDocument.Parse(output);
+    var root = json.RootElement;
+    root.GetProperty("groupBy").GetString().Should().Be("metric");
+    root.GetProperty("violationsGroupsCount").GetInt32().Should().Be(2);
+    var groups = root.GetProperty("violationsGroups").EnumerateArray().ToList();
+    groups.Should().HaveCount(2);
+    groups[0].GetProperty("metric").GetString().Should().Be("SarifIdeRuleViolations");
+    groups[0].GetProperty("violationsCount").GetInt32().Should().Be(2);
+    groups[1].GetProperty("metric").GetString().Should().Be("SarifCaRuleViolations");
+    groups[1].GetProperty("violationsCount").GetInt32().Should().Be(1);
+  }
+
   private static MetricValue CreateSarifMetric(params (string RuleId, (string Message, string Uri, int StartLine)[] Violations)[] entries)
   {
     var breakdown = new Dictionary<string, SarifRuleBreakdownEntry>();
@@ -597,5 +811,3 @@ internal sealed class ReadSarifCommandTests : MetricsReaderCommandTestsBase
     };
   }
 }
-
-

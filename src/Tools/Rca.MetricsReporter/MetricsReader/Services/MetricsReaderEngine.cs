@@ -183,8 +183,10 @@ internal sealed record SarifViolationAggregationResult(
 internal sealed record SarifViolationGroup(
   string RuleId,
   string? ShortDescription,
+  MetricIdentifier Metric,
   int Count,
-  IReadOnlyList<SarifViolationRecord> Violations);
+  IReadOnlyList<SarifViolationRecord> Violations,
+  IReadOnlyList<SarifSymbolContribution> SymbolContributions);
 
 internal sealed record SarifViolationRecord(
   string Symbol,
@@ -192,5 +194,3 @@ internal sealed record SarifViolationRecord(
   string? Uri,
   int? StartLine,
   int? EndLine);
-
-
