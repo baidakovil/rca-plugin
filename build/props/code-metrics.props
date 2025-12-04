@@ -58,7 +58,7 @@
          HTML-only mode must be enabled explicitly via /p:GenerateHtmlFromJson=true or an overriding props file. -->
     <GenerateHtmlFromJson Condition="'$(GenerateHtmlFromJson)' == ''">false</GenerateHtmlFromJson>
     <!-- Set to true to enable automatic baseline replacement when metrics-report.json differs from metrics-baseline.json -->
-    <ReplaceMetricsBaseline Condition="'$(ReplaceMetricsBaseline)' == ''">false</ReplaceMetricsBaseline>
+    <ReplaceMetricsBaseline Condition="'$(ReplaceMetricsBaseline)' == ''">true</ReplaceMetricsBaseline>
   </PropertyGroup>
 
   <ItemGroup>
@@ -92,4 +92,3 @@
     </AltCoverInstrumentedTestAssembly>
   </ItemGroup>
 </Project>
-

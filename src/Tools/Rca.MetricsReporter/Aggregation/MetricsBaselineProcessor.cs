@@ -87,3 +87,5 @@ internal static class MetricsBaselineProcessor
       Dictionary<string, SarifRuleBreakdownEntry>? Breakdown);
 }
 
+
+

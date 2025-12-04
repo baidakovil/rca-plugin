@@ -8,3 +8,5 @@ internal sealed record NoViolationsFoundDto(
   string SymbolKind,
   string Message);
 
+
+

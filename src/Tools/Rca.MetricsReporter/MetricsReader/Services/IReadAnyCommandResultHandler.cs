@@ -13,3 +13,5 @@ internal interface IReadAnyCommandResultHandler
   void HandleResults(IEnumerable<SymbolMetricSnapshot> snapshots, ReadAnyCommandResultParameters parameters);
 }
 
+
+

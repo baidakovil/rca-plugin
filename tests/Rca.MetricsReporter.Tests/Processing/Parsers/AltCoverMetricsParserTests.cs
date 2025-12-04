@@ -549,6 +549,243 @@ public sealed class AltCoverMetricsParserTests
 </CoverageSession>";
   }
 
+  [Test]
+  public async Task ParseAsync_MethodWithoutBranchPoints_ExcludesBranchCoverage()
+  {
+    // Arrange - method with empty BranchPoints element (no actual branches)
+    var xml = @"<?xml version=""1.0"" encoding=""utf-8""?>
+<CoverageSession>
+  <Modules>
+    <Module>
+      <ModuleName>Rca.Loader</ModuleName>
+      <Summary numSequencePoints=""4"" numBranchPoints=""0"" sequenceCoverage=""100"" branchCoverage=""0"" />
+      <Classes>
+        <Class>
+          <FullName>Rca.Loader.TestClass</FullName>
+          <Summary numSequencePoints=""4"" numBranchPoints=""0"" sequenceCoverage=""100"" branchCoverage=""0"" />
+          <Methods>
+            <Method sequenceCoverage=""100"" branchCoverage=""0"" cyclomaticComplexity=""1"" nPathComplexity=""0"">
+              <Name>System.Boolean Rca.Loader.TestClass::ShouldExcludeType(Rca.Loader.TypeEntry)</Name>
+              <BranchPoints />
+            </Method>
+          </Methods>
+        </Class>
+      </Classes>
+    </Module>
+  </Modules>
+</CoverageSession>";
+
+    var tempFile = CreateTempFile(xml);
+
+    try
+    {
+      // Act
+      var result = await parser.ParseAsync(tempFile, CancellationToken.None);
+
+      // Assert
+      var member = result.Elements.FirstOrDefault(e => e.Kind == CodeElementKind.Member);
+      member.Should().NotBeNull();
+      member!.Metrics.Should().ContainKey(MetricIdentifier.AltCoverSequenceCoverage);
+      member.Metrics.Should().NotContainKey(MetricIdentifier.AltCoverBranchCoverage, 
+        "Branch coverage should not be included when BranchPoints element is empty");
+    }
+    finally
+    {
+      File.Delete(tempFile);
+    }
+  }
+
+  [Test]
+  public async Task ParseAsync_MethodWithBranchPoints_IncludesBranchCoverage()
+  {
+    // Arrange - method with actual BranchPoint elements
+    var xml = @"<?xml version=""1.0"" encoding=""utf-8""?>
+<CoverageSession>
+  <Modules>
+    <Module>
+      <ModuleName>Rca.Loader</ModuleName>
+      <Summary numSequencePoints=""8"" numBranchPoints=""3"" sequenceCoverage=""50"" branchCoverage=""33.33"" />
+      <Classes>
+        <Class>
+          <FullName>Rca.Loader.TestClass</FullName>
+          <Summary numSequencePoints=""8"" numBranchPoints=""3"" sequenceCoverage=""50"" branchCoverage=""33.33"" />
+          <Methods>
+            <Method sequenceCoverage=""50"" branchCoverage=""33.33"" cyclomaticComplexity=""3"" nPathComplexity=""2"">
+              <Name>System.Boolean Rca.Loader.TestClass::ShouldExcludeAssembly(System.String)</Name>
+              <BranchPoints>
+                <BranchPoint vc=""0"" uspid=""1433"" ordinal=""0"" offset=""20"" sl=""65"" path=""0"" offsetend=""43"" />
+                <BranchPoint vc=""0"" uspid=""1434"" ordinal=""1"" offset=""20"" sl=""65"" path=""1"" offsetend=""43"" />
+              </BranchPoints>
+            </Method>
+          </Methods>
+        </Class>
+      </Classes>
+    </Module>
+  </Modules>
+</CoverageSession>";
+
+    var tempFile = CreateTempFile(xml);
+
+    try
+    {
+      // Act
+      var result = await parser.ParseAsync(tempFile, CancellationToken.None);
+
+      // Assert
+      var member = result.Elements.FirstOrDefault(e => e.Kind == CodeElementKind.Member);
+      member.Should().NotBeNull();
+      member!.Metrics.Should().ContainKey(MetricIdentifier.AltCoverSequenceCoverage);
+      member.Metrics.Should().ContainKey(MetricIdentifier.AltCoverBranchCoverage,
+        "Branch coverage should be included when BranchPoints element contains actual BranchPoint elements");
+      member.Metrics[MetricIdentifier.AltCoverBranchCoverage].Value.Should().Be(33.33m);
+    }
+    finally
+    {
+      File.Delete(tempFile);
+    }
+  }
+
+  [Test]
+  public async Task ParseAsync_ClassSummaryWithoutBranchPoints_ExcludesBranchCoverage()
+  {
+    // Arrange - class Summary with numBranchPoints=0
+    var xml = @"<?xml version=""1.0"" encoding=""utf-8""?>
+<CoverageSession>
+  <Modules>
+    <Module>
+      <ModuleName>Rca.Loader</ModuleName>
+      <Summary numSequencePoints=""4"" numBranchPoints=""0"" sequenceCoverage=""100"" branchCoverage=""0"" />
+      <Classes>
+        <Class>
+          <FullName>Rca.Loader.TestClass</FullName>
+          <Summary numSequencePoints=""4"" numBranchPoints=""0"" sequenceCoverage=""100"" branchCoverage=""0"" />
+          <Methods>
+            <Method sequenceCoverage=""100"" branchCoverage=""0"" cyclomaticComplexity=""1"" nPathComplexity=""0"">
+              <Name>System.Boolean Rca.Loader.TestClass::SimpleMethod()</Name>
+              <BranchPoints />
+            </Method>
+          </Methods>
+        </Class>
+      </Classes>
+    </Module>
+  </Modules>
+</CoverageSession>";
+
+    var tempFile = CreateTempFile(xml);
+
+    try
+    {
+      // Act
+      var result = await parser.ParseAsync(tempFile, CancellationToken.None);
+
+      // Assert
+      var type = result.Elements.FirstOrDefault(e => e.Kind == CodeElementKind.Type);
+      type.Should().NotBeNull();
+      type!.Metrics.Should().ContainKey(MetricIdentifier.AltCoverSequenceCoverage);
+      type.Metrics.Should().NotContainKey(MetricIdentifier.AltCoverBranchCoverage,
+        "Branch coverage should not be included in class Summary when numBranchPoints is 0");
+    }
+    finally
+    {
+      File.Delete(tempFile);
+    }
+  }
+
+  [Test]
+  public async Task ParseAsync_ClassSummaryWithBranchPoints_IncludesBranchCoverage()
+  {
+    // Arrange - class Summary with numBranchPoints > 0
+    var xml = @"<?xml version=""1.0"" encoding=""utf-8""?>
+<CoverageSession>
+  <Modules>
+    <Module>
+      <ModuleName>Rca.Loader</ModuleName>
+      <Summary numSequencePoints=""8"" numBranchPoints=""3"" sequenceCoverage=""50"" branchCoverage=""33.33"" />
+      <Classes>
+        <Class>
+          <FullName>Rca.Loader.TestClass</FullName>
+          <Summary numSequencePoints=""8"" numBranchPoints=""3"" sequenceCoverage=""50"" branchCoverage=""33.33"" />
+          <Methods>
+            <Method sequenceCoverage=""50"" branchCoverage=""33.33"" cyclomaticComplexity=""3"" nPathComplexity=""2"">
+              <Name>System.Boolean Rca.Loader.TestClass::MethodWithBranches()</Name>
+              <BranchPoints>
+                <BranchPoint vc=""0"" uspid=""1433"" ordinal=""0"" offset=""20"" sl=""65"" path=""0"" offsetend=""43"" />
+              </BranchPoints>
+            </Method>
+          </Methods>
+        </Class>
+      </Classes>
+    </Module>
+  </Modules>
+</CoverageSession>";
+
+    var tempFile = CreateTempFile(xml);
+
+    try
+    {
+      // Act
+      var result = await parser.ParseAsync(tempFile, CancellationToken.None);
+
+      // Assert
+      var type = result.Elements.FirstOrDefault(e => e.Kind == CodeElementKind.Type);
+      type.Should().NotBeNull();
+      type!.Metrics.Should().ContainKey(MetricIdentifier.AltCoverSequenceCoverage);
+      type.Metrics.Should().ContainKey(MetricIdentifier.AltCoverBranchCoverage,
+        "Branch coverage should be included in class Summary when numBranchPoints > 0");
+      type.Metrics[MetricIdentifier.AltCoverBranchCoverage].Value.Should().Be(33.33m);
+    }
+    finally
+    {
+      File.Delete(tempFile);
+    }
+  }
+
+  [Test]
+  public async Task ParseAsync_AssemblySummaryWithoutBranchPoints_ExcludesBranchCoverage()
+  {
+    // Arrange - assembly Summary with numBranchPoints=0
+    var xml = @"<?xml version=""1.0"" encoding=""utf-8""?>
+<CoverageSession>
+  <Modules>
+    <Module>
+      <ModuleName>Rca.Loader</ModuleName>
+      <Summary numSequencePoints=""4"" numBranchPoints=""0"" sequenceCoverage=""100"" branchCoverage=""0"" />
+      <Classes>
+        <Class>
+          <FullName>Rca.Loader.TestClass</FullName>
+          <Summary numSequencePoints=""4"" numBranchPoints=""0"" sequenceCoverage=""100"" branchCoverage=""0"" />
+          <Methods>
+            <Method sequenceCoverage=""100"" branchCoverage=""0"" cyclomaticComplexity=""1"" nPathComplexity=""0"">
+              <Name>System.Boolean Rca.Loader.TestClass::SimpleMethod()</Name>
+              <BranchPoints />
+            </Method>
+          </Methods>
+        </Class>
+      </Classes>
+    </Module>
+  </Modules>
+</CoverageSession>";
+
+    var tempFile = CreateTempFile(xml);
+
+    try
+    {
+      // Act
+      var result = await parser.ParseAsync(tempFile, CancellationToken.None);
+
+      // Assert
+      var assembly = result.Elements.FirstOrDefault(e => e.Kind == CodeElementKind.Assembly);
+      assembly.Should().NotBeNull();
+      assembly!.Metrics.Should().ContainKey(MetricIdentifier.AltCoverSequenceCoverage);
+      assembly.Metrics.Should().NotContainKey(MetricIdentifier.AltCoverBranchCoverage,
+        "Branch coverage should not be included in assembly Summary when numBranchPoints is 0");
+    }
+    finally
+    {
+      File.Delete(tempFile);
+    }
+  }
+
   private static string CreateTempFile(string content)
   {
     var tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".xml");
@@ -556,4 +793,3 @@ public sealed class AltCoverMetricsParserTests
     return tempFile;
   }
 }
-

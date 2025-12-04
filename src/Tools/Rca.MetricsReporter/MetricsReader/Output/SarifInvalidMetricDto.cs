@@ -6,3 +6,5 @@ internal sealed record SarifInvalidMetricDto(
   string Metric,
   string Message);
 
+
+

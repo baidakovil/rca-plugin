@@ -9,3 +9,5 @@ internal sealed record SarifNoViolationsFoundDto(
   string? RuleId,
   string Message);
 
+
+

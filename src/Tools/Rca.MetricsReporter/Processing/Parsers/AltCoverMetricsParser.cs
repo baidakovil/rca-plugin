@@ -241,7 +241,15 @@ public sealed class AltCoverMetricsParser : IMetricsSourceParser
     }
 
     AddMetric(target, MetricIdentifier.AltCoverSequenceCoverage, summary.Attribute("sequenceCoverage"));
-    AddMetric(target, MetricIdentifier.AltCoverBranchCoverage, summary.Attribute("branchCoverage"));
+    
+    // WHY: Branch coverage is only applicable when there are actual branch points to measure.
+    // If numBranchPoints is 0 or missing, branch coverage should not be included in the report
+    // to avoid misleading 0% coverage values for code that has no branches.
+    var numBranchPoints = summary.Attribute("numBranchPoints")?.GetDecimalValue();
+    if (numBranchPoints.HasValue && numBranchPoints.Value > 0)
+    {
+      AddMetric(target, MetricIdentifier.AltCoverBranchCoverage, summary.Attribute("branchCoverage"));
+    }
 
     AddMetric(target, MetricIdentifier.AltCoverCyclomaticComplexity, summary.Attribute("maxCyclomaticComplexity"));
     AddMetric(target, MetricIdentifier.AltCoverNPathComplexity, summary.Attribute("maxNPathComplexity"));
@@ -250,7 +258,18 @@ public sealed class AltCoverMetricsParser : IMetricsSourceParser
   private static void PopulateMethodMetrics(IDictionary<MetricIdentifier, MetricValue> target, XElement method)
   {
     AddMetric(target, MetricIdentifier.AltCoverSequenceCoverage, method.Attribute("sequenceCoverage"));
-    AddMetric(target, MetricIdentifier.AltCoverBranchCoverage, method.Attribute("branchCoverage"));
+    
+    // WHY: Branch coverage is only applicable when there are actual BranchPoint elements to measure.
+    // If the BranchPoints element is empty or missing, branch coverage should not be included
+    // to avoid misleading 0% coverage values for methods that have no branches (e.g., simple getters,
+    // methods with only linear code paths). This prevents false warnings when sequence coverage is 100%
+    // but branch coverage shows 0% due to the absence of branches rather than uncovered branches.
+    var branchPoints = method.Element(XmlNamespace + "BranchPoints");
+    if (branchPoints is not null && branchPoints.Elements(XmlNamespace + "BranchPoint").Any())
+    {
+      AddMetric(target, MetricIdentifier.AltCoverBranchCoverage, method.Attribute("branchCoverage"));
+    }
+    
     AddMetric(target, MetricIdentifier.AltCoverCyclomaticComplexity, method.Attribute("cyclomaticComplexity"));
     AddMetric(target, MetricIdentifier.AltCoverNPathComplexity, method.Attribute("nPathComplexity"));
   }
@@ -401,4 +420,3 @@ file static class XmlExtensions
         : null;
   }
 }
-
