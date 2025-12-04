@@ -73,9 +73,13 @@
 
 #### Специальные правила для ветвлений
 
-- **Нет branch points → нет метрики**:  
-  - На этапе парсинга мы не создаём `AltCoverBranchCoverage`, когда `numBranchPoints = 0` (для Summary) или `<BranchPoints />`/`<BranchPoints>` пуст (для методов).  
-  - Такой узел никогда не попадёт под порог `AltCoverBranchCoverage` и не создаст ложные `0%` с Warning/Error.
+- **Нет branch points → нет метрики на методе**:  
+  - На этапе парсинга мы не создаём `AltCoverBranchCoverage`, когда `numBranchPoints = 0` (для Summary метода) или `<BranchPoints />`/`<BranchPoints>` пуст (для методов).  
+  - Такой метод никогда не попадёт под порог `AltCoverBranchCoverage` и не создаст ложные `0%` с Warning/Error.
+- **Переопределение применимости на уровне типа**:  
+  - После мерджа всех документов выполняется дополнительный reconciliation‑проход по `TypeMetricsNode`.  
+  - Если у типа есть `AltCoverBranchCoverage`, но **ни один его член** не содержит `AltCoverBranchCoverage`, метрика у типа удаляется и трактуется как NotApplicable.  
+  - Если хотя бы один метод типа имеет branch‑метрику, типовая `AltCoverBranchCoverage` сохраняется и отражает агрегированное ветвление по реальным методам.
 - **Iterator/async state machine**:
   - Подробно описано в [`compiler-classes-handling.md`](./compiler-classes-handling.md).  
   - Кратко: покрытие `AltCoverSequenceCoverage` всегда переносится с state machine‑типа на пользовательский метод, чтобы async/iterator‑методы не выглядели «никогда не вызывавшимися».  

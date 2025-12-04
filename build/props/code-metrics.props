@@ -39,7 +39,7 @@
     <!-- Comma-separated or semicolon-separated list of member name patterns to exclude from metrics reports. -->
     <!-- Patterns support '*' and '?' wildcards. Plain names without wildcards are treated as exact matches. -->
     <!-- If not specified, default excluded methods are used (constructors and compiler-generated methods). -->
-    <ExcludedMemberNamesPatterns Condition="'$(ExcludedMemberNamesPatterns)' == ''">*b__*,&lt;Clone&gt;$,ctor,cctor,MoveNext,SetStateMachine,MoveNextAsync,DisposeAsync</ExcludedMemberNamesPatterns>
+    <ExcludedMemberNamesPatterns Condition="'$(ExcludedMemberNamesPatterns)' == ''">*b__*,&lt;Clone&gt;$,ctor,cctor,MoveNext,SetStateMachine,MoveNextAsync,DisposeAsync,Deconstruct,GetHashCode,ToString,Equals,PrintMembers,op_Equality,op_Inequality</ExcludedMemberNamesPatterns>
 
     <!-- Comma-separated or semicolon-separated list of type name patterns to exclude from metrics reports. -->
     <!-- Matching is performed against fully qualified type names using substring matching (case-sensitive). -->
@@ -52,7 +52,7 @@
     <ExcludedAssemblyNames Condition="'$(ExcludedAssemblyNames)' == ''">Tests,Contracts</ExcludedAssemblyNames>
 
     <!-- Toggle metrics dashboard generation -->
-    <GenerateMetricsDashboard Condition="'$(GenerateMetricsDashboard)' == ''">false</GenerateMetricsDashboard>
+    <GenerateMetricsDashboard Condition="'$(GenerateMetricsDashboard)' == ''">true</GenerateMetricsDashboard>
     <!-- When true, generates HTML from existing JSON without collecting metrics.
          Default is false so that full metrics collection (JSON + HTML) is the normal behavior.
          HTML-only mode must be enabled explicitly via /p:GenerateHtmlFromJson=true or an overriding props file. -->

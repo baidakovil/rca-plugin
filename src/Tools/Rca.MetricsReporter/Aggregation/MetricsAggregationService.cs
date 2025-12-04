@@ -350,6 +350,8 @@ public sealed class MetricsAggregationService
     void ReconcileIteratorStateMachineMetrics();
 
     void ReconcilePlainNestedTypeMetrics();
+
+    void ReconcileTypeBranchCoverageApplicability();
   }
 
   private sealed class AggregationDocumentProcessor : IAggregationDocumentProcessor
@@ -492,6 +494,45 @@ public sealed class MetricsAggregationService
             _state.Members,
             RemoveIteratorTypeFromHierarchy);
 
+    /// <summary>
+    /// Ensures that AltCover branch coverage on type nodes is only kept when at least one
+    /// member on that type has AltCover branch coverage. This prevents misleading 0% branch
+    /// coverage on helper or compiler-generated types whose methods do not expose meaningful
+    /// branch points in the report.
+    /// </summary>
+    public void ReconcileTypeBranchCoverageApplicability()
+    {
+      if (_state.Types.Count == 0)
+      {
+        return;
+      }
+
+      foreach (var typeEntry in _state.Types.Values)
+      {
+        var typeMetrics = typeEntry.Node.Metrics;
+        if (!typeMetrics.ContainsKey(MetricIdentifier.AltCoverBranchCoverage))
+        {
+          continue;
+        }
+
+        var hasMemberBranchCoverage = false;
+        foreach (var member in typeEntry.Node.Members)
+        {
+          if (member.Metrics.TryGetValue(MetricIdentifier.AltCoverBranchCoverage, out var branchMetric) &&
+              branchMetric.Value.HasValue)
+          {
+            hasMemberBranchCoverage = true;
+            break;
+          }
+        }
+
+        if (!hasMemberBranchCoverage)
+        {
+          typeMetrics.Remove(MetricIdentifier.AltCoverBranchCoverage);
+        }
+      }
+    }
+
     private void RemoveIteratorTypeFromHierarchy(string iteratorTypeKey, TypeEntry iteratorTypeEntry)
     {
       _state.Types.Remove(iteratorTypeKey);
@@ -566,6 +607,7 @@ public sealed class MetricsAggregationService
       ProcessDocuments(input);
       _reconciliationProcessor.ReconcileIteratorStateMachineMetrics();
       _reconciliationProcessor.ReconcilePlainNestedTypeMetrics();
+      _reconciliationProcessor.ReconcileTypeBranchCoverageApplicability();
       _baselineProcessor.ApplyBaselineAndThresholds(input.Baseline, input.Thresholds);
     }
 

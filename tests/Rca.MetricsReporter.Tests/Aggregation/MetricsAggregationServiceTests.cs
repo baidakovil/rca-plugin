@@ -1203,6 +1203,68 @@ public sealed class MetricsAggregationServiceTests
   }
 
   [Test]
+  public void BuildReport_TypeBranchCoverageIsRemoved_WhenNoMemberHasBranchCoverage()
+  {
+    // Arrange
+    const string assemblyName = "Sample.Assembly";
+    const string namespaceFqn = "Sample.Namespace";
+    const string typeFqn = "Sample.Namespace.HelperType";
+
+    var altCoverDocument = new ParsedMetricsDocument
+    {
+      Elements = new List<ParsedCodeElement>
+      {
+        new(CodeElementKind.Assembly, assemblyName, assemblyName),
+        new(CodeElementKind.Namespace, namespaceFqn, namespaceFqn)
+        {
+          ParentFullyQualifiedName = assemblyName
+        },
+        new(CodeElementKind.Type, "HelperType", typeFqn)
+        {
+          ParentFullyQualifiedName = namespaceFqn,
+          Metrics = new Dictionary<MetricIdentifier, MetricValue>
+          {
+            [MetricIdentifier.AltCoverSequenceCoverage] = Metric(100, "percent"),
+            [MetricIdentifier.AltCoverBranchCoverage] = Metric(0, "percent")
+          }
+        },
+        // Method without branch coverage metric (e.g. helper with linear code only)
+        new(CodeElementKind.Member, "DoWork", typeFqn + ".DoWork(...)")
+        {
+          ParentFullyQualifiedName = typeFqn,
+          Metrics = new Dictionary<MetricIdentifier, MetricValue>
+          {
+            [MetricIdentifier.AltCoverSequenceCoverage] = Metric(100, "percent")
+          }
+        }
+      }
+    };
+
+    var input = new MetricsAggregationInput
+    {
+      SolutionName = "SampleSolution",
+      AltCoverDocuments = new List<ParsedMetricsDocument> { altCoverDocument },
+      RoslynDocuments = new List<ParsedMetricsDocument>(),
+      SarifDocuments = new List<ParsedMetricsDocument>(),
+      Baseline = null,
+      Thresholds = thresholds,
+      Paths = new ReportPaths()
+    };
+
+    // Act
+    var report = service.BuildReport(input);
+
+    // Assert
+    var assembly = report.Solution.Assemblies.Should().ContainSingle(a => a.Name == assemblyName).Subject;
+    var @namespace = assembly.Namespaces.Should().ContainSingle(n => n.Name == namespaceFqn).Subject;
+    var type = @namespace.Types.Should().ContainSingle(t => t.FullyQualifiedName == typeFqn).Subject;
+
+    type.Metrics.Should().ContainKey(MetricIdentifier.AltCoverSequenceCoverage);
+    type.Metrics.Should().NotContainKey(MetricIdentifier.AltCoverBranchCoverage,
+      "Type-level AltCoverBranchCoverage should be removed when no member has branch coverage.");
+  }
+
+  [Test]
   public void BuildReport_IteratorType_NoMatchingMethod_KeepsTypeUnchanged()
   {
     // Arrange
