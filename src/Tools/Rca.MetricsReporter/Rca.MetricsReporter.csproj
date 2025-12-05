@@ -4,6 +4,9 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Disable timestamp file creation during metrics generation builds -->
+    <!-- This prevents Timestamp.txt from being created when building with GenerateMetricsDashboard=true -->
+    <RcaTimestampFile Condition="'$(GenerateMetricsDashboard)' == 'true'"></RcaTimestampFile>
   </PropertyGroup>
   <ItemGroup>
     <AdditionalFiles Include="CodeMetricsConfig.txt" />
@@ -14,4 +17,3 @@
     <PackageReference Include="Spectre.Console.Cli" Version="1.0.0-alpha.0.7" />
   </ItemGroup>
 </Project>
-

@@ -91,7 +91,11 @@ If tests should be written, proceed as follows:
 4. Ensure tests follow all requirements from `@tests/.cursor/rules/csharp-nunit.prompt.mdc`
 5. Verify that the solution build is successful: `dotnet build --no-incremental`. If the build fails, fix the code until the build is green.
 6. Check that there are no compiler warnings or errors in the modified files. If there are, fix them.
-7. Run tests to verify they pass: `dotnet test --no-build`. If tests fail, fix the tests or the code until all tests pass.
+7. Run tests to verify they pass. **IMPORTANT: Run tests only for the specific test project that corresponds to the project being worked on, not all tests.** For example, if working on `Rca.MetricsReporter`, run:
+   ```powershell
+   dotnet test .\tests\Rca.MetricsReporter.Tests\Rca.MetricsReporter.Tests.csproj --no-build
+   ```
+   Do not run general `dotnet test` command without specifying the test project. If tests fail, fix the tests or the code until all tests pass.
 
 ### 5. Verify coverage result
 
