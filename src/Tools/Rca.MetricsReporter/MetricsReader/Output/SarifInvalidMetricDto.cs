@@ -8,3 +8,4 @@ internal sealed record SarifInvalidMetricDto(
 
 
 
+

@@ -510,7 +510,7 @@ public sealed class MetricsAggregationService
       foreach (var typeEntry in _state.Types.Values)
       {
         var typeMetrics = typeEntry.Node.Metrics;
-        if (!typeMetrics.ContainsKey(MetricIdentifier.AltCoverBranchCoverage))
+        if (!typeMetrics.TryGetValue(MetricIdentifier.AltCoverBranchCoverage, out var typeBranchMetric))
         {
           continue;
         }
@@ -526,7 +526,12 @@ public sealed class MetricsAggregationService
           }
         }
 
-        if (!hasMemberBranchCoverage)
+        // WHY: We only remove type-level branch coverage when it represents a purely
+        // synthetic "0%" value with no corresponding member-level branch metrics.
+        // Non-zero branch coverage remains valuable even if individual methods do
+        // not expose branch metrics (for example, after nested-type reconciliation).
+        if (!hasMemberBranchCoverage &&
+            (!typeBranchMetric.Value.HasValue || typeBranchMetric.Value.Value == 0))
         {
           typeMetrics.Remove(MetricIdentifier.AltCoverBranchCoverage);
         }
