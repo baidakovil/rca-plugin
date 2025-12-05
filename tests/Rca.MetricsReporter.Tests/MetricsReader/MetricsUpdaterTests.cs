@@ -33,6 +33,7 @@ internal sealed class MetricsUpdaterTests
 
     updater.CapturedProjectPath.Should().Be(testsProjectPath);
     updater.CapturedArguments.Should().Be($"msbuild \"{testsProjectPath}\" /t:Build /p:GenerateMetricsDashboard=true /p:BuildProjectReferences=false /p:SkipMetricsReporterBuild=true /p:RoslynMetricsEnabled=true");
+    updater.CapturedCoverageArguments.Should().Be($"msbuild \"{testsProjectPath}\" /t:CollectCoverage");
   }
 
   private sealed class TestMetricsUpdater(string solutionPath) : MetricsUpdater(solutionPath)
@@ -41,11 +42,24 @@ internal sealed class MetricsUpdaterTests
 
     public string? CapturedArguments { get; private set; }
 
+    public string? CapturedCoverageArguments { get; private set; }
+
     protected override ProcessStartInfo CreateStartInfo(string projectPath, string solutionDirectory)
     {
       var startInfo = base.CreateStartInfo(projectPath, solutionDirectory);
       CapturedProjectPath = projectPath;
       CapturedArguments = startInfo.Arguments;
+
+      var shell = Environment.GetEnvironmentVariable("COMSPEC") ?? "cmd.exe";
+      startInfo.FileName = shell;
+      startInfo.Arguments = "/c exit 0";
+      return startInfo;
+    }
+
+    protected override ProcessStartInfo CreateCoverageStartInfo(string projectPath, string solutionDirectory)
+    {
+      var startInfo = base.CreateCoverageStartInfo(projectPath, solutionDirectory);
+      CapturedCoverageArguments = startInfo.Arguments;
 
       var shell = Environment.GetEnvironmentVariable("COMSPEC") ?? "cmd.exe";
       startInfo.FileName = shell;
@@ -80,5 +94,3 @@ internal sealed class MetricsUpdaterTests
     }
   }
 }
-
-

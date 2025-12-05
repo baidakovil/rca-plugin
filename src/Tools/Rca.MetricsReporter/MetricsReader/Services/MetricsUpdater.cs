@@ -9,8 +9,14 @@ using System.Threading;
 using System.Threading.Tasks;
 
 /// <summary>
-/// Runs the MSBuild target that refreshes MetricsReport.g.json.
+/// Runs the MSBuild targets that refresh MetricsReport.g.json and collect code coverage.
 /// </summary>
+/// <remarks>
+/// This updater runs two MSBuild targets in sequence:
+/// 1. Build target with GenerateMetricsDashboard=true to regenerate metrics report
+/// 2. CollectCoverage target to collect code coverage (only runs if AltCoverEnabled=true in code-metrics.props)
+/// The CollectCoverage target condition ensures it only runs when AltCoverEnabled is true, so no explicit check is needed here.
+/// </remarks>
 internal class MetricsUpdater : IMetricsUpdater
 {
   private readonly string _solutionPath;
@@ -18,15 +24,34 @@ internal class MetricsUpdater : IMetricsUpdater
   public MetricsUpdater(string solutionPath)
     => _solutionPath = solutionPath ?? throw new ArgumentNullException(nameof(solutionPath));
 
+  /// <summary>
+  /// Updates metrics by running GenerateMetricsDashboard target, then collects code coverage if enabled.
+  /// </summary>
+  /// <param name="cancellationToken">Cancellation token for async operations.</param>
+  /// <remarks>
+  /// Coverage collection is controlled by the AltCoverEnabled property in code-metrics.props.
+  /// The CollectCoverage target will automatically skip if AltCoverEnabled=false.
+  /// </remarks>
   public async Task UpdateAsync(CancellationToken cancellationToken)
   {
     var solutionDirectory = Path.GetDirectoryName(_solutionPath)
       ?? throw new InvalidOperationException($"Cannot resolve solution directory for '{_solutionPath}'.");
 
     var projectPath = ResolveMetricsProjectPath(solutionDirectory);
+
+    // Step 1: Generate metrics dashboard
     var startInfo = CreateStartInfo(projectPath, solutionDirectory);
+    await RunProcessAsync(startInfo, "Updating metrics via GenerateMetricsDashboard...", "Metrics updated successfully.", cancellationToken).ConfigureAwait(false);
+
+    // Step 2: Collect coverage (will automatically skip if AltCoverEnabled=false due to target condition)
+    var coverageStartInfo = CreateCoverageStartInfo(projectPath, solutionDirectory);
+    await RunProcessAsync(coverageStartInfo, "Collecting code coverage...", "Coverage collected successfully.", cancellationToken).ConfigureAwait(false);
+  }
+
+  private async Task RunProcessAsync(ProcessStartInfo startInfo, string startMessage, string successMessage, CancellationToken cancellationToken)
+  {
     using var process = new Process { StartInfo = startInfo };
-    Console.WriteLine("Updating metrics via GenerateMetricsDashboard...");
+    Console.WriteLine(startMessage);
     if (!process.Start())
     {
       throw new InvalidOperationException("Failed to start metrics update process.");
@@ -43,12 +68,44 @@ internal class MetricsUpdater : IMetricsUpdater
       throw new InvalidOperationException($"Metrics update failed with exit code {process.ExitCode}.");
     }
 
-    Console.WriteLine("Metrics updated successfully.");
+    Console.WriteLine(successMessage);
   }
 
+  /// <summary>
+  /// Creates ProcessStartInfo for running the GenerateMetricsDashboard target.
+  /// </summary>
+  /// <param name="projectPath">Path to the project file.</param>
+  /// <param name="solutionDirectory">Directory containing the solution.</param>
+  /// <returns>ProcessStartInfo configured for MSBuild.</returns>
   protected virtual ProcessStartInfo CreateStartInfo(string projectPath, string solutionDirectory)
   {
     var arguments = $"msbuild \"{projectPath}\" /t:Build /p:GenerateMetricsDashboard=true /p:BuildProjectReferences=false /p:SkipMetricsReporterBuild=true /p:RoslynMetricsEnabled=true";
+    return new ProcessStartInfo
+    {
+      FileName = "dotnet",
+      Arguments = arguments,
+      WorkingDirectory = solutionDirectory,
+      RedirectStandardOutput = true,
+      RedirectStandardError = true,
+      UseShellExecute = false,
+      CreateNoWindow = true
+    };
+  }
+
+  /// <summary>
+  /// Creates ProcessStartInfo for running the CollectCoverage target.
+  /// </summary>
+  /// <param name="projectPath">Path to the project file.</param>
+  /// <param name="solutionDirectory">Directory containing the solution.</param>
+  /// <returns>ProcessStartInfo configured for MSBuild.</returns>
+  /// <remarks>
+  /// The CollectCoverage target condition ensures it only runs when AltCoverEnabled=true (from code-metrics.props),
+  /// so this will automatically skip if coverage collection is disabled. We don't pass AltCoverEnabled as a property
+  /// to respect the value from code-metrics.props.
+  /// </remarks>
+  protected virtual ProcessStartInfo CreateCoverageStartInfo(string projectPath, string solutionDirectory)
+  {
+    var arguments = $"msbuild \"{projectPath}\" /t:CollectCoverage";
     return new ProcessStartInfo
     {
       FileName = "dotnet",
@@ -88,4 +145,3 @@ internal class MetricsUpdater : IMetricsUpdater
     }
   }
 }
-

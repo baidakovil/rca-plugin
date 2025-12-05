@@ -12,3 +12,4 @@ internal sealed record SarifNoViolationsFoundDto(
 
 
 
+

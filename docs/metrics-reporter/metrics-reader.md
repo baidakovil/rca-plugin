@@ -2,6 +2,12 @@
 
 `metrics-reader` — часть `Rca.MetricsReporter.exe`, построенная на `Spectre.Console.Cli`. Команды читают уже сгенерированный `MetricsReport.g.json`, поэтому перед запуском либо выполните `dotnet build --no-incremental`, либо передайте `--no-update`, если метрики уже актуальны. Команды регистрируются в `MetricsReaderCommandConfigurator` и работают поверх `MetricsReaderEngine`, который оперирует готовой моделью репорта.
 
+**Обновление метрик и сбор покрытия**: При запуске команд без флага `--no-update`, `metrics-reader` автоматически:
+1. Запускает таргет `GenerateMetricsDashboard` для обновления метрик
+2. Запускает таргет `CollectCoverage` для сбора покрытия (только если `AltCoverEnabled=true` в `code-metrics.props`)
+
+Сбор покрытия контролируется свойством `AltCoverEnabled` в `build/Props/code-metrics.props` — если оно установлено в `false`, сбор покрытия автоматически пропускается.
+
 ### Общие параметры
 
 | Параметр | По умолчанию | Описание |
@@ -9,7 +15,7 @@
 | `--report <PATH>` | `build/Metrics/Report/MetricsReport.g.json` | Источник данных. |
 | `--thresholds-file <PATH>` | Пороги из отчёта | Временная замена `ReportMetadata.thresholdsByLevel`; подхватывается `IMetricsThresholdProvider`. |
 | `--include-suppressed` | `false` | Показывает символы, отмеченные `SuppressMessage` (см. `SuppressedSymbolsService`). |
-| `--no-update` | `false` | Пропускает таргет `GenerateMetricsDashboard`. |
+| `--no-update` | `false` | Пропускает таргет `GenerateMetricsDashboard` и сбор покрытия (CollectCoverage). При использовании этого флага метрики и покрытие не обновляются, используется существующий `MetricsReport.g.json`. |
 | `--group-by <metric/namespace/type/method/ruleId>` | `None` для `readany`, `ruleId` для `readsarif` | Определяет структуру вывода (см. ниже). |
 
 ### Формат сгруппированного ответа
