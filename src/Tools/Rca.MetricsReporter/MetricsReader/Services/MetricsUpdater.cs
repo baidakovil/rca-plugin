@@ -39,19 +39,31 @@ internal class MetricsUpdater : IMetricsUpdater
     var solutionDirectory = Path.GetDirectoryName(_solutionPath)
       ?? throw new InvalidOperationException($"Cannot resolve solution directory for '{_solutionPath}'.");
 
-    var projectPath = ResolveMetricsProjectPath(solutionDirectory);
-
     // Step 1: Collect coverage (will automatically skip if AltCoverEnabled=false due to target condition)
     // This must run first to generate coverage files that will be included in the metrics dashboard
-    var coverageStartInfo = CreateCoverageStartInfo(projectPath, solutionDirectory);
+    // Use Rca.Runtime project for coverage collection as it contains the instrumentation targets
+    var runtimeProjectPath = ResolveRuntimeProjectPath(solutionDirectory);
+    var coverageStartInfo = CreateCoverageStartInfo(runtimeProjectPath, solutionDirectory);
     await RunProcessAsync(coverageStartInfo, "Collecting code coverage...", "Coverage collected successfully.", cancellationToken).ConfigureAwait(false);
 
     // Step 2: Generate metrics dashboard (includes coverage data from Step 1)
-    var startInfo = CreateStartInfo(projectPath, solutionDirectory);
+    // Use Rca.MetricsReporter.Tests project for metrics dashboard generation
+    var metricsProjectPath = ResolveMetricsProjectPath(solutionDirectory);
+    var startInfo = CreateStartInfo(metricsProjectPath, solutionDirectory);
     await RunProcessAsync(startInfo, "Updating metrics via GenerateMetricsDashboard...", "Metrics updated successfully.", cancellationToken).ConfigureAwait(false);
   }
 
-  private async Task RunProcessAsync(ProcessStartInfo startInfo, string startMessage, string successMessage, CancellationToken cancellationToken)
+  /// <summary>
+  /// Runs a process asynchronously and handles output redirection.
+  /// </summary>
+  /// <param name="startInfo">Process start information.</param>
+  /// <param name="startMessage">Message to write before starting the process.</param>
+  /// <param name="successMessage">Message to write after successful completion.</param>
+  /// <param name="cancellationToken">Cancellation token for async operations.</param>
+  /// <remarks>
+  /// This method is virtual to allow test classes to override it and suppress console output.
+  /// </remarks>
+  protected virtual async Task RunProcessAsync(ProcessStartInfo startInfo, string startMessage, string successMessage, CancellationToken cancellationToken)
   {
     using var process = new Process { StartInfo = startInfo };
     Console.WriteLine(startMessage);
@@ -98,17 +110,16 @@ internal class MetricsUpdater : IMetricsUpdater
   /// <summary>
   /// Creates ProcessStartInfo for running the CollectCoverage target.
   /// </summary>
-  /// <param name="projectPath">Path to the project file.</param>
+  /// <param name="projectPath">Path to the project file (should be Rca.Runtime.csproj).</param>
   /// <param name="solutionDirectory">Directory containing the solution.</param>
   /// <returns>ProcessStartInfo configured for MSBuild.</returns>
   /// <remarks>
-  /// The CollectCoverage target condition ensures it only runs when AltCoverEnabled=true (from code-metrics.props),
-  /// so this will automatically skip if coverage collection is disabled. We don't pass AltCoverEnabled as a property
-  /// to respect the value from code-metrics.props.
+  /// Uses Rca.Runtime project because it contains the instrumentation targets needed for coverage collection.
+  /// Explicitly passes AltCoverEnabled=true to ensure coverage collection runs even if not set in code-metrics.props.
   /// </remarks>
   protected virtual ProcessStartInfo CreateCoverageStartInfo(string projectPath, string solutionDirectory)
   {
-    var arguments = $"msbuild \"{projectPath}\" /t:CollectCoverage";
+    var arguments = $"msbuild \"{projectPath}\" /t:CollectCoverage /p:AltCoverEnabled=true";
     return new ProcessStartInfo
     {
       FileName = "dotnet",
@@ -133,7 +144,28 @@ internal class MetricsUpdater : IMetricsUpdater
     return projectPath;
   }
 
-  private static async Task PumpAsync(StreamReader reader, TextWriter destination, CancellationToken cancellationToken)
+  private static string ResolveRuntimeProjectPath(string solutionDirectory)
+  {
+    var projectPath = Directory.EnumerateFiles(solutionDirectory, "Rca.Runtime.csproj", SearchOption.AllDirectories)
+      .FirstOrDefault();
+    if (string.IsNullOrWhiteSpace(projectPath))
+    {
+      throw new InvalidOperationException("Rca.Runtime project file could not be located.");
+    }
+
+    return projectPath;
+  }
+
+  /// <summary>
+  /// Pumps data from a StreamReader to a TextWriter asynchronously.
+  /// </summary>
+  /// <param name="reader">The source reader.</param>
+  /// <param name="destination">The destination writer.</param>
+  /// <param name="cancellationToken">Cancellation token for async operations.</param>
+  /// <remarks>
+  /// This method is protected to allow test classes to access it when overriding RunProcessAsync.
+  /// </remarks>
+  protected static async Task PumpAsync(StreamReader reader, TextWriter destination, CancellationToken cancellationToken)
   {
     var buffer = new char[4096];
     while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested)

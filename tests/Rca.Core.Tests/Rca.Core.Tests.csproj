@@ -10,7 +10,8 @@
     <ProjectReference Include="../../src/Rca.Core/Rca.Core.csproj" />
     <ProjectReference Include="../../src/Rca.Contracts/Rca.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Rca.Loader\Rca.Loader.csproj" />
-    <ProjectReference Include="..\..\src\Rca.Runtime\Rca.Runtime.csproj" />
+    <!-- Rca.Runtime reference removed to prevent AltCover instrumentation during test builds -->
+    <!-- Tests only check metadata in already-deployed Rca.Runtime.dll, which doesn't require a project reference -->
   </ItemGroup>
   <!-- Use Update to avoid duplicate PackageReference items if defined in imported props/targets -->
   <ItemGroup>
