@@ -586,7 +586,7 @@ public sealed class AltCoverMetricsParserTests
       var member = result.Elements.FirstOrDefault(e => e.Kind == CodeElementKind.Member);
       member.Should().NotBeNull();
       member!.Metrics.Should().ContainKey(MetricIdentifier.AltCoverSequenceCoverage);
-      member.Metrics.Should().NotContainKey(MetricIdentifier.AltCoverBranchCoverage, 
+      member.Metrics.Should().NotContainKey(MetricIdentifier.AltCoverBranchCoverage,
         "Branch coverage should not be included when BranchPoints element is empty");
     }
     finally
