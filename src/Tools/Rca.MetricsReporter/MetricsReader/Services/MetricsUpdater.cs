@@ -13,9 +13,10 @@ using System.Threading.Tasks;
 /// </summary>
 /// <remarks>
 /// This updater runs two MSBuild targets in sequence:
-/// 1. Build target with GenerateMetricsDashboard=true to regenerate metrics report
-/// 2. CollectCoverage target to collect code coverage (only runs if AltCoverEnabled=true in code-metrics.props)
+/// 1. CollectCoverage target to collect code coverage (only runs if AltCoverEnabled=true in code-metrics.props)
+/// 2. Build target with GenerateMetricsDashboard=true to regenerate metrics report, which includes coverage data from step 1
 /// The CollectCoverage target condition ensures it only runs when AltCoverEnabled is true, so no explicit check is needed here.
+/// Coverage must be collected first because GenerateMetricsDashboard includes coverage files in the consolidated metrics report.
 /// </remarks>
 internal class MetricsUpdater : IMetricsUpdater
 {
@@ -25,12 +26,13 @@ internal class MetricsUpdater : IMetricsUpdater
     => _solutionPath = solutionPath ?? throw new ArgumentNullException(nameof(solutionPath));
 
   /// <summary>
-  /// Updates metrics by running GenerateMetricsDashboard target, then collects code coverage if enabled.
+  /// Updates metrics by collecting code coverage (if enabled), then running GenerateMetricsDashboard target.
   /// </summary>
   /// <param name="cancellationToken">Cancellation token for async operations.</param>
   /// <remarks>
   /// Coverage collection is controlled by the AltCoverEnabled property in code-metrics.props.
   /// The CollectCoverage target will automatically skip if AltCoverEnabled=false.
+  /// Coverage is collected first because GenerateMetricsDashboard includes coverage data in the consolidated metrics report.
   /// </remarks>
   public async Task UpdateAsync(CancellationToken cancellationToken)
   {
@@ -39,13 +41,14 @@ internal class MetricsUpdater : IMetricsUpdater
 
     var projectPath = ResolveMetricsProjectPath(solutionDirectory);
 
-    // Step 1: Generate metrics dashboard
-    var startInfo = CreateStartInfo(projectPath, solutionDirectory);
-    await RunProcessAsync(startInfo, "Updating metrics via GenerateMetricsDashboard...", "Metrics updated successfully.", cancellationToken).ConfigureAwait(false);
-
-    // Step 2: Collect coverage (will automatically skip if AltCoverEnabled=false due to target condition)
+    // Step 1: Collect coverage (will automatically skip if AltCoverEnabled=false due to target condition)
+    // This must run first to generate coverage files that will be included in the metrics dashboard
     var coverageStartInfo = CreateCoverageStartInfo(projectPath, solutionDirectory);
     await RunProcessAsync(coverageStartInfo, "Collecting code coverage...", "Coverage collected successfully.", cancellationToken).ConfigureAwait(false);
+
+    // Step 2: Generate metrics dashboard (includes coverage data from Step 1)
+    var startInfo = CreateStartInfo(projectPath, solutionDirectory);
+    await RunProcessAsync(startInfo, "Updating metrics via GenerateMetricsDashboard...", "Metrics updated successfully.", cancellationToken).ConfigureAwait(false);
   }
 
   private async Task RunProcessAsync(ProcessStartInfo startInfo, string startMessage, string successMessage, CancellationToken cancellationToken)
