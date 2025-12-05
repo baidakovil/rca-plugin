@@ -136,13 +136,21 @@
     <Delete Files="$(AltCoverSignalFile)" Condition="'$(AltCoverSignalFile)' != '' and Exists('$(AltCoverSignalFile)')" />
     <Delete Files="$(MrCoverageSignalFile)" Condition="'$(MrCoverageEnabled)' == 'true' and '$(MrCoverageSignalFile)' != '' and Exists('$(MrCoverageSignalFile)')" />
 
+    <!-- Configure verbosity flags based on CoverageVerbose property -->
+    <PropertyGroup>
+      <AltCoverQuietFlags Condition="'$(CoverageVerbose)' != 'true'">-q</AltCoverQuietFlags>
+      <AltCoverQuietFlags Condition="'$(CoverageVerbose)' == 'true'"></AltCoverQuietFlags>
+      <ReportGeneratorVerbosity Condition="'$(CoverageVerbose)' != 'true'">Error</ReportGeneratorVerbosity>
+      <ReportGeneratorVerbosity Condition="'$(CoverageVerbose)' == 'true'">Info</ReportGeneratorVerbosity>
+    </PropertyGroup>
+
     <!-- Run AltCover runner to collect coverage -->
-    <Message Text="Collecting coverage from $(AltCoverRecorderDir)..." Importance="High" />    
-    <Exec Command='altcover runner --collect --recorderDirectory="$(AltCoverRecorderDir)" --outputFile="$(RcaCoverageStorageFile)"'
+    <Message Text="Collecting coverage from $(AltCoverRecorderDir)..." Importance="High" Condition="'$(CoverageVerbose)' == 'true'" />
+    <Exec Command='altcover runner --collect --recorderDirectory="$(AltCoverRecorderDir)" --outputFile="$(RcaCoverageStorageFile)" $(AltCoverQuietFlags)'
           ContinueOnError="false" />
     
-    <Message Text="Collecting coverage for MetricsReporter from $(MrCoverageRecorderDir)..." Importance="High" Condition="'$(MrCoverageEnabled)' == 'true'" />
-    <Exec Command='altcover runner --collect --recorderDirectory="$(MrCoverageRecorderDir)" --outputFile="$(MrCoverageStorageFile)"'
+    <Message Text="Collecting coverage for MetricsReporter from $(MrCoverageRecorderDir)..." Importance="High" Condition="'$(CoverageVerbose)' == 'true' and '$(MrCoverageEnabled)' == 'true'" />
+    <Exec Command='altcover runner --collect --recorderDirectory="$(MrCoverageRecorderDir)" --outputFile="$(MrCoverageStorageFile)" $(AltCoverQuietFlags)'
           ContinueOnError="false"
           Condition="'$(MrCoverageEnabled)' == 'true'" />
     
@@ -155,8 +163,8 @@
       <MrCoverageFileCreated Condition="'$(MrCoverageEnabled)' == 'true' and !Exists('$(MrCoverageStorageFile)')">false</MrCoverageFileCreated>
     </PropertyGroup>
     
-    <Message Text="Coverage collected successfully to $(RcaCoverageStorageFile)" Importance="High" Condition="'$(CoverageFileCreated)' == 'true'" />
-    <Message Text="MetricsReporter coverage collected successfully to $(MrCoverageStorageFile)" Importance="High" Condition="'$(MrCoverageEnabled)' == 'true' and '$(MrCoverageFileCreated)' == 'true'" />
+    <Message Text="Coverage collected successfully to $(RcaCoverageStorageFile)" Importance="High" Condition="'$(CoverageVerbose)' == 'true' and '$(CoverageFileCreated)' == 'true'" />
+    <Message Text="MetricsReporter coverage collected successfully to $(MrCoverageStorageFile)" Importance="High" Condition="'$(CoverageVerbose)' == 'true' and '$(MrCoverageEnabled)' == 'true' and '$(MrCoverageFileCreated)' == 'true'" />
     
     <!-- Recreate signal file to enable continuous coverage collection -->
     <WriteLinesToFile File="$(AltCoverSignalFile)" Lines="" Overwrite="true" Condition="'$(CoverageFileCreated)' == 'true'" />
@@ -170,11 +178,11 @@
       <CombinedCoverageReportFiles Condition="'$(MrCoverageEnabled)' == 'true' and '$(MrCoverageFileCreated)' == 'true'">$(RcaCoverageStorageFile);$(MrCoverageStorageFile)</CombinedCoverageReportFiles>
     </PropertyGroup>
     <MakeDir Directories="$(CoverageHtmlDir)" Condition="'$(CoverageFileCreated)' == 'true'" />
-    <Message Text="Generating HTML coverage report in $(CoverageHtmlDir)..." Importance="High" Condition="'$(CoverageFileCreated)' == 'true'" />
-    <Exec Command='reportgenerator -reports:"$(CombinedCoverageReportFiles)" -targetdir:"$(CoverageHtmlDir)" -reporttypes:Html'
+    <Message Text="Generating HTML coverage report in $(CoverageHtmlDir)..." Importance="High" Condition="'$(CoverageVerbose)' == 'true' and '$(CoverageFileCreated)' == 'true'" />
+    <Exec Command='reportgenerator -reports:"$(CombinedCoverageReportFiles)" -targetdir:"$(CoverageHtmlDir)" -reporttypes:Html -verbosity:$(ReportGeneratorVerbosity)'
           ContinueOnError="false"
           Condition="'$(CoverageFileCreated)' == 'true'" />
-    <Message Text="HTML coverage report generated in $(CoverageHtmlDir)" Importance="High" Condition="'$(CoverageFileCreated)' == 'true'" />
+    <Message Text="HTML coverage report generated in $(CoverageHtmlDir)" Importance="High" Condition="'$(CoverageVerbose)' == 'true' and '$(CoverageFileCreated)' == 'true'" />
   </Target>
 
   <!-- Generate consolidated metrics dashboard after all metrics are collected -->
@@ -248,5 +256,3 @@
           Condition="Exists('$(MetricsReporterExe)')" />
   </Target>
 </Project>
-
-

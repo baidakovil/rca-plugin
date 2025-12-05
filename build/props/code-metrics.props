@@ -6,11 +6,13 @@
     <!-- Set to true to enable Roslyn metrics collection -->
     <RoslynMetricsEnabled Condition="'$(RoslynMetricsEnabled)' == ''">false</RoslynMetricsEnabled>
     <!-- Set to true to enable Sarif metrics collection -->
-    <SarifMetricsEnabled Condition="'$(SarifMetricsEnabled)' == ''">true</SarifMetricsEnabled>
+    <SarifMetricsEnabled Condition="'$(SarifMetricsEnabled)' == ''">false</SarifMetricsEnabled>
     <!-- Set to true to enable AltCover metrics collection -->
     <AltCoverEnabled Condition="'$(AltCoverEnabled)' == ''">true</AltCoverEnabled>
     <!-- Set to true to enable MetricsReporter-specific AltCover workflow (requires AltCoverEnabled as well) -->
     <MrCoverageEnabled Condition="'$(MrCoverageEnabled)' == ''">true</MrCoverageEnabled>
+    <!-- Set to true to show verbose messages during coverage collection (altcover and reportgenerator output) -->
+    <CoverageVerbose Condition="'$(CoverageVerbose)' == ''">false</CoverageVerbose>
     <!-- Assembly filter for AltCover instrumentation (which assemblies to instrument) -->
     <RcaCoverageAssemblyFilter Condition="'$(RcaCoverageAssemblyFilter)' == ''">Rca.*.dll</RcaCoverageAssemblyFilter>
     <!-- Assembly filter for MetricsReporter instrumentation.
