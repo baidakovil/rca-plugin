@@ -101,7 +101,7 @@ msbuild rca-plugin.sln -bl:build.binlog
 Build Performance Summary:
   Rca.Loader: 2.5s
   Rca.Runtime: 3.2s
-  Rca.MetricsReporter.Tests: 1.8s
+  Rca.Core.Tests: 1.8s
 Total: 7.5s
 ```
 

@@ -4,8 +4,7 @@
 
   <!-- Ensure a single shared timestamp per real build with sticky TTL and force override -->
   <!-- Must run before CoreCompile so Source Generator can access RcaHotReloadTimestamp -->
-  <!-- Exclude Rca.MetricsReporter.Tests as it doesn't deploy DLLs to Revit and shouldn't modify timestamp -->
-  <Target Name="EnsureRcaTimestamp" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' != 'Rca.SourceHashGenerator' and '$(MSBuildProjectName)' != 'Rca.MetricsReporter.Tests'" BeforeTargets="PrepareForBuild">
+  <Target Name="EnsureRcaTimestamp" Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' != 'Rca.SourceHashGenerator'" BeforeTargets="PrepareForBuild">
     <!-- Create deploy root where timestamp and marker files will be stored (guarded if props are missing) -->
     <MakeDir Condition="'$(RcaRevitAddinsDir)' != ''" Directories="$(RcaRevitAddinsDir)" />
     <Exec Condition="'$(RcaTimestampFile)' != ''" Command='powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(SolutionDir)build\Scripts\EnsureRcaStamp.ps1&quot; -TargetPath &quot;$(RcaTimestampFile)&quot; -TtlSec &quot;$(RcaStickyStampSeconds)&quot; -ForceStr &quot;$(RcaForceNewStamp)&quot; -TimestampPattern &quot;$(RcaTimestampPattern)&quot;' />
