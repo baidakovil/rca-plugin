@@ -126,13 +126,13 @@ Metrics Reporter — консольное приложение .NET 8, объе�
 - DTO сериализуются через `System.Text.Json` (camelCase).
 
 ### Автоматическая генерация через MSBuild
-- В `build/Targets/code-metrics.targets` добавлен таргет `GenerateMetricsDashboard`, который срабатывает после сборки проекта `Rca.MetricsReporter.Tests`.
+- В `build/Targets/code-metrics.targets` добавлен таргет `GenerateMetricsDashboard`, который срабатывает после сборки якорного проекта (`MetricsTargetsAnchorProject`, по умолчанию `Rca.Core.Tests`).
 - Таргет:
   - Строит набор проектов и тестов, чтобы гарантировать актуальные метрики (через `MSBuild` по списку зависимостей).
   - Формирует аргументы (AltCover, все Roslyn XML, SARIF, baseline, пороги) с правильными разделителями.
-  - Вызывает `Rca.MetricsReporter.exe` из `src/Tools/Rca.MetricsReporter/bin/<Configuration>/net8.0`.
+  - Вызывает dotnet‑tool `metricsreporter` (NuGet `MetricsReporter.Tool`) из tool‑manifest: `dotnet tool run metricsreporter`.
   - Создает каталог отчётов (`$(MetricsDir)\Report`) и записывает JSON/HTML + лог.
-- Благодаря этому, после стандартного `dotnet build --no-incremental` в `build/Metrics/Report` автоматически появляются `MetricsReport.g.json` и `MetricsReport.html`.
+- После запуска `dotnet msbuild rca-plugin.sln /t:Build /p:GenerateMetricsDashboard=true /p:RoslynMetricsEnabled=true /p:SarifMetricsEnabled=true /p:MetricsTargetsAnchorProject=Rca.Core.Tests` появляются `build/Metrics/Report/MetricsReport.g.json` и `build/Metrics/Report/MetricsReport.html`, а также вспомогательные файлы (`build/MetricsTemp/RcaSuppressedSymbols.g.json`).
 - **Настройка анализа suppressed-символов**: В `build/Props/code-metrics.props` можно настроить:
   - `AnalyzeSuppressedSymbols` — включить/выключить анализ (по умолчанию `true`).
   - `SourceCodeFolders` — список папок с исходниками через запятую (по умолчанию `"src,src/Tools,tests"`). Пути указываются относительно корня решения (`SolutionDir`). Анализатор сканирует только файлы в этих папках и определяет имя сборки по первому сегменту пути после соответствующей папки.

@@ -30,7 +30,7 @@ Using the `metrics-reader readany` command, get the first "problematic" class th
 Example request to `metrics-reader` with the required options:
 
 ```powershell
-.\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe metrics-reader readany --namespace <given_namespace> --metric AltCoverBranchCoverage --group-by type
+dotnet tool run metricsreporter metrics-reader readany --namespace <given_namespace> --metric AltCoverBranchCoverage --group-by type
 ```
 
 If you receive a message that no suitable symbols are found (instead of an object with fields `metric`, `namespace`, `symbolKind`, `groupBy`, `violationsGroupsCount`, `violationsGroups`), this means there are no problematic classes: complete the task.
@@ -91,10 +91,7 @@ If tests should be written, proceed as follows:
 4. Ensure tests follow all requirements from `@tests/.cursor/rules/csharp-nunit.prompt.mdc`
 5. Verify that the solution build is successful: `dotnet build --no-incremental`. If the build fails, fix the code until the build is green.
 6. Check that there are no compiler warnings or errors in the modified files. If there are, fix them.
-7. Run tests to verify they pass. **IMPORTANT: Run tests only for the specific test project that corresponds to the project being worked on, not all tests.** For example, if working on `Rca.MetricsReporter`, run:
-   ```powershell
-   dotnet test .\tests\Rca.MetricsReporter.Tests\Rca.MetricsReporter.Tests.csproj --no-build
-   ```
+7. Run tests to verify they pass. **IMPORTANT: Run tests only for the specific test project that corresponds to the project being worked on, not all tests.**
    Do not run general `dotnet test` command without specifying the test project. If tests fail, fix the tests or the code until all tests pass.
 
 ### 5. Verify coverage result
@@ -106,7 +103,7 @@ Using the `metrics-reader readany` command with `--all` flag, verify that all me
 Example request to `metrics-reader` with the required options:
 
 ```powershell
-.\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe metrics-reader readany --namespace <class_full_name> --metric AltCoverBranchCoverage --all
+dotnet tool run metricsreporter metrics-reader readany --namespace <class_full_name> --metric AltCoverBranchCoverage --all
 ```
 
 Where `<class_full_name>` is the fully qualified name of the class (type) for which tests were written.

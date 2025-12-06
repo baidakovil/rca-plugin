@@ -9,8 +9,8 @@
     <SarifMetricsEnabled Condition="'$(SarifMetricsEnabled)' == ''">true</SarifMetricsEnabled>
     <!-- Set to true to enable AltCover metrics collection -->
     <AltCoverEnabled Condition="'$(AltCoverEnabled)' == ''">true</AltCoverEnabled>
-    <!-- Set to true to enable MetricsReporter-specific AltCover workflow (requires AltCoverEnabled as well) -->
-    <MrCoverageEnabled Condition="'$(MrCoverageEnabled)' == ''">true</MrCoverageEnabled>
+    <!-- MetricsReporter AltCover workflow is disabled when consuming the external NuGet tool -->
+    <MrCoverageEnabled Condition="'$(MrCoverageEnabled)' == ''">false</MrCoverageEnabled>
     <!-- Set to true to show verbose messages during coverage collection (altcover and reportgenerator output) -->
     <CoverageVerbose Condition="'$(CoverageVerbose)' == ''">false</CoverageVerbose>
     <!-- Assembly filter for AltCover instrumentation (which assemblies to instrument) -->
@@ -55,6 +55,8 @@
 
     <!-- Toggle metrics dashboard generation -->
     <GenerateMetricsDashboard Condition="'$(GenerateMetricsDashboard)' == ''">false</GenerateMetricsDashboard>
+    <!-- Anchor project that triggers metrics collection/generation targets -->
+    <MetricsTargetsAnchorProject Condition="'$(MetricsTargetsAnchorProject)' == ''">Rca.Core.Tests</MetricsTargetsAnchorProject>
     <!-- When true, generates HTML from existing JSON without collecting metrics.
          Default is false so that full metrics collection (JSON + HTML) is the normal behavior.
          HTML-only mode must be enabled explicitly via /p:GenerateHtmlFromJson=true or an overriding props file. -->

@@ -20,7 +20,7 @@
 
   <!-- Generate Roslyn metrics for entire solution (runs once for Rca.MetricsReporter.Tests after all projects are built) -->
   <!-- Metrics.exe will use already built projects or build them if needed -->
-  <Target Name="GenerateSolutionMetrics" AfterTargets="Build" Condition="'$(DesignTimeBuild)' != 'true' and '$(RoslynMetricsEnabled)' == 'true' and '$(MSBuildProjectName)' == 'Rca.MetricsReporter.Tests'">
+  <Target Name="GenerateSolutionMetrics" AfterTargets="Build" Condition="'$(DesignTimeBuild)' != 'true' and '$(RoslynMetricsEnabled)' == 'true' and '$(MSBuildProjectName)' == '$(MetricsTargetsAnchorProject)'">
     <MakeDir Directories="$(RoslynOutputDir)" />
     <Exec Command='"$(RoslynMetricsToolExe)" /solution:"$(RoslynMetricsSolutionPath)" /out:"$(RoslynSolutionMetricsOutputFile)" /quiet'
           WorkingDirectory="$(RoslynMetricsToolDir)"
@@ -195,13 +195,13 @@
   <Target Name="GenerateMetricsDashboard"
           AfterTargets="Build"
           DependsOnTargets="GenerateSolutionMetrics"
-          Condition="'$(GenerateMetricsDashboard)' == 'true' and '$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.MetricsReporter.Tests'">
+          Condition="'$(GenerateMetricsDashboard)' == 'true' and '$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == '$(MetricsTargetsAnchorProject)'">
 
     <!-- When GenerateHtmlFromJson=true, skip metric collection and generate HTML from existing JSON -->
     <PropertyGroup Condition="'$(GenerateHtmlFromJson)' == 'true'">
       <InputJsonFile Condition="'$(InputJsonFile)' == ''">$(MetricsReportJson)</InputJsonFile>
       <OutputHtmlFile Condition="'$(OutputHtmlFile)' == ''">$(MetricsReportHtml)</OutputHtmlFile>
-      <MetricsReporterCommand>"$(MetricsReporterExe)" --input-json "$(InputJsonFile)" --output-html "$(OutputHtmlFile)"</MetricsReporterCommand>
+      <MetricsReporterCommand>$(MetricsReporterExe) --input-json "$(InputJsonFile)" --output-html "$(OutputHtmlFile)"</MetricsReporterCommand>
     </PropertyGroup>
 
     <!-- Error if input JSON file not found when using GenerateHtmlFromJson mode -->
@@ -243,16 +243,15 @@
       <MetricsReporterReplaceBaselineArg Condition="'$(ReplaceMetricsBaseline)' == 'true'"> --replace-baseline</MetricsReporterReplaceBaselineArg>
       <MetricsReporterBaselineStoragePathArg Condition="'$(ReplaceMetricsBaseline)' == 'true' and '$(MetricsReportStoragePath)' != ''"> --baseline-storage-path "$(MetricsReportStoragePath)"</MetricsReporterBaselineStoragePathArg>
       <MetricsReporterCoverageHtmlDirArg Condition="Exists('$(CoverageHtmlDir)')"> --coverage-html-dir "$(CoverageHtmlDir)"</MetricsReporterCoverageHtmlDirArg>
-      <MetricsReporterCommand>"$(MetricsReporterExe)" --solution-name "$(MetricsSolutionName)" --metrics-dir "$(RcaMetricsDir)"$(MetricsReporterAltCoverArgs)$(MetricsReporterRoslynArgs)$(MetricsReporterSarifArgs)$(MetricsReporterBaselineArg)$(MetricsReporterBaselineRefArg) --output-json "$(MetricsReportJson)" --output-html "$(MetricsReportHtml)"$(MetricsReporterThresholdArg)$(MetricsReporterExcludedMembersArg)$(MetricsReporterExcludedAssembliesArg)$(MetricsReporterExcludedTypesArg)$(MetricsReporterSuppressedSymbolsArg)$(MetricsReporterReplaceBaselineArg)$(MetricsReporterBaselineStoragePathArg)$(MetricsReporterCoverageHtmlDirArg)</MetricsReporterCommand>
+      <MetricsReporterCommand>$(MetricsReporterExe) --solution-name "$(MetricsSolutionName)" --metrics-dir "$(RcaMetricsDir)"$(MetricsReporterAltCoverArgs)$(MetricsReporterRoslynArgs)$(MetricsReporterSarifArgs)$(MetricsReporterBaselineArg)$(MetricsReporterBaselineRefArg) --output-json "$(MetricsReportJson)" --output-html "$(MetricsReportHtml)"$(MetricsReporterThresholdArg)$(MetricsReporterExcludedMembersArg)$(MetricsReporterExcludedAssembliesArg)$(MetricsReporterExcludedTypesArg)$(MetricsReporterSuppressedSymbolsArg)$(MetricsReporterReplaceBaselineArg)$(MetricsReporterBaselineStoragePathArg)$(MetricsReporterCoverageHtmlDirArg)</MetricsReporterCommand>
     </PropertyGroup>
 
-    <Message Text="Generating HTML report from existing JSON: $(InputJsonFile)" Importance="High" Condition="'$(GenerateHtmlFromJson)' == 'true' and Exists('$(MetricsReporterExe)')" />
-    <Message Text="Generating metrics dashboard (Rca.MetricsReporter.Tests)." Importance="High" Condition="'$(GenerateHtmlFromJson)' != 'true' and Exists('$(MetricsReporterExe)')" />
-    <Message Text="MetricsReporterCommand: $(MetricsReporterCommand)" Importance="Low" Condition="Exists('$(MetricsReporterExe)') and '$(ShowMetricsReporterCommand)' == 'true'" />
+    <Message Text="Generating HTML report from existing JSON: $(InputJsonFile)" Importance="High" Condition="'$(GenerateHtmlFromJson)' == 'true'" />
+    <Message Text="Generating metrics dashboard via metricsreporter tool." Importance="High" Condition="'$(GenerateHtmlFromJson)' != 'true'" />
+    <Message Text="MetricsReporterCommand: $(MetricsReporterCommand)" Importance="Low" Condition="'$(ShowMetricsReporterCommand)' == 'true'" />
     <MakeDir Directories="$(MetricsReportDir)" />
     <Exec Command="$(MetricsReporterCommand)"
           WorkingDirectory="$(SolutionDir)"
-          IgnoreExitCode="false"
-          Condition="Exists('$(MetricsReporterExe)')" />
+          IgnoreExitCode="false" />
   </Target>
 </Project>

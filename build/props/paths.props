@@ -27,9 +27,7 @@
     <CodeMetricsConfigFile Condition="'$(CodeMetricsConfigFile)' == ''">$(CodeMetricsRulesDir)\CodeMetricsConfig.txt</CodeMetricsConfigFile>
     <MetricsReportHtml Condition="'$(MetricsReportHtml)' == ''">$(MetricsReportDir)\MetricsReport.html</MetricsReportHtml>
     <MetricsSolutionName Condition="'$(MetricsSolutionName)' == ''">rca-plugin</MetricsSolutionName>
-    <MetricsReporterProject Condition="'$(MetricsReporterProject)' == ''">$(SolutionDir)src\Tools\Rca.MetricsReporter\Rca.MetricsReporter.csproj</MetricsReporterProject>
-    <MetricsReporterExe Condition="'$(MetricsReporterExe)' == ''">$(SolutionDir)src\Tools\Rca.MetricsReporter\bin\$(Configuration)\net8.0\Rca.MetricsReporter.exe</MetricsReporterExe>
-    <MetricsReporterOutputDir Condition="'$(MetricsReporterOutputDir)' == ''">$(SolutionDir)src\Tools\Rca.MetricsReporter\bin\$(Configuration)\net8.0</MetricsReporterOutputDir>
+    <MetricsReporterExe Condition="'$(MetricsReporterExe)' == ''">dotnet tool run metricsreporter</MetricsReporterExe>
     <MetricsBaselineReference Condition="'$(MetricsBaselineReference)' == ''"></MetricsBaselineReference>
     <!-- Directory where old baseline files are archived with timestamps -->
     <MetricsReportStoragePath Condition="'$(MetricsReportStoragePath)' == ''">$(LOCALAPPDATA)\RCA\Metrics</MetricsReportStoragePath>
@@ -86,9 +84,7 @@
     <CompilerVisibleProperty Include="MetricsThresholdsPath" />
     <CompilerVisibleProperty Include="MetricsReportHtml" />
     <CompilerVisibleProperty Include="MetricsSolutionName" />
-    <CompilerVisibleProperty Include="MetricsReporterProject" />
     <CompilerVisibleProperty Include="MetricsReporterExe" />
-    <CompilerVisibleProperty Include="MetricsReporterOutputDir" />
     <CompilerVisibleProperty Include="MetricsBaselineReference" />
     <CompilerVisibleProperty Include="MetricsReportStoragePath" />
     <!-- Coverage/AltCover paths visible to code that consumes coverage data -->

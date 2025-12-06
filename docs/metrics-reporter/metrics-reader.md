@@ -1,10 +1,9 @@
 ## Metrics Reader CLI
-
-`metrics-reader` — часть `Rca.MetricsReporter.exe`, построенная на `Spectre.Console.Cli`. Команды читают уже сгенерированный `MetricsReport.g.json`, поэтому перед запуском либо выполните `dotnet build --no-incremental`, либо передайте `--no-update`, если метрики уже актуальны. Команды регистрируются в `MetricsReaderCommandConfigurator` и работают поверх `MetricsReaderEngine`, который оперирует готовой моделью репорта.
+`metrics-reader` — часть dotnet‑tool `MetricsReporter.Tool` (упакованный `metricsreporter`), построенная на `Spectre.Console.Cli`. Команды читают уже сгенерированный `MetricsReport.g.json`, поэтому перед запуском либо выполните MSBuild-пайплайн генерации (см. ниже), либо передайте `--no-update`, если метрики уже актуальны. Команды регистрируются в `MetricsReaderCommandConfigurator` и работают поверх `MetricsReaderEngine`, который оперирует готовой моделью репорта.
 
 **Обновление метрик и сбор покрытия**: При запуске команд без флага `--no-update`, `metrics-reader` автоматически:
-1. Запускает таргет `GenerateMetricsDashboard` для обновления метрик
-2. Запускает таргет `CollectCoverage` для сбора покрытия (только если `AltCoverEnabled=true` в `code-metrics.props`)
+1. Запускает таргет `GenerateMetricsDashboard` (якорный проект задаётся свойством `MetricsTargetsAnchorProject`, по умолчанию `Rca.Core.Tests`) для обновления метрик и baseline.
+2. Запускает таргет `CollectCoverage` для сбора покрытия (только если `AltCoverEnabled=true` в `code-metrics.props`; `MrCoverageEnabled` по умолчанию `false` при использовании внешнего NuGet).
 
 Сбор покрытия контролируется свойством `AltCoverEnabled` в `build/Props/code-metrics.props` — если оно установлено в `false`, сбор покрытия автоматически пропускается.
 

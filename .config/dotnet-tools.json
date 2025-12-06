@@ -6,7 +6,15 @@
       "version": "5.2.5",
       "commands": [
         "reportgenerator"
-      ]
+      ],
+      "rollForward": false
+    },
+    "metricsreporter.tool": {
+      "version": "0.1.1",
+      "commands": [
+        "metricsreporter"
+      ],
+      "rollForward": false
     }
   }
 }

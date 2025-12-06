@@ -19,7 +19,7 @@ Always precede this step with `dotnet build --no-incremental` so the SARIF metri
 Run `metrics-reader readsarif` for the target namespace to retrieve the first SARIF group. Because `--metric` defaults to `Any`, you do not need to specify it unless you want to focus on a single SARIF metric:
 
 ```powershell
-.\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe metrics-reader readsarif --namespace <target_namespace>
+dotnet tool run metricsreporter metrics-reader readsarif --namespace <target_namespace>
 ```
 
 If the command responds with a human-readable message (instead of an object containing `ruleId`, `shortDescription`, `count`, and `violations`), there are no violations left in this namespace—stop.
@@ -64,7 +64,7 @@ After you have addressed all violations in a group, rerun `metrics-reader readsa
 **IMPORTANT: Never use `--no-update` flag when calling `metrics-reader` commands.** The `--no-update` flag skips metric generation and returns stale data. Always let `metrics-reader` update metrics automatically to ensure you work with current values.
 
 ```powershell
-.\src\Tools\Rca.MetricsReporter\bin\Debug\net8.0\Rca.MetricsReporter.exe metrics-reader readsarif --namespace <target_namespace> --ruleid <ruleId>
+dotnet tool run metricsreporter metrics-reader readsarif --namespace <target_namespace> --ruleid <ruleId>
 ```
 
 If the command reports no violations, move on to the next group (return to step 1). If violations persist, go back to step 2. Two refactoring passes are allowed per group; after the second unsuccessful attempt, document the remaining issues with a suppression (English justification) and proceed.
