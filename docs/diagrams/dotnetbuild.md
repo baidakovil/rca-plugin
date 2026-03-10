@@ -1,3 +1,4 @@
+```mermaid
 flowchart TD
   A["Start: dotnet build"] --> B1["Load Directory.Build.targets"]
   B1 --> B2["Set SolutionDir<br/>- Ensures $(SolutionDir) is always available<br/>Condition: If '$(SolutionDir)' == '' then set to $(MSBuildThisFileDirectory)"]
@@ -18,3 +19,4 @@ flowchart TD
   I --> L["Build Complete"]
   K --> L
   H -- Other --> L
+```

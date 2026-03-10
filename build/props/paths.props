@@ -13,25 +13,8 @@
     <RcaLogRoot Condition="'$(RcaLogRoot)' == ''">$(LOCALAPPDATA)\RCA\Logs</RcaLogRoot>
     <!-- Directory for code metrics output files -->
     <RcaMetricsDir Condition="'$(RcaMetricsDir)' == ''">$(SolutionDir)build\Metrics</RcaMetricsDir>
-    <!-- Temporary directory for generated metrics artefacts such as baselines, coverage storage and suppressed symbols. -->
+    <!-- Temporary directory for generated metrics artifacts such as coverage storage files. -->
     <MetricsTempDir Condition="'$(MetricsTempDir)' == ''">$(SolutionDir)build\MetricsTemp</MetricsTempDir>
-    <!-- Aggregated metrics report artifacts -->
-    <MetricsReportDir Condition="'$(MetricsReportDir)' == ''">$(RcaMetricsDir)\Report</MetricsReportDir>
-    <MetricsReportJson Condition="'$(MetricsReportJson)' == ''">$(MetricsReportDir)\MetricsReport.g.json</MetricsReportJson>
-    <!-- Static metrics rules configuration -->
-    <CodeMetricsRulesDir Condition="'$(CodeMetricsRulesDir)' == ''">$(SolutionDir)build\MetricsRules</CodeMetricsRulesDir>
-    <MetricsBaselineJson Condition="'$(MetricsBaselineJson)' == ''">$(MetricsTempDir)\MetricsBaseline.g.json</MetricsBaselineJson>
-    <MetricsThresholdsPath Condition="'$(MetricsThresholdsPath)' == ''">$(CodeMetricsRulesDir)\MetricsReporterThresholds.json</MetricsThresholdsPath>
-    <!-- Path to JSON file with suppressed symbol metadata produced by Roslyn analysis. -->
-    <RcaSuppressedSymbolsJson Condition="'$(RcaSuppressedSymbolsJson)' == ''">$(MetricsTempDir)\RcaSuppressedSymbols.g.json</RcaSuppressedSymbolsJson>
-    <CodeMetricsConfigFile Condition="'$(CodeMetricsConfigFile)' == ''">$(CodeMetricsRulesDir)\CodeMetricsConfig.txt</CodeMetricsConfigFile>
-    <MetricsReportHtml Condition="'$(MetricsReportHtml)' == ''">$(MetricsReportDir)\MetricsReport.html</MetricsReportHtml>
-    <MetricsSolutionName Condition="'$(MetricsSolutionName)' == ''">rca-plugin</MetricsSolutionName>
-    <MetricsReporterExe Condition="'$(MetricsReporterExe)' == ''">dotnet tool run metricsreporter</MetricsReporterExe>
-    <MetricsBaselineReference Condition="'$(MetricsBaselineReference)' == ''"></MetricsBaselineReference>
-    <!-- Directory where old baseline files are archived with timestamps -->
-    <MetricsReportStoragePath Condition="'$(MetricsReportStoragePath)' == ''">$(LOCALAPPDATA)\RCA\Metrics</MetricsReportStoragePath>
-
     <!-- Roslyn Code Metrics -->
     <!-- Directory for Roslyn output files -->
     <RoslynOutputDir Condition="'$(RoslynOutputDir)' == ''">$(RcaMetricsDir)\Roslyn</RoslynOutputDir>
@@ -75,15 +58,6 @@
     <CompilerVisibleProperty Include="RcaTestDeployRoot" />
     <CompilerVisibleProperty Include="RcaLogRoot" />
     <CompilerVisibleProperty Include="RcaMetricsDir" />
-    <CompilerVisibleProperty Include="MetricsReportDir" />
-    <CompilerVisibleProperty Include="MetricsReportJson" />
-    <CompilerVisibleProperty Include="MetricsBaselineJson" />
-    <CompilerVisibleProperty Include="MetricsThresholdsPath" />
-    <CompilerVisibleProperty Include="MetricsReportHtml" />
-    <CompilerVisibleProperty Include="MetricsSolutionName" />
-    <CompilerVisibleProperty Include="MetricsReporterExe" />
-    <CompilerVisibleProperty Include="MetricsBaselineReference" />
-    <CompilerVisibleProperty Include="MetricsReportStoragePath" />
     <!-- Coverage/AltCover paths visible to code that consumes coverage data -->
     <CompilerVisibleProperty Include="RcaCoverageOutputFile" />
     <CompilerVisibleProperty Include="RcaCoverageStorageFile" />
@@ -97,6 +71,5 @@
     <CompilerVisibleProperty Include="SourceHashExe" />
     <CompilerVisibleProperty Include="RcaLoaderRoots" />
     <CompilerVisibleProperty Include="RcaRuntimeRoots" />
-    <CompilerVisibleProperty Include="RcaSuppressedSymbolsJson" />
   </ItemGroup>
 </Project>

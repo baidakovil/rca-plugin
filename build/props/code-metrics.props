@@ -5,10 +5,10 @@
     <!-- Enable/disable code metrics collection -->
     <!-- Set to true to enable Roslyn metrics collection -->
     <RoslynMetricsEnabled Condition="'$(RoslynMetricsEnabled)' == ''">false</RoslynMetricsEnabled>
-    <!-- Set to true to enable Sarif metrics collection -->
-    <SarifMetricsEnabled Condition="'$(SarifMetricsEnabled)' == ''">true</SarifMetricsEnabled>
-    <!-- Set to true to enable AltCover metrics collection -->
-    <AltCoverEnabled Condition="'$(AltCoverEnabled)' == ''">true</AltCoverEnabled>
+    <!-- Set to true to enable Sarif metrics collection (on-demand). -->
+    <SarifMetricsEnabled Condition="'$(SarifMetricsEnabled)' == ''">false</SarifMetricsEnabled>
+    <!-- Set to true to enable AltCover metrics collection (on-demand). -->
+    <AltCoverEnabled Condition="'$(AltCoverEnabled)' == ''">false</AltCoverEnabled>
     <!-- Set to true to show verbose messages during coverage collection (altcover and reportgenerator output) -->
     <CoverageVerbose Condition="'$(CoverageVerbose)' == ''">false</CoverageVerbose>
     <!-- Assembly filter for AltCover instrumentation (which assemblies to instrument) -->
@@ -18,14 +18,6 @@
     <!-- Target framework of test projects whose binaries participate in AltCover-based metrics -->
     <RcaTestTargetFramework Condition="'$(RcaTestTargetFramework)' == ''">net8.0-windows</RcaTestTargetFramework>
 
-    <!-- When true, MetricsReporter will analyze suppressed symbols via Roslyn before aggregating metrics. -->
-    <!-- The analysis is scoped to the solution source tree and respects ExcludedAssemblyNames. -->
-    <AnalyzeSuppressedSymbols Condition="'$(AnalyzeSuppressedSymbols)' == ''">true</AnalyzeSuppressedSymbols>
-    <!-- Comma- or semicolon-separated list of source code folder paths (relative to SolutionDir) -->
-    <!-- that contain assembly projects to scan for suppressed symbols. -->
-    <!-- Example: "src,src/Tools,tests" or "Source,Tests" -->
-    <SourceCodeFolders Condition="'$(SourceCodeFolders)' == ''">src,src/Tools,tests</SourceCodeFolders>
-
     <!-- Directory that contains Metrics.exe and its dependencies. -->
     <RoslynMetricsToolDir Condition="'$(RoslynMetricsToolDir)' == ''">$(SolutionDir)build\Resources\Metrics\win-arm64</RoslynMetricsToolDir>
     <!-- Full path to Metrics.exe. -->
@@ -33,41 +25,14 @@
     <!-- Solution file path and output file for metrics calculation -->
     <RoslynMetricsSolutionPath Condition="'$(RoslynMetricsSolutionPath)' == ''">$(SolutionDir)rca-plugin.sln</RoslynMetricsSolutionPath>
 
-    <!-- Comma-separated or semicolon-separated list of member name patterns to exclude from metrics reports. -->
-    <!-- Patterns support '*' and '?' wildcards. Plain names without wildcards are treated as exact matches. -->
-    <!-- If not specified, default excluded methods are used (constructors and compiler-generated methods). -->
-    <ExcludedMemberNamesPatterns Condition="'$(ExcludedMemberNamesPatterns)' == ''">*b__*,&lt;Clone&gt;$,ctor,cctor,MoveNext,SetStateMachine,MoveNextAsync,DisposeAsync,Deconstruct,GetHashCode,ToString,Equals,PrintMembers,op_Equality,op_Inequality</ExcludedMemberNamesPatterns>
-
-    <!-- Comma-separated or semicolon-separated list of type name patterns to exclude from metrics reports. -->
-    <!-- Matching is performed against fully qualified type names using substring matching (case-sensitive). -->
-    <!-- Example: to exclude all compiler-generated types like Namespace.Type+&lt;&gt;c, specify patterns such as "&lt;&gt;c,__DisplayClass". -->
-    <ExcludedTypeNamePatterns Condition="'$(ExcludedTypeNamePatterns)' == ''">&lt;&gt;c,&lt;-ctor&gt;</ExcludedTypeNamePatterns>
-
-    <!-- Comma-separated or semicolon-separated list of assembly name patterns to exclude from metrics reports. -->
-    <!-- Assembly names containing any of the specified patterns will be excluded. Matching is case-insensitive. -->
-    <!-- Examples: "Tests,Test" or "Tests;Test". If not specified, no assemblies are excluded. -->
-    <ExcludedAssemblyNames Condition="'$(ExcludedAssemblyNames)' == ''">Tests,Contracts</ExcludedAssemblyNames>
-
-    <!-- Toggle metrics dashboard generation -->
-    <GenerateMetricsDashboard Condition="'$(GenerateMetricsDashboard)' == ''">false</GenerateMetricsDashboard>
     <!-- Anchor project that triggers metrics collection/generation targets -->
     <MetricsTargetsAnchorProject Condition="'$(MetricsTargetsAnchorProject)' == ''">Rca.Core.Tests</MetricsTargetsAnchorProject>
-    <!-- When true, generates HTML from existing JSON without collecting metrics.
-         Default is false so that full metrics collection (JSON + HTML) is the normal behavior.
-         HTML-only mode must be enabled explicitly via /p:GenerateHtmlFromJson=true or an overriding props file. -->
-    <GenerateHtmlFromJson Condition="'$(GenerateHtmlFromJson)' == ''">false</GenerateHtmlFromJson>
-    <!-- Set to true to enable automatic baseline replacement when metrics-report.json differs from metrics-baseline.json -->
-    <ReplaceMetricsBaseline Condition="'$(ReplaceMetricsBaseline)' == ''">true</ReplaceMetricsBaseline>
   </PropertyGroup>
 
   <ItemGroup>
     <CompilerVisibleProperty Include="RoslynMetricsEnabled" />
     <CompilerVisibleProperty Include="SarifMetricsEnabled" />
     <CompilerVisibleProperty Include="AltCoverEnabled" />
-    <CompilerVisibleProperty Include="GenerateMetricsDashboard" />
-    <CompilerVisibleProperty Include="GenerateHtmlFromJson" />
-    <CompilerVisibleProperty Include="ReplaceMetricsBaseline" />
-    <CompilerVisibleProperty Include="AnalyzeSuppressedSymbols" />
   </ItemGroup>
 
   <!-- Test assemblies that should receive instrumented runtime binaries for AltCover coverage -->

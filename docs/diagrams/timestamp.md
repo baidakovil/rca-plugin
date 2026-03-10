@@ -1,3 +1,4 @@
+```mermaid
 flowchart TD
   %% Initial Data (Blue, black text)
   style A1 fill:#cce5ff,stroke:#333,stroke-width:2px,color:#000
@@ -67,3 +68,4 @@ flowchart TD
   %% Output
   C1 --> F1["Release mutex and exit"]
   E1 --> F1
+  ```
