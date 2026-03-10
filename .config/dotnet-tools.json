@@ -8,13 +8,6 @@
         "reportgenerator"
       ],
       "rollForward": false
-    },
-    "metricsreporter.tool": {
-      "version": "0.4.0",
-      "commands": [
-        "metricsreporter"
-      ],
-      "rollForward": false
     }
   }
 }

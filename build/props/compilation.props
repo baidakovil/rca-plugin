@@ -39,10 +39,5 @@
     <PackageReference Include="Microsoft.CodeAnalysis.Metrics" Version="4.14.0" />
   </ItemGroup>
 
-  <!-- Provide shared code-metrics configuration as AdditionalFiles for analyzers -->
-  <ItemGroup Condition="Exists('$(CodeMetricsConfigFile)')">
-    <AdditionalFiles Include="$(CodeMetricsConfigFile)" />
-  </ItemGroup>
-
 </Project>
 
