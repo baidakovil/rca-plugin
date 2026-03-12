@@ -2,6 +2,13 @@
   "version": 1,
   "isRoot": true,
   "tools": {
+    "metricsreporter.tool": {
+      "version": "0.4.0",
+      "commands": [
+        "metricsreporter"
+      ],
+      "rollForward": false
+    },
     "dotnet-reportgenerator-globaltool": {
       "version": "5.2.5",
       "commands": [

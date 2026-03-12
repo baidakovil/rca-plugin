@@ -1,0 +1,100 @@
+{
+  "general": {
+    "runScripts": true,
+    "aggregateAfterScripts": true,
+    "verbosity": "normal",
+    "timeoutSeconds": 900,
+    "logTruncationLimit": 4000
+  },
+  "paths": {
+    "metricsDir": "Metrics",
+    "report": "Metrics/MetricsReport.g.json",
+    "readReport": "Metrics/MetricsReport.g.json",
+    "baseline": "Metrics/MetricsTemp/MetricsBaseline.g.json",
+    "baselineStoragePath": "C:\\Users\\baidakov\\AppData\\Local\\RCA\\Metrics",
+    "suppressedSymbols": "Metrics/MetricsTemp/SuppressedSymbols.g.json",
+    "thresholds": "Metrics/MetricsRules/MetricsReporterThresholds.json",
+    "solutionDirectory": ".",
+    "sourceCodeFolders": [
+      "MetricsReporter",
+      "MetricsReporter.Tests",
+      "MetricsReporter.Tool"
+    ],
+    "opencover": [
+      "Metrics/OpenCover/MetricsReporter.coverage.xml",
+      "Metrics/OpenCover/MetricsReporter.Tool.coverage.xml"
+    ],
+    "coverageHtmlDir": "Metrics/OpenCover/Html",
+    "outputHtml": "Metrics/MetricsReport.html",
+    "roslyn": [
+      "Metrics/Roslyn/SolutionMetrics.g.xml"
+    ],
+    "sarif": [
+      "Metrics/Sarif/MetricsReporter.sarif",
+      "Metrics/Sarif/MetricsReporter.Tool.sarif",
+      "Metrics/Sarif/MetricsReporter.Tests.sarif"
+    ],
+    "excludedMembers": "*b__*,*d__*,<Create>*,*<Main>*,<Clone>$,ctor,cctor,MoveNext,SetStateMachine,MoveNextAsync,DisposeAsync,Deconstruct,GetHashCode,ToString,Equals,PrintMembers,op_Equality,op_Inequality,get_*,set_*,add_*,remove_*",
+    "excludedTypes": "<>c,<-ctor>",
+    "excludedAssemblies": "Tests",
+    "solutionName": "metricsreporter",
+    "excludeMethods": false,
+    "excludeProperties": false,
+    "excludeFields": true,
+    "excludeEvents": false,
+    "analyzeSuppressedSymbols": true,
+    "replaceBaseline": false
+  },
+  "scripts": {
+    "generate": [
+      "Metrics/scripts/prepare-metrics.ps1"
+    ],
+    "read": {
+      "byMetric": [
+        {
+          "metrics": [
+            "OpenCoverBranchCoverage",
+            "OpenCoverSequenceCoverage",
+            "OpenCoverCyclomaticComplexity",
+            "OpenCoverNPathComplexity"
+          ],
+          "path": "Metrics/scripts/collect-opencover.ps1"
+        },
+        {
+          "metrics": [
+            "RoslynCyclomaticComplexity",
+            "RoslynClassCoupling",
+            "RoslynMaintainabilityIndex",
+            "RoslynDepthOfInheritance",
+            "RoslynLinesOfCode",
+            "RoslynSourceLines",
+            "SarifCaRuleViolations",
+            "SarifIdeRuleViolations",
+            "Any"
+          ],
+          "path": "Metrics/scripts/prepare-metrics.ps1"
+        }
+      ]
+    },
+    "test": {
+      "any": [
+        "Metrics/scripts/prepare-metrics.ps1"
+      ]
+    }
+  },
+  "metricAliases": {
+    "OpenCoverSequenceCoverage": [ "SequenceCoverage" ],
+    "OpenCoverBranchCoverage": [ "BranchCoverage" ],
+    "OpenCoverCyclomaticComplexity": [ "OpenCoverComplexity" ],
+    "OpenCoverNPathComplexity": [ "NPath" ],
+    "RoslynMaintainabilityIndex": [ "Maintainability"],
+    "RoslynCyclomaticComplexity": [ "Complexity" ],
+    "RoslynClassCoupling": [ "Coupling" ],
+    "RoslynDepthOfInheritance": [ "Inheritance" ],
+    "RoslynSourceLines": [ "SourceLines" ],
+    "RoslynExecutableLines": [ "ExecutableLines" ],
+    "SarifCaRuleViolations": [ "Ca" ],
+    "SarifIdeRuleViolations": [ "Ide" ]
+  }
+}
+
