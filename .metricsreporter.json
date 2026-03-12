@@ -7,37 +7,48 @@
     "logTruncationLimit": 4000
   },
   "paths": {
-    "metricsDir": "Metrics",
-    "report": "Metrics/MetricsReport.g.json",
-    "readReport": "Metrics/MetricsReport.g.json",
-    "baseline": "Metrics/MetricsTemp/MetricsBaseline.g.json",
-    "baselineStoragePath": "C:\\Users\\baidakov\\AppData\\Local\\RCA\\Metrics",
-    "suppressedSymbols": "Metrics/MetricsTemp/SuppressedSymbols.g.json",
-    "thresholds": "Metrics/MetricsRules/MetricsReporterThresholds.json",
+    "metricsDir": "build/Metrics",
+    "report": "build/Metrics/Report/MetricsReport.g.json",
+    "readReport": "build/Metrics/Report/MetricsReport.g.json",
+    "baseline": "build/MetricsTemp/MetricsBaseline.g.json",
+    "baselineStoragePath": "%LOCALAPPDATA%/RCA/Metrics",
+    "suppressedSymbols": "build/MetricsTemp/SuppressedSymbols.g.json",
     "solutionDirectory": ".",
     "sourceCodeFolders": [
-      "MetricsReporter",
-      "MetricsReporter.Tests",
-      "MetricsReporter.Tool"
+      "src",
+      "tests"
     ],
     "opencover": [
-      "Metrics/OpenCover/MetricsReporter.coverage.xml",
-      "Metrics/OpenCover/MetricsReporter.Tool.coverage.xml"
+      "build/MetricsTemp/CoverageStorage.g.xml"
     ],
-    "coverageHtmlDir": "Metrics/OpenCover/Html",
-    "outputHtml": "Metrics/MetricsReport.html",
+    "coverageHtmlDir": "build/Metrics/AltCover/html",
+    "outputHtml": "build/Metrics/Report/MetricsReport.html",
     "roslyn": [
-      "Metrics/Roslyn/SolutionMetrics.g.xml"
+      "build/Metrics/Roslyn/SolutionMetrics.g.xml"
     ],
     "sarif": [
-      "Metrics/Sarif/MetricsReporter.sarif",
-      "Metrics/Sarif/MetricsReporter.Tool.sarif",
-      "Metrics/Sarif/MetricsReporter.Tests.sarif"
+      "build/Metrics/Sarif/Rca.BuildMetadata.Generator.sarif",
+      "build/Metrics/Sarif/Rca.BuildMetadata.Generator.Tests.sarif",
+      "build/Metrics/Sarif/Rca.Contracts.sarif",
+      "build/Metrics/Sarif/Rca.Contracts.Tests.sarif",
+      "build/Metrics/Sarif/Rca.Core.sarif",
+      "build/Metrics/Sarif/Rca.Core.Tests.sarif",
+      "build/Metrics/Sarif/Rca.Integration.Revit.Tests.sarif",
+      "build/Metrics/Sarif/Rca.Loader.Contracts.sarif",
+      "build/Metrics/Sarif/Rca.Loader.sarif",
+      "build/Metrics/Sarif/Rca.Loader.Tests.sarif",
+      "build/Metrics/Sarif/Rca.Logging.Contracts.sarif",
+      "build/Metrics/Sarif/Rca.Network.sarif",
+      "build/Metrics/Sarif/Rca.Network.Tests.sarif",
+      "build/Metrics/Sarif/Rca.Runtime.sarif",
+      "build/Metrics/Sarif/Rca.TestAdapter.sarif",
+      "build/Metrics/Sarif/Rca.UI.sarif",
+      "build/Metrics/Sarif/Rca.UI.Tests.sarif"
     ],
     "excludedMembers": "*b__*,*d__*,<Create>*,*<Main>*,<Clone>$,ctor,cctor,MoveNext,SetStateMachine,MoveNextAsync,DisposeAsync,Deconstruct,GetHashCode,ToString,Equals,PrintMembers,op_Equality,op_Inequality,get_*,set_*,add_*,remove_*",
     "excludedTypes": "<>c,<-ctor>",
     "excludedAssemblies": "Tests",
-    "solutionName": "metricsreporter",
+    "solutionName": "rca-plugin",
     "excludeMethods": false,
     "excludeProperties": false,
     "excludeFields": true,
@@ -47,7 +58,7 @@
   },
   "scripts": {
     "generate": [
-      "Metrics/scripts/prepare-metrics.ps1"
+      "build/Scripts/prepare-metrics.ps1"
     ],
     "read": {
       "byMetric": [
@@ -58,7 +69,7 @@
             "OpenCoverCyclomaticComplexity",
             "OpenCoverNPathComplexity"
           ],
-          "path": "Metrics/scripts/collect-opencover.ps1"
+          "path": "build/Scripts/collect-opencover.ps1"
         },
         {
           "metrics": [
@@ -72,13 +83,13 @@
             "SarifIdeRuleViolations",
             "Any"
           ],
-          "path": "Metrics/scripts/prepare-metrics.ps1"
+          "path": "build/Scripts/prepare-metrics.ps1"
         }
       ]
     },
     "test": {
       "any": [
-        "Metrics/scripts/prepare-metrics.ps1"
+        "build/Scripts/prepare-metrics.ps1"
       ]
     }
   },
