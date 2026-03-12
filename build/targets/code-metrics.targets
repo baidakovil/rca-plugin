@@ -57,38 +57,44 @@
     <Message Text="AltCover instrumentation completed. Signal file: $(AltCoverSignalFile)" Importance="Normal" />
   </Target>
 
-  <!-- Copy instrumented runtime assemblies into unit test output directories after all tests are built -->
-  <!-- Anchored on Rca.Core.Tests, which in current graph builds last among test projects -->
+  <!-- Copy instrumented runtime assemblies into unit test output directories -->
+  <!-- Runs in each mapped test project to avoid later project builds overwriting copied instrumented DLLs -->
   <Target Name="CopyInstrumentedAssembliesToTests"
           AfterTargets="Build"
-          Condition="'$(AltCoverEnabled)' == 'true' and '$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.Core.Tests' and '$(RuntimeDeployDir)' != '' and Exists('$(RuntimeDeployDir)')">
+          Condition="'$(AltCoverEnabled)' == 'true' and '$(DesignTimeBuild)' != 'true' and '$(RuntimeDeployDir)' != '' and Exists('$(RuntimeDeployDir)') and ('$(MSBuildProjectName)' == 'Rca.Contracts.Tests' or '$(MSBuildProjectName)' == 'Rca.Core.Tests' or '$(MSBuildProjectName)' == 'Rca.Loader.Tests' or '$(MSBuildProjectName)' == 'Rca.Network.Tests' or '$(MSBuildProjectName)' == 'Rca.UI.Tests')">
     <PropertyGroup>
       <!-- Ensure AltCoverInputDir is aligned with RuntimeDeployDir used during instrumentation -->
       <AltCoverInputDir Condition="'$(AltCoverInputDir)' == ''">$(RuntimeDeployDir)</AltCoverInputDir>
     </PropertyGroup>
 
+    <!-- Select only the assembly mapping that belongs to the currently built test project -->
+    <ItemGroup>
+      <CurrentAltCoverInstrumentedTestAssembly Include="@(AltCoverInstrumentedTestAssembly)"
+                                               Condition="'%(AltCoverInstrumentedTestAssembly.TestProjectName)' == '$(MSBuildProjectName)'" />
+    </ItemGroup>
+
     <!-- Emit detailed warnings for unexpected states in test bin directories -->
     <!-- PDB is required as a sanity check that the test project was built correctly -->
-    <Warning Text="AltCover: PDB file '$(SolutionDir)tests\%(AltCoverInstrumentedTestAssembly.TestProjectName)\bin\$(Configuration)\$(RcaTestTargetFramework)\%(AltCoverInstrumentedTestAssembly.Identity).pdb' for '%(AltCoverInstrumentedTestAssembly.Identity)' not found. Skipping instrumentation copy for this test directory."
-             Condition="!Exists('$(SolutionDir)tests\%(AltCoverInstrumentedTestAssembly.TestProjectName)\bin\$(Configuration)\$(RcaTestTargetFramework)\%(AltCoverInstrumentedTestAssembly.Identity).pdb')" />
+      <Warning Text="AltCover: PDB file '$(TargetDir)%(CurrentAltCoverInstrumentedTestAssembly.Identity).pdb' for '%(CurrentAltCoverInstrumentedTestAssembly.Identity)' not found. Skipping instrumentation copy for this test directory."
+           Condition="!Exists('$(TargetDir)%(CurrentAltCoverInstrumentedTestAssembly.Identity).pdb')" />
 
     <!-- When PDB exists but DLL is missing, something is off with test output -->
-    <Warning Text="AltCover: Test DLL '$(SolutionDir)tests\%(AltCoverInstrumentedTestAssembly.TestProjectName)\bin\$(Configuration)\$(RcaTestTargetFramework)\%(AltCoverInstrumentedTestAssembly.Identity).dll' for '%(AltCoverInstrumentedTestAssembly.Identity)' not found although PDB exists. Skipping instrumentation copy for this test directory."
-             Condition="Exists('$(SolutionDir)tests\%(AltCoverInstrumentedTestAssembly.TestProjectName)\bin\$(Configuration)\$(RcaTestTargetFramework)\%(AltCoverInstrumentedTestAssembly.Identity).pdb') and !Exists('$(SolutionDir)tests\%(AltCoverInstrumentedTestAssembly.TestProjectName)\bin\$(Configuration)\$(RcaTestTargetFramework)\%(AltCoverInstrumentedTestAssembly.Identity).dll')" />
+      <Warning Text="AltCover: Test DLL '$(TargetDir)%(CurrentAltCoverInstrumentedTestAssembly.Identity).dll' for '%(CurrentAltCoverInstrumentedTestAssembly.Identity)' not found although PDB exists. Skipping instrumentation copy for this test directory."
+           Condition="Exists('$(TargetDir)%(CurrentAltCoverInstrumentedTestAssembly.Identity).pdb') and !Exists('$(TargetDir)%(CurrentAltCoverInstrumentedTestAssembly.Identity).dll')" />
 
     <!-- When both PDB and DLL exist but the instrumented DLL is missing in RuntimeDeployDir -->
-    <Warning Text="AltCover: Instrumented DLL '$(AltCoverInputDir)\%(AltCoverInstrumentedTestAssembly.Identity).dll' for '%(AltCoverInstrumentedTestAssembly.Identity)' not found in AltCover input directory. Skipping instrumentation copy for this test directory."
-             Condition="Exists('$(SolutionDir)tests\%(AltCoverInstrumentedTestAssembly.TestProjectName)\bin\$(Configuration)\$(RcaTestTargetFramework)\%(AltCoverInstrumentedTestAssembly.Identity).pdb') and Exists('$(SolutionDir)tests\%(AltCoverInstrumentedTestAssembly.TestProjectName)\bin\$(Configuration)\$(RcaTestTargetFramework)\%(AltCoverInstrumentedTestAssembly.Identity).dll') and !Exists('$(AltCoverInputDir)\%(AltCoverInstrumentedTestAssembly.Identity).dll')" />
+      <Warning Text="AltCover: Instrumented DLL '$(AltCoverInputDir)\%(CurrentAltCoverInstrumentedTestAssembly.Identity).dll' for '%(CurrentAltCoverInstrumentedTestAssembly.Identity)' not found in AltCover input directory. Skipping instrumentation copy for this test directory."
+           Condition="Exists('$(TargetDir)%(CurrentAltCoverInstrumentedTestAssembly.Identity).pdb') and Exists('$(TargetDir)%(CurrentAltCoverInstrumentedTestAssembly.Identity).dll') and !Exists('$(AltCoverInputDir)\%(CurrentAltCoverInstrumentedTestAssembly.Identity).dll')" />
 
     <!-- Copy instrumented DLLs from RuntimeDeployDir into test bin directories (overwriting originals when present) -->
-    <Copy SourceFiles="$(AltCoverInputDir)\%(AltCoverInstrumentedTestAssembly.Identity).dll"
-          DestinationFiles="$(SolutionDir)tests\%(AltCoverInstrumentedTestAssembly.TestProjectName)\bin\$(Configuration)\$(RcaTestTargetFramework)\%(AltCoverInstrumentedTestAssembly.Identity).dll"
-          Condition="Exists('$(SolutionDir)tests\%(AltCoverInstrumentedTestAssembly.TestProjectName)\bin\$(Configuration)\$(RcaTestTargetFramework)\%(AltCoverInstrumentedTestAssembly.Identity).pdb') and Exists('$(SolutionDir)tests\%(AltCoverInstrumentedTestAssembly.TestProjectName)\bin\$(Configuration)\$(RcaTestTargetFramework)\%(AltCoverInstrumentedTestAssembly.Identity).dll') and Exists('$(AltCoverInputDir)\%(AltCoverInstrumentedTestAssembly.Identity).dll')" />
+    <Copy SourceFiles="$(AltCoverInputDir)\%(CurrentAltCoverInstrumentedTestAssembly.Identity).dll"
+          DestinationFiles="$(TargetDir)%(CurrentAltCoverInstrumentedTestAssembly.Identity).dll"
+          Condition="Exists('$(TargetDir)%(CurrentAltCoverInstrumentedTestAssembly.Identity).pdb') and Exists('$(TargetDir)%(CurrentAltCoverInstrumentedTestAssembly.Identity).dll') and Exists('$(AltCoverInputDir)\%(CurrentAltCoverInstrumentedTestAssembly.Identity).dll')" />
 
     <!-- Copy AltCover recorder into the same test bin directories where we replaced assemblies -->
     <Copy SourceFiles="$(AltCoverInputDir)\AltCover.Recorder.g.dll"
-          DestinationFiles="$(SolutionDir)tests\%(AltCoverInstrumentedTestAssembly.TestProjectName)\bin\$(Configuration)\$(RcaTestTargetFramework)\AltCover.Recorder.g.dll"
-          Condition="Exists('$(AltCoverInputDir)\AltCover.Recorder.g.dll') and Exists('$(SolutionDir)tests\%(AltCoverInstrumentedTestAssembly.TestProjectName)\bin\$(Configuration)\$(RcaTestTargetFramework)\%(AltCoverInstrumentedTestAssembly.Identity).pdb') and Exists('$(SolutionDir)tests\%(AltCoverInstrumentedTestAssembly.TestProjectName)\bin\$(Configuration)\$(RcaTestTargetFramework)\%(AltCoverInstrumentedTestAssembly.Identity).dll')" />
+          DestinationFiles="$(TargetDir)AltCover.Recorder.g.dll"
+          Condition="Exists('$(AltCoverInputDir)\AltCover.Recorder.g.dll') and Exists('$(TargetDir)%(CurrentAltCoverInstrumentedTestAssembly.Identity).pdb') and Exists('$(TargetDir)%(CurrentAltCoverInstrumentedTestAssembly.Identity).dll')" />
   </Target>
 
   <!-- Collect coverage after tests complete. Should be invoked manually via MSBuild after tests have been executed -->
