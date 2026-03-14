@@ -32,13 +32,13 @@
 
 # Coverage reports
 /build/Metrics/*
-!/build/Metrics/MetricsRules/
-!/build/Metrics/Agent/
 src/Rca.Loader/source-hash.txt
 src/Rca.Core/source-hash.txt
 
 # Generated metrics baselines
 *.g.json
+# Ignore all __Instrumented folders and their contents in src/
+src/**/__Instrumented/
 
 # Build log files
 build/binlog

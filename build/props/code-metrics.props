@@ -8,9 +8,9 @@
     <!-- Set to true to enable Sarif metrics collection (on-demand). -->
     <SarifMetricsEnabled Condition="'$(SarifMetricsEnabled)' == ''">false</SarifMetricsEnabled>
     <!-- Set to true to enable AltCover metrics collection (on-demand). -->
-    <AltCoverEnabled Condition="'$(AltCoverEnabled)' == ''">false</AltCoverEnabled>
+    <AltCoverEnabled Condition="'$(AltCoverEnabled)' == ''">true</AltCoverEnabled>
     <!-- Set to true to show verbose messages during coverage collection (altcover and reportgenerator output) -->
-    <CoverageVerbose Condition="'$(CoverageVerbose)' == ''">false</CoverageVerbose>
+    <CoverageVerbose Condition="'$(CoverageVerbose)' == ''">true</CoverageVerbose>
     <!-- Assembly filter for AltCover instrumentation (which assemblies to instrument) -->
     <RcaCoverageAssemblyFilter Condition="'$(RcaCoverageAssemblyFilter)' == ''">Rca.*.dll</RcaCoverageAssemblyFilter>
     <!-- Method filter for AltCover instrumentation (which methods to exclude from coverage, e.g. constructors) -->
