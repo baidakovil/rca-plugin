@@ -57,11 +57,12 @@
     <Message Text="AltCover instrumentation completed. Signal file: $(AltCoverSignalFile)" Importance="Normal" />
   </Target>
 
-  <!-- Copy instrumented runtime assemblies into unit test output directories after all tests are built -->
-  <!-- Anchored on Rca.Core.Tests, which in current graph builds last among test projects -->
+  <!-- Copy instrumented runtime assemblies into unit test output directories after instrumentation completes -->
+  <!-- Anchored on Rca.Runtime after InstrumentDeployedAssemblies to guarantee instrumented DLLs are available -->
+  <!-- Previous anchor (Rca.Core.Tests AfterTargets=Build) had a race condition: test project built before instrumentation finished -->
   <Target Name="CopyInstrumentedAssembliesToTests"
-          AfterTargets="Build"
-          Condition="'$(AltCoverEnabled)' == 'true' and '$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.Core.Tests' and '$(RuntimeDeployDir)' != '' and Exists('$(RuntimeDeployDir)')">
+          AfterTargets="InstrumentDeployedAssemblies"
+          Condition="'$(AltCoverEnabled)' == 'true' and '$(DesignTimeBuild)' != 'true' and '$(MSBuildProjectName)' == 'Rca.Runtime' and '$(RuntimeDeployDir)' != '' and Exists('$(RuntimeDeployDir)')">
     <PropertyGroup>
       <!-- Ensure AltCoverInputDir is aligned with RuntimeDeployDir used during instrumentation -->
       <AltCoverInputDir Condition="'$(AltCoverInputDir)' == ''">$(RuntimeDeployDir)</AltCoverInputDir>
@@ -110,8 +111,11 @@
     <Warning Text="AltCover signal file not found at $(AltCoverSignalFile). Coverage collection may be incomplete." 
              Condition="'$(AltCoverSignalFile)' != '' and !Exists('$(AltCoverSignalFile)')" />
 
-    <!-- Remove signal file if it exists -->
+    <!-- Remove signal file if it exists (pauses recording in running processes like Revit) -->
     <Delete Files="$(AltCoverSignalFile)" Condition="'$(AltCoverSignalFile)' != '' and Exists('$(AltCoverSignalFile)')" />
+
+    <!-- Wait for running processes (e.g. Revit) to detect signal file removal and release .acv file handles -->
+    <Exec Command='powershell -NoProfile -Command "Start-Sleep -Seconds 3"' Condition="'$(AltCoverSignalFile)' != ''" />
 
     <!-- Configure verbosity flags based on CoverageVerbose property -->
     <PropertyGroup>
