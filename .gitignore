@@ -32,6 +32,8 @@
 
 # Coverage reports
 /build/Metrics/*
+!/build/Metrics/MetricsRules/
+!/build/Metrics/Agent/
 src/Rca.Loader/source-hash.txt
 src/Rca.Core/source-hash.txt
 

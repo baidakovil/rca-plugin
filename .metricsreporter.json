@@ -13,6 +13,7 @@
     "baseline": "build/MetricsTemp/MetricsBaseline.g.json",
     "baselineStoragePath": "%LOCALAPPDATA%/RCA/Metrics",
     "suppressedSymbols": "build/MetricsTemp/SuppressedSymbols.g.json",
+    "thresholds": "build/Metrics/MetricsRules/MetricsReporterThresholds.json",
     "solutionDirectory": ".",
     "sourceCodeFolders": [
       "src",
