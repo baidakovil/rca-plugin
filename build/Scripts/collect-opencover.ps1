@@ -20,8 +20,9 @@ function Invoke-DotNet {
 }
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$repoRoot = (Resolve-Path (Join-Path $scriptDir ".." "..")).Path
+$repoRoot = (Resolve-Path (Join-Path (Join-Path $scriptDir "..") "..")).Path
 $solutionPath = Join-Path $repoRoot "rca-plugin.sln"
+$runtimeProjectPath = Join-Path $repoRoot "src\Rca.Runtime\Rca.Runtime.csproj"
 
 $altCoverDir = Join-Path $repoRoot "build\Metrics\AltCover"
 $coverageStorage = Join-Path $repoRoot "build\MetricsTemp\CoverageStorage.g.xml"
@@ -38,6 +39,10 @@ $unitTestProjects = @(
 
 if (-not (Test-Path $solutionPath)) {
     throw "rca-plugin.sln was not found at '$solutionPath'."
+}
+
+if (-not (Test-Path $runtimeProjectPath)) {
+    throw "Rca.Runtime.csproj was not found at '$runtimeProjectPath'."
 }
 
 Write-Host "Cleaning previous coverage and report outputs..." -ForegroundColor Cyan
@@ -80,7 +85,7 @@ foreach ($project in $unitTestProjects) {
 
 Invoke-DotNet -Arguments @(
     "msbuild",
-    $solutionPath,
+    $runtimeProjectPath,
     "/t:CollectCoverage",
     "/p:AltCoverEnabled=true",
     "/p:CoverageVerbose=false"
