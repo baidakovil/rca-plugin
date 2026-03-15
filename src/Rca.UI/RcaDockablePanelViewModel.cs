@@ -2,6 +2,7 @@ using Autodesk.Revit.UI;
 using Rca.Contracts;
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -17,6 +18,7 @@ namespace Rca.UI.ViewModels
     private string inputText = string.Empty;
     private string outputText = string.Empty;
     private readonly IPythonExecutionService pythonService;
+    private readonly Action<PythonRuntimeStatus> showPythonInstallPrompt;
     // NOTE: Use object to avoid hard runtime dependency on RevitAPIUI in unit tests
     private readonly Func<object?> revitContextProvider;
 
@@ -52,16 +54,27 @@ namespace Rca.UI.ViewModels
     /// </summary>
     public RcaDockablePanelViewModel(
         Func<object?> revitContextProvider,
-        IPythonExecutionService pythonService)
+        IPythonExecutionService pythonService,
+        Action<PythonRuntimeStatus>? showPythonInstallPrompt = null)
     {
       this.revitContextProvider = revitContextProvider;
       this.pythonService = pythonService;
+      this.showPythonInstallPrompt = showPythonInstallPrompt ?? ShowPythonInstallPrompt;
       ClickCommand = new RelayCommand(OnHelloClicked);
       ExecutePythonCommand = new RelayCommand(async _ => await OnExecutePython(), _ => !string.IsNullOrWhiteSpace(InputText));
     }
 
     private async Task OnExecutePython()
     {
+      var runtimeStatus = pythonService.GetRuntimeStatus();
+      if (!runtimeStatus.IsAvailable)
+      {
+        OutputText = runtimeStatus.Message;
+        if (!string.IsNullOrWhiteSpace(runtimeStatus.DownloadUrl))
+          showPythonInstallPrompt(runtimeStatus);
+        return;
+      }
+
       OutputText = "Executing...";
 
       try
@@ -79,6 +92,44 @@ namespace Rca.UI.ViewModels
       catch (Exception ex)
       {
         OutputText = $"Error: {ex.Message}";
+      }
+    }
+
+    private static void ShowPythonInstallPrompt(PythonRuntimeStatus runtimeStatus)
+    {
+      var taskDialog = new TaskDialog($"Python {PythonRuntimeStatus.SupportedVersion} Required")
+      {
+        MainIcon = TaskDialogIcon.TaskDialogIconWarning,
+        MainInstruction = $"Python {PythonRuntimeStatus.SupportedVersion} is required to run scripts.",
+        MainContent = runtimeStatus.Message + "\n\nRCA includes pythonnet, but CPython itself must be installed separately by the user. Install Python 3.11 (64-bit), then restart Revit.",
+        CommonButtons = TaskDialogCommonButtons.Cancel,
+        DefaultButton = TaskDialogResult.Cancel
+      };
+
+      taskDialog.AddCommandLink(
+          TaskDialogCommandLinkId.CommandLink1,
+          "Open the official Python download page",
+          runtimeStatus.DownloadUrl ?? PythonRuntimeStatus.OfficialDownloadUrl);
+
+      var result = taskDialog.Show();
+      if (result == TaskDialogResult.CommandLink1)
+      {
+        OpenBrowser(runtimeStatus.DownloadUrl ?? PythonRuntimeStatus.OfficialDownloadUrl);
+      }
+    }
+
+    private static void OpenBrowser(string url)
+    {
+      try
+      {
+        using var process = Process.Start(new ProcessStartInfo(url)
+        {
+          UseShellExecute = true
+        });
+      }
+      catch (Exception ex)
+      {
+        TaskDialog.Show($"Python {PythonRuntimeStatus.SupportedVersion} Required", $"Open this URL manually:\n{url}\n\n{ex.Message}");
       }
     }
 

@@ -102,6 +102,7 @@ namespace Rca.UI.Views
 
     private class NullPythonExecutionService : IPythonExecutionService
     {
+      public PythonRuntimeStatus GetRuntimeStatus() => PythonRuntimeStatus.Unavailable("Python execution not available in standalone mode.");
       public Task<string> ExecuteAsync(string code) => Task.FromResult("Python execution not available in standalone mode.");
       public string ExecuteSync(string code) => "Python execution not available in standalone mode.";
       public void SetRevitContext(object context) { }

@@ -17,6 +17,7 @@ namespace Rca.UI.Services
 
     private class NullPythonExecutionService : IPythonExecutionService
     {
+      public PythonRuntimeStatus GetRuntimeStatus() => PythonRuntimeStatus.Unavailable(PythonServiceUnavailableMessage);
       public Task<string> ExecuteAsync(string code) => Task.FromResult(PythonServiceUnavailableMessage);
       public string ExecuteSync(string code) => PythonServiceUnavailableMessage;
       public void SetRevitContext(object context) { }

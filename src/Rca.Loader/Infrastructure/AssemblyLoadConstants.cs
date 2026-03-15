@@ -12,16 +12,11 @@ namespace Rca.Loader.Infrastructure
   public static class AssemblyLoadConstants
   {
     /// <summary>
-    /// Assembly names that must be loaded in the default context to avoid collectible assembly issues for DLR / IronPython.
+    /// Assembly names that must be loaded in the default context to avoid collectible assembly issues for pythonnet.
     /// </summary>
     public static readonly string[] PythonAssemblies =
     {
-            "IronPython",
-            "IronPython.Modules",
-            "IronPython.StdLib",
-            "Microsoft.Scripting",
-            "Microsoft.Dynamic",
-            "DynamicLanguageRuntime"
+            "Python.Runtime"
         };
 
     /// <summary>
@@ -33,12 +28,7 @@ namespace Rca.Loader.Infrastructure
             "Rca.Loader.Contracts",
             "Rca.Logging.Contracts", // shared logging DTOs (avoid duplicate load + FileLoadException)
             "Rca.Contracts", // shared contracts used by Loader and Runtime
-            "IronPython",
-            "IronPython.Modules",
-            "IronPython.StdLib",
-            "Microsoft.Scripting",
-            "Microsoft.Dynamic",
-            "DynamicLanguageRuntime",
+          "Python.Runtime",
             "System.Numerics",
             "Microsoft.CSharp",
             "System.Dynamic.Runtime"

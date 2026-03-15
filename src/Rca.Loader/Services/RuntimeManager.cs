@@ -155,7 +155,7 @@ namespace Rca.Loader.Services
         currentContext.SetRuntimePath(runtimeDll);
         _log.LogDebug("Context created and path set path={Path} opId={Op}", runtimeDll, opId);
 
-        PreloadIronPythonAssemblies(folderPath);
+        PreloadPythonRuntimeAssemblies(folderPath);
 
         _log.LogTrace("Loading runtime entry assembly opId={Op}", opId);
         var assembly = currentContext.LoadFromAssemblyPath(runtimeDll);
@@ -284,12 +284,12 @@ namespace Rca.Loader.Services
     }
 
     /// <summary>
-    /// Pre-loads IronPython assemblies in the default context to avoid collectible assembly issues.
+    /// Pre-loads pythonnet assemblies in the default context to avoid collectible assembly issues.
     /// </summary>
     /// <param name="runtimeFolder">The runtime folder containing the assemblies.</param>
-    private void PreloadIronPythonAssemblies(string runtimeFolder)
+    private void PreloadPythonRuntimeAssemblies(string runtimeFolder)
     {
-      var pythonAssemblies = new[] { "Microsoft.Dynamic.dll", "Microsoft.Scripting.dll", "IronPython.dll", "IronPython.Modules.dll" };
+      var pythonAssemblies = new[] { "Python.Runtime.dll" };
       foreach (var assemblyFile in pythonAssemblies)
       {
         var assemblyPath = Path.Combine(runtimeFolder, assemblyFile);

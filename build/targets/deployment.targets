@@ -33,9 +33,7 @@
       <RuntimeDeployFiles Include="$(TargetDir)Rca.Network.dll" />
       <RuntimeDeployFiles Include="$(TargetDir)Rca.UI.dll" />
       <RuntimeDeployFiles Include="$(TargetDir)Rca.Contracts.dll" />
-      <RuntimeDeployFiles Include="$(TargetDir)IronPython*.dll" />
-      <RuntimeDeployFiles Include="$(TargetDir)Microsoft.Scripting.dll" />
-      <RuntimeDeployFiles Include="$(TargetDir)Microsoft.Dynamic.dll" />
+      <RuntimeDeployFiles Include="$(TargetDir)Python.Runtime.dll" Condition="Exists('$(TargetDir)Python.Runtime.dll')" />
     </ItemGroup>
     <Copy SourceFiles="@(RuntimeDeployFiles)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" />
 
@@ -44,11 +42,6 @@
       <RuntimeDeployPdbs Include="$(TargetDir)*.pdb" />
     </ItemGroup>
     <Copy SourceFiles="@(RuntimeDeployPdbs)" DestinationFolder="$(RuntimeDeployDir)" SkipUnchangedFiles="false" Condition="@(RuntimeDeployPdbs)!='' and '$(AltCoverEnabled)' == 'true'" />
-
-    <ItemGroup>
-      <LibFiles Include="$(TargetDir)Lib\**\*.*" />
-    </ItemGroup>
-    <Copy SourceFiles="@(LibFiles)" DestinationFiles="@(LibFiles-&gt;'$(RuntimeDeployDir)\Lib\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="@(LibFiles)!=''" />
 
     <!-- Marker file is created by Rca.SourceHashGenerator in deploy folder -->
 

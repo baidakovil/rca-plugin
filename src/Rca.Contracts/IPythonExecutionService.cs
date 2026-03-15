@@ -8,6 +8,12 @@ namespace Rca.Contracts
   public interface IPythonExecutionService
   {
     /// <summary>
+    /// Gets the availability status of the required external Python runtime.
+    /// </summary>
+    /// <returns>The runtime availability status.</returns>
+    PythonRuntimeStatus GetRuntimeStatus();
+
+    /// <summary>
     /// Sets the Revit context for Python execution.
     /// </summary>
     /// <param name="context">The Revit context object.</param>

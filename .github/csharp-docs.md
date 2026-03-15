@@ -82,12 +82,10 @@ public async Task<string> ExecuteAsync(string code)
 
 ### Complex Logic Documentation
 ```csharp
-// WHY: We capture stdout to a MemoryStream because IronPython's print() function
-// outputs to the runtime's IO stream, not to the return value. This allows us
-// to provide comprehensive output that includes both explicit print statements
-// and the final expression result, giving users complete feedback.
-using var outputStream = new MemoryStream();
-engine.Runtime.IO.SetOutput(outputStream, StdoutEncoding);
+// WHY: With pythonnet, print() writes to CPython's stdout stream rather than to
+// the managed return value. We redirect stdout inside the execution helper so
+// the user still sees both printed text and the last expression result in one response.
+scope.Exec(ScopeBootstrapCode);
 ```
 
 ## Documentation Completeness Checklist

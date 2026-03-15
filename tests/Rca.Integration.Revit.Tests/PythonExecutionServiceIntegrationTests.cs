@@ -5,6 +5,7 @@ using Autodesk.Revit.UI;
 using System.Threading.Tasks;
 using Autodesk.Revit.ApplicationServices;
 using System;
+using System.IO;
 using Rca.Integration.Revit.Tests.Infrastructure;
 
 namespace Rca.Integration.Revit.Tests
@@ -13,7 +14,7 @@ namespace Rca.Integration.Revit.Tests
   /// Integration tests for PythonExecutionService with Revit API context.
   /// 
   /// BUSINESS VALUE:
-  /// - Validates IronPython engine executes code in Revit context
+  /// - Validates pythonnet executes code in Revit context when CPython is configured
   /// - Ensures Python code has access to Revit API objects (doc, uiapp)
   /// - Tests synchronous Python execution for scripting
   /// - Critical for AI assistant: must execute user Python commands safely
@@ -44,6 +45,12 @@ namespace Rca.Integration.Revit.Tests
     public void Setup()
     {
       pythonService = new PythonExecutionService();
+      var runtime = pythonService.GetRuntimeStatus();
+      if (!runtime.IsAvailable)
+      {
+        Assert.Ignore($"Python runtime not configured for integration tests: {runtime.Message}");
+      }
+
       if (uiapp != null)
       {
         pythonService.SetRevitContext(uiapp);
