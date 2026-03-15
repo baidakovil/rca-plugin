@@ -1,0 +1,4 @@
+# Exclude generated build artifacts from repo-wide search.
+**/obj/
+/build/Metrics/
+/docs/*/
